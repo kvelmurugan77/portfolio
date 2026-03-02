@@ -1,1856 +1,558 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Velmurugan Karuppiah | Wind Energy Visionary</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800;900&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary: #0a5f3a;
-            --secondary: #12a857;
-            --accent: #2dd4a0;
-            --dark: #0f1419;
-            --light: #f7f9fc;
-            --text-primary: #0f1419;
-            --text-secondary: #64748b;
-            --border: #e0e7ff;
-            --success: #059669;
-            --warning: #f59e0b;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: 'Sora', sans-serif;
-            line-height: 1.6;
-            color: var(--text-primary);
-            background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
-            min-height: 100vh;
-            position: relative;
-            overflow-x: hidden;
-        }
-
-        /* ==================== CURSOR ==================== */
-        body, button, a {
-            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%230a5f3a" stroke-width="2"><path d="M5 3l16 8-16 8V3z"/></svg>') 4 12, auto;
-        }
-
-        a:hover, button:hover {
-            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%230a5f3a"><circle cx="12" cy="12" r="10"/></svg>') 12 12, pointer;
-        }
-
-        /* ==================== ANIMATED BACKGROUND ==================== */
-        .gradient-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, 
-                rgba(10, 95, 58, 0.05) 0%, 
-                rgba(18, 168, 87, 0.03) 25%, 
-                rgba(45, 212, 160, 0.02) 50%, 
-                rgba(15, 20, 25, 0.01) 100%);
-            z-index: -2;
-            pointer-events: none;
-        }
-
-        .animated-orbs {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            overflow: hidden;
-            pointer-events: none;
-        }
-
-        .orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(50px);
-            opacity: 0.15;
-            mix-blend-mode: multiply;
-        }
-
-        .orb-1 {
-            width: 400px;
-            height: 400px;
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            top: -10%;
-            right: -10%;
-            animation: float1 15s ease-in-out infinite;
-        }
-
-        .orb-2 {
-            width: 300px;
-            height: 300px;
-            background: linear-gradient(135deg, var(--secondary), var(--primary));
-            bottom: -5%;
-            left: -5%;
-            animation: float2 18s ease-in-out infinite;
-        }
-
-        .orb-3 {
-            width: 250px;
-            height: 250px;
-            background: linear-gradient(135deg, var(--accent), var(--secondary));
-            top: 50%;
-            left: 50%;
-            animation: float3 20s ease-in-out infinite;
-        }
-
-        @keyframes float1 {
-            0%, 100% { transform: translate(0, 0); }
-            25% { transform: translate(20px, -30px); }
-            50% { transform: translate(-10px, 20px); }
-            75% { transform: translate(30px, 10px); }
-        }
-
-        @keyframes float2 {
-            0%, 100% { transform: translate(0, 0); }
-            25% { transform: translate(-30px, 20px); }
-            50% { transform: translate(20px, -10px); }
-            75% { transform: translate(-20px, -30px); }
-        }
-
-        @keyframes float3 {
-            0%, 100% { transform: translate(0, 0); }
-            25% { transform: translate(25px, 25px); }
-            50% { transform: translate(-25px, 25px); }
-            75% { transform: translate(25px, -25px); }
-        }
-
-        /* ==================== HEADER ==================== */
-        header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            padding: 1.5rem 2rem;
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            animation: slideDown 0.6s ease;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .header-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-decoration: none;
-            letter-spacing: -1px;
-            transition: transform 0.3s ease;
-        }
-
-        .logo:hover {
-            transform: scale(1.05);
-        }
-
-        nav {
-            display: flex;
-            gap: 3rem;
-            align-items: center;
-        }
-
-        nav a {
-            text-decoration: none;
-            color: var(--text-primary);
-            font-size: 0.95rem;
-            font-weight: 500;
-            position: relative;
-            transition: color 0.3s ease;
-        }
-
-        nav a::after {
-            content: '';
-            position: absolute;
-            bottom: -6px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: linear-gradient(90deg, var(--primary), var(--accent));
-            transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        nav a:hover {
-            color: var(--primary);
-        }
-
-        nav a:hover::after {
-            width: 100%;
-        }
-
-        .cta-button {
-            padding: 0.8rem 1.8rem;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            border-radius: 50px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            font-size: 0.95rem;
-            box-shadow: 0 10px 30px rgba(10, 95, 58, 0.2);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .cta-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .cta-button:hover::before {
-            left: 100%;
-        }
-
-        .cta-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 20px 40px rgba(10, 95, 58, 0.3);
-        }
-
-        /* ==================== HERO SECTION ==================== */
-        .hero {
-            margin-top: 100px;
-            padding: 8rem 2rem;
-            position: relative;
-            overflow: hidden;
-            min-height: 90vh;
-            display: flex;
-            align-items: center;
-        }
-
-        .hero-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            width: 100%;
-            display: grid;
-            grid-template-columns: 1.1fr 0.9fr;
-            gap: 6rem;
-            align-items: center;
-        }
-
-        .hero-text h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 4.5rem;
-            font-weight: 900;
-            line-height: 1.1;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: slideUp 0.8s ease;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .hero-subtitle {
-            font-size: 1.4rem;
-            color: var(--text-secondary);
-            margin-bottom: 1.5rem;
-            font-weight: 400;
-            animation: slideUp 0.8s ease 0.1s both;
-        }
-
-        .hero-description {
-            font-size: 1.1rem;
-            line-height: 1.9;
-            color: var(--text-secondary);
-            margin-bottom: 2.5rem;
-            max-width: 550px;
-            animation: slideUp 0.8s ease 0.2s both;
-        }
-
-        .hero-ctas {
-            display: flex;
-            gap: 1.5rem;
-            animation: slideUp 0.8s ease 0.3s both;
-            flex-wrap: wrap;
-        }
-
-        .btn-primary {
-            padding: 1.1rem 2.5rem;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 15px 40px rgba(10, 95, 58, 0.25);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-primary::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .btn-primary:hover::before {
-            left: 100%;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 25px 50px rgba(10, 95, 58, 0.35);
-        }
-
-        .btn-secondary {
-            padding: 1.1rem 2.5rem;
-            background: transparent;
-            color: var(--primary);
-            border: 2px solid var(--primary);
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-        }
-
-        .btn-secondary:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-4px);
-            box-shadow: 0 15px 40px rgba(10, 95, 58, 0.2);
-        }
-
-        .hero-stats {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 2rem;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.5);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.7);
-            padding: 2rem;
-            border-radius: 20px;
-            animation: slideUp 0.8s ease 0.4s both;
-            transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-            background: rgba(255, 255, 255, 0.7);
-            border-color: var(--accent);
-            transform: translateY(-4px);
-        }
-
-        .stat-number {
-            font-family: 'Playfair Display', serif;
-            font-size: 2.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-label {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        /* ==================== FLOATING CARDS ANIMATION ==================== */
-        .hero-visual {
-            position: relative;
-            height: 500px;
-            animation: slideUp 0.8s ease 0.2s both;
-        }
-
-        .card-float {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            padding: 1.5rem;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-1 {
-            width: 220px;
-            top: 20px;
-            right: 0;
-            animation: float-card1 4s ease-in-out infinite;
-        }
-
-        .card-2 {
-            width: 200px;
-            bottom: 40px;
-            left: 0;
-            animation: float-card2 5s ease-in-out infinite;
-        }
-
-        .card-3 {
-            width: 210px;
-            bottom: 80px;
-            right: 30px;
-            animation: float-card3 6s ease-in-out infinite;
-        }
-
-        @keyframes float-card1 {
-            0%, 100% { transform: translateY(0) translateX(0); }
-            50% { transform: translateY(-20px) translateX(-10px); }
-        }
-
-        @keyframes float-card2 {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(15px); }
-        }
-
-        @keyframes float-card3 {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-25px); }
-        }
-
-        .card-title {
-            font-weight: 700;
-            font-size: 0.9rem;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .card-value {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.8rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        /* ==================== SECTIONS ==================== */
-        section {
-            padding: 7rem 2rem;
-            position: relative;
-            scroll-margin-top: 100px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .section-header {
-            text-align: center;
-            margin-bottom: 4rem;
-        }
-
-        .section-title {
-            font-family: 'Playfair Display', serif;
-            font-size: 3.5rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-            letter-spacing: -1px;
-        }
-
-        .section-subtitle {
-            font-size: 1.15rem;
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto;
-            font-weight: 400;
-        }
-
-        /* ==================== ABOUT SECTION ==================== */
-        .about {
-            background: linear-gradient(135deg, rgba(10, 95, 58, 0.03) 0%, rgba(45, 212, 160, 0.02) 100%);
-        }
-
-        .about-grid {
-            display: grid;
-            grid-template-columns: 1.3fr 1fr;
-            gap: 5rem;
-            align-items: start;
-        }
-
-        .about-content h3 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.8rem;
-            margin: 2.5rem 0 1.5rem;
-            color: var(--primary);
-            font-weight: 700;
-        }
-
-        .about-content p {
-            font-size: 1.05rem;
-            line-height: 1.85;
-            color: var(--text-secondary);
-            margin-bottom: 1.5rem;
-        }
-
-        .expertise-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-        }
-
-        .expertise-item {
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            padding: 2.2rem;
-            border-radius: 15px;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .expertise-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--primary), var(--accent));
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-            transform-origin: left;
-        }
-
-        .expertise-item:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 20px 50px rgba(10, 95, 58, 0.15);
-            border-color: var(--accent);
-        }
-
-        .expertise-item:hover::before {
-            transform: scaleX(1);
-        }
-
-        .expertise-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
-
-        .expertise-title {
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: var(--primary);
-            margin-bottom: 0.7rem;
-        }
-
-        .expertise-description {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            line-height: 1.7;
-        }
-
-        /* ==================== EXPERIENCE SECTION ==================== */
-        .experience {
-            background: white;
-        }
-
-        .timeline {
-            position: relative;
-            padding: 2rem 0;
-        }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 2px;
-            height: 100%;
-            background: linear-gradient(180deg, var(--primary), var(--accent), transparent);
-            top: 0;
-        }
-
-        .timeline-item {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 3rem;
-            margin-bottom: 4rem;
-            position: relative;
-            animation: fadeInUp 0.6s ease forwards;
-            opacity: 0;
-        }
-
-        .timeline-item:nth-child(odd) {
-            animation-delay: 0.1s;
-        }
-
-        .timeline-item:nth-child(even) {
-            animation-delay: 0.2s;
-        }
-
-        .timeline-item:nth-child(3) {
-            animation-delay: 0.3s;
-        }
-
-        .timeline-item:nth-child(4) {
-            animation-delay: 0.4s;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .timeline-dot {
-            position: absolute;
-            left: 50%;
-            top: 0;
-            transform: translateX(-50%);
-            width: 20px;
-            height: 20px;
-            background: white;
-            border: 3px solid var(--primary);
-            border-radius: 50%;
-            z-index: 2;
-            transition: all 0.3s ease;
-        }
-
-        .timeline-item:hover .timeline-dot {
-            width: 28px;
-            height: 28px;
-            border-color: var(--accent);
-            box-shadow: 0 0 20px rgba(10, 95, 58, 0.5);
-        }
-
-        .timeline-content {
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            padding: 2.5rem;
-            border-radius: 15px;
-            transition: all 0.3s ease;
-        }
-
-        .timeline-item:nth-child(even) .timeline-content {
-            grid-column: 1;
-            order: 2;
-        }
-
-        .timeline-item:nth-child(odd) .timeline-content {
-            grid-column: 2;
-            order: 1;
-        }
-
-        .timeline-content:hover {
-            box-shadow: 0 20px 50px rgba(10, 95, 58, 0.15);
-            border-color: var(--accent);
-            transform: translateY(-5px);
-        }
-
-        .timeline-title {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .timeline-company {
-            font-size: 1rem;
-            color: var(--secondary);
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .timeline-date {
-            display: inline-block;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-bottom: 1.5rem;
-        }
-
-        .timeline-description {
-            list-style: none;
-        }
-
-        .timeline-description li {
-            padding: 0.5rem 0 0.5rem 1.8rem;
-            position: relative;
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-            line-height: 1.7;
-        }
-
-        .timeline-description li::before {
-            content: '▸';
-            position: absolute;
-            left: 0;
-            color: var(--accent);
-            font-weight: bold;
-            font-size: 1.2rem;
-        }
-
-        /* ==================== PROJECTS SECTION ==================== */
-        .projects {
-            background: linear-gradient(135deg, rgba(10, 95, 58, 0.03) 0%, rgba(45, 212, 160, 0.02) 100%);
-        }
-
-        .projects-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 3.5rem;
-            margin-bottom: 4rem;
-        }
-
-        .project-card {
-            position: relative;
-            border-radius: 20px;
-            overflow: hidden;
-            animation: fadeInUp 0.6s ease forwards;
-            opacity: 0;
-            cursor: pointer;
-            group: project;
-        }
-
-        .project-card:nth-child(1) { animation-delay: 0.1s; }
-        .project-card:nth-child(2) { animation-delay: 0.2s; }
-
-        .project-image {
-            position: relative;
-            height: 350px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 5rem;
-        }
-
-        .project-image::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="2" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)"/></svg>');
-            opacity: 0.6;
-        }
-
-        .project-icon {
-            position: relative;
-            z-index: 1;
-            animation: bounce 2s ease-in-out infinite;
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
-        }
-
-        .project-content {
-            background: white;
-            padding: 3rem;
-            position: relative;
-        }
-
-        .project-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            padding: 0.5rem 1.2rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            margin-bottom: 1.2rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .project-title {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-        }
-
-        .project-description {
-            color: var(--text-secondary);
-            margin-bottom: 2rem;
-            line-height: 1.8;
-            font-size: 0.95rem;
-        }
-
-        .project-metrics-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            padding-bottom: 2rem;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid var(--border);
-        }
-
-        .metric-item {
-            text-align: center;
-        }
-
-        .metric-value {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.8rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.3rem;
-        }
-
-        .metric-label {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            font-weight: 600;
-        }
-
-        .project-features {
-            list-style: none;
-        }
-
-        .project-features li {
-            padding: 0.6rem 0 0.6rem 1.8rem;
-            position: relative;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            line-height: 1.7;
-        }
-
-        .project-features li::before {
-            content: '✓';
-            position: absolute;
-            left: 0;
-            color: var(--success);
-            font-weight: bold;
-            font-size: 1.2rem;
-        }
-
-        .project-card:hover .project-image {
-            animation: imageZoom 0.3s ease forwards;
-        }
-
-        @keyframes imageZoom {
-            from { transform: scale(1); }
-            to { transform: scale(1.05); }
-        }
-
-        .project-card:hover .project-content {
-            box-shadow: 0 30px 60px rgba(10, 95, 58, 0.2);
-        }
-
-        /* ==================== SKILLS SECTION ==================== */
-        .skills {
-            background: white;
-        }
-
-        .skills-wrapper {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 2rem;
-            margin-top: 3rem;
-        }
-
-        .skill-category {
-            animation: fadeInUp 0.6s ease forwards;
-            opacity: 0;
-        }
-
-        .skill-category:nth-child(1) { animation-delay: 0.1s; }
-        .skill-category:nth-child(2) { animation-delay: 0.2s; }
-        .skill-category:nth-child(3) { animation-delay: 0.3s; }
-        .skill-category:nth-child(4) { animation-delay: 0.4s; }
-
-        .category-title {
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.7rem;
-            font-size: 1rem;
-        }
-
-        .category-icon {
-            font-size: 1.3rem;
-        }
-
-        .skills-list {
-            list-style: none;
-        }
-
-        .skill-item {
-            margin-bottom: 1.5rem;
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            padding: 1.2rem;
-            border-radius: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .skill-item:hover {
-            border-color: var(--accent);
-            box-shadow: 0 10px 30px rgba(10, 95, 58, 0.1);
-            transform: translateY(-3px);
-        }
-
-        .skill-name {
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 0.8rem;
-            font-size: 0.9rem;
-        }
-
-        .skill-bar {
-            height: 6px;
-            background: var(--border);
-            border-radius: 3px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .skill-progress {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary), var(--accent));
-            border-radius: 3px;
-            animation: fillBar 1s ease forwards;
-            width: 0;
-        }
-
-        @keyframes fillBar {
-            to {
-                width: var(--progress, 100%);
-            }
-        }
-
-        /* ==================== EDUCATION SECTION ==================== */
-        .education {
-            background: linear-gradient(135deg, rgba(10, 95, 58, 0.03) 0%, rgba(45, 212, 160, 0.02) 100%);
-        }
-
-        .education-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 2.5rem;
-            margin-top: 3rem;
-        }
-
-        .education-card {
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            padding: 2.5rem;
-            border-radius: 15px;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            position: relative;
-            overflow: hidden;
-            animation: fadeInUp 0.6s ease forwards;
-            opacity: 0;
-        }
-
-        .education-card:nth-child(1) { animation-delay: 0.1s; }
-        .education-card:nth-child(2) { animation-delay: 0.2s; }
-        .education-card:nth-child(3) { animation-delay: 0.3s; }
-
-        .education-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary), var(--accent));
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-            transform-origin: left;
-        }
-
-        .education-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 25px 50px rgba(10, 95, 58, 0.15);
-            border-color: var(--accent);
-        }
-
-        .education-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .education-degree {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .education-school {
-            font-size: 0.95rem;
-            color: var(--secondary);
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .education-year {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin-bottom: 1.2rem;
-            font-weight: 500;
-        }
-
-        .education-details {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            line-height: 1.7;
-        }
-
-        /* ==================== CONTACT SECTION ==================== */
-        .contact {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
-            color: white;
-            position: relative;
-            overflow: hidden;
-            padding: 8rem 2rem;
-        }
-
-        .contact::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)" /></svg>');
-            opacity: 0.5;
-            pointer-events: none;
-        }
-
-        .contact-content {
-            max-width: 800px;
-            margin: 0 auto;
-            text-align: center;
-            position: relative;
-            z-index: 1;
-        }
-
-        .contact .section-title {
-            color: white;
-            font-size: 3.5rem;
-        }
-
-        .contact .section-subtitle {
-            color: rgba(255, 255, 255, 0.95);
-        }
-
-        .contact-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 2rem;
-            margin-top: 3.5rem;
-        }
-
-        .contact-card {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 2.5rem;
-            border-radius: 15px;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .contact-card:hover {
-            background: rgba(255, 255, 255, 0.25);
-            transform: translateY(-8px);
-        }
-
-        .contact-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1.2rem;
-        }
-
-        .contact-card a {
-            color: white;
-            text-decoration: none;
-            font-weight: 700;
-            transition: opacity 0.3s ease;
-        }
-
-        .contact-card a:hover {
-            opacity: 0.85;
-        }
-
-        /* ==================== FOOTER ==================== */
-        footer {
-            background: var(--dark);
-            color: white;
-            text-align: center;
-            padding: 2.5rem;
-            font-size: 0.9rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        footer p {
-            opacity: 0.7;
-        }
-
-        /* ==================== SCROLL TO TOP ==================== */
-        .scroll-btn {
-            position: fixed;
-            bottom: 2.5rem;
-            right: 2.5rem;
-            width: 55px;
-            height: 55px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            color: white;
-            z-index: 999;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 15px 40px rgba(10, 95, 58, 0.3);
-        }
-
-        .scroll-btn:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 25px 50px rgba(10, 95, 58, 0.4);
-        }
-
-        .scroll-btn.visible {
-            display: flex;
-        }
-
-        /* ==================== RESPONSIVE ==================== */
-        @media (max-width: 1024px) {
-            .about-grid,
-            .hero-content,
-            .projects-grid,
-            .timeline {
-                grid-template-columns: 1fr;
-            }
-
-            .timeline::before {
-                left: 0;
-            }
-
-            .timeline-item {
-                grid-template-columns: 1fr;
-            }
-
-            .timeline-content {
-                grid-column: 1 !important;
-                order: auto !important;
-            }
-
-            .skills-wrapper {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .education-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .contact-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .hero-content {
-                gap: 3rem;
-            }
-
-            .hero-text h1 {
-                font-size: 3rem;
-            }
-        }
-
-        @media (max-width: 768px) {
-            section {
-                padding: 4rem 1.5rem;
-            }
-
-            .hero {
-                padding: 5rem 2rem;
-                margin-top: 120px;
-            }
-
-            .hero-text h1 {
-                font-size: 2.2rem;
-            }
-
-            .section-title {
-                font-size: 2.2rem;
-            }
-
-            nav {
-                gap: 1.5rem;
-                font-size: 0.85rem;
-            }
-
-            .header-container {
-                padding: 0 1rem;
-            }
-
-            .expertise-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .skills-wrapper {
-                grid-template-columns: 1fr;
-            }
-
-            .education-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .timeline-dot {
-                display: none;
-            }
-
-            .projects-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .hero-ctas {
-                flex-direction: column;
-            }
-
-            .btn-primary,
-            .btn-secondary {
-                width: 100%;
-                text-align: center;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .hero {
-                padding: 3rem 1rem;
-                margin-top: 100px;
-                min-height: auto;
-            }
-
-            .hero-text h1 {
-                font-size: 1.8rem;
-            }
-
-            .hero-subtitle {
-                font-size: 1rem;
-            }
-
-            .section-title {
-                font-size: 1.8rem;
-            }
-
-            nav {
-                gap: 0.8rem;
-                font-size: 0.7rem;
-            }
-
-            .cta-button {
-                padding: 0.6rem 1.2rem;
-                font-size: 0.85rem;
-            }
-
-            .btn-primary,
-            .btn-secondary {
-                padding: 0.8rem 1.5rem;
-            }
-
-            .about-grid,
-            .hero-content {
-                gap: 1.5rem;
-            }
-
-            .expertise-grid {
-                gap: 1rem;
-            }
-
-            .expertise-item {
-                padding: 1.5rem;
-            }
-
-            .scroll-btn {
-                width: 45px;
-                height: 45px;
-                bottom: 1.5rem;
-                right: 1.5rem;
-                font-size: 1.2rem;
-            }
-
-            .hero-stats {
-                gap: 1rem;
-            }
-
-            .stat-card {
-                padding: 1.5rem;
-            }
-
-            .stat-number {
-                font-size: 1.8rem;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Velmurugan Karuppiah — Wind Energy Expert</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f;
+  --paper: #f5f3ee;
+  --cream: #ede9e0;
+  --accent: #1a6b4a;
+  --accent2: #c8793a;
+  --gold: #b89a4e;
+  --muted: #6b6560;
+  --rule: rgba(10,10,15,.12);
+  --mono: 'DM Mono', monospace;
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--paper); color: var(--ink); font-family: var(--serif); line-height: 1.6; overflow-x: hidden; cursor: none; }
+
+/* CURSOR */
+.cur-d { position: fixed; top: 0; left: 0; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%,-50%); }
+.cur-r { position: fixed; top: 0; left: 0; width: 36px; height: 36px; border: 1.5px solid var(--accent); border-radius: 50%; pointer-events: none; z-index: 9998; transform: translate(-50%,-50%); transition: width .3s, height .3s; opacity: .6; }
+
+/* GRAIN */
+body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E"); pointer-events: none; z-index: 999; }
+
+/* NAV */
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 900; display: flex; align-items: center; justify-content: space-between; padding: 1.4rem 3rem; transition: background .4s, border-color .4s, backdrop-filter .4s; border-bottom: 1px solid transparent; }
+nav.scrolled { background: rgba(245,243,238,.9); backdrop-filter: blur(12px); border-color: var(--rule); }
+.nav-logo { font-family: var(--mono); font-size: .78rem; letter-spacing: .18em; color: var(--accent); text-transform: uppercase; text-decoration: none; }
+.nav-links { display: flex; gap: 2.5rem; list-style: none; }
+.nav-links a { font-family: var(--mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink); text-decoration: none; position: relative; padding-bottom: 2px; }
+.nav-links a::after { content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 1px; background: var(--accent); transition: width .3s; }
+.nav-links a:hover::after { width: 100%; }
+.nav-cta { font-family: var(--mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--paper); background: var(--ink); border: none; padding: .55rem 1.4rem; cursor: none; text-decoration: none; transition: background .25s; }
+.nav-cta:hover { background: var(--accent); }
+
+/* HERO */
+#hero { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; position: relative; overflow: hidden; }
+.hero-left { padding: 10rem 3rem 5rem; display: flex; flex-direction: column; justify-content: center; position: relative; z-index: 2; }
+.hero-tag { font-family: var(--mono); font-size: .68rem; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); display: inline-flex; align-items: center; gap: .6rem; margin-bottom: 2rem; opacity: 0; animation: fadeUp .8s ease .2s forwards; }
+.hero-tag::before { content: ''; display: inline-block; width: 28px; height: 1px; background: var(--accent); }
+h1.hero-name { font-family: var(--serif); font-weight: 300; font-size: clamp(3rem, 5.5vw, 5.2rem); line-height: 1.05; color: var(--ink); margin-bottom: .6rem; opacity: 0; animation: fadeUp .9s ease .35s forwards; }
+h1.hero-name em { font-style: italic; color: var(--accent); }
+.hero-title { font-family: var(--sans); font-weight: 700; font-size: .9rem; letter-spacing: .22em; text-transform: uppercase; color: var(--accent2); margin-bottom: 2rem; opacity: 0; animation: fadeUp .9s ease .5s forwards; }
+.hero-desc { font-size: 1.1rem; color: var(--muted); max-width: 40ch; margin-bottom: 3rem; font-weight: 300; line-height: 1.8; opacity: 0; animation: fadeUp .9s ease .65s forwards; }
+.hero-ctas { display: flex; gap: 1.2rem; flex-wrap: wrap; opacity: 0; animation: fadeUp .9s ease .8s forwards; }
+.btn-primary { font-family: var(--mono); font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--paper); background: var(--ink); padding: .9rem 2.2rem; text-decoration: none; transition: background .25s, transform .2s; }
+.btn-primary:hover { background: var(--accent); transform: translateY(-2px); }
+.btn-outline { font-family: var(--mono); font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); border: 1px solid var(--ink); padding: .9rem 2.2rem; text-decoration: none; transition: all .25s; }
+.btn-outline:hover { background: var(--ink); color: var(--paper); transform: translateY(-2px); }
+
+.hero-right { position: relative; overflow: hidden; background: var(--ink); display: flex; align-items: center; justify-content: center; }
+.ring { position: absolute; border-radius: 50%; border: 1px solid rgba(200,255,230,.07); animation: rpulse 6s ease-in-out infinite; }
+.ring:nth-child(1) { width: 180px; height: 180px; }
+.ring:nth-child(2) { width: 330px; height: 330px; animation-delay: .8s; border-color: rgba(200,255,230,.05); }
+.ring:nth-child(3) { width: 500px; height: 500px; animation-delay: 1.6s; border-color: rgba(200,255,230,.03); }
+.ring:nth-child(4) { width: 700px; height: 700px; animation-delay: 2.4s; border-color: rgba(200,255,230,.018); }
+@keyframes rpulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.04); opacity: .6; } }
+.turbine-svg { position: relative; z-index: 2; animation: floatY 8s ease-in-out infinite; }
+@keyframes floatY { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+.blades { transform-origin: 100px 118px; animation: spin 9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.hero-stats { position: absolute; bottom: 3rem; left: 0; right: 0; display: flex; justify-content: center; gap: 3rem; z-index: 3; opacity: 0; animation: fadeUp 1s ease 1s forwards; }
+.stat-item { text-align: center; }
+.stat-num { display: block; font-family: var(--serif); font-size: 2.6rem; font-weight: 300; color: var(--paper); line-height: 1; }
+.stat-label { display: block; font-family: var(--mono); font-size: .6rem; letter-spacing: .18em; color: rgba(245,243,238,.45); text-transform: uppercase; margin-top: .3rem; }
+.stat-div { width: 1px; background: rgba(245,243,238,.12); }
+
+.scroll-hint { position: absolute; bottom: 2rem; left: 3rem; z-index: 10; display: flex; align-items: center; gap: .8rem; font-family: var(--mono); font-size: .63rem; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); opacity: 0; animation: fadeUp 1s ease 1.2s forwards; }
+.scroll-line { width: 40px; height: 1px; background: var(--muted); overflow: hidden; position: relative; }
+.scroll-line::after { content: ''; position: absolute; inset: 0; background: var(--accent); animation: slide 2s ease-in-out infinite; }
+@keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+/* SECTIONS */
+section { position: relative; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 3rem; }
+.eyebrow { font-family: var(--mono); font-size: .66rem; letter-spacing: .22em; text-transform: uppercase; color: var(--accent); display: inline-flex; align-items: center; gap: .7rem; margin-bottom: 1rem; }
+.eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: var(--accent); }
+.eyebrow.lt { color: rgba(200,255,230,.55); }
+.eyebrow.lt::before { background: rgba(200,255,230,.55); }
+.stitle { font-family: var(--serif); font-weight: 300; font-size: clamp(2.2rem, 4.5vw, 3.8rem); line-height: 1.1; color: var(--ink); }
+.stitle em { font-style: italic; color: var(--accent); }
+.stitle.lt { color: var(--paper); }
+.stitle.lt em { color: #7ec8a0; }
+
+/* REVEAL */
+.rv { opacity: 0; transform: translateY(28px); transition: opacity .75s ease, transform .75s ease; }
+.rv.in { opacity: 1; transform: translateY(0); }
+.rv.d1 { transition-delay: .1s; } .rv.d2 { transition-delay: .2s; } .rv.d3 { transition-delay: .3s; } .rv.d4 { transition-delay: .4s; }
+
+/* ABOUT */
+#about { padding: 9rem 0; background: var(--ink); color: var(--paper); overflow: hidden; position: relative; }
+#about::before { content: 'WRA'; position: absolute; font-family: var(--serif); font-size: 22vw; font-weight: 300; color: rgba(255,255,255,.022); right: -1vw; top: 50%; transform: translateY(-50%); pointer-events: none; line-height: 1; }
+.about-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 7rem; align-items: start; }
+.about-intro { margin-top: 2.5rem; font-size: 1.1rem; font-weight: 300; line-height: 1.85; color: rgba(245,243,238,.65); }
+.about-intro strong { color: #7ec8a0; font-weight: 400; }
+.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: rgba(255,255,255,.07); margin-top: 2.5rem; border: 1px solid rgba(255,255,255,.07); }
+.metric { padding: 1.8rem; background: var(--ink); transition: background .3s; }
+.metric:hover { background: rgba(26,107,74,.15); }
+.metric-n { display: block; font-family: var(--serif); font-size: 2.8rem; font-weight: 300; color: #7ec8a0; line-height: 1; }
+.metric-l { display: block; font-family: var(--mono); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; color: rgba(245,243,238,.38); margin-top: .4rem; }
+.exp-cards { padding-top: 2rem; }
+.ecard { border: 1px solid rgba(255,255,255,.09); padding: 1.8rem; margin-bottom: 1px; background: rgba(255,255,255,.02); transition: background .3s, border-color .3s; display: flex; gap: 1.5rem; align-items: flex-start; }
+.ecard:hover { background: rgba(26,107,74,.1); border-color: rgba(26,107,74,.28); }
+.ecard-icon { font-size: 1.4rem; flex-shrink: 0; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.09); border-radius: 3px; }
+.ecard h3 { font-family: var(--sans); font-size: .82rem; font-weight: 600; letter-spacing: .06em; color: var(--paper); margin-bottom: .35rem; }
+.ecard p { font-size: .88rem; font-weight: 300; color: rgba(245,243,238,.5); line-height: 1.65; }
+
+/* EXPERIENCE */
+#experience { padding: 9rem 0; }
+.exp-intro { display: grid; grid-template-columns: 1fr 2fr; gap: 5rem; margin-bottom: 5rem; align-items: end; }
+.exp-summary { font-size: 1.05rem; font-weight: 300; line-height: 1.8; color: var(--muted); }
+.tl { position: relative; }
+.tl::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 1px; background: var(--rule); }
+.tli { display: grid; grid-template-columns: 210px 1fr; gap: 3rem; padding: 3rem 0; border-bottom: 1px solid var(--rule); position: relative; }
+.tli::before { content: ''; position: absolute; left: -4px; top: 3.5rem; width: 8px; height: 8px; border-radius: 50%; background: var(--cream); border: 2px solid var(--rule); transition: background .3s, border-color .3s; }
+.tli:hover::before { background: var(--accent); border-color: var(--accent); }
+.tli-meta { padding-top: .1rem; }
+.tli-period { font-family: var(--mono); font-size: .65rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: .5rem; display: block; }
+.tli-company { font-family: var(--sans); font-weight: 700; font-size: .88rem; letter-spacing: .07em; color: var(--ink); margin-bottom: .25rem; }
+.tli-loc { font-family: var(--mono); font-size: .62rem; color: var(--muted); letter-spacing: .1em; }
+.tli-content h3 { font-family: var(--serif); font-size: 1.42rem; font-weight: 400; color: var(--ink); margin-bottom: .7rem; line-height: 1.2; }
+.tli-content p { font-size: .92rem; line-height: 1.8; color: var(--muted); font-weight: 300; margin-bottom: .8rem; }
+.tli-achv { list-style: none; margin-top: .8rem; }
+.tli-achv li { font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; color: var(--accent); padding: .35rem 0; border-top: 1px solid var(--rule); display: flex; gap: .6rem; align-items: flex-start; }
+.tli-achv li::before { content: '→'; flex-shrink: 0; }
+.tl-tag { display: inline-block; font-family: var(--mono); font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; background: var(--cream); color: var(--muted); padding: .22rem .65rem; margin: .2rem .15rem .2rem 0; border: 1px solid var(--rule); }
+
+/* PROJECTS */
+#projects { padding: 9rem 0; background: var(--cream); }
+.proj-hdr { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; margin-bottom: 5rem; align-items: end; }
+.proj-desc { font-size: 1.02rem; font-weight: 300; line-height: 1.8; color: var(--muted); }
+.pgrid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1px; background: var(--rule); }
+.pcard { background: var(--paper); padding: 3.2rem; position: relative; overflow: hidden; transition: background .3s; }
+.pcard:hover { background: var(--ink); }
+.pcard:hover .pnum, .pcard:hover .ptitle, .pcard:hover .pdesc { color: var(--paper); }
+.pcard:hover .pstat-n { color: #7ec8a0; }
+.pcard:hover .pstat-l, .pcard:hover .parrow { color: rgba(245,243,238,.45); }
+.pcard:hover .ptag { background: rgba(255,255,255,.06); color: rgba(255,255,255,.42); border-color: rgba(255,255,255,.1); }
+.pcard--w { grid-column: 1 / -1; }
+.pnum { font-family: var(--mono); font-size: .62rem; letter-spacing: .18em; color: var(--muted); text-transform: uppercase; margin-bottom: 1.4rem; display: block; transition: color .3s; }
+.picon { font-size: 2.2rem; margin-bottom: 1.4rem; display: block; }
+.ptitle { font-family: var(--serif); font-size: 1.55rem; font-weight: 400; line-height: 1.2; color: var(--ink); margin-bottom: .9rem; transition: color .3s; }
+.pdesc { font-size: .9rem; line-height: 1.78; color: var(--muted); font-weight: 300; margin-bottom: 1.8rem; transition: color .3s; }
+.pstats { display: flex; gap: 2.5rem; margin-bottom: 1.8rem; }
+.pstat-n { display: block; font-family: var(--serif); font-size: 2rem; font-weight: 300; color: var(--accent); line-height: 1; transition: color .3s; }
+.pstat-l { display: block; font-family: var(--mono); font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: .3rem; transition: color .3s; }
+.ptags { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: 1.8rem; }
+.ptag { font-family: var(--mono); font-size: .56rem; letter-spacing: .1em; text-transform: uppercase; border: 1px solid var(--rule); padding: .22rem .6rem; color: var(--muted); transition: all .3s; }
+.parrow { font-family: var(--mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--rule); padding-bottom: .2rem; transition: color .3s; }
+
+/* SKILLS */
+#skills { padding: 9rem 0; }
+.sgrid { display: grid; grid-template-columns: repeat(3,1fr); gap: 0; border: 1px solid var(--rule); margin-top: 4rem; }
+.sgroup { padding: 2.8rem; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.sgroup:nth-child(3n) { border-right: none; }
+.sgroup:nth-last-child(-n+3) { border-bottom: none; }
+.sg-icon { font-size: 1.7rem; margin-bottom: 1.1rem; display: block; }
+.sgroup h3 { font-family: var(--sans); font-size: .78rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); margin-bottom: 1.4rem; padding-bottom: .7rem; border-bottom: 1px solid var(--rule); }
+.slist { list-style: none; }
+.slist li { font-family: var(--mono); font-size: .73rem; letter-spacing: .05em; color: var(--muted); padding: .38rem 0; display: flex; gap: .6rem; align-items: center; }
+.slist li::before { content: ''; display: block; width: 4px; height: 4px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
+.cert-strip { margin-top: 5rem; padding: 2.8rem; background: var(--ink); display: grid; grid-template-columns: auto 1fr; gap: 3rem; align-items: center; }
+.cert-label-v { font-family: var(--mono); font-size: .62rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(245,243,238,.35); writing-mode: vertical-rl; transform: rotate(180deg); }
+.cert-items { display: flex; flex-wrap: wrap; gap: 1rem; }
+.cbadge { font-family: var(--mono); font-size: .68rem; letter-spacing: .09em; border: 1px solid rgba(255,255,255,.1); color: rgba(245,243,238,.65); padding: .6rem 1.1rem; transition: background .3s, border-color .3s; }
+.cbadge:hover { background: rgba(26,107,74,.2); border-color: rgba(26,107,74,.38); color: #7ec8a0; }
+.awards-row { display: flex; gap: 1px; background: var(--rule); margin-top: 1px; }
+.acard { flex: 1; background: var(--paper); padding: 2.3rem; display: flex; flex-direction: column; gap: .55rem; transition: background .3s; }
+.acard:hover { background: rgba(26,107,74,.05); }
+.ayear { font-family: var(--mono); font-size: .62rem; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); }
+.atitle { font-family: var(--serif); font-size: 1.12rem; font-weight: 400; color: var(--ink); line-height: 1.3; }
+.aorg { font-family: var(--mono); font-size: .65rem; color: var(--muted); letter-spacing: .07em; }
+
+/* EDUCATION */
+#education { padding: 9rem 0; background: var(--ink); color: var(--paper); }
+.edu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: rgba(255,255,255,.05); margin-top: 4rem; }
+.ecard2 { background: var(--ink); padding: 3rem; transition: background .3s; }
+.ecard2:hover { background: rgba(26,107,74,.1); }
+.edeg { font-family: var(--mono); font-size: .62rem; letter-spacing: .18em; text-transform: uppercase; color: rgba(200,255,230,.45); margin-bottom: .7rem; display: block; }
+.ename { font-family: var(--serif); font-size: 1.5rem; font-weight: 300; color: var(--paper); margin-bottom: .35rem; }
+.euni { font-family: var(--sans); font-size: .78rem; font-weight: 600; letter-spacing: .1em; color: #7ec8a0; margin-bottom: .55rem; }
+.eperiod { font-family: var(--mono); font-size: .62rem; color: rgba(245,243,238,.3); letter-spacing: .1em; margin-bottom: .9rem; display: block; }
+.edetail { font-size: .88rem; line-height: 1.75; color: rgba(245,243,238,.5); font-weight: 300; }
+
+/* CONTACT */
+#contact { padding: 9rem 0; }
+.contact-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 7rem; align-items: start; }
+.contact-tagline { font-family: var(--serif); font-size: clamp(2rem, 3.8vw, 3.1rem); font-weight: 300; line-height: 1.2; margin-bottom: 1.8rem; color: var(--ink); }
+.contact-tagline em { font-style: italic; color: var(--accent); }
+.contact-intro { font-size: .98rem; font-weight: 300; line-height: 1.8; color: var(--muted); max-width: 40ch; margin-bottom: 2.8rem; }
+.clinks { display: flex; flex-direction: column; }
+.clink { display: flex; align-items: center; justify-content: space-between; padding: 1.2rem 0; border-bottom: 1px solid var(--rule); text-decoration: none; color: var(--ink); transition: padding-left .25s; }
+.clink:hover { padding-left: .7rem; }
+.clink:hover .cl-arrow { color: var(--accent); }
+.cl-l { display: flex; gap: .9rem; align-items: center; }
+.cl-ico { font-size: 1.05rem; }
+.cl-label { font-family: var(--mono); font-size: .65rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); display: block; }
+.cl-val { font-family: var(--serif); font-size: .98rem; color: var(--ink); display: block; margin-top: .1rem; }
+.cl-arrow { font-size: 1rem; color: var(--rule); transition: color .25s; }
+.form-wrap h3 { font-family: var(--sans); font-size: .78rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--ink); margin-bottom: 1.8rem; padding-bottom: .7rem; border-bottom: 1px solid var(--rule); }
+.fgrp { margin-bottom: 1.4rem; }
+.fgrp label { display: block; font-family: var(--mono); font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: .45rem; }
+.fgrp input, .fgrp textarea, .fgrp select { width: 100%; background: var(--cream); border: 1px solid var(--rule); border-radius: 0; font-family: var(--serif); font-size: .98rem; color: var(--ink); padding: .82rem 1.05rem; outline: none; transition: border-color .25s, background .25s; appearance: none; }
+.fgrp input:focus, .fgrp textarea:focus, .fgrp select:focus { border-color: var(--accent); background: var(--paper); }
+.fgrp textarea { resize: vertical; min-height: 110px; }
+.fsub { width: 100%; font-family: var(--mono); font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; background: var(--ink); color: var(--paper); border: none; padding: 1.05rem; cursor: none; transition: background .25s; }
+.fsub:hover { background: var(--accent); }
+
+/* FOOTER */
+footer { background: var(--ink); color: var(--paper); padding: 2.3rem 3rem; display: flex; align-items: center; justify-content: space-between; }
+.foot-logo { font-family: var(--mono); font-size: .72rem; letter-spacing: .2em; color: rgba(245,243,238,.45); text-transform: uppercase; }
+.foot-copy { font-family: var(--mono); font-size: .62rem; letter-spacing: .1em; color: rgba(245,243,238,.25); }
+.foot-top { font-family: var(--mono); font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: rgba(245,243,238,.45); text-decoration: none; transition: color .25s; }
+.foot-top:hover { color: #7ec8a0; }
+
+/* ANIMS */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  nav { padding: 1.2rem 1.5rem; }
+  .nav-links { display: none; }
+  #hero { grid-template-columns: 1fr; }
+  .hero-right { height: 55vw; }
+  .hero-left { padding: 7rem 1.5rem 3.5rem; }
+  .about-grid, .exp-intro, .proj-hdr, .contact-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+  .pgrid { grid-template-columns: 1fr; }
+  .pcard--w { grid-column: auto; }
+  .sgrid { grid-template-columns: 1fr 1fr; }
+  .edu-grid { grid-template-columns: 1fr; }
+  .tli { grid-template-columns: 1fr; gap: .7rem; }
+  .container { padding: 0 1.5rem; }
+  footer { flex-direction: column; gap: 1rem; text-align: center; }
+  .awards-row { flex-direction: column; }
+  .cert-strip { grid-template-columns: 1fr; }
+  .cert-label-v { writing-mode: horizontal-tb; transform: none; }
+}
+</style>
 </head>
 <body>
-    <!-- Background Elements -->
-    <div class="gradient-bg"></div>
-    <div class="animated-orbs">
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
-        <div class="orb orb-3"></div>
+
+<div class="cur-d" id="cd"></div>
+<div class="cur-r" id="cr"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <a class="nav-logo" href="#">VK</a>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#experience">Experience</a></li>
+    <li><a href="#projects">Innovations</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <a class="nav-cta" href="mailto:k.velmurugan77@gmail.com">Hire Me</a>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-left">
+    <div class="hero-tag">Wind Energy Expert &middot; 14+ Years</div>
+    <h1 class="hero-name">Velmurugan<br><em>Karuppiah</em></h1>
+    <p class="hero-title">WTG Procurement &amp; Wind Resource Specialist</p>
+    <p class="hero-desc">Driving measurable impact across five continents &mdash; from India&rsquo;s first nacelle-mounted LiDAR to 1+ GW of procurement across Portugal and Japan.</p>
+    <div class="hero-ctas">
+      <a class="btn-primary" href="#experience">View Career</a>
+      <a class="btn-outline" href="#contact">Get in Touch</a>
     </div>
+  </div>
+  <div class="hero-right">
+    <div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div>
+    <svg class="turbine-svg" viewBox="0 0 200 240" width="260" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M96 235 L104 235 L109 125 L91 125 Z" fill="rgba(255,255,255,0.14)"/>
+      <rect x="84" y="117" width="32" height="13" rx="2" fill="rgba(255,255,255,0.22)"/>
+      <g class="blades">
+        <circle cx="100" cy="118" r="5" fill="rgba(255,255,255,0.38)"/>
+        <path d="M100 118 C98 103 96 82 100 58 C104 82 102 103 100 118Z" fill="rgba(200,255,230,0.32)"/>
+        <path d="M100 118 C87 123 66 132 44 123 C66 111 87 111 100 118Z" fill="rgba(200,255,230,0.22)"/>
+        <path d="M100 118 C113 123 134 132 156 123 C134 111 113 111 100 118Z" fill="rgba(200,255,230,0.18)"/>
+      </g>
+    </svg>
+    <div class="hero-stats">
+      <div class="stat-item"><span class="stat-num">1+</span><span class="stat-label">GW Managed</span></div>
+      <div class="stat-div"></div>
+      <div class="stat-item"><span class="stat-num">30+</span><span class="stat-label">Countries</span></div>
+      <div class="stat-div"></div>
+      <div class="stat-item"><span class="stat-num">14+</span><span class="stat-label">Years</span></div>
+    </div>
+  </div>
+  <div class="scroll-hint"><span class="scroll-line"></span> Scroll</div>
+</section>
 
-    <!-- Header -->
-    <header>
-        <div class="header-container">
-            <a href="#" class="logo">VK</a>
-            <nav>
-                <a href="#about">About</a>
-                <a href="#experience">Experience</a>
-                <a href="#projects">Projects</a>
-                <a href="#skills">Skills</a>
-                <a href="#contact">Contact</a>
-            </nav>
-            <button class="cta-button" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Get In Touch</button>
+<!-- ABOUT -->
+<section id="about">
+  <div class="container">
+    <div class="about-grid">
+      <div class="rv">
+        <div class="eyebrow lt">About Me</div>
+        <h2 class="stitle lt">Wind.<br><em>Measured.</em><br>Delivered.</h2>
+        <p class="about-intro">Wind energy professional with <strong>14+ years</strong> across the full project lifecycle &mdash; resource assessment, WTG procurement, and operational performance optimisation.<br><br>Currently with <strong>Blue Power Partners</strong>, orchestrating multi-continent procurement programmes across Europe and Asia, with <strong>1 GW+ of active portfolios</strong> under management. Previously with Envision Energy, Vestas, SunEdison, MeteoPole, and SgurrEnergy.</p>
+        <div class="metrics">
+          <div class="metric rv d1"><span class="metric-n">1+ GW</span><span class="metric-l">Wind Projects Managed</span></div>
+          <div class="metric rv d2"><span class="metric-n">800 MW</span><span class="metric-l">Portugal Portfolio</span></div>
+          <div class="metric rv d3"><span class="metric-n">200 MW</span><span class="metric-l">Japan Portfolio</span></div>
+          <div class="metric rv d4"><span class="metric-n">500 MW</span><span class="metric-l">Pipeline @ Envision</span></div>
         </div>
-    </header>
+      </div>
+      <div class="exp-cards rv d2">
+        <div class="ecard"><div class="ecard-icon">📋</div><div><h3>WTG Procurement &amp; TSA</h3><p>Full procurement cycle &mdash; RFI/ITT preparation, binding offer review, TSA negotiation and exhibit preparation across multi-GW portfolios.</p></div></div>
+        <div class="ecard"><div class="ecard-icon">🌬️</div><div><h3>Wind Resource Assessment</h3><p>Advanced WRA, measurement campaign design, WAsP &amp; WindPro modelling, Energy Yield Assessment, losses and uncertainty estimation.</p></div></div>
+        <div class="ecard"><div class="ecard-icon">📡</div><div><h3>LiDAR &amp; Power Curve Testing</h3><p>Nacelle-mounted &amp; ground-based LiDAR deployment, yaw error correction, IEC 61400-12-1 power curve testing, SCADA data analysis.</p></div></div>
+        <div class="ecard"><div class="ecard-icon">⚡</div><div><h3>Asset Optimisation</h3><p>Wind farm performance reconciliation, aerodynamic upgrades, power uprate, extended cut-out, life extension across 2+ GW of operational assets.</p></div></div>
+        <div class="ecard"><div class="ecard-icon">🌏</div><div><h3>International Reach</h3><p>Active in 30+ countries. Projects across India, Southeast Asia, Europe and Japan. Multi-OEM and lender engagement experience.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-content">
-            <div class="hero-text">
-                <h1>Velmurugan Karuppiah</h1>
-                <p class="hero-subtitle">Wind Energy Visionary & Innovation Leader</p>
-                <p class="hero-description">Pioneering renewable energy transformation with 14+ years of expertise in advanced LiDAR technology, wind resource optimization, and sustainable power solutions. Driving measurable impact across five continents.</p>
-                
-                <div class="hero-ctas">
-                    <button class="btn-primary" onclick="document.getElementById('projects').scrollIntoView({behavior:'smooth'})">Explore Projects</button>
-                    <button class="btn-secondary" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">📞 Let's Connect</button>
-                </div>
-            </div>
+<!-- EXPERIENCE -->
+<section id="experience">
+  <div class="container">
+    <div class="exp-intro">
+      <div class="rv"><div class="eyebrow">Career</div><h2 class="stitle">Professional<br><em>Journey</em></h2></div>
+      <p class="exp-summary rv d2">14 years across six organisations &mdash; from site engineer to development consultant &mdash; building progressively deeper expertise in wind resource assessment, procurement, and asset performance.</p>
+    </div>
+    <div class="tl">
 
-            <div class="hero-visual">
-                <div class="card-float card-1">
-                    <div class="card-title">Portfolio</div>
-                    <div class="card-value">1+ GW</div>
-                </div>
-                <div class="card-float card-2">
-                    <div class="card-title">Experience</div>
-                    <div class="card-value">14+</div>
-                </div>
-                <div class="card-float card-3">
-                    <div class="card-title">Global Reach</div>
-                    <div class="card-value">5+</div>
-                </div>
-            </div>
+      <div class="tli rv">
+        <div class="tli-meta"><span class="tli-period">May 2020 &mdash; Present</span><div class="tli-company">Blue Power Partners</div><div class="tli-loc">Europe &middot; Asia</div></div>
+        <div class="tli-content">
+          <h3>Development Consultant</h3>
+          <p>Leading WTG procurement for a 1+ GW multi-continent portfolio. Full procurement cycle management &mdash; RFI and ITT preparation, binding proposal review, TSA and exhibit preparation and negotiation. WRA support covering site hunt, measurement campaign design, wind flow modelling, losses and uncertainty estimation. Independent EYA coordination and reconciliation. Power curve verification site assessments.</p>
+          <ul class="tli-achv"><li>Managing WTG procurement &mdash; 800 MW Portugal + 200 MW Japan</li><li>Technical due diligence on 800 MW early-stage development portfolio in Portugal</li><li>Coordination across international consultants, OEMs and lenders</li></ul>
+          <div style="margin-top:.8rem"><span class="tl-tag">TSA Procurement</span><span class="tl-tag">WTG Procurement</span><span class="tl-tag">EYA</span><span class="tl-tag">Due Diligence</span><span class="tl-tag">PCV Assessment</span></div>
         </div>
-    </section>
+      </div>
 
-    <!-- About Section -->
-    <section class="about" id="about">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">About Me</h2>
-                <p class="section-subtitle">Transforming the wind energy landscape through innovation, technical excellence, and visionary leadership</p>
-            </div>
-
-            <div class="about-grid">
-                <div class="about-content">
-                    <h3>Professional Excellence in Motion</h3>
-                    <p>I'm a wind energy pioneer with an unwavering commitment to renewable energy innovation. My career is defined by a relentless pursuit of technical excellence, delivering breakthrough solutions, and driving measurable business impact across international markets.</p>
-
-                    <p>Currently leading transformative development initiatives at <strong>Blue Power Partners</strong>, orchestrating multi-GW turbine procurement across Europe and Asia. My expertise spans the entire wind energy ecosystem—from early-stage site assessment to operational optimization and next-generation performance enhancement.</p>
-
-                    <h3>Proven Track Record</h3>
-                    <p>Assessed 30+ countries in wind market excellence. Successfully managed 1+ GW of wind projects across development and operational phases. Multiple awards for outstanding contribution and innovation leadership in the renewable energy sector.</p>
-                </div>
-
-                <div class="expertise-grid">
-                    <div class="expertise-item">
-                        <div class="expertise-icon">🌬️</div>
-                        <div class="expertise-title">Wind Assessment</div>
-                        <div class="expertise-description">Advanced WRA, measurement campaigns, WAsP & WindPro modeling expertise</div>
-                    </div>
-                    <div class="expertise-item">
-                        <div class="expertise-icon">💼</div>
-                        <div class="expertise-title">Project Leadership</div>
-                        <div class="expertise-description">TSA/WTG procurement, due diligence, cross-functional coordination</div>
-                    </div>
-                    <div class="expertise-item">
-                        <div class="expertise-icon">🔬</div>
-                        <div class="expertise-title">Tech Innovation</div>
-                        <div class="expertise-description">LiDAR optimization, power curve testing, SCADA analysis</div>
-                    </div>
-                    <div class="expertise-item">
-                        <div class="expertise-icon">🏆</div>
-                        <div class="expertise-title">Awards & Recognition</div>
-                        <div class="expertise-description">Best Employee 2013, 2014 | Outperformer 2018</div>
-                    </div>
-                </div>
-            </div>
+      <div class="tli rv">
+        <div class="tli-meta"><span class="tli-period">Jan 2018 &mdash; May 2020</span><div class="tli-company">Envision Energy</div><div class="tli-loc">Asia &mdash; 12+ Countries</div></div>
+        <div class="tli-content">
+          <h3>Wind Resource Specialist</h3>
+          <p>Led comprehensive WRA and Energy Yield Assessment across Asia, establishing technical standards for the organisation. Designed and managed measurement campaigns across 12+ locations. Supported TSA contract signing and customer/third-party engagement. Designed power curve test plans and implemented wind farm performance monitoring programmes.</p>
+          <ul class="tli-achv"><li>Built renewable energy pipeline of 500 MW across Asia</li><li>Outperformer of the Year 2018 &mdash; Solution Engineering team</li></ul>
+          <div style="margin-top:.8rem"><span class="tl-tag">WRA</span><span class="tl-tag">EYA</span><span class="tl-tag">Measurement Campaigns</span><span class="tl-tag">Load Assessment</span><span class="tl-tag">Power Curve Testing</span></div>
         </div>
-    </section>
+      </div>
 
-    <!-- Experience Section -->
-    <section class="experience" id="experience">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Professional Journey</h2>
-                <p class="section-subtitle">14+ years of excellence building the future of renewable energy</p>
-            </div>
-
-            <div class="timeline">
-                <div class="timeline-item">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-content">
-                        <div class="timeline-title">Development Consultant</div>
-                        <div class="timeline-company">Blue Power Partners</div>
-                        <span class="timeline-date">May 2020 - Present</span>
-                        <ul class="timeline-description">
-                            <li>Leading strategic development initiatives for 1+ GW multi-continent portfolio</li>
-                            <li>Managing 800 MW Portugal + 200 MW Japan WTG procurement</li>
-                            <li>Led due diligence on 800 MW early-stage portfolio companies</li>
-                            <li>Technical coordination with international consultants & OEMs</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="timeline-item">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-content">
-                        <div class="timeline-title">Wind Resource Specialist</div>
-                        <div class="timeline-company">Envision Energy</div>
-                        <span class="timeline-date">Jan 2018 - May 2020</span>
-                        <ul class="timeline-description">
-                            <li>Led comprehensive WRA and EYA across Asia establishing technical standards</li>
-                            <li>Pipeline establishment for 500 MW renewable capacity</li>
-                            <li>Outperformer of the Year 2018 - Solution Engineering team</li>
-                            <li>Measurement campaign design & management across 12+ Asian locations</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="timeline-item">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-content">
-                        <div class="timeline-title">After-Sales Wind Engineer</div>
-                        <div class="timeline-company">Vestas</div>
-                        <span class="timeline-date">Aug 2016 - Jan 2018</span>
-                        <ul class="timeline-description">
-                            <li>Optimized wind farm performance for 2+ GW operational portfolio</li>
-                            <li>Refurbishment project management (400+ MW)</li>
-                            <li>Advanced SCADA data analysis & performance monitoring</li>
-                            <li>Life extension assessment across multiple projects</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="timeline-item">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-content">
-                        <div class="timeline-title">Project Manager</div>
-                        <div class="timeline-company">SunEdison</div>
-                        <span class="timeline-date">Aug 2015 - Jul 2016</span>
-                        <ul class="timeline-description">
-                            <li>End-to-end project development from site screening to feasibility assessment</li>
-                            <li>Established 1 GW development portfolio in emerging markets</li>
-                            <li>Pre-feasibility studies & site prospection management</li>
-                            <li>Met mast installation & wind data analysis</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+      <div class="tli rv">
+        <div class="tli-meta"><span class="tli-period">Aug 2016 &mdash; Jan 2018</span><div class="tli-company">Vestas</div><div class="tli-loc">India</div></div>
+        <div class="tli-content">
+          <h3>After-Sales Wind &amp; Site Engineer</h3>
+          <p>Reconciled wind farm performance against pre-sales estimates and identified root causes of performance deterrents. Implemented state-of-the-art after-market boosters including aerodynamic upgrades, power uprate, and extended cut-out. Conducted WRA, SCADA data analysis, alarm analysis, and wind sector management revision.</p>
+          <ul class="tli-achv"><li>Asset optimisation for 2+ GW operational wind farm portfolio</li><li>Refurbishment project management for 400+ MW</li><li>Life extension assessments for five major projects</li></ul>
+          <div style="margin-top:.8rem"><span class="tl-tag">Performance Optimisation</span><span class="tl-tag">SCADA Analysis</span><span class="tl-tag">Life Extension</span><span class="tl-tag">Aerodynamic Upgrades</span></div>
         </div>
-    </section>
+      </div>
 
-    <!-- Projects Section -->
-    <section class="projects" id="projects">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Innovation Showcase</h2>
-                <p class="section-subtitle">Pioneering LiDAR technology and performance optimization across key markets</p>
-            </div>
-
-            <div class="projects-grid">
-                <div class="project-card">
-                    <div class="project-image">
-                        <div class="project-icon">📡</div>
-                    </div>
-                    <div class="project-content">
-                        <span class="project-badge">LiDAR Innovation</span>
-                        <h3 class="project-title">India's First Nacelle-Mounted LiDAR</h3>
-                        <p class="project-description">Led India's pioneering nacelle-mounted LiDAR implementation, enabling real-time yaw error correction and unprecedented performance optimization through cutting-edge measurement technology.</p>
-                        
-                        <div class="project-metrics-grid">
-                            <div class="metric-item">
-                                <div class="metric-value">2.4%</div>
-                                <div class="metric-label">AEP Gain</div>
-                            </div>
-                            <div class="metric-item">
-                                <div class="metric-value">€5.2M+</div>
-                                <div class="metric-label">Annual Impact</div>
-                            </div>
-                        </div>
-
-                        <ul class="project-features">
-                            <li>Surajbari Wind Farm: 34.5 MW (20 Vestas turbines)</li>
-                            <li>440m wind speed measurement capability</li>
-                            <li>-7.55° yaw error correction achieved</li>
-                            <li>First-mover advantage in Indian market</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="project-card">
-                    <div class="project-image">
-                        <div class="project-icon">🌍</div>
-                    </div>
-                    <div class="project-content">
-                        <span class="project-badge">Regional Pioneer</span>
-                        <h3 class="project-title">Thailand Ground-Based LiDAR Campaign</h3>
-                        <p class="project-description">Pioneered advanced ground-based LiDAR deployment in complex terrain, establishing new regional benchmarks for measurement accuracy and project bankability across Southeast Asia.</p>
-                        
-                        <div class="project-metrics-grid">
-                            <div class="metric-item">
-                                <div class="metric-value">2.4%</div>
-                                <div class="metric-label">Measurement Accuracy</div>
-                            </div>
-                            <div class="metric-item">
-                                <div class="metric-value">64 MW</div>
-                                <div class="metric-label">Project Scale</div>
-                            </div>
-                        </div>
-
-                        <ul class="project-features">
-                            <li>Complex terrain with 120m hub height measurement</li>
-                            <li>4 strategic LiDAR deployment locations</li>
-                            <li>AEP uncertainty reduced from 14.87% to 13.19%</li>
-                            <li>CFD-optimized measurement strategy</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+      <div class="tli rv">
+        <div class="tli-meta"><span class="tli-period">Aug 2015 &mdash; Jul 2016</span><div class="tli-company">SunEdison</div><div class="tli-loc">India</div></div>
+        <div class="tli-content">
+          <h3>Project Manager</h3>
+          <p>End-to-end project development from site screening through pre-feasibility study. Led met mast installation, wind data analysis, turbine site suitability assessment, and Energy Yield Estimate preparation. Conducted power curve testing per IEC 61400-12-1.</p>
+          <ul class="tli-achv"><li>Established development portfolio of 1 GW in emerging markets</li></ul>
+          <div style="margin-top:.8rem"><span class="tl-tag">Project Development</span><span class="tl-tag">Site Screening</span><span class="tl-tag">Met Mast</span><span class="tl-tag">IEC 61400-12-1</span></div>
         </div>
-    </section>
+      </div>
 
-    <!-- Skills Section -->
-    <section class="skills" id="skills">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Technical Expertise</h2>
-                <p class="section-subtitle">Comprehensive capabilities across the entire wind energy value chain</p>
-            </div>
-
-            <div class="skills-wrapper">
-                <div class="skill-category">
-                    <h3 class="category-title"><span class="category-icon">🌬️</span> Wind Energy</h3>
-                    <ul class="skills-list">
-                        <li class="skill-item">
-                            <div class="skill-name">Resource Assessment</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 95%;"></div></div>
-                        </li>
-                        <li class="skill-item">
-                            <div class="skill-name">Yield Analysis</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 95%;"></div></div>
-                        </li>
-                        <li class="skill-item">
-                            <div class="skill-name">Power Curve Testing</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 90%;"></div></div>
-                        </li>
-                        <li class="skill-item">
-                            <div class="skill-name">SCADA Analysis</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 92%;"></div></div>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="skill-category">
-                    <h3 class="category-title"><span class="category-icon">💼</span> Project Delivery</h3>
-                    <ul class="skills-list">
-                        <li class="skill-item">
-                            <div class="skill-name">TSA Procurement</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 95%;"></div></div>
-                        </li>
-                        <li class="skill-item">
-                            <div class="skill-name">WTG Procurement</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 92%;"></div></div>
-                        </li>
-                        <li class="skill-item">
-                            <div class="skill-name">Due Diligence</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 90%;"></div></div>
-                        </li>
-                        <li class="skill-item">
-                            <div class="skill-name">Risk Management</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 88%;"></div></div>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="skill-category">
-                    <h3 class="category-title"><span class="category-icon">⚙️</span> Software & Tools</h3>
-                    <ul class="skills-list">
-                        <li class="skill-item">
-                            <div class="skill-name">WAsP & WindPro</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 95%;"></div></div>
-                        </li>
-                        <li class="skill-item">
-                            <div class="skill-name">Windographer</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 92%;"></div></div>
-                        </li>
-                        <li class="skill-item">
-                            <div class="skill-name">ZephyTOOLS CFD</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 85%;"></div></div>
-                        </li>
-                        <li class="skill-item">
-                            <div class="skill-name">Python & MATLAB</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 80%;"></div></div>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="skill-category">
-                    <h3 class="category-title"><span class="category-icon">🏅</span> Certifications</h3>
-                    <ul class="skills-list">
-                        <li class="skill-item">
-                            <div class="skill-name">DNV-GL Certified</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 100%;"></div></div>
-                        </li>
-                        <li class="skill-item">
-                            <div class="skill-name">IEC 61400-12-1</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 95%;"></div></div>
-                        </li>
-                        <li class="skill-item">
-                            <div class="skill-name">Avenum LiDAR</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 95%;"></div></div>
-                        </li>
-                        <li class="skill-item">
-                            <div class="skill-name">Vestas Siting</div>
-                            <div class="skill-bar"><div class="skill-progress" style="--progress: 90%;"></div></div>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+      <div class="tli rv">
+        <div class="tli-meta"><span class="tli-period">May 2013 &mdash; Jul 2015</span><div class="tli-company">MeteoPole</div><div class="tli-loc">India &middot; Thailand &middot; Asia</div></div>
+        <div class="tli-content">
+          <h3>Project Engineer &mdash; LiDAR &amp; Measurement</h3>
+          <p>Led team management, client engagement, and tool development. Spearheaded nacelle-mounted LiDAR installation, yaw misalignment correction, and relative power curve measurement using LiDAR. Power curve testing per IEC 61400-12-1, performance analysis, and SCADA data analysis.</p>
+          <ul class="tli-achv"><li>India&rsquo;s first nacelle-mounted LiDAR campaign &mdash; yaw error correction + power curve measurement</li><li>Designed Thailand&rsquo;s first ground-based LiDAR WRA campaign in complex terrain</li><li>Best Employee of the Year 2013 &amp; 2014 &mdash; Measurement Team</li></ul>
+          <div style="margin-top:.8rem"><span class="tl-tag">LiDAR</span><span class="tl-tag">Yaw Correction</span><span class="tl-tag">Power Curve</span><span class="tl-tag">Measurement</span></div>
         </div>
-    </section>
+      </div>
 
-    <!-- Education Section -->
-    <section class="education" id="education">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Education & Certifications</h2>
-                <p class="section-subtitle">Advanced qualifications in wind energy, engineering, and technical excellence</p>
-            </div>
-
-            <div class="education-grid">
-                <div class="education-card">
-                    <div class="education-degree">Post Graduate Diploma</div>
-                    <div class="education-school">Amrita University</div>
-                    <div class="education-year">August 2011 - May 2012</div>
-                    <div class="education-details">
-                        Wind Resource Assessment (CGPA: 6.47/10). Specialized postgraduate curriculum in advanced WRA methodologies, wind farm operations, aerodynamics, and computational fluid dynamics with industry experts.
-                    </div>
-                </div>
-
-                <div class="education-card">
-                    <div class="education-degree">Bachelor of Mechanical Engineering</div>
-                    <div class="education-school">Anna University</div>
-                    <div class="education-year">September 2007 - June 2011</div>
-                    <div class="education-details">
-                        Aggregate: 75.08%. Comprehensive engineering education in manufacturing, mechanics, thermodynamics, and fluid dynamics—foundation for renewable energy expertise.
-                    </div>
-                </div>
-
-                <div class="education-card">
-                    <div class="education-degree">Professional Certifications</div>
-                    <div class="education-school">Industry Leaders</div>
-                    <div class="education-year">2012 - 2024</div>
-                    <div class="education-details">
-                        DNV-GL Power Performance Testing | Avenum LiDAR | IEC 61400-12-1 (ed 1&2) | Vestas Siting Universe | Business Communication
-                    </div>
-                </div>
-            </div>
+      <div class="tli rv">
+        <div class="tli-meta"><span class="tli-period">Sep 2012 &mdash; May 2013</span><div class="tli-company">SgurrEnergy</div><div class="tli-loc">India</div></div>
+        <div class="tli-content">
+          <h3>Graduate Engineer</h3>
+          <p>Site visits, preparation of bankable energy yield assessments, wind farm construction monitoring as owner&rsquo;s and lender&rsquo;s engineer. Potential site identification, initial feasibility studies, wind regime analysis, wind flow modelling.</p>
+          <div style="margin-top:.8rem"><span class="tl-tag">Bankable EYA</span><span class="tl-tag">Lender&rsquo;s Engineer</span><span class="tl-tag">Wind Flow Modelling</span><span class="tl-tag">Site Assessment</span></div>
         </div>
-    </section>
+      </div>
 
-    <!-- Contact Section -->
-    <section class="contact" id="contact">
-        <div class="contact-content">
-            <h2 class="section-title">Let's Create Impact Together</h2>
-            <p class="section-subtitle">I'm actively seeking opportunities to lead transformative wind energy projects and shape the renewable energy future</p>
+    </div>
+  </div>
+</section>
 
-            <div class="contact-grid">
-                <div class="contact-card">
-                    <div class="contact-icon">✉️</div>
-                    <a href="mailto:velmurugan.karuppiah@gmail.com">Email Me</a>
-                </div>
-                <div class="contact-card">
-                    <div class="contact-icon">🔗</div>
-                    <a href="https://www.linkedin.com/in/velmurugankaruppiah/" target="_blank">LinkedIn Profile</a>
-                </div>
-                <div class="contact-card">
-                    <div class="contact-icon">📞</div>
-                    <a href="tel:+919000500187">+91 9000500187</a>
-                </div>
-            </div>
+<!-- PROJECTS -->
+<section id="projects">
+  <div class="container">
+    <div class="proj-hdr">
+      <div class="rv"><div class="eyebrow">Signature Innovations</div><h2 class="stitle">Pioneering<br><em>Firsts</em></h2></div>
+      <p class="proj-desc rv d2">Two industry-first deployments that set new benchmarks for measurement accuracy, AEP optimisation, and project bankability across Asia. Plus an ongoing multi-continent 1+ GW procurement programme.</p>
+    </div>
+    <div class="pgrid">
 
-            <p style="margin-top: 3rem; opacity: 0.95; font-size: 0.95rem;">
-                📍 Tiruppur, Tamil Nadu, India | Available for International Opportunities
-            </p>
+      <div class="pcard rv">
+        <span class="pnum">01 &middot; India</span>
+        <span class="picon">📡</span>
+        <h3 class="ptitle">India&rsquo;s First Nacelle-Mounted LiDAR Campaign</h3>
+        <p class="pdesc">Pioneered the first-ever nacelle-mounted LiDAR deployment in India at the Surajbari Wind Farm (34.5 MW, 20 Vestas turbines). Achieved 440 m wind speed measurement, enabling real-time yaw error correction and unprecedented power curve measurement accuracy.</p>
+        <div class="pstats">
+          <div><span class="pstat-n">&minus;7.55&deg;</span><span class="pstat-l">Yaw Error Corrected</span></div>
+          <div><span class="pstat-n">2.4%</span><span class="pstat-l">AEP Gain</span></div>
+          <div><span class="pstat-n">440 m</span><span class="pstat-l">Measurement Height</span></div>
         </div>
-    </section>
+        <div class="ptags"><span class="ptag">LiDAR</span><span class="ptag">Vestas V90</span><span class="ptag">Yaw Correction</span><span class="ptag">Power Curve</span><span class="ptag">34.5 MW</span></div>
+        <span class="parrow">First-mover in India &rarr;</span>
+      </div>
 
-    <!-- Footer -->
-    <footer>
-        <p>&copy; 2025 Velmurugan Karuppiah. Crafted with precision | Advancing renewable energy innovation worldwide.</p>
-    </footer>
+      <div class="pcard rv d2">
+        <span class="pnum">02 &middot; Thailand</span>
+        <span class="picon">🌏</span>
+        <h3 class="ptitle">Thailand Ground-Based LiDAR WRA</h3>
+        <p class="pdesc">Designed Thailand&rsquo;s first ground-based LiDAR wind measurement campaign in complex terrain for a 64 MW wind farm at 120 m hub height. 4 strategic LiDAR locations with CFD-optimised strategy reduced energy yield uncertainty from 14.87% to 13.19%.</p>
+        <div class="pstats">
+          <div><span class="pstat-n">1.68%</span><span class="pstat-l">Uncertainty Reduced</span></div>
+          <div><span class="pstat-n">64 MW</span><span class="pstat-l">Project Scale</span></div>
+        </div>
+        <div class="ptags"><span class="ptag">Ground LiDAR</span><span class="ptag">CFD</span><span class="ptag">Complex Terrain</span><span class="ptag">WRA</span><span class="ptag">120 m Hub</span></div>
+        <span class="parrow">Regional benchmark &rarr;</span>
+      </div>
 
-    <!-- Scroll to Top Button -->
-    <button class="scroll-btn" id="scrollBtn">↑</button>
+      <div class="pcard pcard--w rv">
+        <span class="pnum">03 &middot; Portugal + Japan &middot; Active</span>
+        <span class="picon">🌐</span>
+        <h3 class="ptitle">1+ GW Multi-Continent WTG Procurement Programme</h3>
+        <p class="pdesc">Managing a dual-market WTG procurement programme across two demanding wind markets simultaneously. Full procurement lifecycle &mdash; from competitive ITT issuance and binding proposal evaluation through technical/commercial analysis to TSA negotiation and execution. Running in parallel across Europe and Asia-Pacific at Blue Power Partners.</p>
+        <div class="pstats">
+          <div><span class="pstat-n">800 MW</span><span class="pstat-l">Portugal Portfolio</span></div>
+          <div><span class="pstat-n">200 MW</span><span class="pstat-l">Japan Portfolio</span></div>
+          <div><span class="pstat-n">800 MW</span><span class="pstat-l">Due Diligence</span></div>
+        </div>
+        <div class="ptags"><span class="ptag">WTG Procurement</span><span class="ptag">TSA Negotiation</span><span class="ptag">Due Diligence</span><span class="ptag">Portugal</span><span class="ptag">Japan</span><span class="ptag">Blue Power Partners</span></div>
+        <span class="parrow">Active &middot; Ongoing &rarr;</span>
+      </div>
 
-    <script>
-        // Scroll to Top Functionality
-        const scrollBtn = document.getElementById('scrollBtn');
+    </div>
+  </div>
+</section>
 
-        window.addEventListener('scroll', () => {
-            if (window.pageYOffset > 400) {
-                scrollBtn.classList.add('visible');
-            } else {
-                scrollBtn.classList.remove('visible');
-            }
-        });
+<!-- SKILLS -->
+<section id="skills">
+  <div class="container">
+    <div class="rv"><div class="eyebrow">Capabilities</div><h2 class="stitle">Technical<br><em>Arsenal</em></h2></div>
+    <div class="sgrid">
+      <div class="sgroup rv"><span class="sg-icon">🌬️</span><h3>Wind Resource Assessment</h3><ul class="slist"><li>Site prospection &amp; hunt</li><li>Measurement campaign design</li><li>Wind flow modelling (WAsP, WindPro)</li><li>Energy Yield Assessment (EYA)</li><li>Losses &amp; uncertainty estimation</li><li>CFD analysis (ZephyTOOLS)</li><li>Wind regime analysis</li></ul></div>
+      <div class="sgroup rv d1"><span class="sg-icon">📋</span><h3>Procurement &amp; Contracts</h3><ul class="slist"><li>WTG &amp; TSA procurement</li><li>RFI / ITT preparation</li><li>Binding offer evaluation</li><li>TSA &amp; exhibit negotiation</li><li>Technical due diligence</li><li>OEM management</li><li>Power curve verification</li></ul></div>
+      <div class="sgroup rv d2"><span class="sg-icon">📡</span><h3>LiDAR &amp; Measurement</h3><ul class="slist"><li>Nacelle-mounted LiDAR (Avent)</li><li>Ground-based LiDAR campaigns</li><li>Yaw misalignment correction</li><li>IEC 61400-12-1 (Ed 1 &amp; 2)</li><li>Met mast installation</li><li>MEASNET procedure</li><li>Data quality control</li></ul></div>
+      <div class="sgroup rv d1"><span class="sg-icon">⚡</span><h3>Asset Performance</h3><ul class="slist"><li>SCADA data analysis</li><li>Performance reconciliation</li><li>Aerodynamic upgrades</li><li>Power uprate programmes</li><li>Extended cut-out</li><li>Life extension assessment</li><li>Alarm analysis</li></ul></div>
+      <div class="sgroup rv d2"><span class="sg-icon">🛠️</span><h3>Software &amp; Tools</h3><ul class="slist"><li>WAsP &amp; WindPro</li><li>Windographer</li><li>ZephyTOOLS (CFD)</li><li>GlobalMapper</li><li>Python &amp; MATLAB</li><li>Windows &amp; Ubuntu</li></ul></div>
+      <div class="sgroup rv d3"><span class="sg-icon">🌍</span><h3>Domain Knowledge</h3><ul class="slist"><li>IEC 61400-1 &amp; 12-1</li><li>Grid code compliance</li><li>Project development lifecycle</li><li>Lender&rsquo;s &amp; owner&rsquo;s engineering</li><li>Bankable EYA methodology</li><li>Load assessment</li></ul></div>
+    </div>
+    <div class="cert-strip rv">
+      <div class="cert-label-v">Certifications</div>
+      <div class="cert-items">
+        <div class="cbadge">DNV-GL &middot; IEC 61400-12-1 Power Performance</div>
+        <div class="cbadge">Avent LiDAR &middot; Nacelle-Mounted Technology</div>
+        <div class="cbadge">Vestas Siting Universe</div>
+        <div class="cbadge">Vestas Load Check</div>
+        <div class="cbadge">IEC 61400-12-1 Ed 1 &amp; Ed 2</div>
+        <div class="cbadge">MEASNET Procedure</div>
+      </div>
+    </div>
+    <div style="margin-top:4rem" class="rv"><div class="eyebrow" style="margin-bottom:1.4rem">Recognition</div></div>
+    <div class="awards-row">
+      <div class="acard rv"><span class="ayear">2013 &middot; 2014</span><div class="atitle">Best Employee of the Year</div><div class="aorg">MeteoPole &middot; Measurement Team</div></div>
+      <div class="acard rv d1"><span class="ayear">2018</span><div class="atitle">Outperformer of the Year</div><div class="aorg">Envision Energy &middot; Solution Engineering</div></div>
+      <div class="acard rv d2"><span class="ayear">2012 &mdash; Present</span><div class="atitle">India&rsquo;s First &middot; Thailand&rsquo;s First</div><div class="aorg">LiDAR Measurement Pioneer &middot; Asia</div></div>
+    </div>
+  </div>
+</section>
 
-        scrollBtn.addEventListener('click', () => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
+<!-- EDUCATION -->
+<section id="education">
+  <div class="container">
+    <div class="rv"><div class="eyebrow lt">Education</div><h2 class="stitle lt">Academic<br><em>Foundation</em></h2></div>
+    <div class="edu-grid">
+      <div class="ecard2 rv"><span class="edeg">Post-Graduate Diploma</span><div class="ename">Wind Resource Assessment</div><div class="euni">Amrita University</div><span class="eperiod">August 2011 &mdash; May 2012 &middot; CGPA: 6.47/10</span><p class="edetail">Specialised postgraduate curriculum in advanced WRA methodologies, wind farm operation &amp; maintenance, electronics and instrumentation, aerodynamics, computational fluid dynamics, and wind electric generators.</p></div>
+      <div class="ecard2 rv d2"><span class="edeg">Bachelor of Engineering</span><div class="ename">Mechanical Engineering</div><div class="euni">Anna University</div><span class="eperiod">September 2007 &mdash; June 2011 &middot; Aggregate: 75.08%</span><p class="edetail">Comprehensive engineering foundation in manufacturing processes, mechanics, thermodynamics, and fluid dynamics &mdash; forming the technical base for a specialised career in renewable energy systems.</p></div>
+    </div>
+  </div>
+</section>
 
-        // Smooth Scroll for Links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                const href = this.getAttribute('href');
-                if (href !== '#') {
-                    e.preventDefault();
-                    const target = document.querySelector(href);
-                    if (target) {
-                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                }
-            });
-        });
+<!-- CONTACT -->
+<section id="contact">
+  <div class="container">
+    <div class="contact-grid">
+      <div class="rv">
+        <div class="eyebrow">Get in Touch</div>
+        <h2 class="contact-tagline">Let&rsquo;s build the<br><em>next</em> GW<br>together.</h2>
+        <p class="contact-intro">Open to wind energy development roles, WTG procurement leadership, and senior advisory positions across Europe and Asia. Available for international opportunities.</p>
+        <div class="clinks">
+          <a class="clink" href="mailto:k.velmurugan77@gmail.com"><div class="cl-l"><span class="cl-ico">✉️</span><div><span class="cl-label">Email</span><span class="cl-val">k.velmurugan77@gmail.com</span></div></div><span class="cl-arrow">↗</span></a>
+          <a class="clink" href="tel:+919000500187"><div class="cl-l"><span class="cl-ico">📞</span><div><span class="cl-label">Phone</span><span class="cl-val">+91 900 050 0187</span></div></div><span class="cl-arrow">↗</span></a>
+          <a class="clink" href="https://www.linkedin.com/in/velmurugankaruppiah/" target="_blank"><div class="cl-l"><span class="cl-ico">🔗</span><div><span class="cl-label">LinkedIn</span><span class="cl-val">velmurugankaruppiah</span></div></div><span class="cl-arrow">↗</span></a>
+          <a class="clink" href="#"><div class="cl-l"><span class="cl-ico">📍</span><div><span class="cl-label">Location</span><span class="cl-val">Tiruppur, Tamil Nadu &middot; Open to Relocation</span></div></div><span class="cl-arrow">↗</span></a>
+        </div>
+      </div>
+      <div class="form-wrap rv d2">
+        <h3>Send a Message</h3>
+        <form onsubmit="handleForm(event)">
+          <div class="fgrp"><label for="nm">Full Name</label><input type="text" id="nm" placeholder="Your name" required></div>
+          <div class="fgrp"><label for="em">Email Address</label><input type="email" id="em" placeholder="your@email.com" required></div>
+          <div class="fgrp"><label for="sub">Subject</label><select id="sub"><option>WTG Procurement Opportunity</option><option>Wind Resource Assessment</option><option>Technical Consultation</option><option>Project Advisory</option><option>Other</option></select></div>
+          <div class="fgrp"><label for="msg">Message</label><textarea id="msg" placeholder="Tell me about your project or opportunity&hellip;"></textarea></div>
+          <button type="submit" class="fsub">Send Message &rarr;</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
 
-        // Intersection Observer for Animations
-        const observerOptions = {
-            threshold: 0.15,
-            rootMargin: '0px 0px -100px 0px'
-        };
+<!-- FOOTER -->
+<footer>
+  <div class="foot-logo">Velmurugan Karuppiah &middot; Wind Energy Expert</div>
+  <div class="foot-copy">&copy; 2025 &middot; Tiruppur, India</div>
+  <a class="foot-top" href="#hero">Back to top &uarr;</a>
+</footer>
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        }, observerOptions);
+<script>
+// Cursor
+const cd=document.getElementById('cd'), cr=document.getElementById('cr');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+(function loop(){cd.style.left=mx+'px';cd.style.top=my+'px';rx+=(mx-rx)*.12;ry+=(my-ry)*.12;cr.style.left=rx+'px';cr.style.top=ry+'px';requestAnimationFrame(loop);})();
+document.querySelectorAll('a,button').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cr.style.width='54px';cr.style.height='54px';});
+  el.addEventListener('mouseleave',()=>{cr.style.width='36px';cr.style.height='36px';});
+});
+if('ontouchstart' in window){cd.style.display='none';cr.style.display='none';document.body.style.cursor='auto';}
 
-        document.querySelectorAll('.project-card, .education-card, .expertise-item, .timeline-item, .skill-category').forEach(el => {
-            observer.observe(el);
-        });
+// Nav
+const nav=document.getElementById('nav');
+window.addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>60));
 
-        // Add subtle parallax effect
-        window.addEventListener('mousemove', (e) => {
-            const orbs = document.querySelectorAll('.orb');
-            const x = e.clientX / window.innerWidth;
-            const y = e.clientY / window.innerHeight;
+// Reveal
+const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in');}),{threshold:.1});
+document.querySelectorAll('.rv').forEach(r=>obs.observe(r));
 
-            orbs.forEach((orb, index) => {
-                const speed = (index + 1) * 10;
-                orb.style.transform = `translate(${x * speed}px, ${y * speed}px)`;
-            });
-        });
-    </script>
+// Form
+function handleForm(e){e.preventDefault();const b=e.target.querySelector('.fsub');b.textContent='Sent \u2713';b.style.background='var(--accent)';setTimeout(()=>{b.textContent='Send Message \u2192';b.style.background='';e.target.reset();},3000);}
+</script>
 </body>
 </html>
