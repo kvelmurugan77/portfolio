@@ -268,245 +268,220 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
     </div>
   </div>
 
-  <!-- HERO RIGHT: Wind turbine illustration matching reference image exactly
-       Reference: nacelle is horizontal pod facing LEFT, hub/rotor on LEFT side,
-       blades sweep 3-way from left hub, cyan beam shoots straight down from hub,
-       green glow on ground, dark navy sky, soft clouds, wind lines -->
   <div class="hero-right">
     <svg viewBox="0 0 520 600" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <!-- Background radial glow -->
-        <radialGradient id="bgAtm" cx="45%" cy="48%" r="52%">
-          <stop offset="0%" stop-color="#1b5c8a" stop-opacity=".7"/>
-          <stop offset="100%" stop-color="#091624" stop-opacity="0"/>
+        <radialGradient id="skyRg" cx="50%" cy="44%" r="54%">
+          <stop offset="0%"  stop-color="#1c6090" stop-opacity=".7"/>
+          <stop offset="100%" stop-color="#081420" stop-opacity="0"/>
         </radialGradient>
-        <!-- Tower gradient: bright lit centre column -->
-        <linearGradient id="towerG" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%"   stop-color="#071520" stop-opacity=".95"/>
-          <stop offset="28%"  stop-color="#3aaee0" stop-opacity=".9"/>
-          <stop offset="52%"  stop-color="#a0ddf8" stop-opacity="1"/>
-          <stop offset="75%"  stop-color="#3aaee0" stop-opacity=".8"/>
-          <stop offset="100%" stop-color="#071520" stop-opacity=".9"/>
+        <linearGradient id="tG" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0%"   stop-color="#05111e" stop-opacity=".95"/>
+          <stop offset="28%"  stop-color="#34a8dc" stop-opacity=".88"/>
+          <stop offset="52%"  stop-color="#98dcf8" stop-opacity="1"/>
+          <stop offset="76%"  stop-color="#34a8dc" stop-opacity=".78"/>
+          <stop offset="100%" stop-color="#05111e" stop-opacity=".9"/>
         </linearGradient>
-        <!-- Nacelle body: white-blue horizontal capsule -->
-        <linearGradient id="nacG" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%"   stop-color="#eaf7ff"/>
-          <stop offset="40%"  stop-color="#b8e8ff"/>
-          <stop offset="100%" stop-color="#6bbcd8"/>
+        <linearGradient id="nG" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%"   stop-color="#eaf8ff"/>
+          <stop offset="42%"  stop-color="#b2e4ff"/>
+          <stop offset="100%" stop-color="#62b2cc"/>
         </linearGradient>
-        <!-- Blade white aerofoil -->
-        <linearGradient id="blG" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%"   stop-color="#e0f6ff" stop-opacity="1"/>
-          <stop offset="65%"  stop-color="#9ad8f0" stop-opacity=".85"/>
-          <stop offset="100%" stop-color="#4898b8" stop-opacity=".45"/>
+        <linearGradient id="bG" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0%"   stop-color="#d0e8f4" stop-opacity=".95"/>
+          <stop offset="55%"  stop-color="#94bdd0" stop-opacity=".88"/>
+          <stop offset="100%" stop-color="#558098" stop-opacity=".65"/>
         </linearGradient>
-        <linearGradient id="blG2" x1="1" x2="0" y1="0" y2="0">
-          <stop offset="0%"   stop-color="#d8f0ff" stop-opacity=".95"/>
-          <stop offset="65%"  stop-color="#88ccec" stop-opacity=".75"/>
-          <stop offset="100%" stop-color="#4898b8" stop-opacity=".35"/>
+        <linearGradient id="bmG" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%"   stop-color="#58f0ff" stop-opacity="1"/>
+          <stop offset="48%"  stop-color="#18cce8" stop-opacity=".82"/>
+          <stop offset="100%" stop-color="#0898b8" stop-opacity=".04"/>
         </linearGradient>
-        <!-- LiDAR beam: bright cyan glow shaft like reference image -->
-        <linearGradient id="beamG" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%"   stop-color="#5ef0ff" stop-opacity=".95"/>
-          <stop offset="50%"  stop-color="#28cce8" stop-opacity=".75"/>
-          <stop offset="100%" stop-color="#10a0c0" stop-opacity=".08"/>
-        </linearGradient>
-        <!-- Ground green glow -->
-        <radialGradient id="gndG" cx="50%" cy="25%" r="50%">
-          <stop offset="0%"   stop-color="#22ee98" stop-opacity=".6"/>
-          <stop offset="100%" stop-color="#10885a" stop-opacity="0"/>
+        <radialGradient id="gG" cx="50%" cy="18%" r="50%">
+          <stop offset="0%"   stop-color="#1eee88" stop-opacity=".72"/>
+          <stop offset="100%" stop-color="#0a7848" stop-opacity="0"/>
         </radialGradient>
-        <!-- Hub outer glow filter -->
-        <filter id="hubF" x="-100%" y="-100%" width="300%" height="300%">
-          <feGaussianBlur stdDeviation="9" result="b"/>
+        <filter id="hF" x="-130%" y="-130%" width="360%" height="360%">
+          <feGaussianBlur stdDeviation="11" result="b"/>
           <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
-        <!-- Beam soft glow -->
-        <filter id="beamF" x="-80%" y="0" width="260%" height="100%">
-          <feGaussianBlur stdDeviation="8" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <!-- Tower glow -->
-        <filter id="towerF" x="-50%" y="0" width="200%" height="100%">
-          <feGaussianBlur stdDeviation="5" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <!-- Ground glow filter -->
-        <filter id="gndF" x="-50%" y="-100%" width="200%" height="300%">
+        <filter id="bF" x="-100%" y="0" width="300%" height="100%">
           <feGaussianBlur stdDeviation="10" result="b"/>
           <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
+        <filter id="tF" x="-70%" y="0" width="240%" height="100%">
+          <feGaussianBlur stdDeviation="6" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="gF"><feGaussianBlur stdDeviation="14"/></filter>
+
       </defs>
 
-      <!-- Sky atmosphere -->
-      <rect width="520" height="600" fill="url(#bgAtm)"/>
+      <!-- Sky -->
+      <rect width="520" height="600" fill="url(#skyRg)"/>
 
       <!-- Stars -->
-      <g fill="#c8e4f8">
-        <circle cx="55"  cy="48"  r="1.3" opacity=".6"/>
-        <circle cx="430" cy="38"  r="1.1" opacity=".5"/>
-        <circle cx="468" cy="88"  r="1.5" opacity=".65"/>
-        <circle cx="28"  cy="150" r="1"   opacity=".4"/>
-        <circle cx="485" cy="168" r="1.2" opacity=".5"/>
-        <circle cx="108" cy="70"  r=".9"  opacity=".45"/>
-        <circle cx="378" cy="62"  r="1"   opacity=".55"/>
-        <circle cx="158" cy="42"  r=".8"  opacity=".38"/>
-        <circle cx="320" cy="110" r=".9"  opacity=".42"/>
-        <circle cx="75"  cy="205" r=".8"  opacity=".38"/>
-        <circle cx="500" cy="130" r="1"   opacity=".44"/>
-        <circle cx="200" cy="95"  r=".7"  opacity=".35"/>
+      <g fill="#c4def5">
+        <circle cx="58"  cy="52"  r="1.3" opacity=".58"/>
+        <circle cx="438" cy="42"  r="1.1" opacity=".52"/>
+        <circle cx="472" cy="92"  r="1.5" opacity=".62"/>
+        <circle cx="32"  cy="158" r="1"   opacity=".42"/>
+        <circle cx="490" cy="175" r="1.2" opacity=".5"/>
+        <circle cx="115" cy="74"  r=".9"  opacity=".44"/>
+        <circle cx="382" cy="68"  r="1"   opacity=".54"/>
+        <circle cx="166" cy="46"  r=".8"  opacity=".38"/>
+        <circle cx="328" cy="115" r=".9"  opacity=".42"/>
+        <circle cx="80"  cy="212" r=".8"  opacity=".38"/>
+        <circle cx="498" cy="134" r="1"   opacity=".46"/>
+        <circle cx="455" cy="210" r=".9"  opacity=".3"/>
       </g>
 
-      <!-- Clouds — exactly like reference: soft translucent grey-blue puffs -->
-      <!-- Left cloud group -->
-      <g opacity=".25" fill="#8cc8e8">
-        <ellipse cx="110" cy="148" rx="60" ry="24"/>
-        <ellipse cx="80"  cy="142" rx="35" ry="21"/>
-        <ellipse cx="148" cy="140" rx="30" ry="18"/>
+      <!-- Soft clouds -->
+      <g opacity=".2" fill="#8ec5de">
+        <ellipse cx="105" cy="152" rx="64" ry="26"/>
+        <ellipse cx="72"  cy="145" rx="38" ry="23"/>
+        <ellipse cx="148" cy="143" rx="34" ry="20"/>
       </g>
-      <!-- Right cloud — smaller -->
-      <g opacity=".15" fill="#8cc8e8">
-        <ellipse cx="390" cy="170" rx="45" ry="17"/>
-        <ellipse cx="365" cy="165" rx="26" ry="15"/>
-        <ellipse cx="420" cy="163" rx="22" ry="13"/>
+      <g opacity=".11" fill="#8ec5de">
+        <ellipse cx="388" cy="174" rx="48" ry="19"/>
+        <ellipse cx="362" cy="169" rx="28" ry="17"/>
+        <ellipse cx="422" cy="167" rx="24" ry="15"/>
       </g>
 
-      <!-- Wind lines — horizontal rippling lines exactly like reference image -->
-      <g stroke="#a0cce8" fill="none" stroke-linecap="round">
-        <!-- Left side wind lines coming into rotor -->
-        <path d="M22 198 Q68 191 100 198 Q142 205 180 196" stroke-width="2.8" opacity=".28"/>
-        <path d="M12 222 Q62 215 94 222 Q138 230 176 220" stroke-width="2"   opacity=".22"/>
-        <path d="M28 246 Q72 239 104 246 Q145 253 180 243" stroke-width="1.5" opacity=".18"/>
-        <path d="M35 172 Q80 166 112 172 Q150 178 182 169" stroke-width="1.8" opacity=".2"/>
-        <!-- Right side wind lines flowing away -->
-        <path d="M340 202 Q385 195 425 202 Q465 209 502 200" stroke-width="2.5" opacity=".22"/>
-        <path d="M338 226 Q382 219 422 226 Q460 233 502 224" stroke-width="1.8" opacity=".18"/>
-        <path d="M342 250 Q385 243 425 250 Q463 257 502 248" stroke-width="1.3" opacity=".14"/>
-        <path d="M345 175 Q388 169 428 175 Q465 181 502 173" stroke-width="1.5" opacity=".16"/>
+      <!-- Wind lines — both sides -->
+      <g stroke="#98c8e4" fill="none" stroke-linecap="round">
+        <path d="M15 202 Q62 195 96 202 Q138 209 178 200" stroke-width="2.8" opacity=".25"/>
+        <path d="M8  226 Q55 219 90 226 Q132 233 174 223"  stroke-width="2"   opacity=".2"/>
+        <path d="M20 250 Q65 243 100 250 Q140 257 176 247" stroke-width="1.4" opacity=".16"/>
+        <path d="M28 178 Q74 172 108 178 Q146 184 178 175" stroke-width="1.7" opacity=".18"/>
+        <path d="M348 207 Q390 200 430 207 Q470 214 508 205" stroke-width="2.5" opacity=".2"/>
+        <path d="M345 231 Q388 224 427 231 Q465 238 508 229" stroke-width="1.7" opacity=".17"/>
+        <path d="M349 255 Q391 248 430 255 Q467 262 508 253" stroke-width="1.2" opacity=".13"/>
       </g>
 
-      <!-- ═══ TOWER — tapered elegant column, lit from centre ═══ -->
-      <!-- Shadow behind -->
-      <path d="M247 578 L253 305 L262 305 L270 578 Z" fill="#040e1c" opacity=".55"/>
-      <!-- Main tower with bright centre -->
-      <path d="M243 578 L251 305 L265 305 L273 578 Z" fill="url(#towerG)" filter="url(#towerF)"/>
-      <!-- Specular highlight centre line -->
-      <line x1="258" y1="578" x2="258" y2="305" stroke="rgba(255,255,255,.25)" stroke-width="2"/>
+      <!-- ═══ TOWER (hub base at 260,318) ═══ -->
+      <path d="M251,580 L256,320 L264,320 L271,580 Z" fill="#030b16" opacity=".55"/>
+      <path d="M247,580 L253,320 L267,320 L273,580 Z" fill="url(#tG)" filter="url(#tF)"/>
+      <line x1="260" y1="580" x2="260" y2="320" stroke="rgba(255,255,255,.24)" stroke-width="2.5"/>
+      <ellipse cx="260" cy="582" rx="58" ry="11" fill="#040b18" opacity=".74"/>
+      <ellipse cx="260" cy="580" rx="44" ry="8"  fill="rgba(52,168,220,.18)"/>
+      <!-- Green ground glow -->
+      <ellipse cx="260" cy="586" rx="140" ry="38" fill="url(#gG)" filter="url(#gF)"/>
 
-      <!-- Foundation ellipse -->
-      <ellipse cx="258" cy="580" rx="55"  ry="10" fill="#060f1e" opacity=".75"/>
-      <ellipse cx="258" cy="578" rx="40"  ry="7"  fill="rgba(58,174,224,.18)"/>
-
-      <!-- Ground green glow — exactly like reference image -->
-      <ellipse cx="258" cy="580" rx="120" ry="32" fill="url(#gndG)" filter="url(#gndF)"/>
-
-      <!-- ═══ LiDAR BEAM — bright cyan shaft, wide at top narrowing down ═══
-           In the reference image the beam is a bright wide cyan column going
-           straight down from the hub to the ground with soft glowing edges -->
-      <g filter="url(#beamF)" style="animation:beamPulse 2.5s ease-in-out infinite">
-        <!-- Outer soft halo -->
-        <polygon points="243,322 273,322 295,580 221,580"
-          fill="url(#beamG)" opacity=".38"/>
-        <!-- Mid beam -->
-        <polygon points="248,322 268,322 283,580 233,580"
-          fill="url(#beamG)" opacity=".5"/>
-        <!-- Bright core -->
-        <polygon points="252,322 264,322 272,580 244,580"
-          fill="url(#beamG)" opacity=".7"/>
-        <!-- Brilliant centre line -->
-        <line x1="258" y1="322" x2="258" y2="580"
-          stroke="#90f4ff" stroke-width="2.5" opacity=".9" stroke-linecap="round"/>
+      <!-- ═══ LiDAR BEAM (from hub base 260,320 straight down) ═══ -->
+      <g filter="url(#bF)">
+        <polygon points="242,328 278,328 306,582 214,582" fill="url(#bmG)" opacity=".28"/>
+        <polygon points="248,328 272,328 292,582 228,582" fill="url(#bmG)" opacity=".46"/>
+        <polygon points="253,328 267,328 277,582 243,582" fill="url(#bmG)" opacity=".68"/>
+        <line x1="260" y1="328" x2="260" y2="582" stroke="#c0faff" stroke-width="3" opacity=".9" stroke-linecap="round"/>
       </g>
 
-      <!-- ═══ NACELLE — horizontal capsule, LEFT side where rotor attaches ═══
-           In reference: nacelle is a white/light-blue rounded rectangle
-           oriented horizontally, rotor hub sticks out on the LEFT end -->
-      <!-- Back tail right side — small rounded fin -->
-      <path d="M310 305 Q325 305 328 315 Q325 325 310 325 L310 305Z"
-        fill="#9ad8f0" opacity=".8"/>
-      <!-- Main nacelle body -->
-      <rect x="195" y="298" width="115" height="34" rx="7" fill="url(#nacG)" opacity=".97"/>
-      <!-- Top highlight strip -->
-      <rect x="199" y="299" width="107" height="9" rx="5" fill="rgba(255,255,255,.45)"/>
-      <!-- Bottom shadow strip -->
-      <rect x="195" y="326" width="115" height="5" rx="2" fill="rgba(0,45,90,.25)"/>
+      <!-- ═══ NACELLE (sits on top of tower, hub LEFT, tail RIGHT) ═══ -->
+      <!-- Right tail box -->
+      <rect x="330" y="308" width="20" height="20" rx="4" fill="#88cae0" opacity=".9"/>
+      <rect x="330" y="308" width="20" height="8"  rx="4" fill="rgba(255,255,255,.3)"/>
+      <!-- Nacelle body: hub centre at x=260, nacelle from x=232 to x=334 -->
+      <rect x="232" y="304" width="102" height="30" rx="9" fill="url(#nG)" opacity=".98"/>
+      <!-- Top highlight -->
+      <rect x="236" y="305" width="94"  height="9"  rx="6" fill="rgba(255,255,255,.56)"/>
+      <!-- Bottom shadow -->
+      <rect x="232" y="328" width="102" height="5"  rx="2" fill="rgba(0,38,80,.22)"/>
       <!-- Panel seam lines -->
-      <line x1="235" y1="298" x2="234" y2="332" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
-      <line x1="265" y1="298" x2="264" y2="332" stroke="rgba(255,255,255,.09)" stroke-width="1"/>
-      <line x1="295" y1="298" x2="294" y2="332" stroke="rgba(255,255,255,.07)" stroke-width="1"/>
-      <!-- Cooling vents top -->
-      <rect x="240" y="299" width="55" height="4" rx="2" fill="rgba(255,255,255,.14)"/>
+      <line x1="266" y1="304" x2="265" y2="334" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+      <line x1="296" y1="304" x2="295" y2="334" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
 
-      <!-- ═══ HUB — on LEFT side of nacelle like reference image ═══ -->
-      <!-- Hub outer glow halo -->
-      <circle cx="200" cy="315" r="30" fill="#0e304a" opacity=".2" filter="url(#hubF)"/>
-      <!-- Hub white sphere body -->
-      <circle cx="200" cy="315" r="24" fill="#ddf4ff" opacity=".95"/>
-      <!-- Hub shading (lighter top-left quadrant) -->
-      <circle cx="195" cy="310" r="16" fill="rgba(255,255,255,.38)"/>
-      <!-- Hub inner darker circle -->
-      <circle cx="200" cy="315" r="10" fill="#88d4f0"/>
-      <!-- Green LiDAR emitter dot — exactly like the bright green eye in reference -->
-      <circle cx="200" cy="315" r="7" fill="#1db87e" filter="url(#hubF)"/>
-      <circle cx="200" cy="315" r="3.5" fill="#4dffc0"/>
-      <circle cx="200" cy="315" r="1.5" fill="#ffffff"/>
+      <!--
+        ═══ ROTOR — 3 blades, EXACTLY 120° apart ═══
 
-      <!-- ═══ ROTOR BLADES — 3 aerofoil blades rotating around hub (200,315) ═══
-           Reference image shows blades in 3 positions approx:
-           1) Upper-right (going up-right at ~45°)
-           2) Left (going straight left or slight down-left)
-           3) Down-right (going down-right at ~120° from up)
-           Blades are long, wide at root, taper to slim tip, slightly swept back -->
-      <g style="transform-origin:200px 315px; animation:rotateBlade 10s linear infinite">
+        Strategy: draw one blade in WORLD coords pointing straight UP from hub.
+        Hub centre = (260, 318). Blade root at hub, tip at (260, 128) = 190px long.
 
-        <!-- BLADE 1 — pointing up (12 o'clock position) -->
-        <!-- Root at hub (200,315), tip at (200,130): thin tapered aerofoil -->
-        <path d="M200 315
-          C197 300 193 278 190 254 C188 238 186 221 186 205
-          C186 190 187 176 188 164 C190 152 193 141 196 132
-          C198 126 200 122 200 118
-          C202 122 204 126 206 132 C209 141 212 152 214 164
-          C215 176 216 190 216 205 C216 221 214 238 212 254
-          C209 278 205 300 200 315 Z"
-          fill="url(#blG)" opacity=".96"/>
-        <!-- Leading edge highlight -->
-        <path d="M200 118 C198 126 193 141 188 164 C186 190 186 221 190 254 C193 278 197 300 200 315"
-          stroke="rgba(255,255,255,.65)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+        Blade aerofoil shape (world coords, blade pointing UP):
+          Leading edge  = left side  (x < 260): smooth outward curve
+          Trailing edge = right side (x > 260): flatter taper
 
-        <!-- BLADE 2 — pointing lower-right (4–5 o'clock) -->
-        <path d="M200 315
-          C211 308 225 296 238 283 C248 272 258 260 267 248
-          C275 237 282 225 287 214 C292 204 294 195 295 187
-          C296 180 296 174 296 169
-          C292 174 288 181 283 190 C277 202 270 215 263 228
-          C254 243 244 257 233 270 C220 285 210 300 200 315 Z"
-          fill="url(#blG)" opacity=".84"/>
-        <path d="M296 169 C296 174 296 180 295 187 C294 195 292 204 287 214 C282 225 275 237 267 248 C258 260 248 272 238 283 C225 296 211 308 200 315"
-          stroke="rgba(255,255,255,.45)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          Root (at hub):  LE=(253,318)  TE=(270,318)  — 17px chord
+          Quarter span:   LE=(251,268)  TE=(268,268)   — 17px
+          Half span:      LE=(252,218)  TE=(267,218)   — 15px
+          3/4 span:       LE=(254,168)  TE=(264,168)   — 10px
+          Near tip:       LE=(257,138)  TE=(262,138)   — 5px
+          Tip:                    (260,128)             — 0px
 
-        <!-- BLADE 3 — pointing lower-left (7–8 o'clock) -->
-        <path d="M200 315
-          C189 308 175 296 162 283 C152 272 142 260 133 248
-          C125 237 118 225 113 214 C108 204 106 195 105 187
-          C104 180 104 174 104 169
-          C108 174 112 181 117 190 C123 202 130 215 137 228
-          C146 243 156 257 167 270 C180 285 190 300 200 315 Z"
-          fill="url(#blG2)" opacity=".78"/>
-        <path d="M104 169 C104 174 104 180 105 187 C106 195 108 204 113 214 C118 225 125 237 133 248 C142 260 152 272 162 283 C175 296 189 308 200 315"
-          stroke="rgba(255,255,255,.38)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+        The other two blades are IDENTICAL shapes, just SVG-rotated
+        120° and 240° around hub (260,318).
+        This is pure SVG geometry — cannot be wrong.
+      -->
+
+      <!-- Animate the whole rotor group spinning -->
+      <g style="transform-origin:260px 318px; animation:rotateBlade 9s linear infinite;">
+
+        <!-- ── BLADE 1 — pointing straight UP (0°) ── -->
+        <path d="
+          M 253,318
+          C 251,300  250,278  251,258
+          C 252,238  253,218  254,198
+          C 255,178  256,158  257,138
+          C 258,132  259,129  260,128
+          C 261,129  261,132  262,138
+          C 263,158  264,178  265,198
+          C 266,218  267,238  267,258
+          C 267,278  267,300  268,318
+          Z"
+          fill="#c5dde8" opacity=".95"/>
+        <!-- Leading-edge bright line -->
+        <path d="M 260,128 C 259,129 258,132 257,138 C 256,158 255,178 254,198 C 253,218 252,238 251,258 C 250,278 251,300 253,318"
+          stroke="rgba(255,255,255,.8)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+        <!-- ── BLADE 2 — rotated 120° around hub ── -->
+        <g transform="rotate(120,260,318)">
+          <path d="
+            M 253,318
+            C 251,300  250,278  251,258
+            C 252,238  253,218  254,198
+            C 255,178  256,158  257,138
+            C 258,132  259,129  260,128
+            C 261,129  261,132  262,138
+            C 263,158  264,178  265,198
+            C 266,218  267,238  267,258
+            C 267,278  267,300  268,318
+            Z"
+            fill="#b8d0de" opacity=".89"/>
+          <path d="M 260,128 C 259,129 258,132 257,138 C 256,158 255,178 254,198 C 253,218 252,238 251,258 C 250,278 251,300 253,318"
+            stroke="rgba(255,255,255,.68)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        </g>
+
+        <!-- ── BLADE 3 — rotated 240° around hub ── -->
+        <g transform="rotate(240,260,318)">
+          <path d="
+            M 253,318
+            C 251,300  250,278  251,258
+            C 252,238  253,218  254,198
+            C 255,178  256,158  257,138
+            C 258,132  259,129  260,128
+            C 261,129  261,132  262,138
+            C 263,158  264,178  265,198
+            C 266,218  267,238  267,258
+            C 267,278  267,300  268,318
+            Z"
+            fill="#adc8d5" opacity=".82"/>
+          <path d="M 260,128 C 259,129 258,132 257,138 C 256,158 255,178 254,198 C 253,218 252,238 251,258 C 250,278 251,300 253,318"
+            stroke="rgba(255,255,255,.55)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        </g>
+
       </g>
 
-      <!-- Hub redrawn on top of blades (so hub sits in front of blades) -->
-      <circle cx="200" cy="315" r="24" fill="#ddf4ff" opacity=".95"/>
-      <circle cx="195" cy="310" r="16" fill="rgba(255,255,255,.38)"/>
-      <circle cx="200" cy="315" r="10" fill="#88d4f0"/>
-      <circle cx="200" cy="315" r="7"  fill="#1db87e" filter="url(#hubF)"/>
-      <circle cx="200" cy="315" r="3.5" fill="#4dffc0"/>
-      <circle cx="200" cy="315" r="1.5" fill="#fff"/>
+      <!-- ═══ HUB — painted over blade roots ═══ -->
+      <circle cx="260" cy="318" r="34"  fill="#0c2a42" opacity=".14" filter="url(#hF)"/>
+      <circle cx="260" cy="318" r="26"  fill="#ddf4ff" opacity=".97"/>
+      <circle cx="254" cy="312" r="17"  fill="rgba(255,255,255,.44)"/>
+      <circle cx="260" cy="318" r="12"  fill="#82cee8"/>
+      <circle cx="260" cy="318" r="8"   fill="#1cb87c" filter="url(#hF)"/>
+      <circle cx="260" cy="318" r="4.5" fill="#44ffb5"/>
+      <circle cx="260" cy="318" r="2"   fill="#ffffff"/>
 
-      <!-- LiDAR measurement sweep rings -->
-      <circle cx="200" cy="315" r="75"  fill="none" stroke="rgba(29,184,126,.18)" stroke-width="1" stroke-dasharray="6,10"/>
-      <circle cx="200" cy="315" r="118" fill="none" stroke="rgba(29,184,126,.1)"  stroke-width="1" stroke-dasharray="4,16"/>
+      <!-- LiDAR sweep rings -->
+      <circle cx="260" cy="318" r="80"  fill="none" stroke="rgba(29,184,126,.13)" stroke-width="1" stroke-dasharray="6,13"/>
+      <circle cx="260" cy="318" r="124" fill="none" stroke="rgba(29,184,126,.07)" stroke-width="1" stroke-dasharray="4,20"/>
     </svg>
   </div>
 
