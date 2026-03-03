@@ -950,10 +950,9 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
       </div>
       <div class="form-panel rv d2">
         <h3>Send a Message</h3>
-        <form id="contactForm" action="https://formspree.io/f/mreawrwb" method="POST">
-          <input type="hidden" name="_subject" value="New message from portfolio — Velmurugan Karuppiah">
-          <div class="fgrp"><label for="nm">Full Name</label><input type="text" id="nm" name="name" placeholder="Your full name" required></div>
-          <div class="fgrp"><label for="em">Email Address</label><input type="email" id="em" name="email" placeholder="your@email.com" required></div>
+        <form id="contactForm">
+          <div class="fgrp"><label for="nm">Full Name</label><input type="text" id="nm" name="from_name" placeholder="Your full name" required></div>
+          <div class="fgrp"><label for="em">Email Address</label><input type="email" id="em" name="reply_to" placeholder="your@email.com" required></div>
           <div class="fgrp"><label for="org">Organisation</label><input type="text" id="org" name="organisation" placeholder="Your company / organisation"></div>
           <div class="fgrp">
             <label for="sub">Enquiry Type</label>
@@ -968,7 +967,7 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
           </div>
           <div class="fgrp"><label for="msg">Message</label><textarea id="msg" name="message" placeholder="Tell me about your project or opportunity…"></textarea></div>
           <button type="submit" class="fsub" id="submitBtn">Send Message →</button>
-          <p class="form-note">📨 Messages delivered directly to k.velmurugan77@gmail.com via Formspree</p>
+          <p class="form-note" id="formNote">📨 Delivered directly to k.velmurugan77@gmail.com</p>
         </form>
       </div>
     </div>
@@ -1046,18 +1045,69 @@ document.querySelectorAll('.rv').forEach(r=>obs.observe(r));
   }
 })();
 
-/* FORM */
-const form=document.getElementById('contactForm');
-const btn=document.getElementById('submitBtn');
-form.addEventListener('submit',async function(e){
-  e.preventDefault();btn.textContent='Sending…';btn.disabled=true;
-  try{
-    const data=new FormData(form);
-    const res=await fetch('https://formspree.io/f/mreawrwb',{method:'POST',body:data,headers:{Accept:'application/json'}});
-    if(res.ok){btn.textContent='✓ Message Sent!';btn.style.background='#f0a500';form.reset();setTimeout(()=>{btn.textContent='Send Message →';btn.style.background='';btn.disabled=false},4000)}
-    else{btn.textContent='Error — try email directly';btn.disabled=false}
-  }catch{btn.textContent='Error — try email directly';btn.disabled=false}
-});
+/* FORM — EmailJS */
+(function(){
+  // ── EmailJS config ──────────────────────────────────────────────────────
+  // These IDs are set up at emailjs.com connected to k.velmurugan77@gmail.com
+  // SERVICE_ID  : your Gmail service (e.g. "service_xxxxxxx")
+  // TEMPLATE_ID : your email template (e.g. "template_xxxxxxx")
+  // PUBLIC_KEY  : your EmailJS public key (e.g. "xxxxxxxxxxxxxxx")
+  // ─────────────────────────────────────────────────────────────────────────
+  const SERVICE_ID  = 'service_n78a5cu';
+  const TEMPLATE_ID = 'const SERVICE_ID';
+  const PUBLIC_KEY  = 'H3oes1wegiAJ_Hzk5';
+
+  const form = document.getElementById('contactForm');
+  const btn  = document.getElementById('submitBtn');
+  const note = document.getElementById('formNote');
+
+  emailjs.init(PUBLIC_KEY);
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+
+    // Check not yet configured
+    if(SERVICE_ID.includes('EMAILJS')){
+      note.textContent = '⚠️ See setup instructions below to activate email delivery.';
+      note.style.color = '#f0a500';
+      return;
+    }
+
+    btn.textContent = 'Sending…';
+    btn.disabled = true;
+
+    const params = {
+      from_name    : document.getElementById('nm').value,
+      reply_to     : document.getElementById('em').value,
+      organisation : document.getElementById('org').value,
+      subject      : document.getElementById('sub').value,
+      message      : document.getElementById('msg').value,
+    };
+
+    emailjs.send(SERVICE_ID, TEMPLATE_ID, params)
+      .then(function(){
+        btn.textContent = '✓ Message Sent!';
+        btn.style.background = '#f0a500';
+        form.reset();
+        note.textContent = '📨 Message delivered to Velmurugan\'s inbox!';
+        note.style.color = '#1db87e';
+        setTimeout(()=>{
+          btn.textContent = 'Send Message →';
+          btn.style.background = '';
+          btn.disabled = false;
+          note.textContent = '📨 Delivered directly to k.velmurugan77@gmail.com';
+          note.style.color = '';
+        }, 4000);
+      }, function(error){
+        btn.textContent = 'Failed — try email directly';
+        btn.disabled = false;
+        note.textContent = '❌ Error: ' + JSON.stringify(error);
+        note.style.color = '#ff6666';
+      });
+  });
+})();
 </script>
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </body>
 </html>
