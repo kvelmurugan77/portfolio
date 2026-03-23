@@ -211,6 +211,62 @@ h1.hero-name em{font-style:italic;color:var(--sky5)}
 .fsub:hover{background:var(--gold);transform:translateY(-2px);box-shadow:0 6px 20px rgba(240,165,0,.3)}
 .form-note{font-size:.7rem;color:rgba(255,255,255,.3);margin-top:.8rem;text-align:center;font-weight:300}
 
+
+/* KNOWLEDGE BASE */
+#knowledge{background:linear-gradient(180deg,rgba(8,18,38,.97) 0%,rgba(10,26,52,.98) 100%);position:relative}
+#knowledge::before{content:'';position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse at 20% 50%,rgba(29,184,126,.07) 0%,transparent 55%),radial-gradient(ellipse at 80% 20%,rgba(45,156,206,.06) 0%,transparent 55%)}
+.kb-intro{font-size:1rem;font-weight:300;line-height:1.85;color:rgba(255,255,255,.6);max-width:52ch;margin-top:1.2rem}
+.kb-filter-bar{display:flex;flex-wrap:wrap;gap:.7rem;margin:2.8rem 0 2.2rem}
+.kb-filter{font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:.55rem 1.4rem;border-radius:4px;border:1px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.5);cursor:none;transition:all .25s}
+.kb-filter:hover{border-color:var(--mint);color:var(--mint)}
+.kb-filter.active{background:var(--mint);border-color:var(--mint);color:var(--sky1)}
+.kb-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem;position:relative;z-index:1}
+.kb-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;transition:transform .3s,border-color .3s,box-shadow .3s;display:flex;flex-direction:column}
+.kb-card:hover{transform:translateY(-6px);border-color:rgba(29,184,126,.35);box-shadow:0 16px 40px rgba(0,0,0,.35)}
+.kb-thumb{height:170px;background:linear-gradient(135deg,rgba(29,184,126,.12) 0%,rgba(45,156,206,.12) 100%);display:flex;align-items:center;justify-content:center;font-size:3.2rem;border-bottom:1px solid rgba(255,255,255,.06);position:relative;overflow:hidden;transition:background .3s}
+.kb-card:hover .kb-thumb{background:linear-gradient(135deg,rgba(29,184,126,.2) 0%,rgba(45,156,206,.2) 100%)}
+.kb-thumb-slides{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:4px;padding:12px}
+.kb-slide-preview{width:28%;height:85%;object-fit:cover;border-radius:4px;border:1px solid rgba(255,255,255,.15);box-shadow:0 4px 12px rgba(0,0,0,.4);transition:transform .3s}
+.kb-slide-preview:nth-child(2){transform:scale(1.08);z-index:2}
+.kb-card:hover .kb-slide-preview:nth-child(1){transform:rotate(-3deg)}
+.kb-card:hover .kb-slide-preview:nth-child(2){transform:scale(1.12) translateY(-3px)}
+.kb-card:hover .kb-slide-preview:nth-child(3){transform:rotate(3deg)}
+.kb-badge{position:absolute;top:10px;right:10px;font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:.3rem .7rem;border-radius:3px;background:rgba(11,31,58,.8);border:1px solid var(--mint);color:var(--mint)}
+.kb-body{padding:1.4rem 1.5rem;display:flex;flex-direction:column;flex:1}
+.kb-cat{font-size:.6rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mint);margin-bottom:.6rem}
+.kb-title{font-family:var(--display);font-size:1.1rem;font-weight:400;color:#fff;line-height:1.35;margin-bottom:.7rem}
+.kb-desc{font-size:.82rem;font-weight:300;line-height:1.7;color:rgba(255,255,255,.5);flex:1;margin-bottom:1.2rem}
+.kb-meta{display:flex;gap:1rem;margin-bottom:1.2rem;flex-wrap:wrap}
+.kb-meta-item{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.3);display:flex;align-items:center;gap:.35rem}
+.kb-meta-item span{color:rgba(255,255,255,.55)}
+.kb-btn{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.75rem;font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:rgba(29,184,126,.12);border:1px solid rgba(29,184,126,.3);color:var(--mint);border-radius:6px;cursor:none;transition:all .25s}
+.kb-btn:hover:not([disabled]){background:var(--mint);color:var(--sky1);border-color:var(--mint)}
+/* MODAL */
+.kb-modal-overlay{position:fixed;inset:0;z-index:2000;background:rgba(6,12,28,.92);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
+.kb-modal-overlay.open{opacity:1;pointer-events:all}
+.kb-modal{background:rgba(10,25,50,.98);border:1px solid rgba(255,255,255,.1);border-radius:16px;width:90%;max-width:1100px;max-height:92vh;margin:auto;display:flex;flex-direction:column;transform:translateY(24px);transition:transform .3s;overflow:hidden}
+.kb-modal-overlay.open .kb-modal{transform:translateY(0)}
+.kb-modal-header{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.6rem;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0}
+.kb-modal-title{font-family:var(--display);font-size:1.05rem;font-style:italic;color:#fff;flex:1;padding-right:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kb-modal-nav{display:flex;align-items:center;gap:.6rem}
+.kb-nav-btn,.kb-modal-close{width:34px;height:34px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;cursor:none;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.kb-nav-btn:hover:not(:disabled){background:var(--mint);border-color:var(--mint);color:var(--sky1)}
+.kb-nav-btn:disabled{opacity:.25;cursor:not-allowed}
+.kb-modal-close:hover{background:rgba(220,38,38,.3);border-color:rgba(220,38,38,.5)}
+.kb-modal-close{margin-left:.4rem}
+.kb-slide-counter{font-size:.72rem;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.4);min-width:60px;text-align:center}
+.kb-modal-body{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#000;position:relative;min-height:0}
+.kb-modal-img{max-width:100%;max-height:100%;object-fit:contain;display:none;user-select:none;-webkit-user-drag:none}
+.kb-modal-footer{padding:.7rem 1.6rem;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.kb-thumbnail-strip{display:flex;gap:.4rem;overflow-x:auto;flex:1;padding-right:1rem;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent}
+.kb-thumb-mini{width:52px;height:36px;object-fit:cover;border-radius:3px;border:2px solid transparent;opacity:.5;cursor:none;flex-shrink:0;transition:all .2s}
+.kb-thumb-mini.active{border-color:var(--mint);opacity:1}
+.kb-thumb-mini:hover{opacity:.85}
+.kb-secure-note{font-size:.6rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.25);white-space:nowrap;display:flex;align-items:center;gap:.4rem;flex-shrink:0}
+.kb-spinner{width:36px;height:36px;border:3px solid rgba(29,184,126,.2);border-top-color:var(--mint);border-radius:50%;animation:kbspin .8s linear infinite}
+@keyframes kbspin{to{transform:rotate(360deg)}}
+.kb-modal-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000}
+
 /* FOOTER */
 footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border)}
 .foot-logo{font-family:var(--display);font-size:1rem;font-style:italic;color:var(--mint)}
@@ -221,6 +277,7 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
 /* RESPONSIVE */
 @media(max-width:900px){
   nav{padding:1.1rem 1.5rem}.nav-links{display:none}
+  .kb-grid{grid-template-columns:1fr}
   #hero{grid-template-columns:1fr}.hero-right{height:60vw}
   .hero-left{padding:7rem 1.5rem 3rem}
   .about-grid,.exp-header,.proj-hdr,.contact-grid{grid-template-columns:1fr;gap:2.5rem}
@@ -247,6 +304,7 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
     <li><a href="#experience">Experience</a></li>
     <li><a href="#projects">Innovations</a></li>
     <li><a href="#skills">Skills</a></li>
+    <li><a href="#knowledge">Knowledge</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
   <a class="nav-cta" href="#contact">Contact</a>
@@ -719,6 +777,52 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
   </div>
 </section>
 
+<!-- ═══════════════════════════════════════════════════════
+     KNOWLEDGE BASE SECTION
+     Add new materials by editing MATERIALS_DATA in the JS below.
+     ═══════════════════════════════════════════════════════ -->
+<section id="knowledge" class="section-wrap">
+  <div class="container" style="position:relative;z-index:1">
+    <div class="rv">
+      <div class="eyebrow">Knowledge Base</div>
+      <h2 class="stitle">Study Materials &amp; <em>Resources</em></h2>
+      <p class="kb-intro">Comprehensive training decks on wind energy — developed from 14+ years of field experience. Browse by category and view as interactive slideshows.</p>
+    </div>
+    <div class="kb-filter-bar rv d1" id="kbFilters"></div>
+    <div class="kb-grid" id="kbGrid"></div>
+  </div>
+</section>
+
+<!-- KB MODAL VIEWER -->
+<div class="kb-modal-overlay" id="kbModalOverlay" role="dialog" aria-modal="true">
+  <div class="kb-modal">
+    <div class="kb-modal-header">
+      <div class="kb-modal-title" id="kbModalTitle">Loading…</div>
+      <div class="kb-modal-nav">
+        <button class="kb-nav-btn" id="kbPrev" aria-label="Previous slide">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <span class="kb-slide-counter" id="kbCounter">1 / 1</span>
+        <button class="kb-nav-btn" id="kbNext" aria-label="Next slide">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <button class="kb-modal-close" id="kbClose" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="kb-modal-body">
+      <div class="kb-modal-loading" id="kbLoading"><div class="kb-spinner"></div></div>
+      <img id="kbMainImg" class="kb-modal-img" src="" alt="Slide"
+           draggable="false" oncontextmenu="return false"/>
+    </div>
+    <div class="kb-modal-footer">
+      <div class="kb-thumbnail-strip" id="kbThumbnails"></div>
+      <div class="kb-secure-note">🔒 View only</div>
+    </div>
+  </div>
+</div>
+
 <!-- CONTACT -->
 <section id="contact" class="section-wrap">
   <div class="container">
@@ -728,7 +832,7 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
         <h2 class="contact-tagline">Let's build the <em>next</em> GW together.</h2>
         <p class="contact-intro">Open to wind energy development roles, WTG procurement leadership, and senior advisory positions across Europe and Asia. Available for international opportunities.</p>
         <div class="clinks">
-          <a class="clink" href="mailto:kvelmurugan77@gmail.com"><div class="cl-l"><div class="cl-ico-wrap">✉️</div><div><span class="cl-label">Email</span><span class="cl-val">kvelmurugan77@gmail.com</span></div></div><span class="cl-arrow">↗</span></a>
+          <a class="clink" href="/cdn-cgi/l/email-protection#a4cfd2c1c8c9d1d6d1c3c5ca9393e4c3c9c5cdc88ac7cbc9"><div class="cl-l"><div class="cl-ico-wrap">✉️</div><div><span class="cl-label">Email</span><span class="cl-val"><span class="__cf_email__" data-cfemail="90fbe6f5fcfde5e2e5f7f1fea7a7d0f7fdf1f9fcbef3fffd">[email&#160;protected]</span></span></div></div><span class="cl-arrow">↗</span></a>
           <a class="clink" href="tel:+919000500187"><div class="cl-l"><div class="cl-ico-wrap">📞</div><div><span class="cl-label">Phone</span><span class="cl-val">+91 900 050 0187</span></div></div><span class="cl-arrow">↗</span></a>
           <a class="clink" href="https://www.linkedin.com/in/velmurugankaruppiah/" target="_blank"><div class="cl-l"><div class="cl-ico-wrap">🔗</div><div><span class="cl-label">LinkedIn</span><span class="cl-val">velmurugankaruppiah</span></div></div><span class="cl-arrow">↗</span></a>
           <a class="clink" href="#"><div class="cl-l"><div class="cl-ico-wrap">📍</div><div><span class="cl-label">Location</span><span class="cl-val">Tiruppur, Tamil Nadu · Open to Relocation</span></div></div><span class="cl-arrow">↗</span></a>
@@ -753,7 +857,7 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
           </div>
           <div class="fgrp"><label for="msg">Message</label><textarea id="msg" name="message" placeholder="Tell me about your project or opportunity…"></textarea></div>
           <button type="submit" class="fsub" id="submitBtn">Send Message →</button>
-          <p class="form-note" id="formNote">📨 Delivered directly to kvelmurugan77@gmail.com</p>
+          <p class="form-note" id="formNote">📨 Delivered directly to <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="98f3eefdf4f5edeaedfff9f6afafd8fff5f9f1f4b6fbf7f5">[email&#160;protected]</a></p>
         </form>
       </div>
     </div>
@@ -767,7 +871,7 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
   <a class="foot-top" href="#hero">Back to top ↑</a>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
 /* CURSOR */
 const cd=document.getElementById('cd'),cr=document.getElementById('cr');
@@ -1053,15 +1157,7 @@ document.querySelectorAll('.rv').forEach(r=>obs.observe(r));
     ng.addColorStop(0,'#c8e8ff'); ng.addColorStop(0.4,'#88b8d8'); ng.addColorStop(1,'#3870a0');
     ctx.beginPath();
     if(ctx.roundRect) ctx.roundRect(nx,ny,nW,nH,3);
-    else ctx.rect(nx,ny,nW,nH);
-    ctx.fillStyle=ng; ctx.fill();
-    ctx.strokeStyle='rgba(200,240,255,0.3)'; ctx.lineWidth=0.8; ctx.stroke();
-    ctx.beginPath();
-    if(ctx.roundRect) ctx.roundRect(nx+2,ny+1,nW-4,nH*0.35,2);
-    else ctx.rect(nx+2,ny+1,nW-4,nH*0.35);
-    ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.fill();
-    var ax=CX+nW*0.18, ay=ny;
-    ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax,ay-H*0.018);
+    else ctx.rect); ctx.lineTo(ax,ay-H*0.018);
     ctx.strokeStyle='#58a8d0'; ctx.lineWidth=1.5; ctx.stroke();
     var ag=ctx.createRadialGradient(ax,ay-H*0.019,0,ax,ay-H*0.019,H*0.009);
     ag.addColorStop(0,'rgba(29,184,126,0.9)'); ag.addColorStop(1,'rgba(29,184,126,0)');
@@ -1176,6 +1272,302 @@ document.querySelectorAll('.rv').forEach(r=>obs.observe(r));
 
   if(document.readyState==='complete') setTimeout(start,30);
   else window.addEventListener('load',function(){setTimeout(start,30);});
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     KNOWLEDGE BASE JAVASCRIPT ENGINE
+     ═══════════════════════════════════════════════════════════════
+
+  HOW TO ADD A NEW MATERIAL — 3 STEPS:
+  ─────────────────────────────────────
+  Step 1: Host your slide images on GitHub Pages (free):
+    a) Create repo: github.com/YOUR_USERNAME/portfolio-decks
+    b) Settings → Pages → Source: main / root → Save
+    c) Create folder /decks/DECK_NAME/ and upload Slide01.JPG … SlideNN.JPG
+    d) Your base URL = https://YOUR_USERNAME.github.io/portfolio-decks/decks/DECK_NAME/
+
+  Step 2: In MATERIALS_DATA below, add a new object:
+    {
+      id:          'my-new-deck',
+      title:       'My New Training Deck',
+      description: '2-3 sentences describing what this deck covers.',
+      category:    'Choose A Category',
+      icon:        '📊',
+      baseUrl:     'https://YOUR_USERNAME.github.io/portfolio-decks/decks/my-new-deck/',
+      slideCount:  40,
+      prefix:      'Slide',   // filename prefix before the number
+      ext:         '.JPG',    // file extension
+      tags:        ['Tag1','Tag2'],
+      duration:    '20 min'
+    }
+
+  Step 3: Save this file and push to your site. Done.
+  ═══════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+
+/* ══════════════════════════════════════════════════════════════
+   MATERIALS_DATA  ← EDIT THIS ARRAY TO ADD / REMOVE MATERIALS
+   ══════════════════════════════════════════════════════════════ */
+var MATERIALS_DATA = [
+
+  /* ── ENTRY 1: Power Curve Verification Training ─────────────
+     baseUrl: paste your GitHub Pages URL when slides are hosted.
+     Until then, the card shows with a "Coming Soon" button.
+     ──────────────────────────────────────────────────────────── */
+  {
+    id:          'pcv-training',
+    title:       'Power Curve Verification — Complete OEM Training',
+    description: 'End-to-end PCV training covering IEC 61400-12-1 / 12-2 standards, measurement methodology, air density correction, binning, ISO GUM uncertainty analysis, warranty assessment, offshore & complex terrain, real case studies, and certification. Distils 40 years of field experience across 500+ projects.',
+    category:    'Measurement & Testing',
+    icon:        '🎯',
+    baseUrl:     '',          // ← REPLACE with your GitHub Pages URL
+    slideCount:  78,
+    prefix:      'Slide',
+    ext:         '.JPG',
+    tags:        ['IEC 61400-12','Power Curve','Uncertainty','AEP'],
+    duration:    '45 min'
+  },
+
+  /* ── ADD MORE ENTRIES BELOW — copy the block above ──────────
+
+  {
+    id:          'wind-resource-assessment',
+    title:       'Wind Resource Assessment Fundamentals',
+    description: 'Comprehensive guide on WRA methodologies, measurement campaign design, data analysis, and energy yield estimation.',
+    category:    'Wind Resource Assessment',
+    icon:        '📡',
+    baseUrl:     '',
+    slideCount:  0,
+    prefix:      'Slide',
+    ext:         '.JPG',
+    tags:        ['WAsP','WindPRO','MCP','AEP'],
+    duration:    '30 min'
+  },
+
+  {
+    id:          'wtg-procurement',
+    title:       'WTG Procurement & TSA Negotiation',
+    description: 'Complete procurement workflow: RFI/ITT, binding offer evaluation, technical specifications, and TSA contract negotiation.',
+    category:    'Procurement',
+    icon:        '🏭',
+    baseUrl:     '',
+    slideCount:  0,
+    prefix:      'Slide',
+    ext:         '.JPG',
+    tags:        ['TSA','Procurement','FIDIC','RFI'],
+    duration:    '35 min'
+  },
+
+  ── END OF EXAMPLES ── */
+];
+
+/* ══════════════════════════════════════════════════════════════
+   ENGINE — no editing needed below this line
+   ══════════════════════════════════════════════════════════════ */
+
+var currentSlides = [];
+var currentIdx    = 0;
+
+/* Build slide URL array from baseUrl + count */
+function makeSlides(m) {
+  if (!m.baseUrl) return [];
+  var arr = [], prefix = m.prefix||'Slide', ext = m.ext||'.JPG';
+  for (var i = 1; i <= m.slideCount; i++) {
+    arr.push(m.baseUrl + prefix + (i < 10 ? '0' : '') + i + ext);
+  }
+  return arr;
+}
+
+/* Filter buttons */
+function buildFilters() {
+  var bar = document.getElementById('kbFilters');
+  if (!bar) return;
+  var cats = ['All'];
+  MATERIALS_DATA.forEach(function(m){
+    if (cats.indexOf(m.category) === -1) cats.push(m.category);
+  });
+  bar.innerHTML = '';
+  cats.forEach(function(cat, i){
+    var btn = document.createElement('button');
+    btn.className = 'kb-filter' + (i===0?' active':'');
+    btn.textContent = cat;
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.kb-filter').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      var filtered = cat==='All' ? MATERIALS_DATA : MATERIALS_DATA.filter(function(m){ return m.category===cat; });
+      renderGrid(filtered);
+    });
+    bar.appendChild(btn);
+  });
+}
+
+/* Build one card element */
+function buildCard(m) {
+  var slides = makeSlides(m);
+  var card   = document.createElement('div');
+  card.className = 'kb-card rv';
+
+  /* Thumbnail: 3 slide previews or icon */
+  var thumbInner = '';
+  if (slides.length >= 3) {
+    var mid = Math.floor(slides.length / 2);
+    thumbInner =
+      '<div class="kb-thumb-slides">' +
+      '<img class="kb-slide-preview" src="'+slides[0]+'" alt="" loading="lazy" draggable="false" oncontextmenu="return false">' +
+      '<img class="kb-slide-preview" src="'+slides[mid]+'" alt="" loading="lazy" draggable="false" oncontextmenu="return false">' +
+      '<img class="kb-slide-preview" src="'+slides[slides.length-1]+'" alt="" loading="lazy" draggable="false" oncontextmenu="return false">' +
+      '</div>';
+  } else {
+    thumbInner = '<span style="font-size:3.2rem;z-index:1;position:relative">'+m.icon+'</span>';
+  }
+
+  var badge = m.slideCount > 0
+    ? '<span class="kb-badge">'+m.slideCount+' slides</span>' : '';
+
+  var metaHtml = '';
+  if (m.duration)    metaHtml += '<div class="kb-meta-item">⏱ <span>'+m.duration+'</span></div>';
+  if (m.slideCount)  metaHtml += '<div class="kb-meta-item">🖼 <span>'+m.slideCount+' slides</span></div>';
+  (m.tags||[]).forEach(function(t){ metaHtml += '<div class="kb-meta-item"><span>'+t+'</span></div>'; });
+
+  var btnHtml, disabled = '';
+  if (slides.length > 0) {
+    btnHtml = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"><path d="M5 12h14M12 5l7 7-7 7"/></svg> View Slideshow';
+  } else {
+    btnHtml = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg> Coming Soon';
+    disabled = ' disabled style="opacity:.4;pointer-events:none"';
+  }
+
+  card.innerHTML =
+    '<div class="kb-thumb">'+thumbInner+badge+'</div>' +
+    '<div class="kb-body">' +
+      '<div class="kb-cat">'+m.category+'</div>' +
+      '<h3 class="kb-title">'+m.title+'</h3>' +
+      '<p class="kb-desc">'+m.description+'</p>' +
+      '<div class="kb-meta">'+metaHtml+'</div>' +
+      '<button class="kb-btn"'+disabled+'>'+btnHtml+'</button>' +
+    '</div>';
+
+  if (slides.length > 0) {
+    card.querySelector('.kb-btn').addEventListener('click', function(){ openModal(m, slides); });
+  }
+  return card;
+}
+
+/* Render grid */
+function renderGrid(data) {
+  var grid = document.getElementById('kbGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  if (!data || !data.length) {
+    grid.innerHTML = '<p style="color:rgba(255,255,255,.4);font-size:.9rem;grid-column:1/-1;text-align:center;padding:3rem 0">No materials in this category yet — check back soon.</p>';
+    return;
+  }
+  data.forEach(function(m, i){
+    var card = buildCard(m);
+    if (i < 3) card.classList.add('d'+(i+1));
+    grid.appendChild(card);
+  });
+  requestAnimationFrame(function(){
+    grid.querySelectorAll('.rv').forEach(function(el){ el.classList.add('in'); });
+  });
+}
+
+/* Modal */
+function openModal(m, slides) {
+  currentSlides = slides;
+  currentIdx    = 0;
+  document.getElementById('kbModalTitle').textContent = m.title;
+  buildThumbnails();
+  showSlide(0);
+  document.getElementById('kbModalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('kbModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  currentSlides = []; currentIdx = 0;
+}
+
+function showSlide(idx) {
+  if (!currentSlides.length) return;
+  idx = Math.max(0, Math.min(idx, currentSlides.length-1));
+  currentIdx = idx;
+  var img     = document.getElementById('kbMainImg');
+  var loading = document.getElementById('kbLoading');
+  img.style.display     = 'none';
+  loading.style.display = 'flex';
+  var tmp = new Image();
+  tmp.onload = function(){
+    img.src = currentSlides[idx];
+    img.style.display     = 'block';
+    loading.style.display = 'none';
+  };
+  tmp.onerror = function(){
+    img.alt = 'Slide '+(idx+1)+' — image not available';
+    img.style.display     = 'block';
+    loading.style.display = 'none';
+  };
+  tmp.src = currentSlides[idx];
+  document.getElementById('kbCounter').textContent = (idx+1)+' / '+currentSlides.length;
+  document.getElementById('kbPrev').disabled = idx === 0;
+  document.getElementById('kbNext').disabled = idx === currentSlides.length-1;
+  document.querySelectorAll('.kb-thumb-mini').forEach(function(t,i){ t.classList.toggle('active', i===idx); });
+  var active = document.querySelectorAll('.kb-thumb-mini')[idx];
+  if (active) active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+}
+
+function buildThumbnails() {
+  var strip = document.getElementById('kbThumbnails');
+  strip.innerHTML = '';
+  currentSlides.forEach(function(src, i){
+    var img       = document.createElement('img');
+    img.className = 'kb-thumb-mini'+(i===0?' active':'');
+    img.src = src; img.alt = 'Slide '+(i+1);
+    img.draggable = false; img.loading = 'lazy';
+    img.setAttribute('oncontextmenu','return false');
+    img.addEventListener('click', function(){ showSlide(i); });
+    strip.appendChild(img);
+  });
+}
+
+/* Controls */
+document.getElementById('kbPrev').addEventListener('click',  function(){ showSlide(currentIdx-1); });
+document.getElementById('kbNext').addEventListener('click',  function(){ showSlide(currentIdx+1); });
+document.getElementById('kbClose').addEventListener('click', closeModal);
+document.getElementById('kbModalOverlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+
+/* Keyboard */
+document.addEventListener('keydown', function(e){
+  if (!document.getElementById('kbModalOverlay').classList.contains('open')) return;
+  if (e.key==='ArrowRight'||e.key==='ArrowDown'){ e.preventDefault(); showSlide(currentIdx+1); }
+  if (e.key==='ArrowLeft' ||e.key==='ArrowUp')  { e.preventDefault(); showSlide(currentIdx-1); }
+  if (e.key==='Escape')                         { e.preventDefault(); closeModal(); }
+});
+
+/* Touch swipe */
+(function(){
+  var body = document.querySelector('.kb-modal-body'); var sx = 0;
+  if (!body) return;
+  body.addEventListener('touchstart', function(e){ sx = e.touches[0].clientX; },{passive:true});
+  body.addEventListener('touchend',   function(e){
+    var d = sx - e.changedTouches[0].clientX;
+    if (Math.abs(d)>40) d>0 ? showSlide(currentIdx+1) : showSlide(currentIdx-1);
+  });
+})();
+
+/* Init */
+buildFilters();
+renderGrid(MATERIALS_DATA);
+
+/* Wire up existing scroll observer for reveal animations */
+var obs2 = new IntersectionObserver(function(es){
+  es.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('in'); });
+},{threshold:.08});
+document.querySelectorAll('#knowledge .rv').forEach(function(el){ obs2.observe(el); });
+
 })();
 </script>
 </body>
