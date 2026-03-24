@@ -67,6 +67,35 @@ h1.hero-name em{font-style:italic;color:var(--sky5)}
     <div class="css-turbine-blade"></div>
   </div>
 </div>
+  /* REALISTIC WIND TURBINE */
+.wtg{
+  position:absolute;
+  top:50%;
+  right:8%;
+  transform:translateY(-50%);
+  width:clamp(280px,28vw,420px);
+  height:clamp(420px,42vw,630px);
+  z-index:4;
+  pointer-events:none;
+  opacity:0.6;
+  filter:drop-shadow(0 0 20px rgba(29,184,126,0.12));
+}
+.wtg-svg{
+  width:100%;
+  height:100%;
+  overflow:visible;
+}
+.wtg-blades{
+  animation:wtgSpin 10s linear infinite;
+  transform-origin:200px 273px;
+}
+@keyframes wtgSpin{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(360deg)}
+}
+@media(max-width:900px){
+  .wtg{display:none}
+}
 /* HERO RIGHT — turbine fills the panel */
 .hero-right{position:relative;z-index:5;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .hero-right svg{width:100%;height:100%;display:block}
@@ -299,115 +328,7 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
   .cert-strip{grid-template-columns:1fr}.cert-v-label{writing-mode:horizontal-tb;transform:none}
   .hero-stats-bar{display:none}
 }
-         }
-
-        /* Rotating Wind Turbine */
-        .wind-turbine {
-          position: absolute;
-          right: 15%;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 300px;
-          height: 300px;
-          opacity: 0.7;
-          z-index: 1;
-          filter: drop-shadow(0 0 10px rgba(80, 200, 120, 0.3));
-        }
-        
-        .tower {
-          position: absolute;
-          bottom: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 8px;
-          height: 150px;
-          background: linear-gradient(to right, #8899aa, #ccddee);
-          border-radius: 4px;
-        }
-        
-        .nacelle {
-          position: absolute;
-          bottom: 150px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 30px;
-          height: 20px;
-          background: #ccddee;
-          border-radius: 4px;
-        }
-        
-        .rotor {
-          position: absolute;
-          bottom: 160px;
-          left: 50%;
-          width: 200px;
-          height: 200px;
-          margin-left: -100px;
-          animation: rotate 12s linear infinite;
-          transform-origin: center center;
-        }
-        
-        .blade {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          width: 90px;
-          height: 8px;
-          background: linear-gradient(to right, #ccddee, #ffffff);
-          border-radius: 4px;
-          transform-origin: left center;
-        }
-        
-        .blade-1 {
-          transform: rotate(0deg);
-        }
-        
-        .blade-2 {
-          transform: rotate(120deg);
-        }
-        
-        .blade-3 {
-          transform: rotate(240deg);
-        }
-        
-        @keyframes rotate {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-        
-        @media (max-width: 1024px) {
-          .wind-turbine {
-            width: 200px;
-            height: 200px;
-            right: 10%;
-          }
-          .rotor {
-            width: 140px;
-            height: 140px;
-            margin-left: -70px;
-          }
-          .blade {
-            width: 60px;
-          }
-          .tower {
-            height: 100px;
-          }
-          .nacelle {
-            bottom: 100px;
-          }
-        }
-        
-        @media (max-width: 768px) {
-          .wind-turbine {
-            display: none;
-          }
-        }
-
-
+     
         </style>
 </style>
 </head>
@@ -470,7 +391,68 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
             <div class="blade blade-3"></div>
           </div>
         </div>
-
+<!-- Realistic Wind Turbine -->
+<div class="wtg">
+  <svg viewBox="0 0 400 600" class="wtg-svg">
+    <!-- Foundation -->
+    <rect x="185" y="585" width="30" height="15" rx="2" fill="#2d3a4a" stroke="#3d4a5a" stroke-width="1"/>
+    
+    <!-- Tower — tapered trapezoid -->
+    <polygon points="193,580 207,580 212,280 188,280" fill="url(#towerGrad)" stroke="#5a6a7a" stroke-width="0.5"/>
+    
+    <!-- Nacelle -->
+    <rect x="175" y="262" width="55" height="22" rx="4" fill="url(#nacelleGrad)" stroke="#6a7a8a" stroke-width="0.5"/>
+    
+    <!-- Hub center -->
+    <circle cx="200" cy="273" r="8" fill="url(#hubGrad)" stroke="#5a7a6a" stroke-width="1"/>
+    <circle cx="200" cy="273" r="3.5" fill="#1db87e"/>
+    <circle cx="200" cy="273" r="1.5" fill="#44ffcc" opacity="0.8"/>
+    
+    <!-- Rotating blade group -->
+    <g class="wtg-blades" transform-origin="200 273">
+      <!-- Blade 1 — pointing up -->
+      <polygon points="200,273 195,140 197,32 200,20 203,32 205,140" fill="url(#bladeGrad1)" opacity="0.92"/>
+      <!-- Blade 2 — pointing lower-right -->
+      <polygon points="200,273 310,350 395,405 408,412 395,418 310,370" fill="url(#bladeGrad2)" opacity="0.85" transform="rotate(120 200 273)"/>
+      <!-- Blade 3 — pointing lower-left -->
+      <polygon points="200,273 310,350 395,405 408,412 395,418 310,370" fill="url(#bladeGrad3)" opacity="0.85" transform="rotate(240 200 273)"/>
+    </g>
+    
+    <!-- Gradients -->
+    <defs>
+      <linearGradient id="towerGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#6a7a8a"/>
+        <stop offset="35%" stop-color="#c8d4de"/>
+        <stop offset="65%" stop-color="#e0e8f0"/>
+        <stop offset="100%" stop-color="#8090a0"/>
+      </linearGradient>
+      <linearGradient id="nacelleGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#7a8a9a"/>
+        <stop offset="40%" stop-color="#d0dae4"/>
+        <stop offset="100%" stop-color="#8898a8"/>
+      </linearGradient>
+      <radialGradient id="hubGrad">
+        <stop offset="0%" stop-color="#a0b8c8"/>
+        <stop offset="100%" stop-color="#4a6a5a"/>
+      </radialGradient>
+      <linearGradient id="bladeGrad1" x1="0.5" y1="1" x2="0.5" y2="0">
+        <stop offset="0%" stop-color="#c8d4de"/>
+        <stop offset="60%" stop-color="#e8eef4"/>
+        <stop offset="100%" stop-color="#f0f4f8" stop-opacity="0.7"/>
+      </linearGradient>
+      <linearGradient id="bladeGrad2" x1="0" y1="0.5" x2="1" y2="0.5">
+        <stop offset="0%" stop-color="#b8c4ce"/>
+        <stop offset="60%" stop-color="#d8e2ea"/>
+        <stop offset="100%" stop-color="#e8eef4" stop-opacity="0.6"/>
+      </linearGradient>
+      <linearGradient id="bladeGrad3" x1="1" y1="0.5" x2="0" y2="0.5">
+        <stop offset="0%" stop-color="#a0aeb8"/>
+        <stop offset="60%" stop-color="#c8d4de"/>
+        <stop offset="100%" stop-color="#dce4ec" stop-opacity="0.6"/>
+      </linearGradient>
+    </defs>
+  </svg>
+</div>
         <div class="hero-right" id="heroRight">
     <div class="hero-right" id="heroRight">
     <canvas id="wtgCanvas" style="width:100%;height:100%;display:block;"></canvas>
