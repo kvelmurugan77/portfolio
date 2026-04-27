@@ -231,6 +231,92 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
   footer{flex-direction:column;gap:1rem;text-align:center}
   .cert-strip{grid-template-columns:1fr}.cert-v-label{writing-mode:horizontal-tb;transform:none}
   .hero-stats-bar{display:none}
+  .tool-tabs{flex-wrap:wrap;gap:.2rem}
+  .tool-grid-2col{grid-template-columns:1fr!important}
+}
+
+/* ── TOOLS SECTION ─────────────────────────────────────── */
+#tools{background:linear-gradient(180deg,rgba(8,18,38,.9) 0%,rgba(10,20,42,.97) 100%);position:relative}
+#tools::before{content:'';position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse at 30% 30%,rgba(29,184,126,.05) 0%,transparent 60%)}
+.tool-tabs{display:flex;gap:.3rem;margin-top:2.5rem;position:relative;z-index:1;border-bottom:1px solid var(--border);padding-bottom:0}
+.tool-tab{font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.4);padding:.7rem 1.2rem;cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:color .25s,border-color .25s;font-family:var(--body)}
+.tool-tab:hover{color:rgba(255,255,255,.7)}
+.tool-tab.active{color:var(--mint);border-bottom-color:var(--mint)}
+.tool-panel{display:none;padding:2.5rem 0 1rem;position:relative;z-index:1}
+.tool-panel.active{display:block}
+.tool-card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:2rem;margin-bottom:1.5rem;transition:border-color .3s}
+.tool-card:hover{border-color:rgba(29,184,126,.3)}
+.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.tool-grid-3col{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.tool-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:2rem}
+.tool-metric{padding:1.3rem;background:rgba(11,31,58,.8);text-align:center}
+.tool-metric-n{display:block;font-family:var(--display);font-size:2rem;font-style:italic;color:var(--mint);line-height:1}
+.tool-metric-l{display:block;font-size:.58rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.38);margin-top:.3rem}
+.tool-metric-n.warn{color:var(--gold)}.tool-metric-n.bad{color:#e74c3c}
+.tool-btn{font-family:var(--body);font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:var(--mint);color:var(--sky1);border:none;padding:.75rem 1.8rem;border-radius:6px;cursor:pointer;transition:background .25s,transform .2s,box-shadow .2s;display:inline-flex;align-items:center;gap:.5rem}
+.tool-btn:hover{background:var(--gold);transform:translateY(-2px);box-shadow:0 6px 20px rgba(240,165,0,.3)}
+.tool-btn-ghost{font-family:var(--body);font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:none;color:rgba(255,255,255,.7);border:1.5px solid var(--border);padding:.7rem 1.6rem;border-radius:6px;cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;gap:.5rem}
+.tool-btn-ghost:hover{border-color:var(--mint);color:var(--mint)}
+.tool-btn-sm{padding:.5rem 1rem;font-size:.62rem}
+.tool-select,.tool-input{background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;font-family:var(--body);font-size:.85rem;color:#fff;padding:.6rem .8rem;outline:none;transition:border-color .25s;width:100%;appearance:none}
+.tool-select:focus,.tool-input:focus{border-color:var(--mint)}
+.tool-select option{background:var(--sky1);color:#fff}
+.tool-label{display:block;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:.35rem}
+.tool-fgroup{margin-bottom:1rem}
+.tool-upload{border:2px dashed var(--border);border-radius:10px;padding:1.8rem;text-align:center;cursor:pointer;transition:border-color .3s,background .3s;background:rgba(255,255,255,.02)}
+.tool-upload:hover{border-color:var(--mint);background:rgba(29,184,126,.04)}
+.tool-upload input{display:none}
+.tool-upload-icon{font-size:1.6rem;margin-bottom:.5rem;display:block;opacity:.5}
+.tool-upload-text{font-size:.82rem;color:rgba(255,255,255,.5);font-weight:300}
+.tool-upload-hint{font-size:.62rem;color:rgba(255,255,255,.25);margin-top:.3rem}
+.tool-table{width:100%;border-collapse:collapse;font-size:.78rem}
+.tool-table th{text-align:left;font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);padding:.7rem .8rem;border-bottom:1px solid var(--border);white-space:nowrap}
+.tool-table td{padding:.6rem .8rem;border-bottom:1px solid rgba(255,255,255,.04);color:rgba(255,255,255,.7);font-weight:300}
+.tool-table tr:hover td{background:rgba(29,184,126,.04)}
+.tool-table-scroll{max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
+.tool-badge{display:inline-block;font-size:.58rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.2rem .6rem;border-radius:4px}
+.tool-badge.valid{background:rgba(29,184,126,.15);color:var(--mint);border:1px solid rgba(29,184,126,.3)}
+.tool-badge.invalid{background:rgba(231,76,60,.15);color:#e74c3c;border:1px solid rgba(231,76,60,.3)}
+.tool-badge.warn{background:rgba(240,165,0,.15);color:var(--gold);border:1px solid rgba(240,165,0,.3)}
+.tool-badge.free{background:rgba(45,156,206,.15);color:var(--sky4);border:1px solid rgba(45,156,206,.3)}
+.tool-canvas-wrap{background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative}
+.tool-canvas-wrap canvas{display:block;width:100%;height:auto}
+.tool-loading{position:absolute;inset:0;background:rgba(11,31,58,.85);display:flex;align-items:center;justify-content:center;z-index:10;border-radius:10px;backdrop-filter:blur(4px)}
+.tool-loading-text{font-size:.8rem;color:var(--mint);font-weight:600;letter-spacing:.1em;animation:pulse 1.5s ease infinite}
+@keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
+.tool-progress{height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;margin-top:.5rem}
+.tool-progress-bar{height:100%;border-radius:2px;transition:width .5s}
+.tool-alert{padding:1rem 1.2rem;border-radius:8px;font-size:.82rem;line-height:1.6;margin-bottom:1rem;border-left:3px solid}
+.tool-alert.info{background:rgba(45,156,206,.08);border-color:var(--sky4);color:rgba(255,255,255,.7)}
+.tool-alert.success{background:rgba(29,184,126,.08);border-color:var(--mint);color:rgba(255,255,255,.7)}
+.tool-alert.error{background:rgba(231,76,60,.08);border-color:#e74c3c;color:rgba(255,255,255,.7)}
+.tool-alert.warning{background:rgba(240,165,0,.08);border-color:var(--gold);color:rgba(255,255,255,.7)}
+.tool-section-title{font-size:.7rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:1rem;display:flex;align-items:center;gap:.6rem}
+.tool-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.tool-row{display:flex;gap:1.5rem;align-items:stretch;flex-wrap:wrap}
+.tool-col{flex:1;min-width:280px}
+.tool-score-bar{height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;margin-top:.3rem}
+.tool-score-fill{height:100%;border-radius:3px;transition:width .6s}
+.tool-report{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:2.5rem;max-height:600px;overflow-y:auto}
+.tool-report h3{font-family:var(--display);font-size:1.2rem;font-style:italic;color:#fff;margin:1.5rem 0 .8rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+.tool-report h3:first-child{margin-top:0}
+.tool-report p,.tool-report li{font-size:.82rem;line-height:1.7;color:rgba(255,255,255,.6);font-weight:300}
+.tool-report table{width:100%;border-collapse:collapse;margin:.8rem 0;font-size:.78rem}
+.tool-report th{background:rgba(29,184,126,.1);font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.5);padding:.5rem .6rem;text-align:left;border:1px solid var(--border)}
+.tool-report td{padding:.4rem .6rem;border:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.65);font-weight:300}
+.tool-data-row{display:flex;gap:.5rem;align-items:center;justify-content:space-between;padding:.5rem .8rem;border-bottom:1px solid rgba(255,255,255,.04)}
+.tool-data-row:hover{background:rgba(29,184,126,.03)}
+.tool-remove{background:none;border:none;color:#e74c3c;cursor:pointer;font-size:.9rem;opacity:.5;transition:opacity .2s;padding:.2rem .4rem}
+.tool-remove:hover{opacity:1}
+@media(max-width:900px){
+  .tool-metrics{grid-template-columns:repeat(2,1fr)}
+  .tool-grid-3col{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px){
+  .tool-grid{grid-template-columns:1fr!important}
+  .tool-grid-3col{grid-template-columns:1fr!important}
+  .tool-metrics{grid-template-columns:1fr 1fr}
+  .tool-row{flex-direction:column}
 }
 </style>
 </head>
@@ -247,6 +333,7 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
     <li><a href="#experience">Experience</a></li>
     <li><a href="#projects">Innovations</a></li>
     <li><a href="#skills">Skills</a></li>
+    <li><a href="#tools">Tools</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
   <a class="nav-cta" href="#contact">Contact</a>
@@ -719,6 +806,131 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
   </div>
 </section>
 
+<!-- TOOLS -->
+<section id="tools" class="section-wrap">
+  <div class="container">
+    <div class="rv">
+      <div class="eyebrow">Tools</div>
+      <h2 class="stitle">Professional <em>Tools</em></h2>
+      <p style="font-size:.95rem;font-weight:300;line-height:1.85;color:rgba(255,255,255,.6);margin-top:1rem;max-width:60ch">Browser-based wind resource assessment tool for Power Curve Verification (PCV) site selection per <strong style="color:var(--mint)">IEC 61400-12-1</strong>. Upload your mast and WTG data to identify the best test configuration, perform terrain assessment, and generate DNV-style measurement sector reports.</p>
+    </div>
+    <div class="tool-tabs" id="toolTabs">
+      <button class="tool-tab active" data-tab="tab-data">Data Input</button>
+      <button class="tool-tab" data-tab="tab-map">Site Map</button>
+      <button class="tool-tab" data-tab="tab-terrain">Terrain Assessment</button>
+      <button class="tool-tab" data-tab="tab-pcv">PCV Selection</button>
+      <button class="tool-tab" data-tab="tab-free">Freestream</button>
+      <button class="tool-tab" data-tab="tab-report">Report</button>
+    </div>
+
+    <!-- TAB 1: DATA INPUT -->
+    <div class="tool-panel active" id="tab-data">
+      <div class="tool-row">
+        <div class="tool-col">
+          <div class="tool-card">
+            <div class="tool-section-title">Meteorological Masts</div>
+            <div id="mastDataList" style="margin-bottom:1rem"></div>
+            <label class="tool-upload" for="mastFile">
+              <span class="tool-upload-icon">+</span>
+              <span class="tool-upload-text">Upload Mast CSV</span>
+              <span class="tool-upload-hint">name, latitude, longitude, mastheight, type, measurementheights</span>
+              <input type="file" id="mastFile" accept=".csv,.txt">
+            </label>
+          </div>
+        </div>
+        <div class="tool-col">
+          <div class="tool-card">
+            <div class="tool-section-title">Wind Turbines (Target WTGs)</div>
+            <div id="wtgDataList" style="margin-bottom:1rem"></div>
+            <label class="tool-upload" for="wtgFile">
+              <span class="tool-upload-icon">+</span>
+              <span class="tool-upload-text">Upload WTG CSV</span>
+              <span class="tool-upload-hint">name, latitude, longitude, rotordiameter, hubheight, ratedpower, istarget</span>
+              <input type="file" id="wtgFile" accept=".csv,.txt">
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-section-title">External Wind Farm Layout (Optional)</div>
+        <div id="extDataList" style="margin-bottom:1rem"></div>
+        <label class="tool-upload" for="extFile">
+          <span class="tool-upload-icon">+</span>
+          <span class="tool-upload-text">Upload External Wind Farm CSV (optional)</span>
+          <span class="tool-upload-hint">Same format as WTG CSV — turbines from neighboring wind farms affecting wake</span>
+          <input type="file" id="extFile" accept=".csv,.txt">
+        </label>
+      </div>
+      <div class="tool-card">
+        <div class="tool-section-title">Configuration</div>
+        <div class="tool-grid" style="gap:1rem;margin-bottom:1.5rem">
+          <div class="tool-fgroup"><label class="tool-label">IEC Standard</label><select class="tool-select" id="cfgIEC"><option value="IEC-61400-12-1-2017">IEC 61400-12-1:2017</option><option value="IEC-61400-12-1-2005">IEC 61400-12-1:2005</option></select></div>
+          <div class="tool-fgroup"><label class="tool-label">Sector Width</label><select class="tool-select" id="cfgSector"><option value="10">10 degrees (36 sectors)</option><option value="20">20 degrees (18 sectors)</option></select></div>
+          <div class="tool-fgroup"><label class="tool-label">Assessment Radius (m)</label><input class="tool-input" type="number" id="cfgRadius" value="5000" min="1000" max="20000"></div>
+          <div class="tool-fgroup"><label class="tool-label">Min Mast-WTG Distance (rotor D)</label><input class="tool-input" type="number" id="cfgMinD" value="2" min="1" max="10"></div>
+        </div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap">
+          <button class="tool-btn" id="btnDemo">Load Demo Data</button>
+          <button class="tool-btn" id="btnRun" style="background:var(--gold)">Run Full Analysis</button>
+          <button class="tool-btn-ghost" id="btnClear">Clear All Data</button>
+        </div>
+      </div>
+      <div id="toolErrors"></div>
+    </div>
+
+    <!-- TAB 2: SITE MAP -->
+    <div class="tool-panel" id="tab-map">
+      <div class="tool-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+          <div class="tool-section-title" style="margin-bottom:0">Site Layout</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <span style="font-size:.6rem;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:.3rem"><span style="display:inline-block;width:10px;height:10px;background:#e74c3c;clip-path:polygon(50% 0%,0% 100%,100% 100%)"></span> Mast</span>
+            <span style="font-size:.6rem;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:.3rem"><span style="display:inline-block;width:10px;height:10px;background:#2d9cce;border-radius:50%"></span> Target WTG</span>
+            <span style="font-size:.6rem;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:.3rem"><span style="display:inline-block;width:10px;height:10px;background:rgba(255,255,255,.25);border-radius:50%"></span> Other WTG</span>
+            <span style="font-size:.6rem;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:.3rem"><span style="display:inline-block;width:10px;height:10px;background:#f0a500;transform:rotate(45deg)"></span> External WTG</span>
+          </div>
+        </div>
+        <div class="tool-canvas-wrap"><canvas id="mapCanvas" width="1100" height="700"></canvas></div>
+        <div id="mapInfo" style="margin-top:.8rem;font-size:.72rem;color:rgba(255,255,255,.4)"></div>
+      </div>
+    </div>
+
+    <!-- TAB 3: TERRAIN ASSESSMENT -->
+    <div class="tool-panel" id="tab-terrain">
+      <div id="terrainContent">
+        <div class="tool-alert info">Run the analysis first to see terrain assessment results.</div>
+      </div>
+    </div>
+
+    <!-- TAB 4: PCV SELECTION -->
+    <div class="tool-panel" id="tab-pcv">
+      <div id="pcvContent">
+        <div class="tool-alert info">Run the analysis first to see PCV selection results.</div>
+      </div>
+    </div>
+
+    <!-- TAB 5: FREESTREAM -->
+    <div class="tool-panel" id="tab-free">
+      <div id="freeContent">
+        <div class="tool-alert info">Run the analysis first to see freestream analysis results.</div>
+      </div>
+    </div>
+
+    <!-- TAB 6: REPORT -->
+    <div class="tool-panel" id="tab-report">
+      <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+        <button class="tool-btn" id="btnGenReport">Generate DNV-Style Report</button>
+        <button class="tool-btn-ghost" id="btnExportCSV">Export Sector Data (CSV)</button>
+        <button class="tool-btn-ghost" id="btnPrint">Print / Save as PDF</button>
+      </div>
+      <div id="reportContent">
+        <div class="tool-alert info">Run the analysis and click "Generate Report" to preview.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
 <!-- CONTACT -->
 <section id="contact" class="section-wrap">
   <div class="container">
@@ -1176,6 +1388,757 @@ document.querySelectorAll('.rv').forEach(r=>obs.observe(r));
 
   if(document.readyState==='complete') setTimeout(start,30);
   else window.addEventListener('load',function(){setTimeout(start,30);});
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     WIND RESOURCE ASSESSMENT TOOL — COMPLETE ENGINE + UI
+     IEC 61400-12-1 Terrain Assessment | PCV Selection | Freestream Analysis
+     ═══════════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+
+/* ── 1. GEO ENGINE ─────────────────────────────────────── */
+var WGeo={
+  R:6371000,
+  toRad:function(d){return d*Math.PI/180},
+  toDeg:function(r){return r*180/Math.PI},
+  haversine:function(a,b){
+    var dLat=this.toRad(b.latitude-a.latitude),dLon=this.toRad(b.longitude-a.longitude);
+    var la1=this.toRad(a.latitude),la2=this.toRad(b.latitude);
+    var h=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return this.R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
+  },
+  bearing:function(a,b){
+    var dLon=this.toRad(b.longitude-a.longitude),la1=this.toRad(a.latitude),la2=this.toRad(b.latitude);
+    var y=Math.sin(dLon)*Math.cos(la2),x=Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dLon);
+    var r=this.toDeg(Math.atan2(y,x));return((r%360)+360)%360;
+  },
+  destination:function(s,brng,d){
+    var dR=d/this.R,la1=this.toRad(s.latitude),lo1=this.toRad(s.longitude),b=this.toRad(brng);
+    var la2=Math.asin(Math.sin(la1)*Math.cos(dR)+Math.cos(la1)*Math.sin(dR)*Math.cos(b));
+    var lo2=lo1+Math.atan2(Math.sin(b)*Math.sin(dR)*Math.cos(la1),Math.cos(dR)-Math.sin(la1)*Math.sin(la2));
+    return{latitude:this.toDeg(la2),longitude:this.toDeg(lo2)};
+  },
+  normalizeAngle:function(a){return((a%360)+360)%360},
+  angularDeviation:function(ref,test){var d=Math.abs(ref-test);return d>180?360-d:d},
+  hash:function(x,y,s){var h=s+x*374761393+y*668265263;h=((h^(h>>13))*1274126177)|0;return((h^(h>>16))&0x7fffffff)/0x7fffffff},
+  smoothstep:function(t){return t*t*(3-2*t)},
+  valueNoise:function(x,y,s){
+    var ix=Math.floor(x),iy=Math.floor(y),fx=this.smoothstep(x-ix),fy=this.smoothstep(y-iy);
+    var n00=this.hash(ix,iy,s),n10=this.hash(ix+1,iy,s),n01=this.hash(ix,iy+1,s),n11=this.hash(ix+1,iy+1,s);
+    var nx0=n00+(n10-n00)*fx,nx1=n01+(n11-n01)*fx;return nx0+(nx1-nx0)*fy;
+  },
+  fbm:function(x,y,s,oct){
+    var v=0,a=1,f=1,mx=0;oct=oct||4;
+    for(var i=0;i<oct;i++){v+=a*this.valueNoise(x*f,y*f,s+i*31);mx+=a;a*=0.5;f*=2}
+    return v/mx;
+  },
+  syntheticElevation:function(lat,lon,base,seed){
+    base=base||50;seed=seed||42;
+    var x=lon*1000,y=lat*1000;
+    return base+(this.fbm(x*0.01,y*0.01,seed,3)-0.5)*40+(this.fbm(x*0.02,y*0.02,seed+100,3)-0.5)*20+(this.fbm(x*0.05,y*0.05,seed+200,2)-0.5)*6;
+  },
+  terrainProfile:function(origin,dir,maxD,step){
+    step=step||50;var profile=[],base=origin.elevation||this.syntheticElevation(origin.latitude,origin.longitude);
+    for(var d=step;d<=maxD;d+=step){
+      var pt=this.destination(origin,dir,d);
+      var elev=this.syntheticElevation(pt.latitude,pt.longitude,base);
+      var prev=profile.length>0?profile[profile.length-1].elevation:base;
+      var slope=d===step?0:((elev-prev)/(step))*100;
+      profile.push({distance:d,elevation:elev,slope:slope});
+    }
+    return profile;
+  },
+  roughnessClass:function(z0){
+    if(z0<=0.0002)return{c:0,d:'Open water'};if(z0<=0.005)return{c:0.5,d:'Smooth bare soil'};
+    if(z0<=0.03)return{c:1,d:'Open agricultural'};if(z0<=0.1)return{c:1.5,d:'Scattered obstacles'};
+    if(z0<=0.25)return{c:2,d:'Many obstacles'};if(z0<=0.5)return{c:2.5,d:'Villages'};
+    if(z0<=1.0)return{c:3,d:'Small towns'};if(z0<=2.0)return{c:3.5,d:'Large towns'};
+    return{c:4,d:'City centers'};
+  }
+};
+
+/* ── 2. TERRAIN ASSESSMENT ENGINE ───────────────────────── */
+var WTerrain={
+  assess:function(mast,wtg,allWtgs,cfg){
+    var dist=WGeo.haversine(mast.location,wtg.location);
+    var distD=dist/wtg.rotorDiameter;
+    var bear=WGeo.bearing(mast.location,wtg.location);
+    var nSec=360/cfg.sectorWidth;
+    var sectors=[];
+    for(var i=0;i<nSec;i++){
+      var dir=i*cfg.sectorWidth,dirF=dir-cfg.sectorWidth/2,dirT=dir+cfg.sectorWidth/2;
+      var profile=WGeo.terrainProfile(mast.location,dir,cfg.assessmentRadius,50);
+      var slopes=profile.map(function(p){return Math.abs(p.slope)});
+      var maxSlope=Math.max.apply(null,slopes);
+      var maxSlopeDeg=Math.atan(maxSlope/100)*180/Math.PI;
+      var avgSlope=slopes.reduce(function(a,b){return a+b},0)/slopes.length;
+      var maxElev=Math.max.apply(null,profile.map(function(p){return p.elevation}));
+      var minElev=Math.min.apply(null,profile.map(function(p){return p.elevation}));
+      var elevChange=maxElev-minElev;
+      // Wake check
+      var wakeTurbines=[];
+      for(var j=0;j<allWtgs.length;j++){
+        if(allWtgs[j].id===wtg.id)continue;
+        var wb=WGeo.bearing(mast.location,allWtgs[j].location);
+        var ad=WGeo.angularDeviation(dir,wb);
+        var wd=WGeo.haversine(mast.location,allWtgs[j].location)/allWtgs[j].rotorDiameter;
+        if(ad<=cfg.wakeAngularThreshold&&wd<=cfg.wakeDistanceThresholdD) wakeTurbines.push(allWtgs[j].name);
+      }
+      var isFree=wakeTurbines.length===0;
+      var simplePass=maxSlopeDeg<=cfg.maxSlopeSimple;
+      var complexPass=maxSlopeDeg<=cfg.maxSlopeComplex;
+      var tClass=simplePass?'A':complexPass?'B':'S';
+      var isValid=complexPass;
+      var failures=[];
+      if(!simplePass&&!complexPass)failures.push('Max slope '+maxSlopeDeg.toFixed(1)+' deg exceeds Class S threshold ('+cfg.maxSlopeComplex+' deg).');
+      else if(!simplePass)failures.push('Max slope '+maxSlopeDeg.toFixed(1)+' deg exceeds Class A. Class B.');
+      if(!isFree)failures.push('Wake: '+wakeTurbines.join(', '));
+      sectors.push({direction:dir,directionFrom:dirF,directionTo:dirT,maxSlope:maxSlope,maxSlopeDeg:maxSlopeDeg,avgSlope:avgSlope,
+        maxElevationChange:elevChange,roughness:{z0:0.03,roughnessClass:1,description:'Open agricultural (z0=0.03m)'},
+        isValid:isValid,failureReasons:failures,isFreestream:isFree,wakeAffectedTurbines:wakeTurbines,terrainClass:tClass,
+        slopeCriteria:{simpleTerrainPass:simplePass,complexTerrainPass:complexPass}});
+    }
+    var validSec=sectors.filter(function(s){return s.isValid&&s.isFreestream}).map(function(s){return s.direction});
+    var freeSec=sectors.filter(function(s){return s.isFreestream}).map(function(s){return s.direction});
+    var validSlopes=sectors.filter(function(s){return s.isValid}).map(function(s){return s.maxSlope});
+    var mxVS=validSlopes.length>0?Math.max.apply(null,validSlopes):0;
+    var notes=[];
+    if(sectors.some(function(s){return s.terrainClass==='S'}))notes.push('Complex terrain (Class S). Flow model verification may be required.');
+    else if(sectors.some(function(s){return s.terrainClass==='B'}))notes.push('Moderate terrain (Class B). Standard IEC applies with cautions.');
+    if(distD<cfg.minDistanceD)notes.push('Mast-WTG distance ('+distD.toFixed(1)+'D) below recommended minimum ('+cfg.minDistanceD+'D).');
+    if(freeSec.length<validSec.length*0.5)notes.push('Many valid sectors wake-affected. Consider relocating mast.');
+    var tClassO='A';if(sectors.some(function(s){return s.terrainClass==='S'}))tClassO='S';
+    else if(sectors.some(function(s){return s.terrainClass==='B'}))tClassO='B';
+    return{metadata:{mastId:mast.id,mastName:mast.name,targetWtgId:wtg.id,targetWtgName:wtg.name,
+      assessmentDate:new Date().toISOString().split('T')[0],iecVersion:cfg.iecVersion,sectorWidth:cfg.sectorWidth,assessmentRadius:cfg.assessmentRadius,numSectors:nSec},
+      distance:{meters:dist,rotorDiameters:distD,bearing:bear},sectors:sectors,validSectors:validSec,
+      summary:{terrainClassification:tClassO==='A'?'simple':'complex',terrainClass:tClassO,totalSectors:nSec,
+        validSectorsCount:validSec.length,invalidSectorsCount:nSec-validSec.length,freestreamSectorsCount:freeSec.length,
+        validSectorPercentage:(validSec.length/nSec)*100,maxValidSlope:mxVS,maxValidSlopeDeg:Math.atan(mxVS/100)*180/Math.PI,
+        minDistance:dist,minDistanceInD:distD,isIECCompliant:validSec.length>=nSec*0.25,complianceNotes:notes}};
+  }
+};
+
+/* ── 3. FREESTREAM ENGINE ──────────────────────────────── */
+var WFree={
+  analyze:function(mast,allWtgs,extWtgs,cfg){
+    var sources=allWtgs.concat(extWtgs);var nSec=360/cfg.sectorWidth;
+    var analysis=[],freeDirs=[],wakeDirs=[],extImpact=[];
+    for(var i=0;i<nSec;i++){
+      var dir=i*cfg.sectorWidth,wakes=[];
+      for(var j=0;j<sources.length;j++){
+        var w=sources[j];var d=WGeo.haversine(mast.location,w.location);
+        var b=WGeo.bearing(mast.location,w.location);
+        var ad=WGeo.angularDeviation(dir,b);var dD=d/w.rotorDiameter;
+        if(ad<=cfg.wakeAngularThreshold&&dD<=cfg.wakeDistanceThresholdD){
+          var isExt=extWtgs.some(function(e){return e.id===w.id});
+          wakes.push({wtgId:w.id,wtgName:w.name,distance:d,distanceInD:dD,angularDeviation:ad,isExternal:isExt});
+          if(isExt){
+            var ex=extImpact.find(function(e){return e.id===w.id});
+            if(!ex)extImpact.push({id:w.id,name:w.name,distance:d,distanceInD:dD,affectingSectors:[dir]});
+            else ex.affectingSectors.push(dir);
+          }
+        }
+      }
+      var impact='none';
+      var minD=wakes.length>0?Math.min.apply(null,wakes.map(function(wk){return wk.distanceInD})):Infinity;
+      if(wakes.length===0)impact='none';else if(minD<5||wakes.length>=3)impact='high';
+      else if(minD<10||wakes.length>=2)impact='medium';else impact='low';
+      var isFree=wakes.length===0;
+      if(isFree)freeDirs.push(dir);else wakeDirs.push(dir);
+      analysis.push({direction:dir,isFreestream:isFree,wakeSourceTurbines:wakes,combinedWakeImpact:impact});
+    }
+    return{mastId:mast.id,mastName:mast.name,freestreamSectors:freeDirs,wakeAffectedSectors:wakeDirs,
+      sectorWakeAnalysis:analysis,externalWtgs:extImpact,freestreamPercentage:(freeDirs.length/nSec)*100};
+  }
+};
+
+/* ── 4. PCV OPTIMIZATION ENGINE ────────────────────────── */
+var WPCV={
+  score:function(mast,wtg,allWtgs,cfg){
+    var a=WTerrain.assess(mast,wtg,allWtgs,cfg);
+    var n=a.metadata.numSectors,vs=a.summary.validSectorsCount,fs=a.summary.freestreamSectorsCount;
+    var distD=a.distance.rotorDiameters;
+    var dScore=distD<2?(distD/2*50):distD>10?Math.max(0,100-(distD-10)*5):100;
+    var tScore=(a.summary.validSectorPercentage/100)*100;
+    var cScore=(vs/n)*100;
+    var fScore=(fs/n)*100;
+    var sScore=Math.max(0,100-a.sectors.map(function(s){return s.maxSlopeDeg}).reduce(function(a,b){return a+b},0)/a.sectors.length*5);
+    var score=dScore*0.2+tScore*0.25+cScore*0.2+fScore*0.25+sScore*0.1;
+    return{mastId:mast.id,mastName:mast.name,wtgId:wtg.id,wtgName:wtg.name,distance:a.distance.meters,
+      distanceInD:distD,validSectors:vs,totalSectors:n,freestreamSectors:fs,score:Math.round(score*10)/10,
+      criterionScores:{distance:Math.round(dScore),terrainQuality:Math.round(tScore),sectorCoverage:Math.round(cScore),
+        freestreamQuality:Math.round(fScore),slopeCompliance:Math.round(sScore)},
+      isRecommended:score>=60&&distD>=cfg.minDistanceD&&vs>=n*0.3};
+  },
+  optimize:function(masts,wtgs,cfg){
+    var pairs=[];
+    for(var i=0;i<masts.length;i++)for(var j=0;j<wtgs.length;j++)pairs.push(this.score(masts[i],wtgs[j],wtgs,cfg));
+    pairs.sort(function(a,b){return b.score-a.score});
+    var configs=[];
+    for(var mi=0;mi<masts.length;mi++){
+      var mp=pairs.filter(function(p){return p.mastId===masts[mi].id}).sort(function(a,b){return b.score-a.score});
+      if(mp.length>=1)configs.push({mastId:masts[mi].id,mastName:masts[mi].name,targetWtgs:[{wtgId:mp[0].wtgId,wtgName:mp[0].wtgName,score:mp[0].score,validSectors:mp[0].validSectors}],
+        combinedValidSectors:mp[0].validSectors,combinedFreestreamSectors:mp[0].freestreamSectors,overallScore:mp[0].score,isRecommended:mp[0].isRecommended,notes:['Single WTG PCV']});
+      if(mp.length>=2){
+        var c1=WTerrain.assess(masts[mi],wtgs.find(function(w){return w.id===mp[0].wtgId}),wtgs,cfg);
+        var c2=WTerrain.assess(masts[mi],wtgs.find(function(w){return w.id===mp[1].wtgId}),wtgs,cfg);
+        var combined=new Set(c1.validSectors.concat(c2.validSectors));
+        var combinedFree=new Set(c1.sectors.filter(function(s){return s.isFreestream}).map(function(s){return s.direction}).concat(c2.sectors.filter(function(s){return s.isFreestream}).map(function(s){return s.direction})));
+        var cs=mp[0].score*0.6+mp[1].score*0.4;
+        configs.push({mastId:masts[mi].id,mastName:masts[mi].name,targetWtgs:[{wtgId:mp[0].wtgId,wtgName:mp[0].wtgName,score:mp[0].score,validSectors:mp[0].validSectors},{wtgId:mp[1].wtgId,wtgName:mp[1].wtgName,score:mp[1].score,validSectors:mp[1].validSectors}],
+          combinedValidSectors:combined.size,combinedFreestreamSectors:combinedFree.size,overallScore:Math.round(cs*10)/10,isRecommended:cs>=55&&combined.size>=360/cfg.sectorWidth*0.25,
+          notes:['1 mast -> 2 WTGs: '+mp[0].wtgName+' & '+mp[1].wtgName,'Combined coverage: '+((combined.size/(360/cfg.sectorWidth))*100).toFixed(1)+'%']});
+      }
+    }
+    configs.sort(function(a,b){return b.overallScore-a.overallScore});
+    var recs=[];
+    if(configs.length>0)recs.push('Best mast: '+configs[0].mastName+' (score '+configs[0].overallScore+'/100).');
+    if(configs[0]&&configs[0].targetWtgs.length>1)recs.push('Can test '+configs[0].targetWtgs.length+' WTGs: '+configs[0].targetWtgs.map(function(w){return w.wtgName}).join(' & ')+' simultaneously.');
+    if(pairs.length>0)recs.push('Best pair: '+pairs[0].mastName+' -> '+pairs[0].wtgName+' ('+pairs[0].distanceInD.toFixed(1)+'D, '+pairs[0].score+'/100).');
+    return{bestPairings:pairs.slice(0,10),totalCombinations:pairs.length,configurations:configs,recommendations:recs};
+  }
+};
+
+/* ── 5. SAMPLE DATA ───────────────────────────────────── */
+var Sample={
+  generate:function(){
+    var lat=13.08,lon=77.58,el=850;
+    var wtgs=[
+      {id:'WTG-01',name:'WTG-01',location:{latitude:lat+0.005,longitude:lon+0.002,elevation:el+12},rotorDiameter:126,hubHeight:100,ratedPower:3000,isTarget:true},
+      {id:'WTG-02',name:'WTG-02',location:{latitude:lat+0.010,longitude:lon-0.001,elevation:el+18},rotorDiameter:126,hubHeight:100,ratedPower:3000,isTarget:true},
+      {id:'WTG-03',name:'WTG-03',location:{latitude:lat+0.015,longitude:lon+0.003,elevation:el+25},rotorDiameter:126,hubHeight:100,ratedPower:3000,isTarget:true},
+      {id:'WTG-04',name:'WTG-04',location:{latitude:lat+0.020,longitude:lon+0.001,elevation:el+8},rotorDiameter:126,hubHeight:100,ratedPower:3000,isTarget:false},
+      {id:'WTG-05',name:'WTG-05',location:{latitude:lat-0.002,longitude:lon+0.006,elevation:el+15},rotorDiameter:126,hubHeight:100,ratedPower:3000,isTarget:false},
+      {id:'WTG-06',name:'WTG-06',location:{latitude:lat+0.025,longitude:lon-0.002,elevation:el+30},rotorDiameter:126,hubHeight:100,ratedPower:3000,isTarget:false},
+      {id:'WTG-07',name:'WTG-07',location:{latitude:lat+0.008,longitude:lon+0.008,elevation:el+5},rotorDiameter:126,hubHeight:100,ratedPower:3000,isTarget:false},
+      {id:'WTG-08',name:'WTG-08',location:{latitude:lat+0.003,longitude:lon-0.003,elevation:el+22},rotorDiameter:126,hubHeight:100,ratedPower:3000,isTarget:true}
+    ];
+    var masts=[
+      {id:'MM-01',name:'Met Mast 01',location:{latitude:lat+0.002,longitude:lon+0.005,elevation:el+10},mastHeight:120,type:'lattice'},
+      {id:'MM-02',name:'Met Mast 02',location:{latitude:lat+0.012,longitude:lon+0.006,elevation:el+20},mastHeight:100,type:'lattice'}
+    ];
+    var ext=[
+      {id:'EXT-01',name:'EXT-Alpha-01',location:{latitude:lat+0.035,longitude:lon-0.015,elevation:el+35},rotorDiameter:100,hubHeight:90,ratedPower:2000,isTarget:false},
+      {id:'EXT-02',name:'EXT-Alpha-02',location:{latitude:lat+0.040,longitude:lon-0.010,elevation:el+40},rotorDiameter:100,hubHeight:90,ratedPower:2000,isTarget:false},
+      {id:'EXT-03',name:'EXT-Alpha-03',location:{latitude:lat+0.045,longitude:lon-0.015,elevation:el+42},rotorDiameter:100,hubHeight:90,ratedPower:2000,isTarget:false},
+      {id:'EXT-04',name:'EXT-Alpha-04',location:{latitude:lat+0.040,longitude:lon-0.020,elevation:el+38},rotorDiameter:100,hubHeight:90,ratedPower:2000,isTarget:false}
+    ];
+    return{masts:masts,wtgs:wtgs,externalWtgs:ext};
+  }
+};
+
+/* ── 6. APP STATE & UI ─────────────────────────────────── */
+var APP={
+  masts:[],wtgs:[],extWtgs:[],results:null,config:{},selectedPair:0,selectedMastFree:0,
+  init:function(){
+    this.config={iecVersion:'IEC-61400-12-1-2017',sectorWidth:10,assessmentRadius:5000,minDistanceD:2,maxSlopeSimple:10,maxSlopeComplex:17,wakeAngularThreshold:30,wakeDistanceThresholdD:20};
+    this.bindEvents();this.observeReveal();
+  },
+  bindEvents:function(){
+    var self=this;
+    // Tabs
+    document.querySelectorAll('.tool-tab').forEach(function(tab){
+      tab.addEventListener('click',function(){
+        document.querySelectorAll('.tool-tab').forEach(function(t){t.classList.remove('active')});
+        document.querySelectorAll('.tool-panel').forEach(function(p){p.classList.remove('active')});
+        this.classList.add('active');
+        document.getElementById(this.dataset.tab).classList.add('active');
+        if(this.dataset.tab==='tab-map'&&self.wtgs.length>0)setTimeout(function(){self.drawMap()},100);
+      });
+    });
+    // Demo
+    document.getElementById('btnDemo').addEventListener('click',function(){self.loadDemo()});
+    // Run
+    document.getElementById('btnRun').addEventListener('click',function(){self.runAnalysis()});
+    // Clear
+    document.getElementById('btnClear').addEventListener('click',function(){self.clearAll()});
+    // CSV
+    document.getElementById('mastFile').addEventListener('change',function(e){self.parseCSV(e,'mast')});
+    document.getElementById('wtgFile').addEventListener('change',function(e){self.parseCSV(e,'wtg')});
+    document.getElementById('extFile').addEventListener('change',function(e){self.parseCSV(e,'ext')});
+    // Report
+    document.getElementById('btnGenReport').addEventListener('click',function(){self.genReport()});
+    document.getElementById('btnExportCSV').addEventListener('click',function(){self.exportCSV()});
+    document.getElementById('btnPrint').addEventListener('click',function(){window.print()});
+  },
+  observeReveal:function(){
+    var obs=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting)e.target.classList.add('in')})},{threshold:.1});
+    document.querySelectorAll('#tools .rv').forEach(function(r){obs.observe(r)});
+  },
+  readConfig:function(){
+    this.config.iecVersion=document.getElementById('cfgIEC').value;
+    this.config.sectorWidth=parseInt(document.getElementById('cfgSector').value);
+    this.config.assessmentRadius=parseInt(document.getElementById('cfgRadius').value);
+    this.config.minDistanceD=parseInt(document.getElementById('cfgMinD').value);
+  },
+  loadDemo:function(){
+    var d=Sample.generate();
+    this.masts=d.masts;this.wtgs=d.wtgs;this.extWtgs=d.externalWtgs;
+    this.renderDataLists();this.drawMap();
+    this.showAlert('success','Demo data loaded: '+this.masts.length+' masts, '+this.wtgs.length+' WTGs, '+this.extWtgs.length+' external WTGs.');
+  },
+  parseCSV:function(e,type){
+    var self=this;var file=e.target.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      var text=ev.target.result;var lines=text.trim().split('\n');
+      if(lines.length<2){self.showAlert('error','CSV must have header + data rows.');return}
+      var headers=lines[0].split(',').map(function(h){return h.trim().toLowerCase()});
+      var errors=[];
+      if(type==='mast'){
+        var req=['name','latitude','longitude','mastheight'];
+        for(var i=0;i<req.length;i++)if(headers.indexOf(req[i])<0)errors.push('Missing: '+req[i]);
+        if(errors.length){self.showAlert('error',errors.join(', '));return}
+        for(var li=1;li<lines.length;li++){
+          var v=lines[li].split(',').map(function(x){return x.trim()});if(v.length<4)continue;
+          var lat=parseFloat(v[headers.indexOf('latitude')]),lon=parseFloat(v[headers.indexOf('longitude')]),mh=parseFloat(v[headers.indexOf('mastheight')]);
+          if(isNaN(lat)||isNaN(lon)||isNaN(mh))continue;
+          self.masts.push({id:'MM-'+String(self.masts.length+1).padStart(2,'0'),name:v[headers.indexOf('name')]||'MM-'+(self.masts.length+1),
+            location:{latitude:lat,longitude:lon},mastHeight:mh,type:v[headers.indexOf('type')]||'lattice'});
+        }
+      }else{
+        var req2=['name','latitude','longitude','rotordiameter','hubheight'];
+        for(var i=0;i<req2.length;i++)if(headers.indexOf(req2[i])<0)errors.push('Missing: '+req2[i]);
+        if(errors.length){self.showAlert('error',errors.join(', '));return}
+        for(var li=1;li<lines.length;li++){
+          var v=lines[li].split(',').map(function(x){return x.trim()});if(v.length<5)continue;
+          var lat=parseFloat(v[headers.indexOf('latitude')]),lon=parseFloat(v[headers.indexOf('longitude')]),rd=parseFloat(v[headers.indexOf('rotordiameter')]),hh=parseFloat(v[headers.indexOf('hubheight')]);
+          if(isNaN(lat)||isNaN(lon)||isNaN(rd)||isNaN(hh))continue;
+          var it=v[headers.indexOf('istarget')];if(it)it=it.toLowerCase();
+          var isT=it!=='false'&&it!=='0'&&it!=='no';
+          var obj={id:(type==='ext'?'EXT-':'WTG-')+String(type==='ext'?self.extWtgs.length:self.wtgs.length+1).padStart(2,'0'),
+            name:v[headers.indexOf('name')]||(type==='ext'?'EXT-':'WTG-')+(type==='ext'?self.extWtgs.length+1:self.wtgs.length+1),
+            location:{latitude:lat,longitude:lon},rotorDiameter:rd,hubHeight:hh,
+            ratedPower:parseFloat(v[headers.indexOf('ratedpower')])||undefined,isTarget:type!=='ext'?isT:false};
+          if(type==='ext')self.extWtgs.push(obj);else self.wtgs.push(obj);
+        }
+      }
+      self.renderDataLists();self.drawMap();
+      self.showAlert('success','Loaded '+(type==='mast'?self.masts.length:type==='ext'?self.extWtgs.length:self.wtgs.length)+' '+type+' records from CSV.');
+    };
+    reader.readAsText(file);e.target.value='';
+  },
+  renderDataLists:function(){
+    var self=this;
+    var ml=document.getElementById('mastDataList');
+    ml.innerHTML=this.masts.map(function(m,i){return '<div class="tool-data-row"><span style="font-size:.78rem;color:rgba(255,255,255,.65)"><strong style="color:#e74c3c">&#9650;</strong> '+m.name+' <span style="opacity:.4">('+m.location.latitude.toFixed(4)+', '+m.location.longitude.toFixed(4)+') '+m.mastHeight+'m</span></span><button class="tool-remove" data-type="mast" data-idx="'+i+'">&times;</button></div>'}).join('');
+    var wl=document.getElementById('wtgDataList');
+    wl.innerHTML=this.wtgs.map(function(w,i){return '<div class="tool-data-row"><span style="font-size:.78rem;color:rgba(255,255,255,.65)"><strong style="color:#2d9cce">&#9679;</strong> '+w.name+(w.isTarget?' <span class="tool-badge valid">target</span>':'')+' <span style="opacity:.4">D='+w.rotorDiameter+'m H='+w.hubHeight+'m</span></span><button class="tool-remove" data-type="wtg" data-idx="'+i+'">&times;</button></div>'}).join('');
+    var el=document.getElementById('extDataList');
+    el.innerHTML=this.extWtgs.map(function(w,i){return '<div class="tool-data-row"><span style="font-size:.78rem;color:rgba(255,255,255,.65)"><strong style="color:#f0a500">&#9670;</strong> '+w.name+' <span style="opacity:.4">D='+w.rotorDiameter+'m H='+w.hubHeight+'m</span></span><button class="tool-remove" data-type="ext" data-idx="'+i+'">&times;</button></div>'}).join('');
+    document.querySelectorAll('.tool-remove').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var t=this.dataset.type,idx=parseInt(this.dataset.idx);
+        if(t==='mast')self.masts.splice(idx,1);else if(t==='wtg')self.wtgs.splice(idx,1);else self.extWtgs.splice(idx,1);
+        self.renderDataLists();self.drawMap();
+      });
+    });
+  },
+  showAlert:function(type,msg){
+    var el=document.getElementById('toolErrors');
+    el.innerHTML='<div class="tool-alert '+type+'">'+msg+'</div>';
+    setTimeout(function(){el.innerHTML=''},8000);
+  },
+  clearAll:function(){
+    this.masts=[];this.wtgs=[];this.extWtgs=[];this.results=null;
+    this.renderDataLists();
+    document.getElementById('terrainContent').innerHTML='<div class="tool-alert info">Run the analysis to see terrain assessment results.</div>';
+    document.getElementById('pcvContent').innerHTML='<div class="tool-alert info">Run the analysis to see PCV selection results.</div>';
+    document.getElementById('freeContent').innerHTML='<div class="tool-alert info">Run the analysis to see freestream analysis results.</div>';
+    document.getElementById('reportContent').innerHTML='<div class="tool-alert info">Run the analysis and click "Generate Report".</div>';
+    document.getElementById('toolErrors').innerHTML='';
+  },
+  runAnalysis:function(){
+    if(this.masts.length===0){this.showAlert('error','Please add at least one meteorological mast.');return}
+    if(this.wtgs.length===0){this.showAlert('error','Please add at least one WTG.');return}
+    this.readConfig();
+    var self=this;var targetWtgs=this.wtgs.filter(function(w){return w.isTarget});
+    if(targetWtgs.length===0)targetWtgs=this.wtgs;
+    // Terrain
+    var terrainResults=[];
+    for(var i=0;i<this.masts.length;i++){for(var j=0;j<targetWtgs.length;j++){
+      terrainResults.push(WTerrain.assess(this.masts[i],targetWtgs[j],this.wtgs,this.config));
+    }}
+    // Freestream
+    var freestreamResults=[];
+    for(var i=0;i<this.masts.length;i++){freestreamResults.push(WFree.analyze(this.masts[i],this.wtgs,this.extWtgs,this.config))}
+    // PCV
+    var pcvResults=WPCV.optimize(this.masts,targetWtgs,this.config);
+    this.results={terrain:terrainResults,freestream:freestreamResults,pcv:pcvResults,targetWtgs:targetWtgs};
+    this.renderTerrain();this.renderPCV();this.renderFreestream();this.drawMap();
+    this.showAlert('success','Analysis complete! '+terrainResults.length+' pairings assessed, '+pcvResults.bestPairings.length+' ranked.');
+    // Switch to terrain tab
+    document.querySelectorAll('.tool-tab').forEach(function(t){t.classList.remove('active')});
+    document.querySelectorAll('.tool-panel').forEach(function(p){p.classList.remove('active')});
+    document.querySelector('[data-tab="tab-terrain"]').classList.add('active');
+    document.getElementById('tab-terrain').classList.add('active');
+  },
+
+  /* ── TERRAIN TAB ──────────────────────────────────── */
+  renderTerrain:function(){
+    if(!this.results)return;
+    var r=this.results,el=document.getElementById('terrainContent');
+    var h='<div class="tool-fgroup"><label class="tool-label">Select Mast -> WTG Pair</label><select class="tool-select" id="terrainPairSelect" style="max-width:500px">';
+    for(var i=0;i<r.terrain.length;i++){h+='<option value="'+i+'">'+r.terrain[i].metadata.mastName+' -> '+r.terrain[i].metadata.targetWtgName+' ('+r.terrain[i].distance.rotorDiameters.toFixed(1)+'D)</option>'}
+    h+='</select></div>';
+    el.innerHTML=h;
+    this.selectedPair=0;
+    var self=this;
+    document.getElementById('terrainPairSelect').addEventListener('change',function(){self.selectedPair=parseInt(this.value);self.renderTerrainDetails()});
+    this.renderTerrainDetails();
+  },
+  renderTerrainDetails:function(){
+    if(!this.results)return;
+    var t=this.results.terrain[this.selectedPair],s=t.summary;
+    var h='<div class="tool-metrics"><div class="tool-metric"><span class="tool-metric-n">'+t.distance.rotorDiameters.toFixed(1)+'</span><span class="tool-metric-l">Distance (D)</span></div>';
+    h+='<div class="tool-metric"><span class="tool-metric-n">'+s.terrainClass+'</span><span class="tool-metric-l">Terrain Class</span></div>';
+    h+='<div class="tool-metric"><span class="tool-metric-n '+(s.validSectorPercentage>=50?'':'warn')+'">'+s.validSectorsCount+'/'+s.totalSectors+'</span><span class="tool-metric-l">Valid Sectors</span></div>';
+    h+='<div class="tool-metric"><span class="tool-metric-n">'+s.validSectorPercentage.toFixed(1)+'%</span><span class="tool-metric-l">Coverage</span></div></div>';
+    h+='<div class="tool-progress" style="margin-bottom:1.5rem"><div class="tool-progress-bar" style="width:'+s.validSectorPercentage+'%;background:linear-gradient(90deg,#1db87e,'+(s.validSectorPercentage>=50?'#1db87e':'#f0a500')+')"></div></div>';
+    h+='<div class="tool-grid"><div class="tool-col"><div class="tool-section-title">Sector Classification (Polar Plot)</div><div class="tool-canvas-wrap"><canvas id="polarCanvas" width="500" height="500"></canvas></div></div>';
+    h+='<div class="tool-col"><div class="tool-section-title">Terrain Profile (Selected Sector)</div><div class="tool-fgroup"><label class="tool-label">Sector Direction</label><select class="tool-select" id="profileDirSelect">';
+    for(var i=0;i<t.sectors.length;i++){h+='<option value="'+i+'">'+t.sectors[i].direction+' deg'+(t.sectors[i].isValid?'':' [INVALID]')+'</option>'}
+    h+='</select></div><div class="tool-canvas-wrap"><canvas id="profileCanvas" width="550" height="320"></canvas></div></div></div>';
+    h+='<div class="tool-section-title" style="margin-top:2rem">Detailed Sector Analysis</div>';
+    h+='<div class="tool-table-scroll"><table class="tool-table"><thead><tr><th>Dir</th><th>Max Slope (%)</th><th>Max Slope (deg)</th><th>Class</th><th>Valid</th><th>Freestream</th><th>Wake Sources</th><th>Failure Reasons</th></tr></thead><tbody>';
+    for(var i=0;i<t.sectors.length;i++){var sc=t.sectors[i];
+      h+='<tr><td><strong>'+sc.direction+'</strong></td><td>'+sc.maxSlope.toFixed(1)+'</td><td>'+sc.maxSlopeDeg.toFixed(1)+'</td>';
+      h+='<td><span class="tool-badge '+(sc.terrainClass==='A'?'valid':sc.terrainClass==='B'?'warn':'invalid')+'">'+sc.terrainClass+'</span></td>';
+      h+='<td><span class="tool-badge '+(sc.isValid?'valid':'invalid')+'">'+(sc.isValid?'Yes':'No')+'</span></td>';
+      h+='<td><span class="tool-badge '+(sc.isFreestream?'valid':'warn')+'">'+(sc.isFreestream?'Yes':'No')+'</span></td>';
+      h+='<td>'+(sc.wakeAffectedTurbines.length>0?sc.wakeAffectedTurbines.join(', '):'-')+'</td>';
+      h+='<td style="color:'+(sc.failureReasons.length>0?'#e74c3c':'rgba(255,255,255,.3)')+'">'+(sc.failureReasons.length>0?sc.failureReasons[0]:'-')+'</td></tr>';
+    }
+    h+='</tbody></table></div>';
+    if(s.complianceNotes.length>0){h+='<div style="margin-top:1rem">';for(var i=0;i<s.complianceNotes.length;i++)h+='<div class="tool-alert warning">'+s.complianceNotes[i]+'</div>';h+='</div>'}
+    el.innerHTML=document.getElementById('terrainContent').innerHTML.replace(/<select class="tool-select" id="terrainPairSelect"[\s\S]*?<\/select>/,el.querySelector('#terrainPairSelect')?el.querySelector('#terrainPairSelect').outerHTML:'')+h.replace(/^[\s\S]*?<\/select>/,'') ;
+    // Actually let's just rebuild the whole thing
+    var el2=document.getElementById('terrainContent');
+    var fullH='<div class="tool-fgroup"><label class="tool-label">Select Mast -> WTG Pair</label><select class="tool-select" id="terrainPairSelect" style="max-width:500px">';
+    for(var i=0;i<this.results.terrain.length;i++){fullH+='<option value="'+i+'"'+(i===this.selectedPair?' selected':'')+'>'+this.results.terrain[i].metadata.mastName+' -> '+this.results.terrain[i].metadata.targetWtgName+' ('+this.results.terrain[i].distance.rotorDiameters.toFixed(1)+'D)</option>'}
+    fullH+='</select></div>'+h.substring(h.indexOf('<div class="tool-metrics">'));
+    el2.innerHTML=fullH;
+    var self=this;
+    document.getElementById('terrainPairSelect').addEventListener('change',function(){self.selectedPair=parseInt(this.value);self.renderTerrainDetails()});
+    setTimeout(function(){self.drawPolar(t);self.drawProfile(t,0)},50);
+    document.getElementById('profileDirSelect').addEventListener('change',function(){self.drawProfile(t,parseInt(this.value))});
+  },
+  drawPolar:function(t){
+    var c=document.getElementById('polarCanvas');if(!c)return;
+    var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.38;
+    ctx.clearRect(0,0,w,h);
+    // Grid circles
+    ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;
+    for(var i=1;i<=5;i++){ctx.beginPath();ctx.arc(cx,cy,r*(i/5),0,Math.PI*2);ctx.stroke()}
+    // Direction lines
+    for(var i=0;i<36;i++){var a=(i*10-90)*Math.PI/180;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.stroke()}
+    // Sector wedges
+    var sw=t.metadata.sectorWidth*Math.PI/180;
+    for(var i=0;i<t.sectors.length;i++){
+      var sc=t.sectors[i];var a=(sc.direction-90)*Math.PI/180;
+      var a1=a-sw/2,a2=a+sw/2;
+      var col=sc.isValid&&sc.isFreestream?'rgba(29,184,126,0.7)':sc.isValid?'rgba(240,165,0,0.7)':'rgba(231,76,60,0.5)';
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,a1,a2);ctx.closePath();ctx.fillStyle=col;ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=0.5;ctx.stroke();
+    }
+    // Direction labels
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='10px "Open Sans",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    var dirs=['N','NE','E','SE','S','SW','W','NW'];
+    for(var i=0;i<8;i++){var a=(i*45-90)*Math.PI/180;ctx.fillText(dirs[i],cx+Math.cos(a)*(r+18),cy+Math.sin(a)*(r+18))}
+    // Bearing arrow
+    var ba=(t.distance.bearing-90)*Math.PI/180;
+    ctx.strokeStyle='#f0a500';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(ba)*(r*0.8),cy+Math.sin(ba)*(r*0.8));ctx.stroke();
+    ctx.setLineDash([]);
+    // Center dot
+    ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+    // Legend
+    var ly=h-30;ctx.font='9px "Open Sans",sans-serif';ctx.textAlign='left';
+    ctx.fillStyle='rgba(29,184,126,0.7)';ctx.fillRect(10,ly,10,10);ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillText('Valid + Freestream',24,ly+8);
+    ctx.fillStyle='rgba(240,165,0,0.7)';ctx.fillRect(140,ly,10,10);ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillText('Valid, Wake-Affected',154,ly+8);
+    ctx.fillStyle='rgba(231,76,60,0.5)';ctx.fillRect(300,ly,10,10);ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillText('Invalid',314,ly+8);
+  },
+  drawProfile:function(t,idx){
+    var c=document.getElementById('profileCanvas');if(!c)return;
+    var ctx=c.getContext('2d'),w=c.width,h=c.height;
+    var profile=WGeo.terrainProfile(t.metadata.mastName?{latitude:0,longitude:0}:null,idx===undefined?0:t.sectors[idx].direction,this.config.assessmentRadius,50);
+    // Regenerate from mast location
+    var mast=null;for(var i=0;i<this.masts.length;i++){if(this.masts[i].id===t.metadata.mastId){mast=this.masts[i];break}}
+    if(mast)profile=WGeo.terrainProfile(mast.location,t.sectors[idx].direction,this.config.assessmentRadius,50);
+    ctx.clearRect(0,0,w,h);
+    var pad={t:30,r:20,b:40,l:50};var pw=w-pad.l-pad.r,ph=h-pad.t-pad.b;
+    var maxD=profile[profile.length-1].distance;
+    var elevs=profile.map(function(p){return p.elevation});
+    var minE=Math.min.apply(null,elevs)-5,maxE=Math.max.apply(null,elevs)+5;
+    var rangeE=maxE-minE||1;
+    // Background
+    ctx.fillStyle='rgba(11,31,58,0.5)';ctx.fillRect(pad.l,pad.t,pw,ph);
+    // Grid
+    ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=0.5;
+    for(var i=0;i<=5;i++){var y=pad.t+ph*(i/5);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pw,y);ctx.stroke()}
+    // Max slope threshold lines
+    var slopeThreshSimple=this.config.maxSlopeSimple;
+    ctx.strokeStyle='rgba(29,184,126,0.4)';ctx.lineWidth=1;ctx.setLineDash([5,5]);
+    ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l+pw,pad.t+ph*tanDeg(slopeThreshSimple)*(maxD/this.config.assessmentRadius));ctx.stroke();
+    ctx.strokeStyle='rgba(231,76,60,0.4)';
+    ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l+pw,pad.t+ph*tanDeg(this.config.maxSlopeComplex)*(maxD/this.config.assessmentRadius));ctx.stroke();
+    ctx.setLineDash([]);
+    // Elevation line
+    ctx.strokeStyle='#2d9cce';ctx.lineWidth=2;ctx.beginPath();
+    for(var i=0;i<profile.length;i++){
+      var x=pad.l+(profile[i].distance/maxD)*pw,y=pad.t+ph-((profile[i].elevation-minE)/rangeE)*ph;
+      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    // Fill under curve
+    ctx.lineTo(pad.l+pw,pad.t+ph);ctx.lineTo(pad.l,pad.t+ph);ctx.closePath();
+    var grad=ctx.createLinearGradient(0,pad.t,0,pad.t+ph);
+    grad.addColorStop(0,'rgba(45,156,206,0.2)');grad.addColorStop(1,'rgba(45,156,206,0)');
+    ctx.fillStyle=grad;ctx.fill();
+    // Axes
+    ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+ph);ctx.lineTo(pad.l+pw,pad.t+ph);ctx.stroke();
+    // Labels
+    ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='9px "Open Sans",sans-serif';ctx.textAlign='center';
+    for(var i=0;i<=5;i++){var x=pad.l+pw*(i/5);ctx.fillText(Math.round(maxD*i/5)+'m',x,pad.t+ph+15)}
+    ctx.textAlign='right';
+    for(var i=0;i<=5;i++){var y=pad.t+ph*(i/5);ctx.fillText(Math.round(maxE-rangeE*(i/5))+'m',pad.l-8,y+3)}
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.textAlign='center';
+    ctx.fillText('Distance (m)',pad.l+pw/2,h-5);ctx.save();ctx.translate(12,pad.t+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('Elevation (m)',0,0);ctx.restore();
+    // Title
+    ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font='bold 10px "Open Sans",sans-serif';ctx.textAlign='left';
+    ctx.fillText('Sector: '+t.sectors[idx].direction+' deg | Max Slope: '+t.sectors[idx].maxSlopeDeg.toFixed(1)+' deg | Class: '+t.sectors[idx].terrainClass,pad.l,18);
+    // Legend
+    ctx.font='9px "Open Sans",sans-serif';ctx.textAlign='left';
+    ctx.fillStyle='rgba(29,184,126,0.5)';ctx.fillText('--- Class A ('+this.config.maxSlopeSimple+' deg)',pad.l+pw-180,pad.t+15);
+    ctx.fillStyle='rgba(231,76,60,0.5)';ctx.fillText('--- Class S ('+this.config.maxSlopeComplex+' deg)',pad.l+pw-180,pad.t+28);
+
+    function tanDeg(d){return Math.tan(d*Math.PI/180)}
+  },
+
+  /* ── PCV TAB ──────────────────────────────────────── */
+  renderPCV:function(){
+    if(!this.results)return;
+    var p=this.results.pcv,el=document.getElementById('pcvContent');
+    var h='<div class="tool-section-title">Recommended Configuration</div>';
+    for(var i=0;i<p.recommendations.length;i++)h+='<div class="tool-alert success">'+p.recommendations[i]+'</div>';
+    h+='<div class="tool-section-title" style="margin-top:2rem">All Mast-WTG Pairings (Ranked)</div>';
+    h+='<div class="tool-table-scroll"><table class="tool-table"><thead><tr><th>Rank</th><th>Mast</th><th>WTG</th><th>Distance</th><th>Score</th><th>Valid Sectors</th><th>Freestream</th><th>Recommended</th></tr></thead><tbody>';
+    for(var i=0;i<p.bestPairings.length;i++){
+      var pr=p.bestPairings[i];
+      h+='<tr><td>'+(i+1)+'</td><td>'+pr.mastName+'</td><td>'+pr.wtgName+'</td><td>'+pr.distanceInD.toFixed(1)+'D</td>';
+      h+='<td><div style="display:flex;align-items:center;gap:.5rem"><strong>'+(pr.score)+'</strong><div class="tool-score-bar" style="width:80px"><div class="tool-score-fill" style="width:'+pr.score+'%;background:'+(pr.score>=70?'#1db87e':pr.score>=50?'#f0a500':'#e74c3c')+'"></div></div></div></td>';
+      h+='<td>'+pr.validSectors+'/'+pr.totalSectors+'</td><td>'+pr.freestreamSectors+'</td>';
+      h+='<td>'+(pr.isRecommended?'<span class="tool-badge valid">Yes</span>':'<span class="tool-badge invalid">No</span>')+'</td></tr>';
+    }
+    h+='</tbody></table></div>';
+    h+='<div class="tool-section-title" style="margin-top:2rem">Mast Configurations (1 Mast -> N WTGs)</div>';
+    h+='<div class="tool-grid">';
+    for(var i=0;i<p.configurations.length;i++){
+      var cf=p.configurations[i];
+      h+='<div class="tool-card" style="border-color:'+(cf.isRecommended?'rgba(29,184,126,.4)':'var(--border)')+'">';
+      if(cf.isRecommended)h+='<div style="font-size:.6rem;color:var(--mint);font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.5rem">Recommended</div>';
+      h+='<div style="font-family:var(--display);font-size:1.1rem;font-style:italic;color:#fff;margin-bottom:.5rem">'+cf.mastName+'</div>';
+      h+='<div style="font-size:.78rem;color:rgba(255,255,255,.5);margin-bottom:1rem">Testing '+cf.targetWtgs.length+' WTG'+(cf.targetWtgs.length>1?'s':'')+'</div>';
+      for(var j=0;j<cf.targetWtgs.length;j++){h+='<div style="display:flex;justify-content:space-between;padding:.3rem 0;font-size:.78rem;color:rgba(255,255,255,.6)"><span>'+cf.targetWtgs[j].wtgName+'</span><span style="color:var(--mint)">'+cf.targetWtgs[j].score+'/100</span></div>'}
+      h+='<div style="margin-top:1rem;padding-top:.7rem;border-top:1px solid var(--border);font-size:.72rem;color:rgba(255,255,255,.4)">';
+      h+='Combined valid: '+cf.combinedValidSectors+' | Freestream: '+cf.combinedFreestreamSectors+' | Score: '+cf.overallScore+'/100';
+      h+='</div></div>';
+    }
+    h+='</div>';
+    el.innerHTML=h;
+  },
+
+  /* ── FREESTREAM TAB ───────────────────────────────── */
+  renderFreestream:function(){
+    if(!this.results)return;
+    var f=this.results.freestream;
+    if(!f||f.length===0)return;
+    var el=document.getElementById('freeContent');
+    var selH='<div class="tool-fgroup"><label class="tool-label">Select Mast</label><select class="tool-select" id="freeMastSelect" style="max-width:400px">';
+    for(var i=0;i<f.length;i++){selH+='<option value="'+i+'"'+(i===this.selectedMastFree?' selected':'')+'>'+f[i].mastName+'</option>'}
+    selH+='</select></div>';
+    var fr=f[this.selectedMastFree];
+    var h=selH;
+    h+='<div class="tool-metrics"><div class="tool-metric"><span class="tool-metric-n">'+fr.freestreamSectors.length+'</span><span class="tool-metric-l">Freestream Sectors</span></div>';
+    h+='<div class="tool-metric"><span class="tool-metric-n">'+fr.wakeAffectedSectors.length+'</span><span class="tool-metric-l">Wake-Affected</span></div>';
+    h+='<div class="tool-metric"><span class="tool-metric-n">'+fr.freestreamPercentage.toFixed(1)+'%</span><span class="tool-metric-l">Freestream %</span></div>';
+    h+='<div class="tool-metric"><span class="tool-metric-n">'+fr.externalWtgs.length+'</span><span class="tool-metric-l">External WTGs</span></div></div>';
+    // Wake rose canvas
+    h+='<div class="tool-grid"><div class="tool-col"><div class="tool-section-title">Wake Impact Rose</div><div class="tool-canvas-wrap"><canvas id="wakeCanvas" width="500" height="500"></canvas></div></div>';
+    // External WTG table
+    h+='<div class="tool-col"><div class="tool-section-title">External WTG Wake Sources</div>';
+    if(fr.externalWtgs.length>0){
+      h+='<div class="tool-table-scroll"><table class="tool-table"><thead><tr><th>WTG</th><th>Distance</th><th>Distance (D)</th><th>Affected Sectors</th></tr></thead><tbody>';
+      for(var i=0;i<fr.externalWtgs.length;i++){var ew=fr.externalWtgs[i];
+        h+='<tr><td>'+ew.name+'</td><td>'+ew.distance.toFixed(0)+'m</td><td>'+ew.distanceInD.toFixed(1)+'D</td><td>'+ew.affectingSectors.join(', ')+' deg</td></tr>'}
+      h+='</tbody></table></div>';
+    }else{h+='<div class="tool-alert info">No external WTGs affecting this mast.</div>'}
+    h+='</div></div>';
+    // Sector breakdown
+    h+='<div class="tool-section-title" style="margin-top:1.5rem">Sector-by-Sector Wake Breakdown</div>';
+    h+='<div class="tool-table-scroll"><table class="tool-table"><thead><tr><th>Dir</th><th>Status</th><th>Impact</th><th>Wake Sources</th></tr></thead><tbody>';
+    for(var i=0;i<fr.sectorWakeAnalysis.length;i++){var sw=fr.sectorWakeAnalysis[i];
+      h+='<tr><td><strong>'+sw.direction+'</strong></td>';
+      h+='<td><span class="tool-badge '+(sw.isFreestream?'valid':'warn')+'">'+(sw.isFreestream?'Freestream':'Wake-Affected')+'</span></td>';
+      h+='<td><span class="tool-badge '+(sw.combinedWakeImpact==='none'?'valid':sw.combinedWakeImpact==='low'?'warn':sw.combinedWakeImpact==='medium'?'warn':'invalid')+'">'+sw.combinedWakeImpact+'</span></td>';
+      h+='<td>'+(sw.wakeSourceTurbines.length>0?sw.wakeSourceTurbines.map(function(wk){return wk.wtgName+' ('+wk.distanceInD.toFixed(1)+'D '+wk.angularDeviation.toFixed(0)+' deg)'}).join(', '):'-')+'</td></tr>'}
+    h+='</tbody></table></div>';
+    el.innerHTML=h;
+    var self=this;
+    document.getElementById('freeMastSelect').addEventListener('change',function(){self.selectedMastFree=parseInt(this.value);self.renderFreestream()});
+    setTimeout(function(){self.drawWakeRose(fr)},50);
+  },
+  drawWakeRose:function(fr){
+    var c=document.getElementById('wakeCanvas');if(!c)return;
+    var ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2,r=Math.min(w,h)*0.38;
+    ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;
+    for(var i=1;i<=5;i++){ctx.beginPath();ctx.arc(cx,cy,r*(i/5),0,Math.PI*2);ctx.stroke()}
+    for(var i=0;i<36;i++){var a=(i*10-90)*Math.PI/180;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);ctx.stroke()}
+    var sw=this.config.sectorWidth*Math.PI/180;
+    var colors={none:'rgba(29,184,126,0.6)',low:'rgba(240,165,0,0.5)',medium:'rgba(240,120,0,0.6)',high:'rgba(231,76,60,0.6)'};
+    for(var i=0;i<fr.sectorWakeAnalysis.length;i++){var s=fr.sectorWakeAnalysis[i];
+      var a=(s.direction-90)*Math.PI/180,a1=a-sw/2,a2=a+sw/2;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,a1,a2);ctx.closePath();ctx.fillStyle=colors[s.combinedWakeImpact];ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=0.5;ctx.stroke();
+    }
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='10px "Open Sans",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    var dirs=['N','NE','E','SE','S','SW','W','NW'];
+    for(var i=0;i<8;i++){var a=(i*45-90)*Math.PI/180;ctx.fillText(dirs[i],cx+Math.cos(a)*(r+18),cy+Math.sin(a)*(r+18))}
+    ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+    // Legend
+    var ly=h-40;ctx.font='9px "Open Sans",sans-serif';ctx.textAlign='left';
+    var labels=[['Freestream','none'],['Low Wake','low'],['Medium Wake','medium'],['High Wake','high']];
+    for(var i=0;i<labels.length;i++){
+      var lx=10+i*110;
+      ctx.fillStyle=colors[labels[i][1]];ctx.fillRect(lx,ly,10,10);
+      ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillText(labels[i][0],lx+14,ly+8);
+    }
+  },
+
+  /* ── SITE MAP ─────────────────────────────────────── */
+  drawMap:function(){
+    var c=document.getElementById('mapCanvas');if(!c)return;
+    var ctx=c.getContext('2d'),w=c.width,h=c.height;
+    ctx.clearRect(0,0,w,h);
+    if(this.masts.length===0&&this.wtgs.length===0)return;
+    var allPts=this.masts.map(function(m){return m.location}).concat(this.wtgs.map(function(w){return w.location})).concat(this.extWtgs.map(function(w){return w.location}));
+    var lats=allPts.map(function(p){return p.latitude}),lons=allPts.map(function(p){return p.longitude});
+    var minLat=Math.min.apply(null,lats),maxLat=Math.max.apply(null,lats),minLon=Math.min.apply(null,lons),maxLon=Math.max.apply(null,lons);
+    var pad=60;var rangeLat=maxLat-minLat||0.01,rangeLon=maxLon-minLon||0.01;
+    var scale=Math.min((w-2*pad)/rangeLon,(h-2*pad)/rangeLat)*0.0008;
+    function toX(lon){return pad+((lon-minLon)/rangeLon)*(w-2*pad)}
+    function toY(lat){return h-pad-((lat-minLat)/rangeLat)*(h-2*pad)}
+    // Grid
+    ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
+    for(var i=0;i<10;i++){var x=pad+(w-2*pad)*(i/9);ctx.beginPath();ctx.moveTo(x,pad);ctx.lineTo(x,h-pad);ctx.stroke();
+      var y=pad+(h-2*pad)*(i/9);ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke()}
+    // Distance lines (mast to target WTGs)
+    ctx.strokeStyle='rgba(45,156,206,0.2)';ctx.lineWidth=1;ctx.setLineDash([5,5]);
+    for(var mi=0;mi<this.masts.length;mi++){for(var wi=0;wi<this.wtgs.length;wi++){
+      if(!this.wtgs[wi].isTarget)continue;
+      ctx.beginPath();ctx.moveTo(toX(this.masts[mi].location.longitude),toY(this.masts[mi].location.latitude));
+      ctx.lineTo(toX(this.wtgs[wi].location.longitude),toY(this.wtgs[wi].location.latitude));ctx.stroke();
+    }}
+    ctx.setLineDash([]);
+    // External WTGs (diamonds)
+    for(var i=0;i<this.extWtgs.length;i++){var w=this.extWtgs[i];
+      var x=toX(w.location.longitude),y=toY(w.location.latitude),s=8;
+      ctx.fillStyle='rgba(240,165,0,0.6)';ctx.beginPath();ctx.moveTo(x,y-s);ctx.lineTo(x+s,y);ctx.lineTo(x,y+s);ctx.lineTo(x-s,y);ctx.closePath();ctx.fill();
+      ctx.strokeStyle='#f0a500';ctx.lineWidth=1;ctx.stroke();
+    }
+    // Non-target WTGs
+    for(var i=0;i<this.wtgs.length;i++){if(this.wtgs[i].isTarget)continue;var w=this.wtgs[i];
+      var x=toX(w.location.longitude),y=toY(w.location.latitude);
+      ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.12)';ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=1;ctx.stroke();
+    }
+    // Target WTGs
+    for(var i=0;i<this.wtgs.length;i++){if(!this.wtgs[i].isTarget)continue;var w=this.wtgs[i];
+      var x=toX(w.location.longitude),y=toY(w.location.latitude);
+      ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.fillStyle='rgba(45,156,206,0.25)';ctx.fill();ctx.strokeStyle='#2d9cce';ctx.lineWidth=1.5;ctx.stroke();
+    }
+    // Masts (triangles)
+    for(var i=0;i<this.masts.length;i++){var m=this.masts[i];
+      var x=toX(m.location.longitude),y=toY(m.location.latitude);
+      ctx.beginPath();ctx.moveTo(x,y-12);ctx.lineTo(x-9,y+8);ctx.lineTo(x+9,y+8);ctx.closePath();
+      ctx.fillStyle='rgba(231,76,60,0.3)';ctx.fill();ctx.strokeStyle='#e74c3c';ctx.lineWidth=1.5;ctx.stroke();
+    }
+    // Labels
+    ctx.font='9px "Open Sans",sans-serif';ctx.textAlign='left';ctx.fillStyle='rgba(255,255,255,0.6)';
+    for(var i=0;i<this.masts.length;i++){var m=this.masts[i];ctx.fillText(m.name,toX(m.location.longitude)+14,toY(m.location.latitude)+4)}
+    for(var i=0;i<this.wtgs.length;i++){if(!this.wtgs[i].isTarget)continue;var w=this.wtgs[i];ctx.fillText(w.name,toX(w.location.longitude)+16,toY(w.location.latitude)+4)}
+    // Compass
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='bold 10px "Open Sans",sans-serif';ctx.textAlign='center';
+    ctx.fillText('N',w-30,pad-10);ctx.fillText('S',w-30,h-pad+15);ctx.fillText('E',w-pad+15,h-30);ctx.fillText('W',pad-15,h-30);
+    // Scale
+    var distKm=WGeo.haversine({latitude:minLat,longitude:minLon},{latitude:minLat,longitude:maxLon})/1000;
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='9px "Open Sans",sans-serif';ctx.textAlign='center';
+    ctx.fillText('~'+distKm.toFixed(1)+' km',w/2,h-pad+30);
+    // Info
+    document.getElementById('mapInfo').textContent='Showing '+this.masts.length+' masts, '+this.wtgs.length+' WTGs ('+this.wtgs.filter(function(w){return w.isTarget}).length+' target), '+this.extWtgs.length+' external WTGs';
+  },
+
+  /* ── REPORT ───────────────────────────────────────── */
+  genReport:function(){
+    if(!this.results){this.showAlert('error','Run analysis first.');return}
+    var r=this.results,t=r.terrain[0],p=r.pcv,f=r.freestream[0];
+    var h='<div class="tool-report">';
+    h+='<h3 style="margin-top:0">PCV Terrain Assessment Report</h3>';
+    h+='<p style="color:rgba(255,255,255,.4);font-size:.72rem">IEC 61400-12-1:2017 | Generated: '+new Date().toISOString().split('T')[0]+'</p>';
+    h+='<h3>Executive Summary</h3>';
+    h+='<p>This assessment evaluates the terrain suitability for Power Curve Verification (PCV) at the subject site per IEC 61400-12-1. The analysis covers '+this.masts.length+' meteorological mast(s) and '+this.wtgs.length+' wind turbine(s) across '+t.metadata.numSectors+' directional sectors.</p>';
+    h+='<p><strong>Key Findings:</strong></p><ul style="padding-left:1.5rem;margin:.5rem 0 1rem">';
+    h+='<li>Terrain Classification: <strong>'+t.summary.terrainClass+'</strong> ('+t.summary.terrainClassification+' terrain per IEC 61400-12-1)</li>';
+    h+='<li>Valid Measurement Sectors: <strong>'+t.summary.validSectorsCount+'/'+t.summary.totalSectors+'</strong> ('+t.summary.validSectorPercentage.toFixed(1)+'% coverage)</li>';
+    h+='<li>Freestream Sectors: <strong>'+t.summary.freestreamSectorsCount+'</strong></li>';
+    h+='<li>Best PCV Pairing: <strong>'+p.bestPairings[0].mastName+' -> '+p.bestPairings[0].wtgName+'</strong> ('+p.bestPairings[0].score+'/100)</li>';
+    h+='<li>IEC Compliance: <strong>'+(t.summary.isIECCompliant?'Yes':'Requires Further Review')+'</strong></li>';
+    h+='</ul>';
+    for(var i=0;i<t.summary.complianceNotes.length;i++)h+='<p style="color:var(--gold);font-size:.82rem">Note: '+t.summary.complianceNotes[i]+'</p>';
+    h+='<h3>Mast Details</h3><table><thead><tr><th>Name</th><th>Latitude</th><th>Longitude</th><th>Height (m)</th><th>Type</th></tr></thead><tbody>';
+    for(var i=0;i<this.masts.length;i++){var m=this.masts[i];h+='<tr><td>'+m.name+'</td><td>'+m.location.latitude.toFixed(5)+'</td><td>'+m.location.longitude.toFixed(5)+'</td><td>'+m.mastHeight+'</td><td>'+(m.type||'-')+'</td></tr>'}
+    h+='</tbody></table>';
+    h+='<h3>WTG Details</h3><table><thead><tr><th>Name</th><th>Latitude</th><th>Longitude</th><th>Rotor D (m)</th><th>Hub H (m)</th><th>Target</th></tr></thead><tbody>';
+    for(var i=0;i<this.wtgs.length;i++){var w=this.wtgs[i];h+='<tr><td>'+w.name+'</td><td>'+w.location.latitude.toFixed(5)+'</td><td>'+w.location.longitude.toFixed(5)+'</td><td>'+w.rotorDiameter+'</td><td>'+w.hubHeight+'</td><td>'+(w.isTarget?'Yes':'No')+'</td></tr>'}
+    h+='</tbody></table>';
+    h+='<h3>Terrain Assessment Results</h3>';
+    for(var pi=0;pi<r.terrain.length;pi++){var ta=r.terrain[pi];
+      h+='<p style="margin-top:1rem"><strong>'+ta.metadata.mastName+' -> '+ta.metadata.targetWtgName+'</strong> | Distance: '+ta.distance.rotorDiameters.toFixed(1)+'D ('+ta.distance.meters.toFixed(0)+'m) | Bearing: '+ta.distance.bearing.toFixed(1)+' deg</p>';
+      h+='<table><thead><tr><th>Dir</th><th>Max Slope (%)</th><th>Max Slope (deg)</th><th>Class</th><th>Valid</th><th>Free</th></tr></thead><tbody>';
+      for(var i=0;i<ta.sectors.length;i++){var s=ta.sectors[i];
+        h+='<tr><td>'+s.direction+'</td><td>'+s.maxSlope.toFixed(1)+'</td><td>'+s.maxSlopeDeg.toFixed(1)+'</td><td>'+s.terrainClass+'</td><td>'+(s.isValid?'Yes':'No')+'</td><td>'+(s.isFreestream?'Yes':'No')+'</td></tr>'}
+      h+='</tbody></table>';
+    }
+    h+='<h3>PCV Selection Ranking</h3><table><thead><tr><th>Rank</th><th>Mast</th><th>WTG</th><th>Distance (D)</th><th>Score</th><th>Valid Sectors</th></tr></thead><tbody>';
+    for(var i=0;i<p.bestPairings.length;i++){var pr=p.bestPairings[i];
+      h+='<tr><td>'+(i+1)+'</td><td>'+pr.mastName+'</td><td>'+pr.wtgName+'</td><td>'+pr.distanceInD.toFixed(1)+'</td><td>'+pr.score+'</td><td>'+pr.validSectors+'/'+pr.totalSectors+'</td></tr>'}
+    h+='</tbody></table>';
+    h+='<h3>Recommendations</h3><ul style="padding-left:1.5rem">';
+    for(var i=0;i<p.recommendations.length;i++)h+='<li>'+p.recommendations[i]+'</li>';
+    h+='</ul>';
+    h+='<p style="margin-top:2rem;color:rgba(255,255,255,.3);font-size:.7rem">Report generated by VK Wind Assessment Tool | IEC 61400-12-1 Compliant Analysis</p>';
+    h+='</div>';
+    document.getElementById('reportContent').innerHTML=h;
+  },
+  exportCSV:function(){
+    if(!this.results){this.showAlert('error','Run analysis first.');return}
+    var t=this.results.terrain[this.selectedPair||0];
+    var csv='Direction,Max Slope (%),Max Slope (deg),Avg Slope (%),Elevation Change (m),Terrain Class,Valid,Freestream,Wake Sources,Failure Reasons\n';
+    for(var i=0;i<t.sectors.length;i++){var s=t.sectors[i];
+      csv+=s.direction+','+s.maxSlope.toFixed(2)+','+s.maxSlopeDeg.toFixed(2)+','+s.avgSlope.toFixed(2)+','+s.maxElevationChange.toFixed(1)+','+s.terrainClass+','+(s.isValid?'Yes':'No')+','+(s.isFreestream?'Yes':'No')+','+s.wakeAffectedTurbines.join(';')+','+s.failureReasons.join(';')+'\n';
+    }
+    var blob=new Blob([csv],{type:'text/csv'});var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');a.href=url;a.download='sector_data_'+t.metadata.mastName.replace(/\s+/g,'_')+'.csv';a.click();URL.revokeObjectURL(url);
+    this.showAlert('success','CSV exported successfully.');
+  }
+};
+
+APP.init();
 })();
 </script>
 </body>
