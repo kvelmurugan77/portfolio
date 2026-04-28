@@ -305,11 +305,98 @@ table.data-table td.cleaned{color:var(--mint)}
 
 <!-- ====================== STEP 3: DATA CLEANING ====================== -->
 <div class="step-panel" id="step3">
+    <!-- NREL-Based Auto-Cleaning Panel -->
     <div class="card">
-      <div class="card-title">Interactive Data Viewer</div>
+      <div class="card-title">NREL Standard Data Cleaning (Automated)</div>
+      <div class="alert alert-info" style="margin:0 0 .8rem 0;font-size:.72rem">
+        Implements the complete NREL/AWS Scientific Wind Resource Assessment Handbook (1997) data validation suite:
+        <strong>Range Tests</strong> (Table 9.1), <strong>Relational Tests</strong> (Table 9.2), <strong>Trend Tests</strong> (Table 9.3),
+        plus Tower Shadow, Frozen Sensor, and Constancy checks. All thresholds are configurable below.
+      </div>
+      <div class="clean-toolbar">
+        <button class="btn btn-primary btn-sm" onclick="runNRELAutoClean()">Run Full NREL Validation Suite</button>
+        <button class="btn btn-sm btn-secondary" onclick="resetCleaning()">Reset All Flags</button>
+        <button class="btn btn-sm btn-secondary" onclick="document.getElementById('nrelThresholds').style.display=document.getElementById('nrelThresholds').style.display==='none'?'block':'none'">Configure Thresholds</button>
+      </div>
+      <div id="nrelThresholds" style="display:none;margin-top:.8rem">
+        <div class="grid-3">
+          <div class="card" style="margin:0">
+            <div class="card-title">Range Tests (Table 9.1)</div>
+            <div class="form-group"><label class="form-label">WS Avg Min (m/s)</label><input class="form-input thresh-input" type="number" id="rng_wsMin" value="0" step="0.1" style="width:100%"></div>
+            <div class="form-group"><label class="form-label">WS Avg Max (m/s)</label><input class="form-input thresh-input" type="number" id="rng_wsMax" value="40" step="1" style="width:100%"></div>
+            <div class="form-group"><label class="form-label">WS StdDev Max (m/s)</label><input class="form-input thresh-input" type="number" id="rng_wsStdMax" value="3" step="0.1" style="width:100%"></div>
+            <div class="form-group"><label class="form-label">WS Max Gust Max (m/s)</label><input class="form-input thresh-input" type="number" id="rng_wsGustMax" value="50" step="1" style="width:100%"></div>
+            <div class="form-group"><label class="form-label">WD Avg Range (deg)</label><input class="form-input thresh-input" type="number" id="rng_wdMin" value="0" step="1" style="width:100%"> to <input class="form-input thresh-input" type="number" id="rng_wdMax" value="360" step="1" style="width:60px"></div>
+            <div class="form-group"><label class="form-label">WD StdDev Range (deg)</label><input class="form-input thresh-input" type="number" id="rng_wdStdMin" value="3" step="1" style="width:100%"> to <input class="form-input thresh-input" type="number" id="rng_wdStdMax" value="75" step="1" style="width:60px"></div>
+            <div class="form-group"><label class="form-label">Temp Range (°C)</label><input class="form-input thresh-input" type="number" id="rng_tempMin" value="-50" step="1" style="width:100%"> to <input class="form-input thresh-input" type="number" id="rng_tempMax" value="55" step="1" style="width:60px"></div>
+            <div class="form-group"><label class="form-label">Pressure Range (hPa)</label><input class="form-input thresh-input" type="number" id="rng_presMin" value="930" step="1" style="width:100%"> to <input class="form-input thresh-input" type="number" id="rng_presMax" value="1060" step="1" style="width:60px"></div>
+          </div>
+          <div class="card" style="margin:0">
+            <div class="card-title">Relational Tests (Table 9.2)</div>
+            <div class="form-group"><label class="form-label">Max Gust / Avg Ratio</label><input class="form-input thresh-input" type="number" id="rel_gustAvgRatio" value="2.5" step="0.1" style="width:100%"></div>
+            <div class="form-group"><label class="form-label">Speed Diff 40m vs 25m (m/s)</label><input class="form-input thresh-input" type="number" id="rel_speedDiff40_25" value="5.0" step="0.1" style="width:100%"></div>
+            <div class="form-group"><label class="form-label">Speed Diff 40m vs 10m (m/s)</label><input class="form-input thresh-input" type="number" id="rel_speedDiff40_10" value="7.5" step="0.1" style="width:100%"></div>
+            <div class="form-group"><label class="form-label">Dir Diff 40m vs 25m (deg)</label><input class="form-input thresh-input" type="number" id="rel_dirDiff40_25" value="20" step="1" style="width:100%"></div>
+            <div class="form-group"><label class="form-label">Speed StdDev / Mean Max Ratio</label><input class="form-input thresh-input" type="number" id="rel_tiMax" value="1.0" step="0.1" style="width:100%"></div>
+          </div>
+          <div class="card" style="margin:0">
+            <div class="card-title">Trend & Special Tests (Table 9.3)</div>
+            <div class="form-group"><label class="form-label">WS 1-hr Change Max (m/s)</label><input class="form-input thresh-input" type="number" id="trn_ws1hr" value="5.0" step="0.5" style="width:100%"></div>
+            <div class="form-group"><label class="form-label">Temp 1-hr Change Max (°C)</label><input class="form-input thresh-input" type="number" id="trn_temp1hr" value="5" step="0.5" style="width:100%"></div>
+            <div class="form-group"><label class="form-label">Pressure 3-hr Change Max (hPa)</label><input class="form-input thresh-input" type="number" id="trn_pres3hr" value="3" step="0.5" style="width:100%"></div>
+            <div class="form-group"><label class="form-label">Frozen Sensor: WD StdDev Min (deg)</label><input class="form-input thresh-input" type="number" id="spc_frozenWD" value="1" step="0.5" style="width:100%"></div>
+            <div class="form-group"><label class="form-label">Tower Shadow Sectors (deg)</label><input class="form-input thresh-input" type="number" id="spc_towerShadow" value="30" step="5" style="width:100%"><span style="font-size:.5rem;color:rgba(255,255,255,.3)">half-width each side of tower boom</span></div>
+            <div class="form-group"><label class="form-label">Constancy: Max identical WD runs</label><input class="form-input thresh-input" type="number" id="spc_constWD" value="6" step="1" style="width:100%"><span style="font-size:.5rem;color:rgba(255,255,255,.3)">consecutive records</span></div>
+          </div>
+        </div>
+      </div>
+      <div id="nrelResults" style="margin-top:.8rem"></div>
+    </div>
+    <!-- Interactive Scatter Plot (Windographer-style) -->
+    <div class="card" style="margin-top:.5rem">
+      <div class="card-title">Scatter Plot Inspection <span style="font-size:.5rem;color:rgba(255,255,255,.3)">(Windographer-style)</span></div>
+      <div class="clean-toolbar">
+        <div class="form-group" style="margin:0;margin-right:.8rem"><label class="form-label">X-Axis</label>
+          <select class="form-select" id="scatterXAxis" style="width:180px" onchange="renderScatterPlot()">
+            <option value="speed_ti">Wind Speed vs TI</option>
+            <option value="speed_dir">Wind Speed vs Direction</option>
+            <option value="speed_std">Wind Speed vs Std Dev</option>
+            <option value="speed_time">Wind Speed vs Time</option>
+            <option value="dir_time">Direction vs Time</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;margin-right:.8rem"><label class="form-label">Height</label>
+          <select class="form-select" id="scatterHeight" style="width:130px" onchange="renderScatterPlot()"></select>
+        </div>
+        <div class="form-group" style="margin:0"><label class="form-label">Y-Axis Limit</label>
+          <input class="form-input thresh-input" type="number" id="scatterYMax" value="0" step="1" style="width:70px" placeholder="Auto" onchange="renderScatterPlot()">
+        </div>
+      </div>
+      <div class="cleaning-canvas-wrap">
+        <canvas id="scatterCanvas" width="1400" height="420"></canvas>
+      </div>
+      <div class="clean-toolbar" style="margin-top:.3rem">
+        <button class="btn btn-sm btn-danger" onclick="scatterDeleteSelected()">Delete Selected Points</button>
+        <button class="btn btn-sm btn-secondary" onclick="scatterClearSelection()">Clear Selection</button>
+        <span style="font-size:.58rem;color:rgba(255,255,255,.3);margin-left:.5rem">Click & drag to lasso-select outlier points on scatter, then delete</span>
+      </div>
+      <div class="flag-legend" style="margin-top:.4rem">
+        <div class="flag-item"><span class="flag-dot f-valid"></span>Valid</div>
+        <div class="flag-item"><span class="flag-dot f-range"></span>Range Test Failed</div>
+        <div class="flag-item"><span class="flag-dot f-spike"></span>Spike / Relational</div>
+        <div class="flag-item"><span class="flag-dot f-manual"></span>Manual Delete</div>
+        <div class="flag-item"><span class="flag-dot f-gapfilled"></span>Gap Filled</div>
+        <div class="flag-item"><span class="flag-dot" style="background:#9b59b6"></span>Trend Failed</div>
+        <div class="flag-item"><span class="flag-dot" style="background:#e87d20"></span>Tower Shadow</div>
+        <div class="flag-item"><span class="flag-dot" style="background:#3498db"></span>Frozen Sensor</div>
+      </div>
+    </div>
+    <!-- Time Series Plot -->
+    <div class="card" style="margin-top:.5rem">
+      <div class="card-title">Time Series Viewer</div>
       <div class="signal-toggles" id="cleanSignalToggles"></div>
       <div class="cleaning-canvas-wrap">
-        <canvas id="cleaningCanvas" width="1400" height="350"></canvas>
+        <canvas id="cleaningCanvas" width="1400" height="300"></canvas>
         <div class="zoom-controls">
           <button onclick="cleanZoomIn()" title="Zoom In">+</button>
           <button onclick="cleanZoomOut()" title="Zoom Out">-</button>
@@ -321,14 +408,8 @@ table.data-table td.cleaned{color:var(--mint)}
         <button class="btn btn-sm btn-secondary" onclick="clearSelection()">Clear Selection</button>
         <span style="font-size:.58rem;color:rgba(255,255,255,.3);margin-left:.5rem">Click & drag on plot to select a region, then delete</span>
       </div>
-      <div class="flag-legend">
-        <div class="flag-item"><span class="flag-dot f-valid"></span>Valid</div>
-        <div class="flag-item"><span class="flag-dot f-range"></span>Range Filtered</div>
-        <div class="flag-item"><span class="flag-dot f-spike"></span>Spike</div>
-        <div class="flag-item"><span class="flag-dot f-manual"></span>Manual Delete</div>
-        <div class="flag-item"><span class="flag-dot f-gapfilled"></span>Gap Filled</div>
-      </div>
     </div>
+    <!-- Manual Tools -->
     <div class="grid-2" style="margin-top:.5rem">
     <div class="card">
       <div class="card-title">Range Filter <span style="font-size:.5rem;color:rgba(255,255,255,.3)">(editable thresholds)</span></div>
@@ -391,7 +472,7 @@ table.data-table td.cleaned{color:var(--mint)}
       <div id="gapResult" style="margin-top:.3rem"></div>
     </div>
     <div class="card">
-      <div class="card-title">Time Averaging</div>
+      <div class="card-title">Time Averaging & Log</div>
       <div class="form-group">
         <label class="form-label">Resample To</label>
         <select class="form-select" id="avgInterval">
@@ -617,11 +698,26 @@ table.data-table td.cleaned{color:var(--mint)}
     </div>
   </div>
       <div class="card" style="margin-top:.5rem">
-        <div class="card-title collapsible-header" onclick="this.parentElement.classList.toggle('collapsed')">Download ERA5 Reference Data</div>
-        <div class="era5-hint" style="margin-top:.5rem">
-          <div class="alert alert-info" style="margin:0 0 .6rem 0;font-size:.72rem">Use the <strong>CDS API</strong> to download ERA5T (near real-time) or ERA5 (reanalysis) wind data at 10m, 100m heights for your site coordinates. The Python script below is pre-configured with your site coordinates (if set in Step 1).</div>
+        <div class="card-title">Auto-Download ERA5 Reference Data (Open-Meteo)</div>
+        <div class="alert alert-info" style="margin:0 0 .6rem 0;font-size:.72rem">Automatically downloads ERA5T/ERA5 reanalysis wind data from <strong>Open-Meteo Historical API</strong> (free, no API key). Uses your site coordinates from Step 1. Data is hourly, 10m & 100m wind speeds.</div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Start Date</label><input class="form-input" type="date" id="era5Start" value="2023-01-01"></div>
+          <div class="form-group"><label class="form-label">End Date</label><input class="form-input" type="date" id="era5End" value="2023-12-31"></div>
+          <div class="form-group"><label class="form-label">Model</label>
+            <select class="form-select" id="era5Model">
+              <option value="era5">ERA5 (reanalysis, 1940-2024)</option>
+              <option value="era5_land">ERA5-Land (higher resolution, 1950-2024)</option>
+              <option value="cfs">CFS (near real-time, 1979-)</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center;margin-top:.3rem">
+          <button class="btn btn-primary btn-sm" id="era5DownloadBtn" onclick="autoDownloadERA5()">Download ERA5 Data</button>
+          <button class="btn btn-sm btn-secondary" onclick="generateERA5Script()" title="For advanced users who want CDS API script">Generate CDS Script</button>
+          <span id="era5DownloadStatus" style="font-size:.65rem;color:rgba(255,255,255,.5)"></span>
+        </div>
+        <div class="era5-hint" id="era5ScriptSection" style="margin-top:.6rem;display:none">
           <pre id="era5Script"></pre>
-          <button class="btn btn-sm btn-secondary" style="margin-top:.6rem" onclick="generateERA5Script()">Generate ERA5 Download Script</button>
         </div>
       </div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem">
@@ -964,10 +1060,10 @@ function autoMapColumns() {
     if (col.mappedAs !== 'none') return;
     if (/timestamp|date|time|datetime/.test(n)) col.mappedAs = 'timestamp';
     else if (/ws|windspeed|wind_spd|spd|speed/.test(n) && !/dir|temp|pres|hum/.test(n)) {
-      // Check for std/min/max suffixes
-      if (/_sd$|_std$|_stddev$|_ti$/.test(origLower) || /\bsd\b/.test(origLower) && /speed|spd|ws/.test(origLower)) col.mappedAs = 'speed_std';
-      else if (/_max$/.test(origLower) && /speed|spd|ws/.test(origLower)) col.mappedAs = 'speed_max';
-      else if (/_min$/.test(origLower) && /speed|spd|ws/.test(origLower)) col.mappedAs = 'speed_min';
+      // Check for std/min/max suffixes — careful operator precedence
+      if (/_sd$|_std$|_stddev$|_ti$|std\s*dev|stdev|sigma/.test(origLower) || (/(?:_sd|_std|_stddev|_sdv|Sigma)\b/.test(origLower) && /speed|spd|ws/.test(origLower)) || (/(?:Av?g|Mean)\s*[\/\\]\s*(?:Std|SD|Sigma|StDev)/i.test(col.name)) || (/(?:Std|SD|Sigma|StDev)\s*[\/\\]\s*(?:Av?g|Mean)/i.test(col.name))) col.mappedAs = 'speed_std';
+      else if (/(?:_max|Max|Gust|Peak|TX)/.test(origLower) && /speed|spd|ws|wind/.test(origLower)) col.mappedAs = 'speed_max';
+      else if (/(?:_min|Min|TN)/.test(origLower) && /speed|spd|ws|wind/.test(origLower)) col.mappedAs = 'speed_min';
       else col.mappedAs = 'speed';
     }
     else if (/wd|winddir|wind_dir|direction|dir_/.test(n)) col.mappedAs = 'dir';
@@ -2596,50 +2692,132 @@ function generateReport() {
   if(!sc) { alert('No data available for report'); return; }
   const vals = sc.data.filter(v=>v!==null&&!isNaN(v));
   const wb = W.weibullCache[sc.name] || weibullFit(vals);
-  let html = '<h3>Executive Summary</h3>';
-  html += '<p>This report presents the wind data analysis for the dataset <strong>'+W.fileName+'</strong> containing '+W.rawColumns[0].data.length.toLocaleString()+' records. ';
-  html += 'The observed mean wind speed at '+sc.name+' is <strong>'+mean(vals).toFixed(1)+' m/s</strong> with a Weibull A = '+(wb?wb.A:'N/A')+' m/s and K = '+(wb?wb.K:'N/A')+'. ';
-  if(W.mcpResults) { const best=W.mcpResults.methods.reduce((a,b)=>a.mae<b.mae?a:b); html+='After long-term correction, the adjusted mean wind speed is <strong>'+best.correctedMean.toFixed(1)+' m/s</strong> ('+best.name+').'; }
+  const N = W.rawColumns[0] ? W.rawColumns[0].data.length : 0;
+
+  let html = '<h3>1. Executive Summary</h3>';
+  html += '<p>This comprehensive wind data analysis report covers the complete processing pipeline for the dataset <strong>'+W.fileName+'</strong> containing '+N.toLocaleString()+' records in '+W.detectedFormat+' format. ';
+  html += 'The dataset contains '+getSpeedCols().length+' wind speed measurement heights, '+getDirCols().length+' direction sensor(s)'+(tc?', 1 temperature sensor':'')+'. ';
+  html += 'The observed mean wind speed at the primary anemometer ('+sc.name+') is <strong>'+mean(vals).toFixed(2)+' m/s</strong> with a Weibull scale parameter A = '+(wb?wb.A.toFixed(2):'N/A')+' m/s and shape parameter K = '+(wb?wb.K.toFixed(3):'N/A')+'. ';
+  if(W.mcpResults) { const best=W.mcpResults.methods.reduce((a,b)=>a.mae<b.mae?a:b); html+='After long-term correction using the '+best.name+' method, the adjusted mean wind speed is <strong>'+best.correctedMean.toFixed(2)+' m/s</strong> (representing a '+(best.correctedMean>mean(vals)?'+':'')+((best.correctedMean-mean(vals))/mean(vals)*100).toFixed(1)+'% correction).'; }
+  if(W.energyResults) { html+=' The estimated net annual energy production is <strong>'+W.energyResults.netEnergy.toFixed(0)+' MWh</strong> with a capacity factor of '+W.energyResults.capacityFactor.toFixed(1)+'%.'; }
   html += '</p>';
-  html += '<h3>Data Overview</h3>';
+
+  // ── Step 1: Data Import ──
+  html += '<h3>2. Data Import & Signal Mapping</h3>';
   html += '<table><tr><th>Parameter</th><th>Value</th></tr>';
-  html += '<tr><td>File</td><td>'+W.fileName+'</td></tr>';
+  html += '<tr><td>File Name</td><td>'+W.fileName+'</td></tr>';
   html += '<tr><td>Format</td><td>'+W.detectedFormat+'</td></tr>';
-  html += '<tr><td>Total Records</td><td>'+W.rawColumns[0].data.length.toLocaleString()+'</td></tr>';
-  html += '<tr><td>Active Columns</td><td>'+W.rawColumns.filter(c=>c.mappedAs!=='none').length+'</td></tr>';
-  html += '<tr><td>Data Quality Score</td><td>'+(W.qualityReport?W.qualityReport.overallScore+'%':'N/A')+'</td></tr>';
+  html += '<tr><td>Total Records</td><td>'+N.toLocaleString()+'</td></tr>';
+  html += '<tr><td>Total Columns</td><td>'+W.rawColumns.length+'</td></tr>';
+  if(W.siteCoords.lat!==null) html += '<tr><td>Site Coordinates</td><td>'+W.siteCoords.lat.toFixed(4)+', '+W.siteCoords.lon.toFixed(4)+'</td></tr>';
   html += '</table>';
-  html += '<h3>Wind Climate Analysis</h3>';
-  html += '<table><tr><th>Column</th><th>Mean</th><th>Std</th><th>Min</th><th>Max</th></tr>';
-  W.rawColumns.filter(c=>c.mappedAs!=='none'&&c.mappedAs!=='timestamp').forEach(c=>{
-    const cv=c.data.filter(v=>v!==null&&!isNaN(v));
-    html += '<tr><td>'+c.name+'</td><td>'+mean(cv).toFixed(2)+'</td><td>'+std(cv).toFixed(2)+'</td><td>'+(cv.length?safeMin(cv).toFixed(2):'-')+'</td><td>'+(cv.length?safeMax(cv).toFixed(2):'-')+'</td></tr>';
+  html += '<p><strong>Signal Mapping:</strong></p>';
+  html += '<table><tr><th>Column</th><th>Mapped Type</th><th>Height</th><th>Valid Records</th><th>Recovery %</th></tr>';
+  W.rawColumns.filter(c=>c.mappedAs!=='none').forEach(c=>{
+    const vc = validCount(c.data);
+    html += '<tr><td>'+c.name+'</td><td><span class="badge badge-info">'+c.mappedAs+'</span></td><td>'+(c.unit||'-')+'</td><td>'+vc.toLocaleString()+'</td><td>'+(N>0?(vc/N*100).toFixed(1):'-')+'%</td></tr>';
   });
   html += '</table>';
-  if(wb) {
-    html += '<h3>Weibull Parameters ('+sc.name+')</h3>';
-    html += '<table><tr><td>Scale (A)</td><td>'+wb.A+' m/s</td></tr>';
-    html += '<tr><td>Shape (K)</td><td>'+wb.K+'</td></tr>';
-    html += '<tr><td>R² Goodness of Fit</td><td>'+wb.R2.toFixed(4)+'</td></tr></table>';
-  }
-  if(W.shearAlpha!==null) {
-    html += '<h3>Wind Shear</h3>';
-    html += '<p>Power law exponent (alpha) = <strong>'+W.shearAlpha.toFixed(3)+'</strong> calculated from '+getSpeedCols().length+' measurement heights.</p>';
-  }
-  if(W.mcpResults) {
-    html += '<h3>Long-Term Correction (MCP)</h3>';
-    html += '<table><tr><th>Method</th><th>LT Mean</th><th>RMSE</th><th>MAE</th><th>R²</th></tr>';
-    W.mcpResults.methods.forEach(m=>{
-      html += '<tr><td>'+m.name+'</td><td>'+m.correctedMean.toFixed(2)+'</td><td>'+m.rmse.toFixed(3)+'</td><td>'+m.mae.toFixed(3)+'</td><td>'+m.r2.toFixed(3)+'</td></tr>';
-    });
-    html += '</table>';
-  }
-  if(W.cleaningLog.length>0) {
-    html += '<h3>Data Cleaning Actions</h3>';
+
+  // ── Step 2: Data Quality ──
+  html += '<h3>3. Initial Data Quality Assessment</h3>';
+  if(W.qualityReport) {
+    const qr = W.qualityReport;
+    html += '<p>Overall data quality score: <strong>'+qr.overallScore+'%</strong>. ';
+    html += qr.issues.length+' quality issues were identified during the initial assessment, including '+(qr.issues.filter(i=>i.severity==='error').length)+' critical issues. ';
+    html += 'Issues span ' + [...new Set(qr.issues.map(i=>i.type))].join(', ') + ' categories.</p>';
+    if(qr.issues.length>0) {
+      html += '<table><tr><th>Issue</th><th>Column</th><th>Count</th><th>Severity</th></tr>';
+      qr.issues.forEach(i => {
+        html += '<tr><td>'+i.type+'</td><td>'+i.column+'</td><td>'+i.count.toLocaleString()+'</td><td><span class="badge badge-'+(i.severity==='error'?'invalid':'warn')+'">'+i.severity+'</span></td></tr>';
+      });
+      html += '</table>';
+    }
+  } else { html += '<p>Data quality assessment was not performed or no data was available.</p>'; }
+
+  // ── Step 3: Data Cleaning ──
+  html += '<h3>4. Data Cleaning & Validation</h3>';
+  if(W.cleaningLog.length > 0 || W.nrelCleanResults) {
+    const totalFlagged = W.dataFlags ? W.dataFlags.filter(f=>f>0).length : 0;
+    const validAfter = W.dataFlags ? W.dataFlags.filter(f=>f===0).length : N;
+    html += '<p>A total of <strong>'+W.cleaningLog.length+'</strong> cleaning actions were performed, resulting in <strong>'+totalFlagged.toLocaleString()+'</strong> records flagged ('+(N>0?(totalFlagged/N*100).toFixed(1):0)+'% of total). ';
+    html += 'After cleaning, <strong>'+validAfter.toLocaleString()+'</strong> records ('+(N>0?(validAfter/N*100).toFixed(1):0)+'%) remain valid.</p>';
+    if(W.nrelCleanResults && W.nrelCleanResults.tests.length > 0) {
+      html += '<p><strong>NREL Validation Suite Results:</strong></p>';
+      html += '<table><tr><th>Test</th><th>Type</th><th>Flagged</th><th>% of Total</th></tr>';
+      W.nrelCleanResults.tests.forEach(t => {
+        const pct = N > 0 ? (t.count / N * 100).toFixed(2) : 0;
+        html += '<tr><td>'+t.name+'</td><td><span class="badge badge-'+(t.type==='Range'?'warn':t.type==='Relational'?'invalid':t.type==='Trend'?'info':'valid')+'">'+t.type+'</span></td><td>'+t.count.toLocaleString()+'</td><td>'+pct+'%</td></tr>';
+      });
+      html += '</table>';
+    }
+    html += '<p><strong>Cleaning Actions Log:</strong></p>';
     html += '<table><tr><th>Time</th><th>Action</th></tr>';
     W.cleaningLog.forEach(l=>{ html += '<tr><td>'+l.time+'</td><td>'+l.action+'</td></tr>'; });
     html += '</table>';
+  } else { html += '<p>No data cleaning actions were performed. Raw data was used for analysis.</p>'; }
+
+  // ── Step 4: Wind Analysis ──
+  html += '<h3>5. Wind Climate Analysis</h3>';
+  html += '<p><strong>Summary Statistics by Column:</strong></p>';
+  html += '<table><tr><th>Column</th><th>Type</th><th>Mean</th><th>Std Dev</th><th>Min</th><th>Max</th><th>Valid N</th></tr>';
+  W.rawColumns.filter(c=>c.mappedAs!=='none'&&c.mappedAs!=='timestamp').forEach(c=>{
+    const cv=c.data.filter(v=>v!==null&&!isNaN(v));
+    html += '<tr><td>'+c.name+'</td><td><span class="badge badge-info">'+c.mappedAs+'</span></td><td>'+mean(cv).toFixed(2)+'</td><td>'+(cv.length>1?std(cv).toFixed(2):'-')+'</td><td>'+(cv.length?safeMin(cv).toFixed(2):'-')+'</td><td>'+(cv.length?safeMax(cv).toFixed(2):'-')+'</td><td>'+cv.length.toLocaleString()+'</td></tr>';
+  });
+  html += '</table>';
+  if(wb) {
+    html += '<h3>6. Weibull Distribution Fit ('+sc.name+')</h3>';
+    html += '<p>The two-parameter Weibull distribution provides a good statistical description of the wind speed frequency distribution. ';
+    html += 'Scale parameter A = <strong>'+wb.A.toFixed(2)+' m/s</strong> represents the characteristic wind speed, while shape parameter K = <strong>'+wb.K.toFixed(3)+'</strong> indicates the breadth of the distribution. ';
+    html += 'The R-squared goodness of fit is <strong>'+wb.R2.toFixed(4)+'</strong>.</p>';
+    html += '<table><tr><td>Scale (A)</td><td>'+wb.A.toFixed(2)+' m/s</td></tr>';
+    html += '<tr><td>Shape (K)</td><td>'+wb.K.toFixed(3)+'</td></tr>';
+    html += '<tr><td>Mean Wind Speed</td><td>'+mean(vals).toFixed(2)+' m/s</td></tr>';
+    html += '<tr><td>Most Probable Speed (Vmp)</td><td>'+((wb.K-1)/wb.K*wb.A).toFixed(2)+' m/s</td></tr>';
+    html += '<tr><td>Energy-Carrying Speed (Ve)</td><td>'+((wb.K+2)/wb.K*wb.A).toFixed(2)+' m/s</td></tr>';
+    html += '<tr><td>R-squared</td><td>'+wb.R2.toFixed(4)+'</td></tr></table>';
   }
+  if(W.shearAlpha!==null) {
+    html += '<h3>7. Wind Shear Analysis</h3>';
+    html += '<p>The wind shear exponent (alpha) describes how wind speed increases with height. A power law fit through '+getSpeedCols().length+' measurement heights yields alpha = <strong>'+W.shearAlpha.toFixed(3)+'</strong>. ';
+    html += 'Typical values range from 0.10 (smooth/unstable) to 0.40 (rough/stable). ';
+    html += (W.shearAlpha < 0.15 ? 'This low value suggests relatively flat terrain or unstable atmospheric conditions.' : W.shearAlpha > 0.30 ? 'This high value indicates rough terrain or stable stratification.' : 'This value is within the typical range for most wind farm sites.') + '</p>';
+  }
+
+  // ── Step 5: MCP ──
+  if(W.mcpResults) {
+    html += '<h3>8. Long-Term Correction (Measure-Correlate-Predict)</h3>';
+    const best=W.mcpResults.methods.reduce((a,b)=>a.mae<b.mae?a:b);
+    html += '<p>The MCP analysis used '+W.mcpResults.concurrentN+' concurrent data records between the target site and the reference dataset. ';
+    html += 'Multiple regression methods were applied and compared. The best-performing method is <strong>'+best.name+'</strong> with an R-squared of '+best.r2.toFixed(3)+' and MAE of '+best.mae.toFixed(3)+' m/s. ';
+    html += 'The long-term corrected mean wind speed is <strong>'+best.correctedMean.toFixed(2)+' m/s</strong>, representing a '+(best.correctedMean>mean(vals)?'+':'')+((best.correctedMean-mean(vals))/mean(vals)*100).toFixed(1)+'% adjustment from the short-term observed mean of '+mean(vals).toFixed(2)+' m/s.</p>';
+    html += '<table><tr><th>Method</th><th>Corrected Mean</th><th>RMSE</th><th>MAE</th><th>R-squared</th><th>Correction %</th></tr>';
+    W.mcpResults.methods.forEach(m=>{
+      html += '<tr><td>'+m.name+'</td><td>'+m.correctedMean.toFixed(2)+' m/s</td><td>'+m.rmse.toFixed(3)+'</td><td>'+m.mae.toFixed(3)+'</td><td>'+m.r2.toFixed(3)+'</td><td>'+((m.correctedMean-mean(vals))/mean(vals)*100).toFixed(1)+'%</td></tr>';
+    });
+    html += '</table>';
+  }
+
+  // ── Step 7: Energy ──
+  if(W.energyResults) {
+    html += '<h3>9. Energy Yield Estimation</h3>';
+    const er = W.energyResults;
+    html += '<p>Energy yield was estimated using a '+er.ratedPower.toFixed(0)+' kW wind turbine power curve applied to the '+sc.name+' wind speed data. ';
+    html += 'Gross annual energy production: <strong>'+er.grossMWh.toFixed(0)+' MWh</strong>. After applying losses (wake '+document.getElementById('eyWake').value+'%, electrical '+document.getElementById('eyElec').value+'%, availability '+document.getElementById('eyAvail').value+'%, environmental '+document.getElementById('eyEnv').value+'%), ';
+    html += 'the net annual energy production is <strong>'+er.netEnergy.toFixed(0)+' MWh</strong> with a capacity factor of <strong>'+er.capacityFactor.toFixed(1)+'%</strong>. ';
+    html += 'Uncertainty P90 estimate: <strong>'+er.p90.toFixed(0)+' MWh</strong>.</p>';
+    html += '<table><tr><td>Gross AEP</td><td>'+er.grossMWh.toFixed(0)+' MWh</td></tr>';
+    html += '<tr><td>Net AEP (P50)</td><td>'+er.netEnergy.toFixed(0)+' MWh</td></tr>';
+    html += '<tr><td>Net AEP (P75)</td><td>'+er.p75.toFixed(0)+' MWh</td></tr>';
+    html += '<tr><td>Net AEP (P90)</td><td>'+er.p90.toFixed(0)+' MWh</td></tr>';
+    html += '<tr><td>Capacity Factor</td><td>'+er.capacityFactor.toFixed(1)+'%</td></tr>';
+    html += '<tr><td>Rated Power</td><td>'+er.ratedPower.toFixed(0)+' kW</td></tr></table>';
+  }
+
+  // Timestamp
+  html += '<div style="margin-top:1.5rem;padding-top:.5rem;border-top:1px solid var(--border);font-size:.7rem;color:rgba(255,255,255,.3)">Report generated: '+new Date().toLocaleString()+' | Wind Data Analysis Tool v2.0</div>';
+
   document.getElementById('reportContent').innerHTML = html;
 }
 
@@ -2732,14 +2910,14 @@ function renderPowerCurve() {
   }
   ctx.strokeStyle='#1db87e';ctx.lineWidth=2.5;ctx.beginPath();
   W.powerCurve.forEach((p,i)=>{
-    const x=margin.l+(p.speed/maxS)*pw, y=margin.t+ph*(p.power/maxP);
+    const x=margin.l+(p.speed/maxS)*pw, y=margin.t+ph*(1-p.power/maxP);
     if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
   });
   ctx.stroke();
   ctx.fillStyle='rgba(29,184,126,.15)';
   ctx.beginPath();ctx.moveTo(margin.l,margin.t+ph);
   W.powerCurve.forEach(p=>{
-    const x=margin.l+(p.speed/maxS)*pw, y=margin.t+ph*(p.power/maxP);
+    const x=margin.l+(p.speed/maxS)*pw, y=margin.t+ph*(1-p.power/maxP);
     ctx.lineTo(x,y);
   });
   ctx.lineTo(margin.l+(W.powerCurve[W.powerCurve.length-1].speed/maxS)*pw,margin.t+ph);
@@ -2833,7 +3011,66 @@ function saveCoords() {
   document.getElementById('coordStatus').innerHTML = '<div class="alert alert-success" style="margin:.3rem 0">Coordinates saved: '+lat.toFixed(4)+', '+lon.toFixed(4)+'</div>';
 }
 
-// ── ERA5 DOWNLOAD SCRIPT ─────────────────────────────────────────────────
+// ── ERA5 AUTO-DOWNLOAD (via Open-Meteo Historical API) ──────────────────
+async function autoDownloadERA5() {
+  const lat = W.siteCoords.lat;
+  const lon = W.siteCoords.lon;
+  if (lat === null || lon === null) {
+    alert('Please set site coordinates first (Step 1 or manually enter above).');
+    return;
+  }
+  const startDate = document.getElementById('era5Start').value;
+  const endDate = document.getElementById('era5End').value;
+  const model = document.getElementById('era5Model').value;
+  if (!startDate || !endDate) { alert('Enter start and end dates.'); return; }
+  const btn = document.getElementById('era5DownloadBtn');
+  const status = document.getElementById('era5DownloadStatus');
+  btn.disabled = true;
+  status.textContent = 'Downloading from Open-Meteo...';
+  status.style.color = 'var(--sky4)';
+  try {
+    // Open-Meteo Historical Weather API — provides ERA5 reanalysis data
+    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&start_date=${startDate}&end_date=${endDate}&hourly=wind_speed_10m,wind_speed_100m,wind_direction_10m,wind_direction_100m,temperature_2m,surface_pressure&timezone=auto&model=${model}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    const json = await resp.json();
+    if (!json.hourly || !json.hourly.time) throw new Error('No hourly data returned. Check dates and coordinates.');
+    const hourly = json.hourly;
+    const N = hourly.time.length;
+    // Parse into reference columns
+    const tsRef = [], ws10 = [], ws100 = [], wd10 = [], wd100 = [], tempRef = [], presRef = [];
+    for (let i = 0; i < N; i++) {
+      tsRef.push(hourly.time[i]);
+      ws10.push(hourly.wind_speed_10m !== null && hourly.wind_speed_10m !== undefined ? hourly.wind_speed_10m[i] : null);
+      ws100.push(hourly.wind_speed_100m !== null && hourly.wind_speed_100m !== undefined ? hourly.wind_speed_100m[i] : null);
+      wd10.push(hourly.wind_direction_10m !== null && hourly.wind_direction_10m !== undefined ? hourly.wind_direction_10m[i] : null);
+      wd100.push(hourly.wind_direction_100m !== null && hourly.wind_direction_100m !== undefined ? hourly.wind_direction_100m[i] : null);
+      tempRef.push(hourly.temperature_2m !== null && hourly.temperature_2m !== undefined ? hourly.temperature_2m[i] : null);
+      presRef.push(hourly.surface_pressure !== null && hourly.surface_pressure !== undefined ? hourly.surface_pressure[i] : null);
+    }
+    W.refColumns = [
+      { name: 'Timestamp', data: tsRef, unit: '', mappedAs: 'timestamp' },
+      { name: 'WS_10m', data: ws10, unit: '10m', mappedAs: 'speed' },
+      { name: 'WS_100m', data: ws100, unit: '100m', mappedAs: 'speed' },
+      { name: 'WD_10m', data: wd10, unit: '10m', mappedAs: 'dir' },
+      { name: 'WD_100m', data: wd100, unit: '100m', mappedAs: 'dir' },
+      { name: 'Temperature', data: tempRef, unit: '2m', mappedAs: 'temp' },
+      { name: 'Pressure', data: presRef, unit: 'hPa', mappedAs: 'pressure' }
+    ];
+    status.textContent = 'Downloaded ' + N.toLocaleString() + ' hourly records (' + model + '). Loaded as reference data.';
+    status.style.color = 'var(--mint)';
+    setUploadStatus('refUploadZone', 'refUploadInfo', 'loaded', `ERA5 (${model}) ${startDate} to ${endDate}`, N.toLocaleString() + ' hourly records');
+    initMCPStep();
+    logCleaning('Downloaded ERA5 reference data: ' + N + ' records from Open-Meteo (' + model + ') for ' + lat.toFixed(2) + ', ' + lon.toFixed(2));
+  } catch (err) {
+    status.textContent = 'Error: ' + err.message;
+    status.style.color = '#e74c3c';
+    alert('ERA5 download failed: ' + err.message + '\n\nFallback: Use the "Generate CDS Script" button to get a Python script for manual download.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function generateERA5Script() {
   const lat = W.siteCoords.lat || 13.0827;
   const lon = W.siteCoords.lon || 80.2707;
@@ -2854,26 +3091,23 @@ c.retrieve(
         'product_type': 'reanalysis',
         'format': 'netcdf',
         'variable': [
-            '10m_wind_speed', '10m_wind_direction',
-            '100m_wind_speed', '100m_wind_direction',
+            '10m_u_component_of_wind', '10m_v_component_of_wind',
             '100m_u_component_of_wind', '100m_v_component_of_wind',
         ],
         'year': '2023',
-        'month': [
-            '01','02','03','04','05','06',
-            '07','08','09','10','11','12'
-        ],
+        'month': ['01','02','03','04','05','06','07','08','09','10','11','12'],
         'day': [str(d).zfill(2) for d in range(1,32)],
         'time': [f'{h:02d}:00' for h in range(24)],
-        'area': [${lat+0.5}, ${lon-0.5}, ${lat-0.5}, ${lon+0.5}],  # N, W, S, E (0.5 deg box)
+        'area': [${lat+0.5}, ${lon-0.5}, ${lat-0.5}, ${lon+0.5}],
     },
     'era5_wind_data_${lat.toFixed(2)}_${lon.toFixed(2)}.nc'
 )
 
-print("Download complete! Convert .nc to CSV using:")
-print("  python -c \"import xarray as xr; ds=xr.open_dataset('era5_wind_data.nc'); ds.to_dataframe().to_csv('era5_reference.csv')\"")
+print("Download complete!")
 `;
   document.getElementById('era5Script').textContent = script;
+  const sec = document.getElementById('era5ScriptSection');
+  sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
 }
 
 // ── INTERACTIVE CLEANING PLOT ────────────────────────────────────────────
@@ -3190,6 +3424,521 @@ applyGapFilling = function() {
   renderCleaningPlot();
 };
 
+// ── NREL FULL AUTO-CLEAN VALIDATION SUITE ────────────────────────────────
+// Implements: NREL/AWS Scientific Wind Resource Assessment Handbook (1997)
+// Table 9.1 (Range Tests), Table 9.2 (Relational Tests), Table 9.3 (Trend Tests)
+// Plus: Tower Shadow, Frozen Sensor, Constancy, and TI ratio checks.
+
+function getNRELThresholds() {
+  return {
+    rng_wsMin: parseFloat(document.getElementById('rng_wsMin').value) || 0,
+    rng_wsMax: parseFloat(document.getElementById('rng_wsMax').value) || 40,
+    rng_wsStdMax: parseFloat(document.getElementById('rng_wsStdMax').value) || 3,
+    rng_wsGustMax: parseFloat(document.getElementById('rng_wsGustMax').value) || 50,
+    rng_wdMin: parseFloat(document.getElementById('rng_wdMin').value) || 0,
+    rng_wdMax: parseFloat(document.getElementById('rng_wdMax').value) || 360,
+    rng_wdStdMin: parseFloat(document.getElementById('rng_wdStdMin').value) || 3,
+    rng_wdStdMax: parseFloat(document.getElementById('rng_wdStdMax').value) || 75,
+    rng_tempMin: parseFloat(document.getElementById('rng_tempMin').value) || -50,
+    rng_tempMax: parseFloat(document.getElementById('rng_tempMax').value) || 55,
+    rng_presMin: parseFloat(document.getElementById('rng_presMin').value) || 930,
+    rng_presMax: parseFloat(document.getElementById('rng_presMax').value) || 1060,
+    rel_gustAvgRatio: parseFloat(document.getElementById('rel_gustAvgRatio').value) || 2.5,
+    rel_speedDiff40_25: parseFloat(document.getElementById('rel_speedDiff40_25').value) || 5.0,
+    rel_speedDiff40_10: parseFloat(document.getElementById('rel_speedDiff40_10').value) || 7.5,
+    rel_dirDiff40_25: parseFloat(document.getElementById('rel_dirDiff40_25').value) || 20,
+    rel_tiMax: parseFloat(document.getElementById('rel_tiMax').value) || 1.0,
+    trn_ws1hr: parseFloat(document.getElementById('trn_ws1hr').value) || 5.0,
+    trn_temp1hr: parseFloat(document.getElementById('trn_temp1hr').value) || 5,
+    trn_pres3hr: parseFloat(document.getElementById('trn_pres3hr').value) || 3,
+    spc_frozenWD: parseFloat(document.getElementById('spc_frozenWD').value) || 1,
+    spc_towerShadow: parseFloat(document.getElementById('spc_towerShadow').value) || 30,
+    spc_constWD: parseInt(document.getElementById('spc_constWD').value) || 6
+  };
+}
+
+function runNRELAutoClean() {
+  const T = getNRELThresholds();
+  const N = W.rawColumns[0] ? W.rawColumns[0].data.length : 0;
+  if (N === 0) return;
+  const results = { tests: [], totalFlagged: 0 };
+
+  // ── RANGE TESTS (Table 9.1) ────────────────────────────────────────────
+  // Wind Speed Mean columns
+  const speedCols = getSpeedCols();
+  let rangeSpeedCount = 0;
+  speedCols.forEach(col => {
+    for (let i = 0; i < N; i++) {
+      const v = col.data[i];
+      if (v === null || isNaN(v) || W.dataFlags[i] >= 1) continue;
+      if (v < T.rng_wsMin || v > T.rng_wsMax) { col.data[i] = null; W.dataFlags[i] = 1; rangeSpeedCount++; }
+    }
+  });
+  if (rangeSpeedCount > 0) results.tests.push({ name: 'Range: Wind Speed Mean', count: rangeSpeedCount, type: 'Range' });
+
+  // Wind Speed StdDev columns
+  const stdCols = getMappedColumns('speed_std');
+  let rangeStdCount = 0;
+  stdCols.forEach(col => {
+    for (let i = 0; i < N; i++) {
+      const v = col.data[i];
+      if (v === null || isNaN(v) || W.dataFlags[i] >= 1) continue;
+      if (v < 0 || v > T.rng_wsStdMax) { col.data[i] = null; W.dataFlags[i] = 1; rangeStdCount++; }
+    }
+  });
+  if (rangeStdCount > 0) results.tests.push({ name: 'Range: Wind Speed Std Dev', count: rangeStdCount, type: 'Range' });
+
+  // Wind Speed Max columns
+  const maxCols = getMappedColumns('speed_max');
+  let rangeMaxCount = 0;
+  maxCols.forEach(col => {
+    for (let i = 0; i < N; i++) {
+      const v = col.data[i];
+      if (v === null || isNaN(v) || W.dataFlags[i] >= 1) continue;
+      if (v < 0 || v > T.rng_wsGustMax) { col.data[i] = null; W.dataFlags[i] = 1; rangeMaxCount++; }
+    }
+  });
+  if (rangeMaxCount > 0) results.tests.push({ name: 'Range: Wind Speed Max Gust', count: rangeMaxCount, type: 'Range' });
+
+  // Wind Direction columns
+  const dirCols = getDirCols();
+  let rangeDirCount = 0;
+  dirCols.forEach(col => {
+    for (let i = 0; i < N; i++) {
+      const v = col.data[i];
+      if (v === null || isNaN(v) || W.dataFlags[i] >= 1) continue;
+      if (v < T.rng_wdMin || v > T.rng_wdMax) { col.data[i] = null; W.dataFlags[i] = 1; rangeDirCount++; }
+    }
+  });
+  if (rangeDirCount > 0) results.tests.push({ name: 'Range: Wind Direction', count: rangeDirCount, type: 'Range' });
+
+  // Temperature
+  const tempCols = getMappedColumns('temp');
+  let rangeTempCount = 0;
+  tempCols.forEach(col => {
+    for (let i = 0; i < N; i++) {
+      const v = col.data[i];
+      if (v === null || isNaN(v) || W.dataFlags[i] >= 1) continue;
+      if (v < T.rng_tempMin || v > T.rng_tempMax) { col.data[i] = null; W.dataFlags[i] = 1; rangeTempCount++; }
+    }
+  });
+  if (rangeTempCount > 0) results.tests.push({ name: 'Range: Temperature', count: rangeTempCount, type: 'Range' });
+
+  // Pressure
+  const presCols = getMappedColumns('pressure');
+  let rangePresCount = 0;
+  presCols.forEach(col => {
+    for (let i = 0; i < N; i++) {
+      const v = col.data[i];
+      if (v === null || isNaN(v) || W.dataFlags[i] >= 1) continue;
+      if (v < T.rng_presMin || v > T.rng_presMax) { col.data[i] = null; W.dataFlags[i] = 1; rangePresCount++; }
+    }
+  });
+  if (rangePresCount > 0) results.tests.push({ name: 'Range: Pressure', count: rangePresCount, type: 'Range' });
+
+  // ── RELATIONAL TESTS (Table 9.2) ──────────────────────────────────────
+  // Gust / Mean ratio
+  let relGustCount = 0;
+  speedCols.forEach(sc => {
+    const baseName = sc.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i, '');
+    const mc = maxCols.find(c => c.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i, '') === baseName);
+    if (!mc) return;
+    for (let i = 0; i < N; i++) {
+      const avg = sc.data[i], gust = mc.data[i];
+      if (avg === null || isNaN(avg) || gust === null || isNaN(gust) || avg <= 0 || W.dataFlags[i] >= 2) continue;
+      if (gust > T.rel_gustAvgRatio * avg) { mc.data[i] = null; W.dataFlags[i] = 2; relGustCount++; }
+    }
+  });
+  if (relGustCount > 0) results.tests.push({ name: 'Relational: Gust/Avg Ratio > ' + T.rel_gustAvgRatio, count: relGustCount, type: 'Relational' });
+
+  // Speed difference between heights
+  if (speedCols.length >= 2) {
+    let relSpeedCount = 0;
+    for (let i = 0; i < N; i++) {
+      if (W.dataFlags[i] >= 2) continue;
+      for (let a = 0; a < speedCols.length; a++) {
+        for (let b = a + 1; b < speedCols.length; b++) {
+          const va = speedCols[a].data[i], vb = speedCols[b].data[i];
+          if (va === null || isNaN(va) || vb === null || isNaN(vb)) continue;
+          const diff = Math.abs(va - vb);
+          if (diff > T.rel_speedDiff40_10) { speedCols[b].data[i] = null; W.dataFlags[i] = 2; relSpeedCount++; break; }
+        }
+      }
+    }
+    if (relSpeedCount > 0) results.tests.push({ name: 'Relational: Speed Height Diff > ' + T.rel_speedDiff40_10 + ' m/s', count: relSpeedCount, type: 'Relational' });
+  }
+
+  // TI ratio check (std/mean)
+  let relTICount = 0;
+  speedCols.forEach(sc => {
+    const baseName = sc.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i, '');
+    const stdC = stdCols.find(c => c.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i, '') === baseName);
+    if (!stdC) return;
+    for (let i = 0; i < N; i++) {
+      const avg = sc.data[i], sd = stdC.data[i];
+      if (avg === null || isNaN(avg) || sd === null || isNaN(sd) || avg <= 0 || W.dataFlags[i] >= 2) continue;
+      if (sd / avg > T.rel_tiMax) { sc.data[i] = null; stdC.data[i] = null; W.dataFlags[i] = 2; relTICount++; }
+    }
+  });
+  if (relTICount > 0) results.tests.push({ name: 'Relational: TI > ' + (T.rel_tiMax * 100).toFixed(0) + '%', count: relTICount, type: 'Relational' });
+
+  // Direction difference between heights
+  if (dirCols.length >= 2) {
+    let relDirCount = 0;
+    for (let i = 0; i < N; i++) {
+      if (W.dataFlags[i] >= 2) continue;
+      for (let a = 0; a < dirCols.length; a++) {
+        for (let b = a + 1; b < dirCols.length; b++) {
+          const va = dirCols[a].data[i], vb = dirCols[b].data[i];
+          if (va === null || isNaN(va) || vb === null || isNaN(vb)) continue;
+          let diff = Math.abs(va - vb);
+          if (diff > 180) diff = 360 - diff;
+          if (diff > T.rel_dirDiff40_25) { dirCols[b].data[i] = null; W.dataFlags[i] = 2; relDirCount++; break; }
+        }
+      }
+    }
+    if (relDirCount > 0) results.tests.push({ name: 'Relational: Dir Height Diff > ' + T.rel_dirDiff40_25 + ' deg', count: relDirCount, type: 'Relational' });
+  }
+
+  // ── TREND TESTS (Table 9.3) ────────────────────────────────────────────
+  // Wind speed 1-hour change (6 records for 10-min data)
+  let trendWSCount = 0;
+  speedCols.forEach(col => {
+    for (let i = 6; i < N; i++) {
+      if (W.dataFlags[i] >= 5 || W.dataFlags[i - 6] >= 5) continue;
+      const v1 = col.data[i - 6], v2 = col.data[i];
+      if (v1 === null || isNaN(v1) || v2 === null || isNaN(v2)) continue;
+      if (Math.abs(v2 - v1) > T.trn_ws1hr) { col.data[i] = null; W.dataFlags[i] = 5; trendWSCount++; }
+    }
+  });
+  if (trendWSCount > 0) results.tests.push({ name: 'Trend: WS 1-hr Change > ' + T.trn_ws1hr + ' m/s', count: trendWSCount, type: 'Trend' });
+
+  // Temperature 1-hour change
+  let trendTempCount = 0;
+  tempCols.forEach(col => {
+    for (let i = 6; i < N; i++) {
+      if (W.dataFlags[i] >= 5 || W.dataFlags[i - 6] >= 5) continue;
+      const v1 = col.data[i - 6], v2 = col.data[i];
+      if (v1 === null || isNaN(v1) || v2 === null || isNaN(v2)) continue;
+      if (Math.abs(v2 - v1) > T.trn_temp1hr) { col.data[i] = null; W.dataFlags[i] = 5; trendTempCount++; }
+    }
+  });
+  if (trendTempCount > 0) results.tests.push({ name: 'Trend: Temp 1-hr Change > ' + T.trn_temp1hr + ' degC', count: trendTempCount, type: 'Trend' });
+
+  // ── SPECIAL TESTS ──────────────────────────────────────────────────────
+  // Frozen sensor detection: consecutive identical wind direction values with zero or near-zero std dev
+  let frozenCount = 0;
+  dirCols.forEach(col => {
+    let runCount = 0, lastVal = null;
+    for (let i = 0; i < N; i++) {
+      const v = col.data[i];
+      if (v === null || isNaN(v)) { runCount = 0; lastVal = null; continue; }
+      if (lastVal !== null && Math.abs(v - lastVal) < T.spc_frozenWD) {
+        runCount++;
+        if (runCount >= T.spc_constWD) { col.data[i] = null; W.dataFlags[i] = 6; frozenCount++; }
+      } else { runCount = 1; }
+      lastVal = v;
+    }
+  });
+  if (frozenCount > 0) results.tests.push({ name: 'Special: Frozen Wind Vane', count: frozenCount, type: 'Special' });
+
+  // Tower shadow detection: reduced wind speed in specific direction sectors
+  // If we have direction data at the same height as speed data, flag points in the tower shadow zone
+  let towerShadowCount = 0;
+  if (speedCols.length > 0 && dirCols.length > 0) {
+    // Assume tower boom direction (typically 0° or 180° - we check both)
+    const boomDirs = [0, 180, 90, 270];
+    speedCols.forEach(sc => {
+      const heightNum = sc.name.match(/(\d+)/);
+      if (!heightNum) return;
+      const dc = dirCols.find(d => d.name.match(new RegExp(heightNum[1] + 'm?')));
+      if (!dc) return;
+      for (let i = 0; i < N; i++) {
+        if (W.dataFlags[i] >= 1) continue;
+        const wd = dc.data[i], ws = sc.data[i];
+        if (wd === null || isNaN(wd) || ws === null || isNaN(ws)) continue;
+        let inShadow = false;
+        for (const bd of boomDirs) {
+          let diff = Math.abs(wd - bd);
+          if (diff > 180) diff = 360 - diff;
+          if (diff < T.spc_towerShadow) { inShadow = true; break; }
+        }
+        if (inShadow) { sc.data[i] = null; W.dataFlags[i] = 7; towerShadowCount++; }
+      }
+    });
+  }
+  if (towerShadowCount > 0) results.tests.push({ name: 'Special: Tower Shadow (sectors)', count: towerShadowCount, type: 'Special' });
+
+  // ── SUMMARY ────────────────────────────────────────────────────────────
+  results.totalFlagged = results.tests.reduce((s, t) => s + t.count, 0);
+  results.totalRecords = N;
+  results.validAfter = W.dataFlags.filter(f => f === 0).length;
+
+  W.nrelCleanResults = results;
+  W.flagSummary.range = W.dataFlags.filter(f => f === 1).length;
+  W.flagSummary.spike = W.dataFlags.filter(f => f === 2).length;
+
+  // Render results
+  let html = '<div class="grid-4" style="margin-bottom:.8rem">';
+  html += '<div class="metric-item"><span class="metric-val" style="font-size:1.4rem">' + results.totalFlagged.toLocaleString() + '</span><span class="metric-label">Total Flagged</span></div>';
+  html += '<div class="metric-item"><span class="metric-val" style="font-size:1.4rem;color:var(--mint)">' + results.validAfter.toLocaleString() + '</span><span class="metric-label">Valid After Cleaning</span></div>';
+  html += '<div class="metric-item"><span class="metric-val" style="font-size:1.4rem">' + (N > 0 ? (results.validAfter / N * 100).toFixed(1) : 0) + '%</span><span class="metric-label">Data Recovery</span></div>';
+  html += '<div class="metric-item"><span class="metric-val" style="font-size:1.4rem">' + results.tests.length + '</span><span class="metric-label">Tests Executed</span></div>';
+  html += '</div>';
+  if (results.tests.length > 0) {
+    html += '<table class="data-table"><thead><tr><th>Test</th><th>Type</th><th>Flagged Records</th><th>% of Total</th></tr></thead><tbody>';
+    results.tests.forEach(t => {
+      const pct = N > 0 ? (t.count / N * 100).toFixed(2) : 0;
+      const badge = t.type === 'Range' ? 'warn' : t.type === 'Relational' ? 'invalid' : t.type === 'Trend' ? 'info' : 'valid';
+      html += '<tr><td>' + t.name + '</td><td><span class="badge badge-' + badge + '">' + t.type + '</span></td><td><strong>' + t.count.toLocaleString() + '</strong></td><td>' + pct + '%</td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<div class="alert alert-success" style="margin:0">All NREL validation tests passed. No suspect values detected.</div>';
+  }
+  document.getElementById('nrelResults').innerHTML = html;
+  logCleaning('NREL Validation Suite: ' + results.tests.length + ' tests, ' + results.totalFlagged + ' total flagged (' + results.tests.map(t => t.name + ': ' + t.count).join('; ') + ')');
+  updateCleaningStats();
+  renderScatterPlot();
+  renderCleaningPlot();
+}
+
+function resetCleaning() {
+  if (!W.originalData) { alert('No original data to restore.'); return; }
+  W.rawColumns = deepCopyCols(W.originalData);
+  W.dataFlags = new Array(W.rawColumns[0].data.length).fill(0);
+  W.flagSummary = { range: 0, spike: 0, manual: 0, gapfilled: 0 };
+  W.nrelCleanResults = null;
+  W.cleaningLog = [];
+  document.getElementById('cleaningLog').innerHTML = '<em>No cleaning actions yet</em>';
+  document.getElementById('nrelResults').innerHTML = '';
+  updateCleaningStats();
+  initCleaningPlot();
+  renderScatterPlot();
+  logCleaning('Reset all cleaning — restored original data');
+}
+
+// ── SCATTER PLOT (Windographer-style) ────────────────────────────────────
+let _scatterDragStart = null;
+let _scatterSelection = null;
+let _scatterPoints = []; // cache [{x, y, idx}]
+
+function initScatterPlot() {
+  const canvas = document.getElementById('scatterCanvas');
+  if (!canvas) return;
+  // Populate height selector
+  const speedCols = getSpeedCols();
+  const sel = document.getElementById('scatterHeight');
+  if (sel && speedCols.length > 0) sel.innerHTML = speedCols.map(c => '<option value="' + c.name + '">' + c.name + '</option>').join('');
+  // Mouse events for lasso selection
+  canvas.onmousedown = function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    _scatterDragStart = { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * (canvas.height / rect.height) };
+    _scatterSelection = null;
+  };
+  canvas.onmousemove = function(e) {
+    if (!_scatterDragStart) return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const curX = (e.clientX - rect.left) * scaleX;
+    const curY = (e.clientY - rect.top) * (canvas.height / rect.height);
+    renderScatterPlot();
+    const ctx = canvas.getContext('2d');
+    const x1 = Math.min(_scatterDragStart.x, curX), y1 = Math.min(_scatterDragStart.y, curY);
+    const x2 = Math.max(_scatterDragStart.x, curX), y2 = Math.max(_scatterDragStart.y, curY);
+    ctx.strokeStyle = 'rgba(231,76,60,.7)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(231,76,60,.08)';
+    ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+  };
+  canvas.onmouseup = function(e) {
+    if (!_scatterDragStart) return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const curX = (e.clientX - rect.left) * scaleX;
+    const curY = (e.clientY - rect.top) * scaleY;
+    const x1 = Math.min(_scatterDragStart.x, curX), y1 = Math.min(_scatterDragStart.y, curY);
+    const x2 = Math.max(_scatterDragStart.x, curX), y2 = Math.max(_scatterDragStart.y, curY);
+    if ((x2 - x1) > 5 && (y2 - y1) > 5) {
+      _scatterSelection = [];
+      _scatterPoints.forEach(pt => {
+        if (pt.cx >= x1 && pt.cx <= x2 && pt.cy >= y1 && pt.cy <= y2) _scatterSelection.push(pt.idx);
+      });
+    } else { _scatterSelection = null; }
+    _scatterDragStart = null;
+    renderScatterPlot();
+  };
+  renderScatterPlot();
+}
+
+function renderScatterPlot() {
+  const canvas = document.getElementById('scatterCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  const mode = document.getElementById('scatterXAxis') ? document.getElementById('scatterXAxis').value : 'speed_ti';
+  const colName = document.getElementById('scatterHeight') ? document.getElementById('scatterHeight').value : (getSpeedCols()[0] ? getSpeedCols()[0].name : '');
+  if (!colName) return;
+  const col = findColumn(colName);
+  if (!col) return;
+  const N = col.data.length;
+  const margin = { t: 30, r: 20, b: 45, l: 60 };
+  const pw = w - margin.l - margin.r, ph = h - margin.t - margin.b;
+  const yMaxOverride = parseFloat(document.getElementById('scatterYMax').value) || 0;
+  // Build scatter data based on mode
+  let dataPoints = [];
+  let xLabel = '', yLabel = '', xMin = 0, xMax = 30, yMin = 0, yMax = 1;
+  const dirCol = getDirCols()[0];
+  const baseName = col.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i, '');
+  const stdCol = W.rawColumns.find(c => c.mappedAs === 'speed_std' && c.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i, '') === baseName);
+
+  if (mode === 'speed_ti') {
+    xLabel = 'Wind Speed (m/s)'; yLabel = 'Turbulence Intensity'; xMax = 30; yMax = yMaxOverride > 0 ? yMaxOverride : 0.8;
+    for (let i = 0; i < N; i++) {
+      const spd = col.data[i], sd = stdCol ? stdCol.data[i] : null;
+      if (spd === null || isNaN(spd) || spd <= 0) continue;
+      const ti = (sd !== null && !isNaN(sd)) ? sd / spd : null;
+      if (ti === null || ti < 0 || ti > yMax * 2) continue;
+      dataPoints.push({ x: spd, y: ti, idx: i });
+    }
+  } else if (mode === 'speed_dir') {
+    xLabel = 'Wind Speed (m/s)'; yLabel = 'Direction (deg)'; xMax = 30; yMax = 360;
+    for (let i = 0; i < N; i++) {
+      const spd = col.data[i], dir = dirCol ? dirCol.data[i] : null;
+      if (spd === null || isNaN(spd) || dir === null || isNaN(dir)) continue;
+      dataPoints.push({ x: spd, y: dir, idx: i });
+    }
+  } else if (mode === 'speed_std') {
+    xLabel = 'Wind Speed (m/s)'; yLabel = 'Std Dev (m/s)'; xMax = 30; yMax = yMaxOverride > 0 ? yMaxOverride : 5;
+    for (let i = 0; i < N; i++) {
+      const spd = col.data[i], sd = stdCol ? stdCol.data[i] : null;
+      if (spd === null || isNaN(spd) || sd === null || isNaN(sd)) continue;
+      dataPoints.push({ x: spd, y: sd, idx: i });
+    }
+  } else if (mode === 'speed_time') {
+    xLabel = 'Record Index'; yLabel = 'Wind Speed (m/s)'; xMax = N; yMax = 40;
+    for (let i = 0; i < N; i++) {
+      const spd = col.data[i];
+      if (spd === null || isNaN(spd)) continue;
+      dataPoints.push({ x: i, y: spd, idx: i });
+    }
+  } else if (mode === 'dir_time') {
+    xLabel = 'Record Index'; yLabel = 'Direction (deg)'; xMax = N; yMax = 360;
+    for (let i = 0; i < N; i++) {
+      const dir = dirCol ? dirCol.data[i] : null;
+      if (dir === null || isNaN(dir)) continue;
+      dataPoints.push({ x: i, y: dir, idx: i });
+    }
+  }
+
+  if (dataPoints.length === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.font = '14px Open Sans'; ctx.textAlign = 'center';
+    ctx.fillText('No valid data points for this scatter combination', w / 2, h / 2); return;
+  }
+
+  // Compute data bounds
+  if (yMaxOverride > 0) yMax = yMaxOverride;
+  else { yMax = Math.max(...dataPoints.map(p => p.y)) * 1.1; }
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,.06)';
+  ctx.fillStyle = 'rgba(255,255,255,.25)';
+  ctx.font = '9px Open Sans';
+  for (let i = 0; i <= 5; i++) {
+    const y = margin.t + ph * (1 - i / 5);
+    ctx.beginPath(); ctx.moveTo(margin.l, y); ctx.lineTo(w - margin.r, y); ctx.stroke();
+    ctx.textAlign = 'right';
+    ctx.fillText((yMax * i / 5).toFixed(1), margin.l - 5, y + 3);
+  }
+  for (let i = 0; i <= 5; i++) {
+    const x = margin.l + (i / 5) * pw;
+    ctx.beginPath(); ctx.moveTo(x, margin.t); ctx.lineTo(x, margin.t + ph); ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.fillText(mode === 'speed_time' || mode === 'dir_time' ? Math.round(xMax * i / 5).toLocaleString() : (xMax * i / 5).toFixed(0), x, h - margin.b + 14);
+  }
+
+  // Draw reference lines for TI mode
+  if (mode === 'speed_ti') {
+    // IEC 61400-1 TI categories
+    const tiLimits = [{val: 0.10, label: 'Low (IEC A)', color: 'rgba(29,184,126,.3)'}, {val: 0.16, label: 'Medium (IEC B)', color: 'rgba(240,165,0,.3)'}, {val: 0.25, label: 'High', color: 'rgba(231,76,60,.3)'}];
+    tiLimits.forEach(ti => {
+      const y = margin.t + ph * (1 - ti.val / yMax);
+      if (y >= margin.t && y <= margin.t + ph) {
+        ctx.strokeStyle = ti.color; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+        ctx.beginPath(); ctx.moveTo(margin.l, y); ctx.lineTo(w - margin.r, y); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = '8px Open Sans'; ctx.textAlign = 'left';
+        ctx.fillText(ti.label + ' (TI=' + ti.val + ')', margin.l + 5, y - 3);
+      }
+    });
+  }
+
+  // Plot scatter points
+  const flagColors = { 0: 'rgba(45,156,206,.4)', 1: '#f0a500', 2: '#e74c3c', 3: '#e87d20', 4: '#2d9cce', 5: '#9b59b6', 6: '#3498db', 7: '#e87d20' };
+  // Downsample for performance if too many points
+  const maxPts = 8000;
+  const step = dataPoints.length > maxPts ? Math.ceil(dataPoints.length / maxPts) : 1;
+  _scatterPoints = [];
+  for (let j = 0; j < dataPoints.length; j += step) {
+    const pt = dataPoints[j];
+    const cx = margin.l + ((pt.x - xMin) / (xMax - xMin)) * pw;
+    const cy = margin.t + ph * (1 - (pt.y - yMin) / (yMax - yMin));
+    const flag = W.dataFlags[pt.idx] || 0;
+    const isSelected = _scatterSelection && _scatterSelection.includes(pt.idx);
+    ctx.fillStyle = isSelected ? '#ff4444' : (flagColors[flag] || flagColors[0]);
+    const radius = isSelected ? 2.5 : (flag === 0 ? 1 : 1.5);
+    ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
+    _scatterPoints.push({ x: pt.x, y: pt.y, idx: pt.idx, cx: cx, cy: cy });
+  }
+
+  // Selection box
+  if (_scatterSelection && _scatterDragStart === null) {
+    const selectedPts = _scatterPoints.filter(p => _scatterSelection.includes(p.idx));
+    if (selectedPts.length > 0) {
+      ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.font = '10px Open Sans'; ctx.textAlign = 'left';
+      ctx.fillText(selectedPts.length + ' points selected', margin.l + 5, margin.t + 12);
+    }
+  }
+
+  // Axis labels
+  ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = '10px Open Sans';
+  ctx.textAlign = 'center';
+  ctx.fillText(xLabel, w / 2, h - 3);
+  ctx.save(); ctx.translate(12, h / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(yLabel, 0, 0); ctx.restore();
+  // Title
+  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = '11px Open Sans'; ctx.textAlign = 'center';
+  ctx.fillText(colName + ' — ' + mode.replace('_', ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase()), w / 2, 15);
+  // Point count
+  ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.font = '8px Open Sans'; ctx.textAlign = 'right';
+  ctx.fillText(dataPoints.length.toLocaleString() + ' points', w - margin.r - 5, h - margin.b + 14);
+}
+
+function scatterDeleteSelected() {
+  if (!_scatterSelection || _scatterSelection.length === 0) { alert('Select points on the scatter plot first (click & drag to lasso)'); return; }
+  const allNumeric = W.rawColumns.filter(c => c.mappedAs !== 'timestamp' && c.mappedAs !== 'none');
+  _scatterSelection.forEach(idx => {
+    allNumeric.forEach(col => { col.data[idx] = null; });
+    W.dataFlags[idx] = 3; // manual delete
+  });
+  W.flagSummary.manual += _scatterSelection.length;
+  logCleaning('Scatter plot manual delete: ' + _scatterSelection.length + ' points');
+  _scatterSelection = null;
+  updateCleaningStats();
+  renderScatterPlot();
+  renderCleaningPlot();
+}
+
+function scatterClearSelection() {
+  _scatterSelection = null;
+  renderScatterPlot();
+}
+
 // ── ENHANCED INIT CLEANING STEP ─────────────────────────────────────────
 const _origInitCleaning = initCleaningStep;
 initCleaningStep = function() {
@@ -3198,6 +3947,7 @@ initCleaningStep = function() {
   const N = W.rawColumns[0] ? W.rawColumns[0].data.length : 0;
   if (W.dataFlags.length !== N) { W.dataFlags = new Array(N).fill(0); }
   initCleaningPlot();
+  initScatterPlot();
 };
 
 // ── ENHANCED TURBULENCE WITH STD COLUMNS ────────────────────────────────
