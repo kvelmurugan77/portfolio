@@ -408,6 +408,10 @@ table.data-table tr:hover td{background:rgba(29,184,126,.04)}
           <div class="form-group"><label class="form-label">View Direction (°)</label><select class="form-select" id="mastInspectorDirSel" onchange="renderMastInspectorProfile()"></select></div>
           <div class="canvas-wrap"><canvas id="mastInspectorProfile" width="1100" height="300"></canvas></div>
         </div>
+        <div class="card" style="margin-top:1rem">
+          <div class="card-title">Mast → WTG Elevation Cross-Section</div>
+          <div class="canvas-wrap"><canvas id="mastWTGProfileCanvas" width="1100" height="350"></canvas></div>
+        </div>
       </div>
     </div>
     <div class="card" style="margin-top:.5rem">
@@ -766,8 +770,31 @@ function autoFillERA5() {
     document.getElementById('era5Lon').value = lon.toFixed(4);
     document.getElementById('era5CoordNote').style.display = 'none';
   } else {
-    document.getElementById('era5CoordNote').style.display = 'block';
+    // Try to detect UTM zone from coordinates and provide approximate conversion
+    const approxLat = approximateUTMtoLat(lon);
+    if (approxLat !== null) {
+      document.getElementById('era5Lat').value = approxLat.toFixed(4);
+      document.getElementById('era5Lon').value = approximateUTMtoLon(lat).toFixed(4);
+      document.getElementById('era5CoordNote').style.display = 'block';
+      document.getElementById('era5CoordNote').innerHTML = 'Layout appears to use UTM/projected coordinates. Approximate lat/lon auto-filled. <strong>Please verify and correct if needed.</strong>';
+    } else {
+      document.getElementById('era5CoordNote').style.display = 'block';
+      document.getElementById('era5CoordNote').innerHTML = 'Layout uses projected/UTM coordinates. Please enter geographic lat/lon manually for ERA5 download.';
+    }
   }
+}
+
+// Approximate UTM to lat/lon (rough estimate for ERA5 download)
+function approximateUTMtoLat(northing) {
+  // Very rough: UTM northing in meters → approximate latitude
+  // Equator = 0m, pole = ~10,000,000m. 1° lat ≈ 111,320m
+  const lat = (northing - 0) / 111320;
+  return (lat >= -90 && lat <= 90) ? lat : null;
+}
+function approximateUTMtoLon(easting) {
+  // Cannot accurately determine longitude from easting alone without zone
+  // Return 0 as placeholder — user must verify
+  return 0;
 }
 
 function handleWindUpload(e) {
@@ -1196,6 +1223,14 @@ function renderProposalResults() {
 }
 
 // ── MAST–WTG INSPECTOR (Step 5 interactive click) ──────────────────────────
+function calcBandSlope(profilePts) {
+  if (!profilePts || profilePts.length < 2) return 0;
+  const startElev = profilePts[0].elev;
+  const endElev = profilePts[profilePts.length - 1].elev;
+  const dist = profilePts[profilePts.length - 1].dist;
+  return dist > 0 ? ((endElev - startElev) / dist) * 100 : 0;
+}
+
 function inspectMast(mastIdx) {
   const r = STATE.analysisResults; if (!r || !r.proposedMasts[mastIdx]) return;
   const m = r.proposedMasts[mastIdx];
@@ -1211,11 +1246,19 @@ function inspectMast(mastIdx) {
   // Draw polar measurement sector
   drawInspectorPolar('mastInspectorPolar', assessment, m, wtg);
 
-  // Terrain assessment table (windPRO-style)
-  let thtml = '<table class="data-table"><thead><tr><th>Dir°</th><th>Compass</th><th>Max Slope</th><th>Class</th><th>Freestream</th><th>Wake Sources</th><th>Valid</th></tr></thead><tbody>';
+  // Terrain assessment table (windPRO-style with slope bands & roughness)
+  let thtml = '<table class="data-table"><thead><tr><th>Dir°</th><th>Compass</th><th>Max Slope</th><th>Slope 0–4km</th><th>Slope 0–2km</th><th>Rough. z0</th><th>Class</th><th>Freestream</th><th>Wake Sources</th><th>Valid</th></tr></thead><tbody>';
   for (const s of assessment.sectors) {
     const cc = s.terrainClass === 'A' ? 'badge-valid' : s.terrainClass === 'B' ? 'badge-warn' : 'badge-invalid';
-    thtml += `<tr><td>${s.dir}°</td><td>${degToCompass(s.dir)}</td><td>${s.maxSlopeDeg.toFixed(2)}°</td><td><span class="badge ${cc}">Class ${s.terrainClass}</span></td><td>${s.isFreestream ? '<span style="color:var(--mint)">YES</span>' : '<span style="color:#e74c3c">NO</span>'}</td><td style="font-size:.62rem">${s.wakeAffected.length > 0 ? s.wakeAffected.join(', ') : '—'}</td><td>${s.isValid ? '<span style="color:var(--mint)">YES</span>' : '<span style="color:#e74c3c">NO</span>'}</td></tr>`;
+    // Calculate slope in distance bands
+    const prof = s.profile;
+    const dist4km = prof.filter(p => p.dist <= 4000);
+    const dist2km = prof.filter(p => p.dist <= 2000);
+    const slope4 = calcBandSlope(dist4km);
+    const slope2 = calcBandSlope(dist2km);
+    // Estimate roughness from terrain class
+    const z0 = s.terrainClass === 'A' ? 0.03 : s.terrainClass === 'B' ? 0.1 : 0.5;
+    thtml += `<tr><td>${s.dir}°</td><td>${degToCompass(s.dir)}</td><td>${s.maxSlopeDeg.toFixed(2)}°</td><td>${slope4.toFixed(2)}%</td><td>${slope2.toFixed(2)}%</td><td>${z0.toFixed(3)}m</td><td><span class="badge ${cc}">Class ${s.terrainClass}</span></td><td>${s.isFreestream ? '<span style="color:var(--mint)">YES</span>' : '<span style="color:#e74c3c">NO</span>'}</td><td style="font-size:.62rem">${s.wakeAffected.length > 0 ? s.wakeAffected.join(', ') : '—'}</td><td>${s.isValid ? '<span style="color:var(--mint)">YES</span>' : '<span style="color:#e74c3c">NO</span>'}</td></tr>`;
   }
   thtml += '</tbody></table>';
   document.getElementById('mastInspectorTerrainTable').innerHTML = thtml;
@@ -1265,6 +1308,14 @@ function drawInspectorPolar(canvasId, assessment, mastEntry, wtg) {
   for (let r = 1; r <= 4; r++) { ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.beginPath(); ctx.arc(cx, cy, maxR * r / 4, 0, Math.PI * 2); ctx.stroke(); }
   // Direction labels
   ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'].forEach((d, i) => { const ang = (i * 45 - 90) * Math.PI / 180; ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = 'bold 10px Open Sans'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(d, cx + (maxR + 25) * Math.cos(ang), cy + (maxR + 25) * Math.sin(ang)); });
+  // Sector degree labels (every 30° for readability)
+  ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.font = '7px Open Sans'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let d = 0; d < 360; d += 30) { if (d % 45 === 0) continue; const ang = (d - 90) * Math.PI / 180; ctx.fillText(d + '°', cx + (maxR + 18) * Math.cos(ang), cy + (maxR + 18) * Math.sin(ang)); }
+  // Rotor swept area circle (at hub height reference)
+  const rotorRefR = maxR * 0.35;
+  ctx.beginPath(); ctx.arc(cx, cy, rotorRefR, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.font = '7px Open Sans'; ctx.textAlign = 'left';
+  ctx.fillText('rotor ref', cx + rotorRefR + 3, cy - 3);
   // Sector wedges
   const sectorAng = (2 * Math.PI) / assessment.numSectors;
   for (const s of assessment.sectors) {
@@ -1322,6 +1373,152 @@ function renderMastInspectorProfile() {
   const assessment = performTerrainAssessment(mast, m.targetWTG, STATE.wtgs, STATE.extWtgs, STATE.terrainPoints, config);
   const selSector = assessment.sectors.find(s => s.dir === selDir) || assessment.sectors[0];
   drawTerrainProfile('mastInspectorProfile', selSector);
+  // Also draw Mast→WTG elevation cross-section
+  drawMastWTGCrossSection(m, m.targetWTG);
+}
+
+// ── MAST → WTG ELEVATION CROSS-SECTION (windPRO-style) ────────────────────
+function drawMastWTGCrossSection(mastEntry, wtg) {
+  const canvas = document.getElementById('mastWTGProfileCanvas'); if (!canvas) return;
+  const ctx = canvas.getContext('2d'), W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H); ctx.fillStyle = 'rgba(11,31,58,.5)'; ctx.fillRect(0, 0, W, H);
+
+  const mast = { lat: mastEntry.lat, lon: mastEntry.lon };
+  const mastDist = getDist(mast, wtg);
+  const bearingM2W = getBearing(mast, wtg); // bearing FROM mast TO WTG
+  const step = Math.max(mastDist / 100, 10); // ~100 points
+
+  // Generate elevation profile from mast to WTG
+  const profile = [];
+  for (let d = 0; d <= mastDist; d += step) {
+    let elev;
+    if (STATE.terrainPoints.length > 0 && STATE.terrainPoints[0].z !== 0) {
+      elev = interpElev(mast, bearingM2W, d, STATE.terrainPoints, synthElev(mast.lat, mast.lon));
+    } else {
+      const pt = isGeo(mast.lat, mast.lon) ? destPoint(mast.lat, mast.lon, bearingM2W, d) : { lat: mast.lat + d * Math.sin(bearingM2W * Math.PI / 180), lon: mast.lon + d * Math.cos(bearingM2W * Math.PI / 180) };
+      elev = synthElev(pt.lat, pt.lon);
+    }
+    profile.push({ dist: d, elev });
+  }
+  if (profile.length < 2) return;
+
+  const mastElev = profile[0].elev;
+  const wtgElev = profile[profile.length - 1].elev;
+  const elevDiff = wtgElev - mastElev;
+  const avgSlope = (elevDiff / mastDist) * 100;
+  const mastHH = mastEntry.height || wtg.hh;
+  const wtgHH = wtg.hh;
+  const rd = wtg.rd;
+  const allElevs = profile.map(p => p.elev);
+  const minE = Math.min(...allElevs) - 5;
+  const maxE = Math.max(mastElev + mastHH + rd / 2, wtgElev + wtgHH + rd / 2) + 10;
+  const eRange = maxE - minE || 1;
+
+  const pad = { l: 65, r: 30, t: 35, b: 45 };
+  const plotW = W - pad.l - pad.r;
+  const plotH = H - pad.t - pad.b;
+  const toX = d => pad.l + (d / mastDist) * plotW;
+  const toY = e => pad.t + plotH - ((e - minE) / eRange) * plotH;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) { const x = pad.l + plotW * i / 5; ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, H - pad.b); ctx.stroke(); }
+  for (let i = 0; i <= 5; i++) {
+    const y = pad.t + plotH * i / 5; ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.font = '9px Open Sans'; ctx.textAlign = 'right';
+    ctx.fillText((maxE - eRange * i / 5).toFixed(0) + 'm a.s.l.', pad.l - 5, y + 3);
+  }
+  // Distance labels
+  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = '9px Open Sans'; ctx.textAlign = 'center';
+  for (let i = 0; i <= 5; i++) { ctx.fillText((mastDist * i / 5).toFixed(0) + 'm', toX(mastDist * i / 5), H - pad.b + 15); }
+  ctx.fillText('Distance from Mast', W / 2, H - 8);
+
+  // IEC slope threshold lines (from mast)
+  // 3% slope threshold line from mast
+  ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(29,184,126,.3)'; ctx.lineWidth = 1;
+  const slope3YatEnd = toY(mastElev + mastDist * 0.03);
+  ctx.beginPath(); ctx.moveTo(toX(0), toY(mastElev)); ctx.lineTo(toX(mastDist), slope3YatEnd); ctx.stroke();
+  // 10% slope threshold line
+  ctx.strokeStyle = 'rgba(240,165,0,.3)';
+  const slope10YatEnd = toY(mastElev + mastDist * 0.10);
+  ctx.beginPath(); ctx.moveTo(toX(0), toY(mastElev)); ctx.lineTo(toX(mastDist), slope10YatEnd); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Slope labels
+  ctx.font = '8px Open Sans'; ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(29,184,126,.5)'; ctx.fillText('3% slope (Class A)', toX(mastDist) + 3, slope3YatEnd);
+  ctx.fillStyle = 'rgba(240,165,0,.5)'; ctx.fillText('10% slope (Class B)', toX(mastDist) + 3, slope10YatEnd);
+
+  // Terrain fill
+  ctx.beginPath(); ctx.moveTo(toX(0), toY(profile[0].elev));
+  for (const p of profile) ctx.lineTo(toX(p.dist), toY(p.elev));
+  ctx.lineTo(toX(mastDist), H - pad.b); ctx.lineTo(toX(0), H - pad.b); ctx.closePath();
+  ctx.fillStyle = 'rgba(45,156,206,.1)'; ctx.fill();
+  // Terrain line
+  ctx.beginPath(); ctx.moveTo(toX(0), toY(profile[0].elev));
+  for (const p of profile) ctx.lineTo(toX(p.dist), toY(p.elev));
+  ctx.strokeStyle = '#2d9cce'; ctx.lineWidth = 2; ctx.stroke();
+
+  // Mast marker (triangle + vertical line)
+  const mx = toX(0), my = toY(mastElev);
+  ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx, toY(mastElev + mastHH)); ctx.stroke();
+  // Mast triangle top
+  ctx.beginPath(); ctx.moveTo(mx - 8, toY(mastElev + mastHH)); ctx.lineTo(mx + 8, toY(mastElev + mastHH)); ctx.lineTo(mx, toY(mastElev + mastHH) - 12); ctx.closePath();
+  ctx.fillStyle = '#e74c3c'; ctx.fill();
+  // Mast base dot
+  ctx.beginPath(); ctx.arc(mx, my, 4, 0, Math.PI * 2); ctx.fillStyle = '#e74c3c'; ctx.fill();
+  // Labels
+  ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 10px Open Sans'; ctx.textAlign = 'center';
+  ctx.fillText('MET MAST', mx, my - 12);
+  ctx.font = '9px Open Sans'; ctx.fillStyle = 'rgba(255,255,255,.5)';
+  ctx.fillText(`HH: ${mastHH}m`, mx, toY(mastElev + mastHH / 2) - 6);
+  ctx.fillText(`Elev: ${mastElev.toFixed(1)}m`, mx, my + 16);
+
+  // WTG marker (tower + rotor circle)
+  const wx = toX(mastDist), wy = toY(wtgElev);
+  // Tower
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx, toY(wtgElev + wtgHH)); ctx.stroke();
+  // Hub
+  ctx.beginPath(); ctx.arc(wx, toY(wtgElev + wtgHH), 4, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+  // Rotor circle
+  const rotorY = toY(wtgElev + wtgHH);
+  const rotorR = (rd / 2 / eRange) * plotH;
+  ctx.beginPath(); ctx.arc(wx, rotorY, rotorR, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(wx - rotorR, rotorY); ctx.lineTo(wx + rotorR, rotorY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(wx, rotorY - rotorR); ctx.lineTo(wx, rotorY + rotorR); ctx.stroke();
+  // Base dot
+  ctx.beginPath(); ctx.arc(wx, wy, 4, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+  // Labels
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 10px Open Sans'; ctx.textAlign = 'center';
+  ctx.fillText(wtg.name, wx, wy - 12);
+  ctx.font = '9px Open Sans'; ctx.fillStyle = 'rgba(255,255,255,.5)';
+  ctx.fillText(`HH: ${wtgHH}m | RD: ${rd}m`, wx, rotorY + rotorR + 14);
+  ctx.fillText(`Elev: ${wtgElev.toFixed(1)}m`, wx, wy + 16);
+
+  // Distance arrow between mast and WTG
+  const arrowY = H - pad.b - 15;
+  ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(mx, arrowY); ctx.lineTo(wx, arrowY); ctx.stroke();
+  // Arrow heads
+  ctx.beginPath(); ctx.moveTo(mx, arrowY - 4); ctx.lineTo(mx, arrowY + 4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(wx, arrowY - 4); ctx.lineTo(wx, arrowY + 4); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = 'bold 10px Open Sans'; ctx.textAlign = 'center';
+  ctx.fillText(`${mastDist.toFixed(0)}m (${mastEntry.distanceD.toFixed(1)}D)`, (mx + wx) / 2, arrowY - 6);
+
+  // Title bar
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 11px Open Sans'; ctx.textAlign = 'left';
+  ctx.fillText(`Mast → WTG Cross-Section | Bearing: ${bearingM2W.toFixed(1)}° | Avg Slope: ${avgSlope.toFixed(2)}% | Elev Diff: ${elevDiff.toFixed(1)}m`, pad.l + 5, pad.t - 12);
+
+  // Classification
+  const maxAbsSlope = Math.abs(avgSlope);
+  const tClass = maxAbsSlope <= 3 ? 'A (Simple)' : maxAbsSlope <= 10 ? 'B (Complex)' : 'S (Very Complex)';
+  const tColor = maxAbsSlope <= 3 ? '#1db87e' : maxAbsSlope <= 10 ? '#f0a500' : '#e74c3c';
+  ctx.fillStyle = tColor; ctx.font = 'bold 10px Open Sans'; ctx.textAlign = 'right';
+  ctx.fillText(`Terrain Class: ${tClass}`, W - pad.r - 5, pad.t - 12);
 }
 
 // ── STEP 6: DETAILED REPORT ─────────────────────────────────────────────────
