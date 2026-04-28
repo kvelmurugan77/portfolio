@@ -183,6 +183,42 @@ table.data-table td.cleaned{color:var(--mint)}
 .collapsible-header{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between}
 .collapsible-header::after{content:'+/-';font-size:.6rem;color:rgba(255,255,255,.3)}
 
+/* Enhanced Controls */
+.signal-note{font-size:.58rem;color:rgba(255,255,255,.35);font-style:italic;margin-top:.2rem;line-height:1.4}
+.signal-toggles label{transition:all .15s ease}
+.signal-toggles label:hover{border-color:rgba(29,184,126,.5);color:rgba(255,255,255,.8)}
+.analysis-toolbar{display:flex;gap:.4rem;align-items:end;margin:.6rem 0;flex-wrap:wrap}
+.analysis-toolbar .form-group{margin:0;margin-right:.6rem}
+.analysis-toolbar .form-group .form-select{width:180px}
+.analysis-toolbar .btn{margin-top:auto}
+
+/* Greenwich Pipeline */
+.pipeline-bar{display:flex;align-items:center;gap:0;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.pipeline-step{display:flex;flex-direction:column;align-items:center;min-width:100px;padding:.4rem .6rem;cursor:default;transition:all .2s}
+.pipeline-step .pip-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;border:2px solid var(--border);color:rgba(255,255,255,.3);transition:all .3s;background:rgba(255,255,255,.03);margin-bottom:.2rem}
+.pipeline-step.done .pip-icon{background:var(--mint);border-color:var(--mint);color:var(--sky1)}
+.pipeline-step.active .pip-icon{border-color:var(--gold);color:var(--gold)}
+.pipeline-step .pip-label{font-size:.5rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.3);white-space:nowrap;text-align:center}
+.pipeline-step.done .pip-label{color:rgba(255,255,255,.6)}
+.pipeline-connector{width:20px;height:2px;background:var(--border);align-self:center;margin-bottom:16px;flex-shrink:0}
+
+/* Risk checklist */
+.risk-table{width:100%;border-collapse:collapse;font-size:.72rem;margin-top:.5rem}
+.risk-table th{text-align:left;font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);padding:.5rem .6rem;border-bottom:1px solid var(--border)}
+.risk-table td{padding:.4rem .6rem;border-bottom:1px solid rgba(255,255,255,.04);color:rgba(255,255,255,.7)}
+.risk-low{color:var(--mint);font-weight:600}
+.risk-medium{color:var(--gold);font-weight:600}
+.risk-high{color:#e74c3c;font-weight:600}
+
+/* Quality trace tooltip */
+.quality-tooltip{position:absolute;background:rgba(11,31,58,.95);border:1px solid var(--border);border-radius:6px;padding:.4rem .6rem;font-size:.65rem;color:rgba(255,255,255,.8);pointer-events:none;z-index:20;white-space:nowrap;display:none}
+
+/* Additional flag colors */
+.flag-dot.f-trend{background:#9b59b6}
+.flag-dot.f-towershadow{background:#e87d20}
+.flag-dot.f-frozen{background:#3498db}
+.flag-dot.f-anomaly{background:#e84393}
+
 </style>
 </head>
 <body>
@@ -305,6 +341,12 @@ table.data-table td.cleaned{color:var(--mint)}
 
 <!-- ====================== STEP 3: DATA CLEANING ====================== -->
 <div class="step-panel" id="step3">
+    <!-- Greenwich Processing Pipeline Status -->
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-title">Processing Pipeline <span style="font-size:.5rem;color:rgba(255,255,255,.3)">(Greenwich-style workflow)</span></div>
+      <div class="pipeline-bar" id="pipelineBar"></div>
+      <div id="pipelineSteps" style="display:flex;gap:0;margin-top:.6rem;overflow-x:auto"></div>
+    </div>
     <!-- NREL-Based Auto-Cleaning Panel -->
     <div class="card">
       <div class="card-title">NREL Standard Data Cleaning (Automated)</div>
@@ -352,23 +394,69 @@ table.data-table td.cleaned{color:var(--mint)}
       </div>
       <div id="nrelResults" style="margin-top:.8rem"></div>
     </div>
+    <!-- Tower Shadow / Shading Calibration -->
+    <div class="card" style="margin-top:.5rem">
+      <div class="card-title">Tower Shadow / Shading Calibration</div>
+      <div class="alert alert-info" style="margin:0 0 .6rem 0;font-size:.72rem">
+        Detects and corrects wind speed reduction caused by mast shadow. Select two speed sensors at the same height from opposite booms. The system identifies the directional speed deficit sector and applies correction.
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Sensor 1 (to correct)</label>
+          <select class="form-select" id="shadowSensor1"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sensor 2 (reference)</label>
+          <select class="form-select" id="shadowSensor2"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Direction Sensor</label>
+          <select class="form-select" id="shadowDirSensor"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Sector Half-Width (deg)</label>
+          <input class="form-input" type="number" id="shadowSectorWidth" value="30" step="5" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Min Speed Threshold (m/s)</label>
+          <input class="form-input" type="number" id="shadowMinSpeed" value="2" step="0.5" style="width:100%">
+        </div>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="applyTowerShadowCorrection()">Analyze &amp; Correct Tower Shadow</button>
+      <div id="shadowResult" style="margin-top:.5rem"></div>
+      <div class="canvas-wrap" style="margin-top:.5rem"><canvas id="shadowCanvas" width="800" height="350"></canvas></div>
+    </div>
+    <!-- Wind Direction Calibration (Declination) -->
+    <div class="card" style="margin-top:.5rem">
+      <div class="card-title">Wind Direction Calibration</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Magnetic Declination (deg)</label>
+          <input class="form-input" type="number" id="declinationAngle" value="0" step="0.5" style="width:100%">
+          <span style="font-size:.5rem;color:rgba(255,255,255,.3)">Positive = East, Negative = West. Use IGRF model for your location.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Direction Sensor</label>
+          <select class="form-select" id="declinationSensor"></select>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="applyDeclination()">Apply Declination Correction</button>
+      <div id="declinationResult" style="margin-top:.3rem"></div>
+    </div>
     <!-- Interactive Scatter Plot (Windographer-style) -->
     <div class="card" style="margin-top:.5rem">
       <div class="card-title">Scatter Plot Inspection <span style="font-size:.5rem;color:rgba(255,255,255,.3)">(Windographer-style)</span></div>
       <div class="clean-toolbar">
         <div class="form-group" style="margin:0;margin-right:.8rem"><label class="form-label">X-Axis</label>
-          <select class="form-select" id="scatterXAxis" style="width:180px" onchange="renderScatterPlot()">
-            <option value="speed_ti">Wind Speed vs TI</option>
-            <option value="speed_dir">Wind Speed vs Direction</option>
-            <option value="speed_std">Wind Speed vs Std Dev</option>
-            <option value="speed_time">Wind Speed vs Time</option>
-            <option value="dir_time">Direction vs Time</option>
-          </select>
+          <select class="form-select" id="scatterXSignal" style="width:200px" onchange="renderScatterPlot()"></select>
         </div>
-        <div class="form-group" style="margin:0;margin-right:.8rem"><label class="form-label">Height</label>
-          <select class="form-select" id="scatterHeight" style="width:130px" onchange="renderScatterPlot()"></select>
+        <div class="form-group" style="margin:0;margin-right:.8rem"><label class="form-label">Y-Axis</label>
+          <select class="form-select" id="scatterYSignal" style="width:200px" onchange="renderScatterPlot()"></select>
         </div>
-        <div class="form-group" style="margin:0"><label class="form-label">Y-Axis Limit</label>
+        <button class="btn btn-sm btn-secondary" onclick="swapScatterAxes()" title="Swap X and Y axes">⇄ Swap</button>
+        <div class="form-group" style="margin:0"><label class="form-label">Y Max</label>
           <input class="form-input thresh-input" type="number" id="scatterYMax" value="0" step="1" style="width:70px" placeholder="Auto" onchange="renderScatterPlot()">
         </div>
       </div>
@@ -387,8 +475,9 @@ table.data-table td.cleaned{color:var(--mint)}
         <div class="flag-item"><span class="flag-dot f-manual"></span>Manual Delete</div>
         <div class="flag-item"><span class="flag-dot f-gapfilled"></span>Gap Filled</div>
         <div class="flag-item"><span class="flag-dot" style="background:#9b59b6"></span>Trend Failed</div>
-        <div class="flag-item"><span class="flag-dot" style="background:#e87d20"></span>Tower Shadow</div>
-        <div class="flag-item"><span class="flag-dot" style="background:#3498db"></span>Frozen Sensor</div>
+        <div class="flag-item"><span class="flag-dot f-towershadow"></span>Tower Shadow</div>
+        <div class="flag-item"><span class="flag-dot f-frozen"></span>Frozen Sensor</div>
+        <div class="flag-item"><span class="flag-dot f-anomaly"></span>Sensor Anomaly</div>
       </div>
     </div>
     <!-- Time Series Plot -->
@@ -462,11 +551,18 @@ table.data-table td.cleaned{color:var(--mint)}
           <option value="spline">Spline Interpolation</option>
           <option value="nearest">Nearest Neighbor</option>
           <option value="ratio">Ratio Method (use another height)</option>
+          <option value="intermast">Inter-Mast Correlation</option>
         </select>
       </div>
       <div class="form-group" id="ratioRefGroup" style="display:none">
         <label class="form-label">Reference Column (for ratio)</label>
         <select class="form-select" id="ratioRefCol"></select>
+      </div>
+      <div class="form-group" id="intermastGroup" style="display:none;margin-top:.8rem">
+        <label class="form-label">Reference Column (Inter-Mast)</label>
+        <select class="form-select" id="intermastRefCol"></select>
+        <button class="btn btn-sm btn-secondary" style="margin-top:.3rem" onclick="analyzeCorrelation()">Auto-Calculate Time Offset &amp; Correlation</button>
+        <div id="correlationResult" style="margin-top:.3rem"></div>
       </div>
       <button class="btn btn-sm btn-secondary" onclick="applyGapFilling()">Fill Gaps</button>
       <div id="gapResult" style="margin-top:.3rem"></div>
@@ -511,6 +607,9 @@ table.data-table td.cleaned{color:var(--mint)}
     <button class="tab" onclick="switchAnalysisTab('diurnal')">Diurnal/Seasonal</button>
     <button class="tab" onclick="switchAnalysisTab('temp')">Temperature</button>
     <button class="tab" onclick="switchAnalysisTab('stats')">Statistics</button>
+    <button class="tab" onclick="switchAnalysisTab('airdensity')">Air Density</button>
+    <button class="tab" onclick="switchAnalysisTab('extreme')">Extreme Wind</button>
+    <button class="tab" onclick="switchAnalysisTab('uncertainty')">Uncertainty</button>
   </div>
   <div class="tab-panel active" id="apanel-rose">
     <div class="grid-2">
@@ -538,9 +637,7 @@ table.data-table td.cleaned{color:var(--mint)}
     <div class="grid-2">
       <div class="card">
         <div class="card-title">Wind Speed Frequency Distribution</div>
-        <div class="form-row" style="margin-bottom:1rem">
-          <div class="form-group"><label class="form-label">Height</label><select class="form-select" id="freqHeight" onchange="renderFreqDist()"></select></div>
-        </div>
+        <div class="signal-toggles" id="freqSignalToggles"></div>
         <div class="canvas-wrap"><canvas id="freqDistCanvas" width="600" height="400"></canvas></div>
       </div>
       <div class="card">
@@ -553,9 +650,7 @@ table.data-table td.cleaned{color:var(--mint)}
     <div class="grid-2">
       <div class="card">
         <div class="card-title">Weibull Distribution Fit</div>
-        <div class="form-row" style="margin-bottom:1rem">
-          <div class="form-group"><label class="form-label">Height</label><select class="form-select" id="weibullHeight" onchange="renderWeibull()"></select></div>
-        </div>
+        <div class="signal-toggles" id="weibullSignalToggles"></div>
         <div class="canvas-wrap"><canvas id="weibullCanvas" width="600" height="400"></canvas></div>
       </div>
       <div class="card">
@@ -572,13 +667,12 @@ table.data-table td.cleaned{color:var(--mint)}
     <div class="grid-2">
       <div class="card">
         <div class="card-title">Turbulence Intensity by Wind Speed</div>
-        <div class="form-row" style="margin-bottom:1rem">
-          <div class="form-group"><label class="form-label">Height</label><select class="form-select" id="tiHeight" onchange="renderTurbulence()"></select></div>
-        </div>
+        <div class="signal-toggles" id="tiSignalToggles"></div>
         <div class="canvas-wrap"><canvas id="tiCanvas" width="600" height="400"></canvas></div>
       </div>
       <div class="card">
         <div class="card-title">TI by Direction Sector</div>
+        <div class="signal-toggles" id="tiDirSignalToggles"></div>
         <div class="canvas-wrap"><canvas id="tiDirCanvas" width="520" height="520"></canvas></div>
       </div>
     </div>
@@ -587,7 +681,20 @@ table.data-table td.cleaned{color:var(--mint)}
     <div class="grid-2">
       <div class="card">
         <div class="card-title">Wind Shear Profile</div>
-        <div class="canvas-wrap"><canvas id="shearCanvas" width="600" height="400"></canvas></div>
+        <div class="signal-toggles" id="shearSignalToggles"></div>
+        <div class="signal-note" id="shearNote"></div>
+        <div class="form-row" style="margin:.6rem 0">
+          <div class="form-group">
+            <label class="form-label">Extrapolate to Height (m)</label>
+            <input class="form-input" type="number" id="shearExtrapHeight" placeholder="e.g. 120, 150" style="width:100%">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Actions</label>
+            <button class="btn btn-sm btn-primary" onclick="renderShear()" style="margin-top:auto">Update Profile</button>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas id="shearCanvas" width="600" height="450"></canvas></div>
+        <div id="shearExtrapResult" style="margin-top:.5rem"></div>
       </div>
       <div>
         <div class="card">
@@ -605,13 +712,20 @@ table.data-table td.cleaned{color:var(--mint)}
     <div class="grid-2">
       <div class="card">
         <div class="card-title">Diurnal Wind Speed Pattern</div>
-        <div class="form-row" style="margin-bottom:1rem">
-          <div class="form-group"><label class="form-label">Height</label><select class="form-select" id="diurnalHeight" onchange="renderDiurnal()"></select></div>
+        <div class="signal-toggles" id="diurnalSignalToggles"></div>
+        <div class="analysis-toolbar">
+          <div class="form-group"><label class="form-label">X-Axis</label>
+            <select class="form-select" id="diurnalXAxis" onchange="renderDiurnal()">
+              <option value="hour">Hour of Day</option>
+              <option value="month">Month</option>
+            </select>
+          </div>
         </div>
         <div class="canvas-wrap"><canvas id="diurnalCanvas" width="600" height="350"></canvas></div>
       </div>
       <div class="card">
         <div class="card-title">Monthly Wind Speed Pattern</div>
+        <div class="signal-toggles" id="monthlySignalToggles"></div>
         <div class="canvas-wrap"><canvas id="monthlyCanvas" width="600" height="350"></canvas></div>
       </div>
     </div>
@@ -620,10 +734,16 @@ table.data-table td.cleaned{color:var(--mint)}
     <div class="grid-2">
       <div class="card">
         <div class="card-title">Temperature Distribution</div>
+        <div class="signal-toggles" id="tempSignalToggles"></div>
         <div class="canvas-wrap"><canvas id="tempDistCanvas" width="600" height="350"></canvas></div>
       </div>
       <div class="card">
         <div class="card-title">Temperature vs Wind Speed</div>
+        <div class="analysis-toolbar">
+          <div class="form-group"><label class="form-label">Speed Column</label>
+            <select class="form-select" id="tempSpeedCol" onchange="renderTempAnalysis()"></select>
+          </div>
+        </div>
         <div class="canvas-wrap"><canvas id="tempSpeedCanvas" width="600" height="350"></canvas></div>
       </div>
     </div>
@@ -632,6 +752,95 @@ table.data-table td.cleaned{color:var(--mint)}
     <div class="card">
       <div class="card-title">Summary Statistics</div>
       <div class="table-wrap" id="statsTableWrap"></div>
+    </div>
+  </div>
+  <div class="tab-panel" id="apanel-airdensity">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Air Density Distribution</div>
+        <div class="canvas-wrap"><canvas id="airDensityCanvas" width="600" height="350"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Air Density Statistics</div>
+        <div class="stat-grid" id="airDensityStats"></div>
+        <div style="margin-top:1rem">
+          <div class="card-title">Air Density vs Wind Speed</div>
+          <div class="canvas-wrap"><canvas id="airDensitySpeedCanvas" width="600" height="350"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tab-panel" id="apanel-extreme">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Extreme Wind Speed Analysis (Gumbel Distribution)</div>
+        <div class="signal-toggles" id="extremeSignalToggles"></div>
+        <div class="form-row" style="margin:.6rem 0">
+          <div class="form-group">
+            <label class="form-label">Return Period (years)</label>
+            <select class="form-select" id="extremeReturnPeriod">
+              <option value="1">1 year</option>
+              <option value="10">10 years</option>
+              <option value="25">25 years</option>
+              <option value="50" selected>50 years</option>
+              <option value="100">100 years</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Annual Max Method</label>
+            <select class="form-select" id="extremeMethod">
+              <option value="annual_max">Annual Maximum Series</option>
+              <option value="monthly_max">Monthly Maximum (more data)</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-primary" onclick="renderExtremeWind()">Calculate Extreme Wind</button>
+        <div class="canvas-wrap" style="margin-top:.5rem"><canvas id="extremeWindCanvas" width="600" height="400"></canvas></div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title">Extreme Wind Results</div>
+          <div class="stat-grid" id="extremeWindStats"></div>
+        </div>
+        <div class="card" style="margin-top:.5rem">
+          <div class="card-title">IEC Wind Class Check</div>
+          <div id="iecWindClass" style="font-size:.75rem;color:rgba(255,255,255,.6)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tab-panel" id="apanel-uncertainty">
+    <div class="card">
+      <div class="card-title">Wind Resource Uncertainty Analysis</div>
+      <div class="alert alert-info" style="margin:0 0 .8rem 0;font-size:.72rem">
+        Quantifies uncertainty components following IEC 61400-12-1 methodology. Combined uncertainty determines the P75/P90 energy yield.
+      </div>
+      <div class="grid-3">
+        <div class="card" style="margin:0">
+          <div class="card-title">Measurement Uncertainty</div>
+          <div class="form-group"><label class="form-label">Wind Speed Sensor (%)</label><input class="form-input" type="number" id="unc_speedSensor" value="1.0" step="0.1"></div>
+          <div class="form-group"><label class="form-label">Wind Direction Sensor (%)</label><input class="form-input" type="number" id="unc_dirSensor" value="3.0" step="0.5"></div>
+          <div class="form-group"><label class="form-label">Temperature Sensor (%)</label><input class="form-input" type="number" id="unc_tempSensor" value="0.5" step="0.1"></div>
+          <div class="form-group"><label class="form-label">Data Recovery (%)</label><input class="form-input" type="number" id="unc_dataRecovery" value="2.0" step="0.5"></div>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="card-title">Analysis Uncertainty</div>
+          <div class="form-group"><label class="form-label">Shear Extrapolation (%)</label><input class="form-input" type="number" id="unc_shear" value="2.0" step="0.5"></div>
+          <div class="form-group"><label class="form-label">MCP / Long-Term (%)</label><input class="form-input" type="number" id="unc_mcp" value="3.0" step="0.5"></div>
+          <div class="form-group"><label class="form-label">Weibull Fit (%)</label><input class="form-input" type="number" id="unc_weibull" value="2.0" step="0.5"></div>
+          <div class="form-group"><label class="form-label">CFD / Flow Model (%)</label><input class="form-input" type="number" id="unc_flowModel" value="3.0" step="0.5"></div>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="card-title">Project Uncertainty</div>
+          <div class="form-group"><label class="form-label">Wake Effect (%)</label><input class="form-input" type="number" id="unc_wake" value="3.0" step="0.5"></div>
+          <div class="form-group"><label class="form-label">Power Curve (%)</label><input class="form-input" type="number" id="unc_powerCurve" value="2.0" step="0.5"></div>
+          <div class="form-group"><label class="form-label">Availability (%)</label><input class="form-input" type="number" id="unc_availability" value="1.0" step="0.5"></div>
+          <div class="form-group"><label class="form-label">Electrical Loss (%)</label><input class="form-input" type="number" id="unc_electrical" value="0.5" step="0.1"></div>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-primary" style="margin-top:.8rem" onclick="calculateUncertainty()">Calculate Combined Uncertainty</button>
+      <div id="uncertaintyResults" style="margin-top:.8rem"></div>
+      <div class="canvas-wrap" style="margin-top:.5rem"><canvas id="uncertaintyCanvas" width="800" height="350"></canvas></div>
     </div>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem">
@@ -739,6 +948,11 @@ table.data-table td.cleaned{color:var(--mint)}
   <div class="report-content" id="reportContent">
     <div class="alert alert-info">Click "Generate Full Report" to create a comprehensive wind data analysis report.</div>
   </div>
+  <div class="card">
+    <div class="card-title">Wind Resource Risk Checklist <span style="font-size:.5rem;color:rgba(255,255,255,.3)">(Greenwich-style)</span></div>
+    <button class="btn btn-sm btn-primary" onclick="runRiskChecklist()">Run Risk Assessment</button>
+    <div id="riskChecklistResults" style="margin-top:.8rem"></div>
+  </div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem">
     <button class="btn btn-secondary" onclick="goToStep(5)">← Back: MCP</button>
     <button class="btn btn-primary" onclick="goToStep(7)">Next: Energy Yield →</button>
@@ -827,11 +1041,14 @@ const W = {
   fileSize: 0,
   detectedFormat: 'Unknown',
   siteCoords: { lat: null, lon: null },
-  dataFlags: [],         // parallel to data indices: 0=valid, 1=range, 2=spike, 3=manual, 4=gapfilled
+  dataFlags: [],         // parallel to data indices: 0=valid, 1=range, 2=spike, 3=manual, 4=gapfilled, 5=trend, 6=towershadow, 7=frozen, 8=anomaly
   cleanZoom: { start: 0, end: 1 }, // 0-1 range for visible portion
   cleanSelection: null,  // {startIdx, endIdx} or null
   cleanActiveSignals: [], // column names shown in cleaning plot
-  flagSummary: { range: 0, spike: 0, manual: 0, gapfilled: 0 }
+  flagSummary: { range: 0, spike: 0, manual: 0, gapfilled: 0 },
+  calibrationDone: false,
+  declinationDone: false,
+  towerShadowDone: false,
 };
 
 // ── NAVIGATION ───────────────────────────────────────────────────────────
@@ -849,8 +1066,8 @@ function goToStep(n) {
   const si = document.querySelector('.step-item[data-step="'+n+'"]');
   if (si) si.classList.add('active');
   // Step-specific triggers
-  if (n === 2) runQualityAssessment();
-  if (n === 3) initCleaningStep();
+  if (n === 2) { runQualityAssessment(); initQualityTraceInteraction(); }
+  if (n === 3) { initCleaningStep(); updatePipelineStatus(); }
   if (n === 4) initAnalysisStep();
   if (n === 5) initMCPStep();
   if (n === 7) initEnergyStep();
@@ -1061,7 +1278,14 @@ function autoMapColumns() {
     if (/timestamp|date|time|datetime/.test(n)) col.mappedAs = 'timestamp';
     else if (/ws|windspeed|wind_spd|spd|speed/.test(n) && !/dir|temp|pres|hum/.test(n)) {
       // Check for std/min/max suffixes — careful operator precedence
-      if (/_sd$|_std$|_stddev$|_ti$|std\s*dev|stdev|sigma/.test(origLower) || (/(?:_sd|_std|_stddev|_sdv|Sigma)\b/.test(origLower) && /speed|spd|ws/.test(origLower)) || (/(?:Av?g|Mean)\s*[\/\\]\s*(?:Std|SD|Sigma|StDev)/i.test(col.name)) || (/(?:Std|SD|Sigma|StDev)\s*[\/\\]\s*(?:Av?g|Mean)/i.test(col.name))) col.mappedAs = 'speed_std';
+      if (/_sd$|_std$|_stddev$|_ti$|std\s*dev|stdev|sigma/.test(origLower) ||
+          (/(?:_sd|_std|_stddev|_sdv|Sigma)\b/.test(origLower) && /speed|spd|ws/.test(origLower)) ||
+          (/(?:Av?g|Mean)\s*[\/\\]\s*(?:Std|SD|Sigma|StDev)/i.test(col.name)) ||
+          (/(?:Std|SD|Sigma|StDev)\s*[\/\\]\s*(?:Av?g|Mean)/i.test(col.name)) ||
+          /^(?:SD|Sigma|SpdSD|SpdSigma|TurbSD)\d/i.test(n) ||
+          (/(?:SD|StdDev|Std|Sigma|StDev)\d*m?$/.test(origLower) && !/avg|mean/i.test(origLower))) {
+        col.mappedAs = 'speed_std';
+      }
       else if (/(?:_max|Max|Gust|Peak|TX)/.test(origLower) && /speed|spd|ws|wind/.test(origLower)) col.mappedAs = 'speed_max';
       else if (/(?:_min|Min|TN)/.test(origLower) && /speed|spd|ws|wind/.test(origLower)) col.mappedAs = 'speed_min';
       else col.mappedAs = 'speed';
@@ -1415,6 +1639,60 @@ function renderQualityTimeSeries() {
   ctx.fillStyle='rgba(255,255,255,.5)'; ctx.font='11px Open Sans';
   ctx.textAlign='center';
   ctx.fillText('Wind Speed Time Series — '+sc.name, w/2, h-5);
+  // Store data for click/hover interaction
+  if (!window._qualityTSData) window._qualityTSData = {};
+  window._qualityTSData = { canvas, ctx, w, h, margin, data, maxV, N, step };
+}
+
+// ── QUALITY TRACE CLICK & TOOLTIP ──────────────────────────────────────
+function initQualityTraceInteraction() {
+  const canvas = document.getElementById('qualityTSCanvas');
+  if (!canvas) return;
+  const tooltip = document.createElement('div');
+  tooltip.className = 'quality-tooltip';
+  canvas.parentElement.style.position = 'relative';
+  canvas.parentElement.appendChild(tooltip);
+
+  canvas.onmousemove = function(e) {
+    if (!window._qualityTSData) return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const { margin: m, w: cw, data: d, maxV: mv, N: n } = window._qualityTSData;
+    if (!d || n === 0) return;
+    const pw = cw - m.l - m.r;
+    const frac = (mx - m.l) / pw;
+    if (frac < 0 || frac > 1) { tooltip.style.display = 'none'; return; }
+    const idx = Math.round(frac * n);
+    if (idx < 0 || idx >= n) { tooltip.style.display = 'none'; return; }
+    const v = d[idx];
+    const flag = W.dataFlags[idx] || 0;
+    const flagNames = { 0:'Valid', 1:'Range', 2:'Spike/Rel', 3:'Manual', 4:'Gap Filled', 5:'Trend', 6:'Tower Shadow', 7:'Frozen', 8:'Anomaly' };
+    const flagColors = { 0:'#1db87e', 1:'#f0a500', 2:'#e74c3c', 3:'#e87d20', 4:'#2d9cce', 5:'#9b59b6', 6:'#e87d20', 7:'#3498db', 8:'#e84393' };
+    const ts = getTimestamps()[idx];
+    tooltip.innerHTML = '<div style="font-weight:700;margin-bottom:2px">'+(ts||'Rec '+idx)+'</div>'+
+      '<div>Speed: '+(v!==null&&!isNaN(v)?v.toFixed(2)+' m/s':'null')+'</div>'+
+      '<div style="color:'+(flagColors[flag]||'#fff')+'">Flag: '+(flagNames[flag]||'Unknown ('+flag+')')+'</div>';
+    tooltip.style.display='block';
+    tooltip.style.left=(e.clientX-rect.left+12)+'px';
+    tooltip.style.top=(e.clientY-rect.top-10)+'px';
+  };
+  canvas.onmouseleave=function(){ tooltip.style.display='none'; };
+  canvas.onclick=function(e){
+    if(!window._qualityTSData) return;
+    const rect=canvas.getBoundingClientRect();
+    const scaleX=canvas.width/rect.width;
+    const mx=(e.clientX-rect.left)*scaleX;
+    const {margin:m,w:cw,data:d,N:n}=window._qualityTSData;
+    if(!d||n===0) return;
+    const pw=cw-m.l-m.r;
+    const frac=(mx-m.l)/pw;
+    if(frac<0||frac>1) return;
+    const idx=Math.round(frac*n);
+    if(idx<0||idx>=n) return;
+    W.dataFlags[idx]=W.dataFlags[idx]===0?1:0;
+    renderQualityTimeSeries();
+  };
 }
 
 function renderGapHistogram() {
@@ -1513,6 +1791,14 @@ function initCleaningStep() {
         const gc=document.getElementById('gapCol').value;
         const allNum = W.rawColumns.filter(c=>c.mappedAs!=='timestamp'&&c.mappedAs!=='none');
         document.getElementById('ratioRefCol').innerHTML = allNum.filter(c=>c.name!==gc).map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+      }
+      if(this.value==='intermast') {
+        document.getElementById('intermastGroup').style.display='block';
+        const gc=document.getElementById('gapCol').value;
+        const allNum = W.rawColumns.filter(c=>c.mappedAs!=='timestamp'&&c.mappedAs!=='none');
+        document.getElementById('intermastRefCol').innerHTML = allNum.filter(c=>c.name!==gc).map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+      } else if(this.value!=='intermast') {
+        document.getElementById('intermastGroup').style.display='none';
       }
     });
     _cleaningInit = true;
@@ -1665,15 +1951,69 @@ function applyTimeAveraging() {
   updateCleaningStats();
 }
 
+// ── REUSABLE SIGNAL TOGGLE CREATOR ───────────────────────────────────────
+function createSignalToggles(containerId, columns, defaultActive) {
+  const el = document.getElementById(containerId);
+  if (!el || !columns || columns.length === 0) return;
+  const defaultSet = defaultActive || (columns.length > 0 ? [columns[0].name] : []);
+  el.innerHTML = columns.map(c =>
+    '<label class="' + (defaultSet.includes(c.name) ? 'active' : '') + '" data-signal="' + c.name + '">' +
+    '<input type="checkbox" ' + (defaultSet.includes(c.name) ? 'checked' : '') + ' onchange="toggleSignal(\'' + containerId + '\',this)">' +
+    c.name + (c.unit && c.unit !== '?' ? ' (' + c.unit + ')' : '') + '</label>'
+  ).join('');
+  return defaultSet;
+}
+
+function toggleSignal(containerId, labelEl) {
+  labelEl.classList.toggle('active');
+  const cb = labelEl.querySelector('input');
+  if (cb) cb.checked = labelEl.classList.contains('active');
+  // Trigger re-render based on which container was toggled
+  const renderMap = {
+    'freqSignalToggles': 'renderFreqDist',
+    'weibullSignalToggles': 'renderWeibull',
+    'tiSignalToggles': 'renderTurbulence',
+    'tiDirSignalToggles': 'renderTurbulence',
+    'shearSignalToggles': 'renderShear',
+    'diurnalSignalToggles': 'renderDiurnal',
+    'monthlySignalToggles': 'renderMonthly',
+    'tempSignalToggles': 'renderTempAnalysis'
+  };
+  const fn = renderMap[containerId];
+  if (fn && typeof window[fn] === 'function') window[fn]();
+}
+
+function getActiveSignals(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return [];
+  return Array.from(el.querySelectorAll('label.active')).map(l => l.dataset.signal);
+}
+
 // ── STEP 4: WIND ANALYSIS ────────────────────────────────────────────────
 function initAnalysisStep() {
   const speedCols = getSpeedCols();
   const dirCols = getDirCols();
-  const selIds = ['roseHeight','freqHeight','weibullHeight','tiHeight','diurnalHeight','eyHeight'];
+  const allNumeric = W.rawColumns.filter(c => c.mappedAs !== 'timestamp' && c.mappedAs !== 'none');
+  // Height selectors for wind rose and energy
+  const selIds = ['roseHeight','eyHeight'];
   selIds.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.innerHTML = speedCols.map(c=>`<option value="${c.name}">${c.name} ${c.unit}</option>`).join('');
+    if (el) el.innerHTML = speedCols.map(c=>'<option value="'+c.name+'">'+c.name+' '+c.unit+'</option>').join('');
   });
+  // Signal toggles for each panel
+  createSignalToggles('freqSignalToggles', speedCols, speedCols.length > 0 ? [speedCols[0].name] : []);
+  createSignalToggles('weibullSignalToggles', speedCols, speedCols.length > 0 ? [speedCols[0].name] : []);
+  createSignalToggles('tiSignalToggles', speedCols, speedCols.length > 0 ? [speedCols[0].name] : []);
+  createSignalToggles('tiDirSignalToggles', speedCols, speedCols.length > 0 ? [speedCols[0].name] : []);
+  createSignalToggles('shearSignalToggles', speedCols, speedCols.map(c => c.name)); // all active for shear
+  createSignalToggles('diurnalSignalToggles', speedCols, speedCols.length > 0 ? [speedCols[0].name] : []);
+  createSignalToggles('monthlySignalToggles', speedCols, speedCols.map(c => c.name)); // all active for monthly
+  const tempCols = W.rawColumns.filter(c => c.mappedAs === 'temp');
+  createSignalToggles('tempSignalToggles', tempCols, tempCols.length > 0 ? [tempCols[0].name] : []);
+  createSignalToggles('extremeSignalToggles', speedCols, speedCols.length > 0 ? [speedCols[0].name] : []);
+  // Temp vs Speed selector
+  const tsc = document.getElementById('tempSpeedCol');
+  if (tsc) tsc.innerHTML = speedCols.map(c => '<option value="'+c.name+'">'+c.name+' '+c.unit+'</option>').join('');
   switchAnalysisTab('rose');
   renderWindRose(); renderFreqDist(); renderWeibull(); renderTurbulence();
   renderShear(); renderDiurnal(); renderTempAnalysis(); renderStatsTable();
@@ -1682,11 +2022,15 @@ function initAnalysisStep() {
 function switchAnalysisTab(tab) {
   document.querySelectorAll('#analysisTabs .tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('#step4 .tab-panel').forEach(p=>p.classList.remove('active'));
-  const btn = document.querySelector('#analysisTabs .tab:nth-child('+
-    ({rose:1,freq:2,weibull:3,turbulence:4,shear:5,diurnal:6,temp:7,stats:8}[tab])+')');
+  const tabMap = {rose:1,freq:2,weibull:3,turbulence:4,shear:5,diurnal:6,temp:7,stats:8,airdensity:9,extreme:10,uncertainty:11};
+  const btn = document.querySelector('#analysisTabs .tab:nth-child('+(tabMap[tab]||1)+')');
   if(btn) btn.classList.add('active');
   const panel = document.getElementById('apanel-'+tab);
   if(panel) panel.classList.add('active');
+  // Auto-render new tabs
+  if(tab==='airdensity') renderAirDensity();
+  if(tab==='extreme') renderExtremeWind();
+  if(tab==='uncertainty') calculateUncertainty();
 }
 
 // ── Wind Rose ────────────────────────────────────────────────────────────
@@ -1805,65 +2149,68 @@ function renderFreqDist() {
   const ctx=canvas.getContext('2d');
   const w=canvas.width, h=canvas.height;
   ctx.clearRect(0,0,w,h);
-  const scName = document.getElementById('freqHeight')?.value;
-  if(!scName) return;
-  const col = findColumn(scName); if(!col) return;
-  const vals = col.data.filter(v=>v!==null&&!isNaN(v)&&v>=0);
-  if(vals.length===0) return;
+  const activeNames = getActiveSignals('freqSignalToggles');
+  if (activeNames.length === 0) { ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='14px Open Sans';ctx.textAlign='center';ctx.fillText('Select at least one signal above',w/2,h/2);return; }
+  const colors = ['#1db87e','#2d9cce','#f0a500','#e74c3c','#e87d20','#9b59b6','#87ceeb'];
   const binWidth=1, maxBin=35;
-  const hist=new Array(maxBin).fill(0);
-  vals.forEach(v=>{const b=Math.floor(v);if(b>=0&&b<maxBin)hist[b]++;});
-  const maxCount=safeMax(hist);
   const margin={t:20,r:20,b:45,l:55};
   const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
+  let globalMaxCount=0;
+  const allHists=[];
+  activeNames.forEach((scName,ci)=>{
+    const col=findColumn(scName); if(!col) return;
+    const vals=col.data.filter(v=>v!==null&&!isNaN(v)&&v>=0);
+    if(vals.length===0) return;
+    const hist=new Array(maxBin).fill(0);
+    vals.forEach(v=>{const b=Math.floor(v);if(b>=0&&b<maxBin)hist[b]++;});
+    const mc=safeMax(hist); if(mc>globalMaxCount) globalMaxCount=mc;
+    allHists.push({name:scName,hist,color:colors[ci%colors.length],total:vals.length});
+  });
+  if(globalMaxCount===0) return;
+  ctx.clearRect(0,0,w,h);
   // Grid
   ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=1;
   ctx.fillStyle='rgba(255,255,255,.3)'; ctx.font='10px Open Sans';
-  for(let i=0;i<=5;i++) {
+  for(let i=0;i<=5;i++){
     const y=margin.t+ph*(1-i/5);
     ctx.beginPath(); ctx.moveTo(margin.l,y); ctx.lineTo(w-margin.r,y); ctx.stroke();
-    ctx.fillText((maxCount*i/5).toFixed(0),2,y+3);
+    ctx.fillText((globalMaxCount*i/5).toFixed(0),2,y+3);
   }
-  // Bars
   const barW=pw/maxBin-1;
-  for(let i=0;i<maxBin;i++) {
-    const x=margin.l+i*(barW+1);
-    const bh=maxCount>0?(hist[i]/maxCount)*ph:0;
-    const grad=ctx.createLinearGradient(x,margin.t+ph-bh,x,margin.t+ph);
-    if(i<3){grad.addColorStop(0,'#4a90d9');grad.addColorStop(1,'#2d9cce');}
-    else if(i<6){grad.addColorStop(0,'#1db87e');grad.addColorStop(1,'#7bc67e');}
-    else if(i<12){grad.addColorStop(0,'#f0a500');grad.addColorStop(1,'#e87d20');}
-    else{grad.addColorStop(0,'#e74c3c');grad.addColorStop(1,'#c0392b');}
-    ctx.fillStyle=grad;
-    ctx.fillRect(x,margin.t+ph-bh,barW,bh);
-  }
-  // Weibull overlay
-  const wb = weibullFit(vals);
-  if(wb) {
-    ctx.strokeStyle='#87ceeb'; ctx.lineWidth=2.5; ctx.setLineDash([6,4]); ctx.beginPath();
-    for(let i=0;i<maxBin;i++) {
-      const v=i+0.5;
-      const f=vals.length*binWidth*(wb.k/wb.a)*Math.pow(v/wb.a,wb.k-1)*Math.exp(-Math.pow(v/wb.a,wb.k));
-      const x=margin.l+(v/maxBin)*pw, y=margin.t+ph-(f/maxCount)*ph;
-      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  const nActive=allHists.length;
+  allHists.forEach((hd,ci)=>{
+    const offset=nActive>1?ci*(barW/nActive):0;
+    const bw=nActive>1?barW/nActive-0.5:barW;
+    for(let i=0;i<maxBin;i++){
+      const x=margin.l+i*(barW+1)+offset;
+      const bh=globalMaxCount>0?(hd.hist[i]/globalMaxCount)*ph:0;
+      ctx.fillStyle=hd.color; ctx.globalAlpha=0.7;
+      ctx.fillRect(x,margin.t+ph-bh,bw,bh);
+      ctx.globalAlpha=1;
     }
-    ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle='#87ceeb'; ctx.font='11px Open Sans'; ctx.fillText('Weibull fit',w-120,margin.t+20);
-  }
-  // Axes labels
+  });
+  // Legend
+  allHists.forEach((hd,ci)=>{
+    ctx.fillStyle=hd.color; ctx.fillRect(margin.l+ci*120+10,margin.t+5,12,12);
+    ctx.fillStyle='rgba(255,255,255,.6)'; ctx.font='10px Open Sans'; ctx.textAlign='left';
+    ctx.fillText(hd.name,margin.l+ci*120+26,margin.t+15);
+  });
   ctx.fillStyle='rgba(255,255,255,.5)'; ctx.font='11px Open Sans'; ctx.textAlign='center';
-  ctx.fillText('Wind Speed (m/s) — '+scName, w/2, h-5);
-  for(let i=0;i<maxBin;i+=5) {
+  ctx.fillText('Wind Speed (m/s)', w/2, h-5);
+  for(let i=0;i<maxBin;i+=5){
     const x=margin.l+i*(barW+1)+barW/2;
     ctx.fillText(i, x, h-margin.b+15);
   }
-  // Frequency table
+  // Frequency table (first active)
+  const firstCol=findColumn(activeNames[0]); if(!firstCol) return;
+  const fvals = firstCol.data.filter(v=>v!==null&&!isNaN(v)&&v>=0);
+  const fhist=new Array(maxBin).fill(0);
+  fvals.forEach(v=>{const b=Math.floor(v);if(b>=0&&b<maxBin)fhist[b]++;});
   let fhtml='<table class="data-table"><thead><tr><th>Speed (m/s)</th><th>Count</th><th>Freq %</th><th>Cumulative %</th></tr></thead><tbody>';
   let cumul=0;
-  for(let i=0;i<maxBin;i++) {
-    const pct = vals.length>0?hist[i]/vals.length*100:0;
-    cumul+=pct;
-    if(hist[i]>0) fhtml+=`<tr><td>${i}–${i+1}</td><td>${hist[i]}</td><td>${pct.toFixed(2)}%</td><td>${cumul.toFixed(2)}%</td></tr>`;
+  for(let i=0;i<maxBin;i++){
+    const pct=fvals.length>0?fhist[i]/fvals.length*100:0; cumul+=pct;
+    if(fhist[i]>0) fhtml+='<tr><td>'+i+'–'+(i+1)+'</td><td>'+fhist[i]+'</td><td>'+pct.toFixed(2)+'%</td><td>'+cumul.toFixed(2)+'%</td></tr>';
   }
   fhtml+='</tbody></table>';
   document.getElementById('freqTableWrap').innerHTML = fhtml;
@@ -1941,61 +2288,93 @@ function renderWeibull() {
   const ctx=canvas.getContext('2d');
   const w=canvas.width, h=canvas.height;
   ctx.clearRect(0,0,w,h);
-  const scName = document.getElementById('weibullHeight')?.value;
-  if(!scName) return;
-  const col = findColumn(scName); if(!col) return;
-  const vals = col.data.filter(v=>v!==null&&!isNaN(v)&&v>0);
-  if(vals.length<10) return;
-  const wb = weibullFit(vals);
-  if(!wb) return;
-  W.weibullCache[scName] = wb;
-  // Histogram
+  const activeNames = getActiveSignals('weibullSignalToggles');
+  if(activeNames.length===0){ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='14px Open Sans';ctx.textAlign='center';ctx.fillText('Select at least one signal above',w/2,h/2);return;}
+  const colors=['#1db87e','#2d9cce','#f0a500','#e74c3c','#e87d20','#9b59b6','#87ceeb'];
   const binWidth=1, maxBin=30;
-  const hist=new Array(maxBin).fill(0);
-  vals.forEach(v=>{const b=Math.floor(v);if(b>=0&&b<maxBin)hist[b]++;});
-  const maxCount=safeMax(hist);
   const margin={t:20,r:20,b:45,l:55};
   const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
-  // Normalize to probability density
-  const total=vals.length;
-  ctx.fillStyle='rgba(45,156,206,.3)';
-  const barW=pw/maxBin-1;
-  for(let i=0;i<maxBin;i++) {
-    const x=margin.l+i*(barW+1);
-    const density = hist[i]/(total*binWidth);
-    const bh=maxCount>0?(hist[i]/maxCount)*ph:0;
-    ctx.fillRect(x,margin.t+ph-bh,barW,bh);
+  let globalMaxCount=0;
+  // Draw first active signal as histogram bars, all as PDF overlays
+  let firstHist=null, firstTotal=0, firstScName='';
+  const allWb=[];
+  activeNames.forEach((scName,ci)=>{
+    const col=findColumn(scName); if(!col) return;
+    const vals=col.data.filter(v=>v!==null&&!isNaN(v)&&v>0);
+    if(vals.length<10) return;
+    const wb=weibullFit(vals); if(!wb) return;
+    W.weibullCache[scName]=wb;
+    allWb.push({scName,wb,vals});
+    const hist=new Array(maxBin).fill(0);
+    vals.forEach(v=>{const b=Math.floor(v);if(b>=0&&b<maxBin)hist[b]++;});
+    const mc=safeMax(hist);
+    if(mc>globalMaxCount) globalMaxCount=mc;
+    if(ci===0){firstHist=hist;firstTotal=vals.length;firstScName=scName;}
+  });
+  if(allWb.length===0) return;
+  // Histogram bars for first signal
+  if(firstHist){
+    ctx.fillStyle='rgba(45,156,206,.3)';
+    const barW=pw/maxBin-1;
+    for(let i=0;i<maxBin;i++){
+      const x=margin.l+i*(barW+1);
+      const bh=globalMaxCount>0?(firstHist[i]/globalMaxCount)*ph:0;
+      ctx.fillRect(x,margin.t+ph-bh,barW,bh);
+    }
   }
-  // Weibull PDF
-  ctx.strokeStyle='#1db87e'; ctx.lineWidth=2.5; ctx.beginPath();
-  for(let i=0;i<maxBin*10;i++) {
-    const v=i/10;
-    const pdf = (wb.K/wb.A)*Math.pow(v/wb.A,wb.K-1)*Math.exp(-Math.pow(v/wb.A,wb.K));
-    const f = pdf*total*binWidth;
-    const x=margin.l+(v/maxBin)*pw, y=margin.t+ph-(f/maxCount)*ph;
-    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,.08)';ctx.lineWidth=1;
+  ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='10px Open Sans';
+  for(let i=0;i<=5;i++){
+    const y=margin.t+ph*(1-i/5);
+    ctx.beginPath();ctx.moveTo(margin.l,y);ctx.lineTo(w-margin.r,y);ctx.stroke();
+    ctx.textAlign='right';ctx.fillText((globalMaxCount*i/5).toFixed(0),margin.l-5,y+3);
   }
-  ctx.stroke();
+  for(let i=0;i<=6;i++){
+    const x=margin.l+(i/6)*pw;
+    ctx.beginPath();ctx.moveTo(x,margin.t);ctx.lineTo(x,margin.t+ph);ctx.stroke();
+    ctx.textAlign='center';ctx.fillText((maxBin*i/6).toFixed(0),x,h-margin.b+14);
+  }
+  // Weibull PDF overlays
+  allWb.forEach((item,ci)=>{
+    const {scName,wb,vals}=item;
+    const total=vals.length;
+    ctx.strokeStyle=colors[ci%colors.length]; ctx.lineWidth=2.5; ctx.beginPath();
+    for(let i=0;i<maxBin*10;i++){
+      const v=i/10;
+      const pdf=(wb.K/wb.A)*Math.pow(v/wb.A,wb.K-1)*Math.exp(-Math.pow(v/wb.A,wb.K));
+      const f=pdf*total*binWidth;
+      const x=margin.l+(v/maxBin)*pw, y=margin.t+ph-(f/globalMaxCount)*ph;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  });
   // Labels
-  ctx.fillStyle='rgba(255,255,255,.5)'; ctx.font='11px Open Sans'; ctx.textAlign='center';
-  ctx.fillText('Wind Speed (m/s) vs Probability Density — '+scName, w/2, h-5);
-  ctx.fillStyle='#87ceeb'; ctx.font='10px Open Sans'; ctx.textAlign='left';
-  ctx.fillText('Histogram',margin.l+10,margin.t+15);
-  ctx.fillStyle='#1db87e';
-  ctx.fillText('Weibull PDF',margin.l+100,margin.t+15);
-  // Params
-  document.getElementById('weibullParams').innerHTML = `
-    <div class="stat-item"><span class="stat-val">${wb.A}</span><span class="stat-lbl">Scale (A) m/s</span></div>
-    <div class="stat-item"><span class="stat-val">${wb.K}</span><span class="stat-lbl">Shape (K)</span></div>
-    <div class="stat-item"><span class="stat-val">${mean(vals).toFixed(1)}</span><span class="stat-lbl">Mean Speed</span></div>
-    <div class="stat-item"><span class="stat-val">${wb.R2.toFixed(3)}</span><span class="stat-lbl">R² Goodness</span></div>`;
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='11px Open Sans';ctx.textAlign='center';
+  ctx.fillText('Wind Speed (m/s) vs Probability Density',w/2,h-5);
+  // Legend
+  ctx.font='9px Open Sans';ctx.textAlign='left';
+ ctx.fillText('Histogram: '+firstScName,margin.l+10,margin.t+15);
+  allWb.forEach((item,ci)=>{
+    ctx.fillStyle=colors[ci%colors.length];
+    ctx.fillText('Weibull: '+item.scName+' (A='+item.wb.A+', K='+item.wb.K+')',margin.l+10,margin.t+28+ci*13);
+  });
+  // Params (show last selected or first)
+  const last=allWb[allWb.length-1];
+  const wb=last.wb, vals=last.vals;
+  document.getElementById('weibullParams').innerHTML =
+    '<div class="stat-item"><span class="stat-val">'+wb.A+'</span><span class="stat-lbl">Scale (A) m/s</span></div>' +
+    '<div class="stat-item"><span class="stat-val">'+wb.K+'</span><span class="stat-lbl">Shape (K)</span></div>' +
+    '<div class="stat-item"><span class="stat-val">'+mean(vals).toFixed(1)+'</span><span class="stat-lbl">Mean Speed</span></div>' +
+    '<div class="stat-item"><span class="stat-val">'+wb.R2.toFixed(3)+'</span><span class="stat-lbl">R\u00B2 Goodness</span></div>';
   // GoF table
-  document.getElementById('weibullGofTable').innerHTML = `<table class="data-table"><tbody>
-    <tr><td>Scale A</td><td><strong>${wb.A} m/s</strong></td></tr>
-    <tr><td>Shape K</td><td><strong>${wb.K}</strong></td></tr>
-    <tr><td>R²</td><td><strong>${wb.R2.toFixed(4)}</strong></td></tr>
-    <tr><td>Energy Pattern Factor</td><td><strong>${(Math.gamma(1+3/wb.K)/Math.pow(Math.gamma(1+1/wb.K),3)).toFixed(3)}</strong></td></tr>
-  </tbody></table>`;
+  let gofHtml='<table class="data-table"><thead><tr><th>Signal</th><th>A (m/s)</th><th>K</th><th>R\u00B2</th><th>EPF</th></tr></thead><tbody>';
+  allWb.forEach(item=>{
+    const epf=(Math.gamma(1+3/item.wb.K)/Math.pow(Math.gamma(1+1/item.wb.K),3)).toFixed(3);
+    gofHtml+='<tr><td>'+item.scName+'</td><td>'+item.wb.A+'</td><td>'+item.wb.K+'</td><td>'+item.wb.R2.toFixed(4)+'</td><td>'+epf+'</td></tr>';
+  });
+  gofHtml+='</tbody></table>';
+  document.getElementById('weibullGofTable').innerHTML=gofHtml;
 }
 
 // ── Turbulence Intensity ─────────────────────────────────────────────────
@@ -2004,56 +2383,82 @@ function renderTurbulence() {
   const ctx=canvas.getContext('2d');
   const w=canvas.width, h=canvas.height;
   ctx.clearRect(0,0,w,h);
-  const scName = document.getElementById('tiHeight')?.value;
-  if(!scName) return;
-  const col = findColumn(scName); if(!col) return;
-  const vals = col.data.filter(v=>v!==null&&!isNaN(v)&&v>0);
-  if(vals.length<10) return;
-  // TI by speed bin (using std of detrended values as proxy, or use Weibull K-based TI)
-  // Simple TI approximation: TI = std(speed) / mean(speed) for each speed bin
+  const activeNames = getActiveSignals('tiSignalToggles');
+  if(activeNames.length===0){ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='14px Open Sans';ctx.textAlign='center';ctx.fillText('Select at least one signal above',w/2,h/2);return;}
+  const colors=['#1db87e','#2d9cce','#f0a500','#e74c3c','#e87d20','#9b59b6','#87ceeb'];
   const binWidth=2, maxBin=25;
-  const bins=[];
-  for(let b=0;b<maxBin;b+=binWidth) {
-    const bVals = vals.filter(v=>v>=b&&v<b+binWidth);
-    if(bVals.length<3) continue;
-    bins.push({center:b+binWidth/2, mean:mean(bVals), std:std(bVals), n:bVals.length, ti:mean(bVals)>0?std(bVals)/mean(bVals):0});
-  }
-  const maxTI=Math.max(safeMax(bins.map(b=>b.ti)),0.3);
   const margin={t:20,r:20,b:45,l:55};
   const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
+  let globalMaxTI=0.3;
+  const allBins=[];
+  activeNames.forEach((scName,ci)=>{
+    const col=findColumn(scName); if(!col) return;
+    const vals=col.data.filter(v=>v!==null&&!isNaN(v)&&v>0);
+    if(vals.length<10) return;
+    const bins=[];
+    for(let b=0;b<maxBin;b+=binWidth){
+      const bVals=vals.filter(v=>v>=b&&v<b+binWidth);
+      if(bVals.length<3) continue;
+      const m=mean(bVals), s=std(bVals);
+      bins.push({center:b+binWidth/2, ti:m>0?s/m:0, n:bVals.length});
+    }
+    const mTI=safeMax(bins.map(b=>b.ti));
+    if(mTI>globalMaxTI) globalMaxTI=mTI;
+    allBins.push({scName,bins,color:colors[ci%colors.length]});
+  });
+  if(allBins.length===0) return;
   // Grid
   ctx.strokeStyle='rgba(255,255,255,.08)';
   for(let i=0;i<=5;i++){
     const y=margin.t+ph*(1-i/5);
     ctx.beginPath();ctx.moveTo(margin.l,y);ctx.lineTo(w-margin.r,y);ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,.3)'; ctx.font='10px Open Sans';
-    ctx.fillText((maxTI*i/5).toFixed(2),2,y+3);
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='10px Open Sans';
+    ctx.textAlign='right';ctx.fillText((globalMaxTI*i/5).toFixed(2),margin.l-5,y+3);
   }
-  // Bars + line
-  ctx.strokeStyle='#2d9cce'; ctx.lineWidth=2; ctx.beginPath();
-  bins.forEach(b => {
-    const x=margin.l+(b.center/maxBin)*pw;
-    const y=margin.t+ph*(1-b.ti/maxTI);
-    ctx.fillStyle='rgba(45,156,206,.4)';
-    ctx.fillRect(x-8,y,pw/maxBin*0.6-2,margin.t+ph-y);
-    if(bins.indexOf(b)===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  for(let i=0;i<=5;i++){
+    const x=margin.l+(i/5)*pw;
+    ctx.beginPath();ctx.moveTo(x,margin.t);ctx.lineTo(x,margin.t+ph);ctx.stroke();
+    ctx.textAlign='center';ctx.fillText((maxBin*i/5).toFixed(0),x,h-margin.b+14);
+  }
+  // Plot each signal
+  allBins.forEach(({scName,bins,color})=>{
+    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();
+    bins.forEach((b,bi)=>{
+      const x=margin.l+(b.center/maxBin)*pw;
+      const y=margin.t+ph*(1-b.ti/globalMaxTI);
+      if(bi===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    // Data points
+    bins.forEach(b=>{
+      const x=margin.l+(b.center/maxBin)*pw;
+      const y=margin.t+ph*(1-b.ti/globalMaxTI);
+      ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();
+    });
   });
-  ctx.stroke();
-  // IEC TI envelope (class A, B, C)
-  ctx.setLineDash([4,4]); ctx.lineWidth=1;
-  [{c:'A',f:0.16},{c:'B',f:0.14},{c:'C',f:0.12}].forEach(iec => {
-    ctx.strokeStyle=iec.c==='A'?'rgba(231,76,60,.5)':iec.c==='B'?'rgba(240,165,0,.5)':'rgba(29,184,126,.5)';
+  // IEC TI envelope
+  ctx.setLineDash([4,4]);ctx.lineWidth=1;
+  [{c:'A',f:0.16},{c:'B',f:0.14},{c:'C',f:0.12}].forEach(iec=>{
+    ctx.strokeStyle=iec.c==='A'?'rgba(231,76,60,.4)':iec.c==='B'?'rgba(240,165,0,.4)':'rgba(29,184,126,.4)';
     ctx.beginPath();
-    for(let v=0;v<maxBin;v+=0.5) {
+    for(let v=0;v<maxBin;v+=0.5){
       const ti=iec.f*(0.75*v+5.6);
-      const x=margin.l+(v/maxBin)*pw, y=margin.t+ph*(1-Math.min(ti,maxTI)/maxTI);
-      if(v===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      const x=margin.l+(v/maxBin)*pw, y=margin.t+ph*(1-Math.min(ti,globalMaxTI)/globalMaxTI);
+      if(v===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
     }
     ctx.stroke();
   });
   ctx.setLineDash([]);
-  ctx.fillStyle='rgba(255,255,255,.5)'; ctx.font='11px Open Sans'; ctx.textAlign='center';
-  ctx.fillText('Turbulence Intensity vs Wind Speed — '+scName, w/2, h-5);
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='11px Open Sans';ctx.textAlign='center';
+  ctx.fillText('Turbulence Intensity vs Wind Speed',w/2,h-5);
+  // Legend
+  ctx.font='9px Open Sans';ctx.textAlign='left';
+  allBins.forEach((item,ci)=>{
+    ctx.fillStyle=item.color;
+    ctx.fillText(item.scName,margin.l+10,margin.t+15+ci*13);
+  });
+  ctx.fillStyle='rgba(255,255,255,.3)';
+  ctx.fillText('IEC A/B/C envelopes',margin.l+10,margin.t+15+allBins.length*13);
   // TI by direction polar plot
   renderTIDirPolar();
 }
@@ -2063,7 +2468,11 @@ function renderTIDirPolar() {
   const ctx=canvas.getContext('2d');
   const w=canvas.width, h=canvas.height;
   ctx.clearRect(0,0,w,h);
-  const sc = getFirstMapped('speed'), dc = getDirCols()[0];
+  const activeNames = getActiveSignals('tiDirSignalToggles');
+  if(activeNames.length===0) return;
+  const scName = activeNames[activeNames.length-1]; // use last active
+  const sc = findColumn(scName);
+  const dc = getDirCols()[0];
   if(!sc||!dc) return;
   const nSec=12;
   const sectors=[];
@@ -2108,65 +2517,124 @@ function renderShear() {
   const ctx=canvas.getContext('2d');
   const w=canvas.width, h=canvas.height;
   ctx.clearRect(0,0,w,h);
-  const speedCols = getSpeedCols();
+  const activeNames = getActiveSignals('shearSignalToggles');
+  const speedCols = W.rawColumns.filter(c => c.mappedAs === 'speed' && activeNames.includes(c.name));
   if(speedCols.length<2) { ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='14px Open Sans';ctx.textAlign='center';ctx.fillText('Need at least 2 speed heights for shear analysis',w/2,h/2);return; }
-  // Extract heights from column names
-  const heights=[], means=[];
+  // Extract heights and means from active speed columns
+  const heights=[], means=[], colNames=[];
   speedCols.forEach(c=>{
     const m=c.name.match(/(\d+)/);
     if(m){
       heights.push(parseInt(m[1]));
       const vals=c.data.filter(v=>v!==null&&!isNaN(v)&&v>0);
       means.push(vals.length?mean(vals):0);
+      colNames.push(c.name);
     }
   });
-  if(heights.length<2) return;
-  // Power law fit: v = v_ref * (h/h_ref)^alpha
-  const logH=heights.map(h=>Math.log(h)), logV=means.map(v=>Math.log(v));
+  // Sort by height
+  const indexed=heights.map((h,i)=>({h,m:means[i],n:colNames[i]})).sort((a,b)=>a.h-b.h);
+  const sortedH=indexed.map(x=>x.h), sortedM=indexed.map(x=>x.m), sortedN=indexed.map(x=>x.n);
+  if(sortedH.length<2) return;
+  // Check for duplicate heights and show note
+  const heightGroups = {};
+  sortedH.forEach((h,i) => { if(!heightGroups[h]) heightGroups[h]=[]; heightGroups[h].push(sortedN[i]); });
+  const dupHeights = Object.entries(heightGroups).filter(([k,v])=>v.length>1);
+  const shearNote = document.getElementById('shearNote');
+  if(dupHeights.length>0) {
+    shearNote.innerHTML = '<i>Note: Multiple signals at same height: ' + dupHeights.map(([h,names])=>h+'m: '+names.join(', ')).join('; ') + '. All will be used in the fit.</i>';
+  } else { shearNote.innerHTML = ''; }
+  // Power law fit: v = v_ref * (h/h_ref)^alpha => log(v) = log(v_ref) + alpha*log(h/h_ref)
+  const logH=sortedH.map(h=>Math.log(h)), logV=sortedM.map(v=>Math.log(v));
   const mx=mean(logH), my=mean(logV);
   let num=0,den=0;
-  for(let i=0;i<heights.length;i++){num+=(logH[i]-mx)*(logV[i]-my);den+=(logH[i]-mx)**2;}
+  for(let i=0;i<sortedH.length;i++){num+=(logH[i]-mx)*(logV[i]-my);den+=(logH[i]-mx)**2;}
   const alpha = den>0?num/den:0.2;
   W.shearAlpha = alpha;
-  // Plot
-  const margin={t:20,r:20,b:45,l:55};
+  // R-squared
+  const meanV2 = mean(sortedM);
+  let ssTot=0, ssRes=0;
+  for(let i=0;i<sortedH.length;i++){
+    const vPred = sortedM[0]*Math.pow(sortedH[i]/sortedH[0],alpha);
+    ssTot+=(sortedM[i]-meanV2)**2; ssRes+=(sortedM[i]-vPred)**2;
+  }
+  const r2 = ssTot>0?1-ssRes/ssTot:0;
+  // Plot: X=Wind Speed, Y=Height (inverted so higher is up)
+  const margin={t:20,r:20,b:50,l:60};
   const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
-  const minH=Math.min(...heights)*0.8, maxH=Math.max(...heights)*1.2;
-  const maxV=Math.max(...means)*1.2;
-  // Grid
+  const maxV=Math.max(...sortedM)*1.25;
+  const minHPlot=0, maxHPlot=Math.max(...sortedH)*1.3;
+  // X-axis grid (wind speed)
   ctx.strokeStyle='rgba(255,255,255,.08)';
-  for(let i=0;i<=5;i++){
-    const y=margin.t+ph*(1-i/5);
+  const xSteps=6;
+  for(let i=0;i<=xSteps;i++){
+    const v=(maxV/xSteps)*i;
+    const x=margin.l+(v/maxV)*pw;
+    ctx.beginPath();ctx.moveTo(x,margin.t);ctx.lineTo(x,margin.t+ph);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='10px Open Sans';ctx.textAlign='center';
+    ctx.fillText(v.toFixed(1),x,h-margin.b+15);
+  }
+  // Y-axis grid (height) - inverted
+  const ySteps=5;
+  for(let i=0;i<=ySteps;i++){
+    const hVal=(maxHPlot/ySteps)*i;
+    const y=margin.t+ph*(1-hVal/maxHPlot);
     ctx.beginPath();ctx.moveTo(margin.l,y);ctx.lineTo(w-margin.r,y);ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='10px Open Sans';
-    ctx.fillText((maxV*i/5).toFixed(1),2,y+3);
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='10px Open Sans';ctx.textAlign='right';
+    ctx.fillText(hVal.toFixed(0)+'m',margin.l-5,y+3);
   }
-  // Power law curve
-  ctx.strokeStyle='#1db87e';ctx.lineWidth=2.5;ctx.beginPath();
-  const vRef=means[0], hRef=heights[0];
-  for(let i=0;i<=100;i++){
-    const h=minH+(maxH-minH)*i/100;
-    const v=vRef*Math.pow(h/hRef,alpha);
-    const x=margin.l+((h-minH)/(maxH-minH))*pw;
-    const y=margin.t+ph*(1-v/maxV);
-    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  // Power law fit curve: v = v_ref * (h/h_ref)^alpha => h = h_ref * (v/v_ref)^(1/alpha)
+  if(alpha > 0.001) {
+    ctx.strokeStyle='#1db87e';ctx.lineWidth=2.5;ctx.beginPath();
+    const vRef=sortedM[0], hRef=sortedH[0];
+    for(let i=0;i<=200;i++){
+      const v=(maxV/200)*i*1.1;
+      const hFit = hRef*Math.pow(v/vRef,1/alpha);
+      if(hFit>maxHPlot) break;
+      const x=margin.l+(v/maxV)*pw;
+      const y=margin.t+ph*(1-hFit/maxHPlot);
+      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
   }
-  ctx.stroke();
   // Data points
-  means.forEach((v,i)=>{
-    const x=margin.l+((heights[i]-minH)/(maxH-minH))*pw;
-    const y=margin.t+ph*(1-v/maxV);
+  sortedM.forEach((v,i)=>{
+    const x=margin.l+(v/maxV)*pw;
+    const y=margin.t+ph*(1-sortedH[i]/maxHPlot);
     ctx.fillStyle='#2d9cce';ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='10px Open Sans';ctx.textAlign='center';
-    ctx.fillText(heights[i]+'m',x,y-12);
+    ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='10px Open Sans';ctx.textAlign='left';
+    ctx.fillText(sortedH[i]+'m ('+sortedN[i]+')',x+10,y+3);
   });
+  // Extrapolation
+  const extrapH = parseFloat(document.getElementById('shearExtrapHeight').value) || 0;
+  let extrapResult = '';
+  if(extrapH > 0 && alpha > 0.001 && sortedH.length >= 2) {
+    const vRef=sortedM[0], hRef=sortedH[0];
+    const vExtrap = vRef * Math.pow(extrapH/hRef, alpha);
+    const x=margin.l+(vExtrap/maxV)*pw;
+    const y=margin.t+ph*(1-extrapH/maxHPlot);
+    // Diamond marker
+    ctx.fillStyle='#f0a500';ctx.beginPath();
+    ctx.moveTo(x,y-8);ctx.lineTo(x+6,y);ctx.lineTo(x,y+8);ctx.lineTo(x-6,y);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#f0a500';ctx.font='10px Open Sans';ctx.textAlign='left';
+    ctx.fillText(extrapH+'m: '+vExtrap.toFixed(2)+' m/s',x+10,y+3);
+    extrapResult = '<div class="alert alert-success" style="margin:0"><strong>Extrapolation to '+extrapH+'m:</strong> '+vExtrap.toFixed(2)+' m/s (using alpha='+alpha.toFixed(4)+', ref='+hRef+'m)</div>';
+  }
+  document.getElementById('shearExtrapResult').innerHTML = extrapResult;
+  // Axis labels
   ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='11px Open Sans';ctx.textAlign='center';
-  ctx.fillText('Wind Speed vs Height (Power Law) — alpha = '+alpha.toFixed(3), w/2, h-5);
+  ctx.fillText('Wind Speed (m/s)',w/2,h-5);
+  ctx.save();ctx.translate(12,h/2);ctx.rotate(-Math.PI/2);ctx.fillText('Height (m)',0,0);ctx.restore();
+  // Title
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='11px Open Sans';ctx.textAlign='center';
+  ctx.fillText('Wind Shear Profile — alpha = '+alpha.toFixed(4)+', R\u00B2 = '+r2.toFixed(3),w/2,margin.t-5);
   // Shear params
-  document.getElementById('shearParams').innerHTML = `
-    <div class="stat-item"><span class="stat-val">${alpha.toFixed(3)}</span><span class="stat-lbl">Power Law Alpha</span></div>
-    <div class="stat-item"><span class="stat-val">${heights.length}</span><span class="stat-lbl">Measurement Heights</span></div>`;
-  // Diurnal shear
+  document.getElementById('shearParams').innerHTML =
+    '<div class="stat-item"><span class="stat-val">'+alpha.toFixed(4)+'</span><span class="stat-lbl">Power Law Alpha</span></div>' +
+    '<div class="stat-item"><span class="stat-val">'+r2.toFixed(3)+'</span><span class="stat-lbl">R\u00B2 Goodness</span></div>' +
+    '<div class="stat-item"><span class="stat-val">'+sortedH.length+'</span><span class="stat-lbl">Heights Used</span></div>' +
+    '<div class="stat-item"><span class="stat-val">'+sortedH.map(h=>h+'m').join(', ')+'</span><span class="stat-lbl">Heights</span></div>';
   renderShearDiurnal();
 }
 
@@ -2175,50 +2643,89 @@ function renderShearDiurnal() {
   const ctx=canvas.getContext('2d');
   const w=canvas.width, h=canvas.height;
   ctx.clearRect(0,0,w,h);
-  const speedCols = getSpeedCols();
+  const speedCols = W.rawColumns.filter(c => c.mappedAs === 'speed');
   if(speedCols.length<2) return;
   const timestamps = getTimestamps();
   if(timestamps.length===0) return;
-  // Calculate shear by hour
+  // Use the two closest height pairs for better accuracy
+  const colsWithH = speedCols.map(c=>{
+    const m=c.name.match(/(\d+)/);
+    return m ? {col:c, h:parseInt(m[1])} : null;
+  }).filter(x=>x!==null).sort((a,b)=>a.h-b.h);
+  if(colsWithH.length<2) return;
+  // Use all consecutive pairs, but weight by closeness
   const hourShear = new Array(24).fill(0), hourCount = new Array(24).fill(0);
-  const pairs = [];
-  for(let i=0;i<Math.min(2,speedCols.length);i++){
-    const m=speedCols[i].name.match(/(\d+)/);
-    if(m) pairs.push({h:parseInt(m[1]),data:speedCols[i].data});
+  for(let p=0; p<colsWithH.length-1; p++) {
+    const p0=colsWithH[p], p1=colsWithH[p+1];
+    for(let i=0;i<Math.min(p0.col.data.length, p1.col.data.length, timestamps.length);i++){
+      const v0=p0.col.data[i], v1=p1.col.data[i];
+      if(v0===null||isNaN(v0)||v1===null||isNaN(v1)||v0<=0||v1<=0) continue;
+      const alpha = Math.log(v1/v0)/Math.log(p1.h/p0.h);
+      if(!isFinite(alpha)||alpha<0||alpha>2) continue; // sanity check
+      const ts=timestamps[i];
+      let hour=0;
+      if(typeof ts==='string'){ const hr=getTimestampHour(ts); if(hr>=0)hour=hr; }
+      else hour=(i%144)/6|0;
+      hourShear[hour]+=alpha; hourCount[hour]++;
+    }
   }
-  if(pairs.length<2) return;
-  for(let i=0;i<pairs[0].data.length;i++){
-    const v0=pairs[0].data[i],v1=pairs[1].data[i];
-    if(v0===null||isNaN(v0)||v1===null||isNaN(v1)||v0<=0||v1<=0) continue;
-    const alpha = Math.log(v1/v0)/Math.log(pairs[1].h/pairs[0].h);
-    const ts = timestamps[i];
-    let hour = 0;
-    if(typeof ts==='string'){ const h=getTimestampHour(ts); if(h>=0)hour=h; }
-    else hour=i%144/6|0;
-    hourShear[hour]+=alpha; hourCount[hour]++;
-  }
-  const margin={t:15,r:15,b:35,l:45};
+  // Compute overall mean alpha
+  let totalAlpha=0, totalCount=0;
+  for(let i=0;i<24;i++){totalAlpha+=hourShear[i];totalCount+=hourCount[i];}
+  const overallAlpha = totalCount>0?totalAlpha/totalCount:0.2;
+  // Proper Y-axis range for alpha (typical 0.05 to 0.45)
+  const validAlphas = [];
+  for(let i=0;i<24;i++){if(hourCount[i]>=5)validAlphas.push(hourShear[i]/hourCount[i]);}
+  let minA = validAlphas.length>0?Math.max(0,Math.min(...validAlphas)-0.05):0.05;
+  let maxA = validAlphas.length>0?Math.max(...validAlphas)+0.05:0.45;
+  if(maxA-minA<0.1) { minA=overallAlpha-0.15; maxA=overallAlpha+0.15; }
+  minA=Math.max(0,minA); maxA=Math.min(1,maxA);
+  const margin={t:15,r:15,b:35,l:50};
   const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
-  const maxA=Math.max(...hourShear.filter((_,i)=>hourCount[i]>0),0.5);
+  // Grid
   ctx.strokeStyle='rgba(255,255,255,.08)';
-  for(let i=0;i<=4;i++){
-    const y=margin.t+ph*(1-i/4);
+  for(let i=0;i<=5;i++){
+    const y=margin.t+ph*(1-i/5);
     ctx.beginPath();ctx.moveTo(margin.l,y);ctx.lineTo(w-margin.r,y);ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='9px Open Sans';
-    ctx.fillText((maxA*i/4).toFixed(2),2,y+3);
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='9px Open Sans';ctx.textAlign='right';
+    ctx.fillText((minA+(maxA-minA)*i/5).toFixed(2),margin.l-4,y+3);
   }
+  // Horizontal reference line at overall mean
+  const meanY = margin.t+ph*(1-(overallAlpha-minA)/(maxA-minA));
+  if(meanY>=margin.t&&meanY<=margin.t+ph){
+    ctx.strokeStyle='rgba(255,255,255,.2)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(margin.l,meanY);ctx.lineTo(w-margin.r,meanY);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='8px Open Sans';ctx.textAlign='left';
+    ctx.fillText('mean='+overallAlpha.toFixed(3),w-margin.r-70,meanY-3);
+  }
+  // Plot
   ctx.strokeStyle='#f0a500';ctx.lineWidth=2;ctx.beginPath();
-  let started=false;
   for(let i=0;i<24;i++){
-    if(hourCount[i]===0)continue;
+    if(hourCount[i]<5){
+      // Gap for insufficient data
+      continue;
+    }
     const a=hourShear[i]/hourCount[i];
-    const x=margin.l+(i/23)*pw, y=margin.t+ph*(1-a/maxA);
-    if(!started){ctx.moveTo(x,y);started=true;}else ctx.lineTo(x,y);
+    const x=margin.l+(i/23)*pw, y=margin.t+ph*(1-(a-minA)/(maxA-minA));
+    if(i===0||hourCount[i-1]<5)ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
   }
   ctx.stroke();
+  // Mark low-data hours
+  for(let i=0;i<24;i++){
+    if(hourCount[i]>0&&hourCount[i]<5){
+      const a=hourShear[i]/hourCount[i];
+      const x=margin.l+(i/23)*pw, y=margin.t+ph*(1-(a-minA)/(maxA-minA));
+      ctx.fillStyle='rgba(240,165,0,.3)';ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();
+    }
+  }
   ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='9px Open Sans';ctx.textAlign='center';
   for(let i=0;i<24;i+=3) ctx.fillText(i+'h',margin.l+(i/23)*pw,h-margin.b+14);
-  ctx.fillText('Shear Exponent by Hour of Day',w/2,h-3);
+  ctx.fillText('Shear Exponent (alpha) by Hour',w/2,h-3);
+  ctx.save();ctx.translate(10,h/2);ctx.rotate(-Math.PI/2);
+  ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='8px Open Sans';ctx.textAlign='center';
+  ctx.fillText('alpha',0,0);ctx.restore();
 }
 
 // ── Diurnal / Seasonal ──────────────────────────────────────────────────
@@ -2227,23 +2734,37 @@ function renderDiurnal() {
   const ctx=canvas.getContext('2d');
   const w=canvas.width, h=canvas.height;
   ctx.clearRect(0,0,w,h);
-  const scName = document.getElementById('diurnalHeight')?.value;
-  if(!scName) return;
-  const col = findColumn(scName); if(!col) return;
+  const activeNames = getActiveSignals('diurnalSignalToggles');
+  if(activeNames.length===0) return;
+  const xAxis = document.getElementById('diurnalXAxis')?.value || 'hour';
+  const colors=['#1db87e','#2d9cce','#f0a500','#e74c3c','#e87d20','#9b59b6','#87ceeb'];
   const timestamps = getTimestamps();
-  // Hourly means
-  const hourMeans=new Array(24).fill(0), hourCounts=new Array(24).fill(0);
-  for(let i=0;i<col.data.length;i++){
-    const v=col.data[i]; if(v===null||isNaN(v)) continue;
-    let hour=0;
-    if(timestamps[i]&&typeof timestamps[i]==='string'){const h=getTimestampHour(timestamps[i]);if(h>=0)hour=h;}
-    else hour=(i%144)/6|0;
-    hourMeans[hour]+=v; hourCounts[hour]++;
-  }
-  for(let i=0;i<24;i++) if(hourCounts[i]>0) hourMeans[i]/=hourCounts[i];
   const margin={t:20,r:20,b:40,l:55};
   const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
-  const maxV=Math.max(...hourMeans)*1.15||10;
+  let maxV=0;
+  const nBins = xAxis==='month'?12:24;
+  const allSeries=[];
+  activeNames.forEach((scName,ci)=>{
+    const col=findColumn(scName); if(!col) return;
+    const bins=new Array(nBins).fill(0), counts=new Array(nBins).fill(0);
+    for(let i=0;i<col.data.length;i++){
+      const v=col.data[i]; if(v===null||isNaN(v)) continue;
+      let bin=0;
+      if(xAxis==='month'){
+        if(timestamps[i]&&typeof timestamps[i]==='string'){const m=getTimestampMonth(timestamps[i]);if(m>=0)bin=m;}
+        else bin=Math.floor((i/144)%12);
+      } else {
+        if(timestamps[i]&&typeof timestamps[i]==='string'){const hr=getTimestampHour(timestamps[i]);if(hr>=0)bin=hr;}
+        else bin=(i%144)/6|0;
+      }
+      bins[bin]+=v; counts[bin]++;
+    }
+    for(let b=0;b<nBins;b++) if(counts[b]>0) bins[b]/=counts[b];
+    const mv=Math.max(...bins); if(mv>maxV)maxV=mv;
+    allSeries.push({name:scName,bins,color:colors[ci%colors.length]});
+  });
+  maxV=(maxV*1.15)||10;
+  // Grid
   ctx.strokeStyle='rgba(255,255,255,.08)';
   for(let i=0;i<=5;i++){
     const y=margin.t+ph*(1-i/5);
@@ -2251,21 +2772,31 @@ function renderDiurnal() {
     ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='10px Open Sans';
     ctx.fillText((maxV*i/5).toFixed(1),2,y+3);
   }
-  ctx.strokeStyle='#1db87e';ctx.lineWidth=2.5;ctx.beginPath();
-  for(let i=0;i<24;i++){
-    const x=margin.l+(i/23)*pw, y=margin.t+ph*(1-hourMeans[i]/maxV);
-    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-  }
-  ctx.stroke();
-  ctx.fillStyle='rgba(29,184,126,.3)';
-  for(let i=0;i<24;i++){
-    const x=margin.l+(i/23)*pw-4, y=margin.t+ph*(1-hourMeans[i]/maxV);
-    ctx.fillRect(x,y,8,margin.t+ph-y);
-  }
+  // Lines
+  allSeries.forEach((s,ci)=>{
+    ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.beginPath();
+    s.bins.forEach((v,b)=>{
+      const x=margin.l+(b/(nBins-1))*pw, y=margin.t+ph*(1-v/maxV);
+      if(b===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  });
+  // X-axis labels
   ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='10px Open Sans';ctx.textAlign='center';
-  for(let i=0;i<24;i+=3) ctx.fillText(i+':00',margin.l+(i/23)*pw,h-margin.b+14);
-  ctx.fillText('Mean Wind Speed by Hour — '+scName, w/2, h-5);
-  // Monthly
+  if(xAxis==='month'){
+    const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    for(let m=0;m<12;m++) ctx.fillText(mNames[m],margin.l+(m/11)*pw,h-margin.b+14);
+    ctx.fillText('Monthly Mean Wind Speed',w/2,h-5);
+  } else {
+    for(let i=0;i<24;i+=3) ctx.fillText(i+':00',margin.l+(i/23)*pw,h-margin.b+14);
+    ctx.fillText('Mean Wind Speed by Hour',w/2,h-5);
+  }
+  // Legend
+  allSeries.forEach((s,ci)=>{
+    ctx.fillStyle=s.color;ctx.fillRect(margin.l+ci*120+10,margin.t+5,12,12);
+    ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='10px Open Sans';ctx.textAlign='left';
+    ctx.fillText(s.name,margin.l+ci*120+26,margin.t+15);
+  });
   renderMonthly();
 }
 
@@ -2324,8 +2855,10 @@ function renderMonthly() {
 
 // ── Temperature Analysis ─────────────────────────────────────────────────
 function renderTempAnalysis() {
-  const tempCol = getFirstMapped('temp');
-  const speedCol = getFirstMapped('speed');
+  const activeTempNames = getActiveSignals('tempSignalToggles');
+  const tempCol = activeTempNames.length > 0 ? findColumn(activeTempNames[0]) : getFirstMapped('temp');
+  const speedSel = document.getElementById('tempSpeedCol');
+  const speedCol = speedSel && speedSel.value ? findColumn(speedSel.value) : getFirstMapped('speed');
   // Temperature distribution
   const tc = document.getElementById('tempDistCanvas');
   const tCtx = tc.getContext('2d');
@@ -3723,13 +4256,44 @@ let _scatterDragStart = null;
 let _scatterSelection = null;
 let _scatterPoints = []; // cache [{x, y, idx}]
 
+function populateScatterSelectors() {
+  const allNumeric = W.rawColumns.filter(c => c.mappedAs !== 'timestamp' && c.mappedAs !== 'none');
+  const xSel = document.getElementById('scatterXSignal');
+  const ySel = document.getElementById('scatterYSignal');
+  if (!xSel || !ySel) return;
+  let opts = '';
+  allNumeric.forEach(c => { opts += '<option value="' + c.name + '">' + c.name + ' (' + (c.mappedAs||'?') + ')</option>'; });
+  opts += '<option value="__TI__">Turbulence Intensity (computed)</option>';
+  opts += '<option value="__Time__">Time / Record Index</option>';
+  xSel.innerHTML = opts;
+  ySel.innerHTML = opts;
+  // Set sensible defaults
+  const speedCols = getSpeedCols();
+  if (speedCols.length > 0) {
+    const stdCol = W.rawColumns.find(c => c.mappedAs === 'speed_std');
+    if (stdCol) {
+      xSel.value = speedCols[0].name;
+      ySel.value = '__TI__';
+    } else {
+      xSel.value = speedCols[0].name;
+      if (speedCols.length > 1) ySel.value = speedCols[1].name;
+    }
+  }
+}
+
+function swapScatterAxes() {
+  const xSel = document.getElementById('scatterXSignal');
+  const ySel = document.getElementById('scatterYSignal');
+  const tmp = xSel.value;
+  xSel.value = ySel.value;
+  ySel.value = tmp;
+  renderScatterPlot();
+}
+
 function initScatterPlot() {
   const canvas = document.getElementById('scatterCanvas');
   if (!canvas) return;
-  // Populate height selector
-  const speedCols = getSpeedCols();
-  const sel = document.getElementById('scatterHeight');
-  if (sel && speedCols.length > 0) sel.innerHTML = speedCols.map(c => '<option value="' + c.name + '">' + c.name + '</option>').join('');
+  populateScatterSelectors();
   // Mouse events for lasso selection
   canvas.onmousedown = function(e) {
     const rect = canvas.getBoundingClientRect();
@@ -3782,69 +4346,64 @@ function renderScatterPlot() {
   const ctx = canvas.getContext('2d');
   const w = canvas.width, h = canvas.height;
   ctx.clearRect(0, 0, w, h);
-  const mode = document.getElementById('scatterXAxis') ? document.getElementById('scatterXAxis').value : 'speed_ti';
-  const colName = document.getElementById('scatterHeight') ? document.getElementById('scatterHeight').value : (getSpeedCols()[0] ? getSpeedCols()[0].name : '');
-  if (!colName) return;
-  const col = findColumn(colName);
-  if (!col) return;
-  const N = col.data.length;
+  const xSignal = document.getElementById('scatterXSignal') ? document.getElementById('scatterXSignal').value : '';
+  const ySignal = document.getElementById('scatterYSignal') ? document.getElementById('scatterYSignal').value : '';
+  if (!xSignal || !ySignal) return;
+  // Helper to get column data or compute TI
+  function getColumnData(sig) {
+    if (sig === '__Time__') return {data: Array.from({length:W.rawColumns[0]?W.rawColumns[0].data.length:0},(_,i)=>i), label:'Record Index', unit:''};
+    if (sig === '__TI__') {
+      // Compute TI from first speed/std pair
+      const sc = getSpeedCols()[0]; const stdc = W.rawColumns.find(c=>c.mappedAs==='speed_std');
+      if (!sc) return {data:[], label:'TI', unit:''};
+      const N = sc.data.length;
+      const tiData = new Array(N).fill(null);
+      if (stdc) {
+        const baseName = sc.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i,'');
+        const matchingStd = W.rawColumns.find(c=>c.mappedAs==='speed_std'&&c.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i,'')===baseName);
+        for(let i=0;i<N;i++){
+          const m=sc.data[i],s=matchingStd?matchingStd.data[i]:stdc.data[i];
+          if(m!==null&&!isNaN(m)&&s!==null&&!isNaN(s)&&m>0) tiData[i]=s/m;
+        }
+      }
+      return {data:tiData, label:'Turbulence Intensity', unit:''};
+    }
+    const col = findColumn(sig);
+    if (!col) return {data:[], label:sig, unit:col?col.unit:''};
+    return {data:col.data, label:sig, unit:col.unit};
+  }
+  const xData = getColumnData(xSignal);
+  const yData = getColumnData(ySignal);
+  if (xData.data.length === 0 || yData.data.length === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.font = '14px Open Sans'; ctx.textAlign = 'center';
+    ctx.fillText('Select valid X and Y signals', w/2, h/2); return;
+  }
+  const N = Math.min(xData.data.length, yData.data.length);
   const margin = { t: 30, r: 20, b: 45, l: 60 };
   const pw = w - margin.l - margin.r, ph = h - margin.t - margin.b;
   const yMaxOverride = parseFloat(document.getElementById('scatterYMax').value) || 0;
-  // Build scatter data based on mode
+  // Build data points
   let dataPoints = [];
-  let xLabel = '', yLabel = '', xMin = 0, xMax = 30, yMin = 0, yMax = 1;
-  const dirCol = getDirCols()[0];
-  const baseName = col.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i, '');
-  const stdCol = W.rawColumns.find(c => c.mappedAs === 'speed_std' && c.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i, '') === baseName);
-
-  if (mode === 'speed_ti') {
-    xLabel = 'Wind Speed (m/s)'; yLabel = 'Turbulence Intensity'; xMax = 30; yMax = yMaxOverride > 0 ? yMaxOverride : 0.8;
-    for (let i = 0; i < N; i++) {
-      const spd = col.data[i], sd = stdCol ? stdCol.data[i] : null;
-      if (spd === null || isNaN(spd) || spd <= 0) continue;
-      const ti = (sd !== null && !isNaN(sd)) ? sd / spd : null;
-      if (ti === null || ti < 0 || ti > yMax * 2) continue;
-      dataPoints.push({ x: spd, y: ti, idx: i });
-    }
-  } else if (mode === 'speed_dir') {
-    xLabel = 'Wind Speed (m/s)'; yLabel = 'Direction (deg)'; xMax = 30; yMax = 360;
-    for (let i = 0; i < N; i++) {
-      const spd = col.data[i], dir = dirCol ? dirCol.data[i] : null;
-      if (spd === null || isNaN(spd) || dir === null || isNaN(dir)) continue;
-      dataPoints.push({ x: spd, y: dir, idx: i });
-    }
-  } else if (mode === 'speed_std') {
-    xLabel = 'Wind Speed (m/s)'; yLabel = 'Std Dev (m/s)'; xMax = 30; yMax = yMaxOverride > 0 ? yMaxOverride : 5;
-    for (let i = 0; i < N; i++) {
-      const spd = col.data[i], sd = stdCol ? stdCol.data[i] : null;
-      if (spd === null || isNaN(spd) || sd === null || isNaN(sd)) continue;
-      dataPoints.push({ x: spd, y: sd, idx: i });
-    }
-  } else if (mode === 'speed_time') {
-    xLabel = 'Record Index'; yLabel = 'Wind Speed (m/s)'; xMax = N; yMax = 40;
-    for (let i = 0; i < N; i++) {
-      const spd = col.data[i];
-      if (spd === null || isNaN(spd)) continue;
-      dataPoints.push({ x: i, y: spd, idx: i });
-    }
-  } else if (mode === 'dir_time') {
-    xLabel = 'Record Index'; yLabel = 'Direction (deg)'; xMax = N; yMax = 360;
-    for (let i = 0; i < N; i++) {
-      const dir = dirCol ? dirCol.data[i] : null;
-      if (dir === null || isNaN(dir)) continue;
-      dataPoints.push({ x: i, y: dir, idx: i });
-    }
+  for (let i = 0; i < N; i++) {
+    const xv = xData.data[i], yv = yData.data[i];
+    if (xv === null || isNaN(xv) || yv === null || isNaN(yv)) continue;
+    dataPoints.push({ x: xv, y: yv, idx: i });
   }
-
   if (dataPoints.length === 0) {
     ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.font = '14px Open Sans'; ctx.textAlign = 'center';
-    ctx.fillText('No valid data points for this scatter combination', w / 2, h / 2); return;
+    ctx.fillText('No valid data points for this combination', w/2, h/2); return;
   }
-
-  // Compute data bounds
+  // Auto-detect ranges
+  let xMin = Math.min(...dataPoints.map(p => p.x));
+  let xMax = Math.max(...dataPoints.map(p => p.x));
+  let yMin = Math.min(...dataPoints.map(p => p.y));
+  let yMax = Math.max(...dataPoints.map(p => p.y));
+  const xPad = (xMax-xMin)*0.05 || 1;
+  const yPad = (yMax-yMin)*0.05 || 0.5;
+  xMin -= xPad; xMax += xPad; yMin -= yPad; yMax += yPad;
   if (yMaxOverride > 0) yMax = yMaxOverride;
-  else { yMax = Math.max(...dataPoints.map(p => p.y)) * 1.1; }
+  const xLabel = xData.label + (xData.unit ? ' ('+xData.unit+')' : '');
+  const yLabel = yData.label + (yData.unit ? ' ('+yData.unit+')' : '');
 
   // Grid
   ctx.strokeStyle = 'rgba(255,255,255,.06)';
@@ -3854,17 +4413,17 @@ function renderScatterPlot() {
     const y = margin.t + ph * (1 - i / 5);
     ctx.beginPath(); ctx.moveTo(margin.l, y); ctx.lineTo(w - margin.r, y); ctx.stroke();
     ctx.textAlign = 'right';
-    ctx.fillText((yMax * i / 5).toFixed(1), margin.l - 5, y + 3);
+    ctx.fillText((yMin + (yMax - yMin) * i / 5).toFixed(1), margin.l - 5, y + 3);
   }
   for (let i = 0; i <= 5; i++) {
     const x = margin.l + (i / 5) * pw;
     ctx.beginPath(); ctx.moveTo(x, margin.t); ctx.lineTo(x, margin.t + ph); ctx.stroke();
     ctx.textAlign = 'center';
-    ctx.fillText(mode === 'speed_time' || mode === 'dir_time' ? Math.round(xMax * i / 5).toLocaleString() : (xMax * i / 5).toFixed(0), x, h - margin.b + 14);
+    ctx.fillText((xMin + (xMax - xMin) * i / 5).toFixed(xSignal === '__Time__' ? 0 : 1), x, h - margin.b + 14);
   }
 
   // Draw reference lines for TI mode
-  if (mode === 'speed_ti') {
+  if (ySignal === '__TI__') {
     // IEC 61400-1 TI categories
     const tiLimits = [{val: 0.10, label: 'Low (IEC A)', color: 'rgba(29,184,126,.3)'}, {val: 0.16, label: 'Medium (IEC B)', color: 'rgba(240,165,0,.3)'}, {val: 0.25, label: 'High', color: 'rgba(231,76,60,.3)'}];
     tiLimits.forEach(ti => {
@@ -3913,7 +4472,7 @@ function renderScatterPlot() {
   ctx.save(); ctx.translate(12, h / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(yLabel, 0, 0); ctx.restore();
   // Title
   ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = '11px Open Sans'; ctx.textAlign = 'center';
-  ctx.fillText(colName + ' — ' + mode.replace('_', ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase()), w / 2, 15);
+  ctx.fillText(xLabel + ' vs ' + yLabel, w / 2, 15);
   // Point count
   ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.font = '8px Open Sans'; ctx.textAlign = 'right';
   ctx.fillText(dataPoints.length.toLocaleString() + ' points', w - margin.r - 5, h - margin.b + 14);
@@ -3948,6 +4507,22 @@ initCleaningStep = function() {
   if (W.dataFlags.length !== N) { W.dataFlags = new Array(N).fill(0); }
   initCleaningPlot();
   initScatterPlot();
+  // Populate shadow and declination selectors
+  const speedCols = getSpeedCols();
+  const dirCols = getDirCols();
+  const allNumeric = W.rawColumns.filter(c => c.mappedAs !== 'timestamp' && c.mappedAs !== 'none');
+  const shadowIds = ['shadowSensor1','shadowSensor2'];
+  shadowIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = allNumeric.map(c => '<option value="'+c.name+'">'+c.name+'</option>').join('');
+  });
+  const shadowDir = document.getElementById('shadowDirSensor');
+  if (shadowDir) shadowDir.innerHTML = dirCols.map(c => '<option value="'+c.name+'">'+c.name+'</option>').join('');
+  const declSensor = document.getElementById('declinationSensor');
+  if (declSensor) declSensor.innerHTML = dirCols.map(c => '<option value="'+c.name+'">'+c.name+'</option>').join('');
+  const imRef = document.getElementById('intermastRefCol');
+  if (imRef) imRef.innerHTML = allNumeric.map(c => '<option value="'+c.name+'">'+c.name+'</option>').join('');
+  updatePipelineStatus();
 };
 
 // ── ENHANCED TURBULENCE WITH STD COLUMNS ────────────────────────────────
@@ -4156,6 +4731,654 @@ function exportReportHTML() {
   downloadFile(fullHTML, 'wind_analysis_report.html', 'text/html');
 }
 
+// ── GREENWICH PIPELINE STATUS ──────────────────────────────────────────
+function updatePipelineStatus() {
+  const steps = [
+    { name: 'Import', done: W.rawColumns.length > 0 },
+    { name: 'Location', done: W.siteCoords.lat !== null },
+    { name: 'Filtration', done: W.flagSummary.range > 0 || W.flagSummary.spike > 0 },
+    { name: 'Calibration', done: W.calibrationDone || W.declinationDone || W.towerShadowDone },
+    { name: 'Repair', done: W.flagSummary.gapfilled > 0 || W.flagSummary.manual > 0 },
+    { name: 'Extrapolation', done: W.shearAlpha !== null },
+    { name: 'MCP', done: W.mcpResults !== null }
+  ];
+  const container = document.getElementById('pipelineSteps');
+  const bar = document.getElementById('pipelineBar');
+  if (!container || !bar) return;
+  // Find current active step
+  let activeIdx = -1;
+  for (let i = steps.length - 1; i >= 0; i--) { if (steps[i].done) { activeIdx = i; break; } }
+  const nextActive = activeIdx < steps.length - 1 ? activeIdx + 1 : -1;
+  // Render bar
+  const doneCount = steps.filter(s => s.done).length;
+  bar.innerHTML = '<div style="height:100%;width:' + (doneCount / steps.length * 100) + '%;background:var(--mint);border-radius:4px;transition:width .5s"></div>';
+  // Render steps
+  let html = '';
+  steps.forEach((s, i) => {
+    if (i > 0) html += '<div class="pipeline-connector" style="' + (i <= doneCount ? 'background:var(--mint)' : '') + '"></div>';
+    const cls = s.done ? 'done' : (i === nextActive ? 'active' : '');
+    html += '<div class="pipeline-step ' + cls + '"><div class="pip-icon">' + (s.done ? '✓' : '○') + '</div><div class="pip-label">' + s.name + '</div></div>';
+  });
+  container.innerHTML = html;
+}
+
+// ── TOWER SHADOW CORRECTION ────────────────────────────────────────────
+function applyTowerShadowCorrection() {
+  const s1Name = document.getElementById('shadowSensor1').value;
+  const s2Name = document.getElementById('shadowSensor2').value;
+  const dirName = document.getElementById('shadowDirSensor').value;
+  const halfWidth = parseFloat(document.getElementById('shadowSectorWidth').value) || 30;
+  const minSpeed = parseFloat(document.getElementById('shadowMinSpeed').value) || 2;
+  const s1 = findColumn(s1Name), s2 = findColumn(s2Name), dc = findColumn(dirName);
+  if (!s1 || !s2 || !dc) { alert('Select Sensor 1, Sensor 2, and Direction Sensor'); return; }
+  if (s1Name === s2Name) { alert('Select two different sensors'); return; }
+  const N = Math.min(s1.data.length, s2.data.length, dc.data.length);
+  // Bin speed difference by direction (10° bins)
+  const nBins = 36;
+  const binSize = 360 / nBins;
+  const binSums = new Array(nBins).fill(0);
+  const binCounts = new Array(nBins).fill(0);
+  const binMeans = new Array(nBins).fill(0);
+  const binRatios = new Array(nBins).fill(1);
+  for (let i = 0; i < N; i++) {
+    const v1 = s1.data[i], v2 = s2.data[i], d = dc.data[i];
+    if (v1 === null || isNaN(v1) || v2 === null || isNaN(v2) || d === null || isNaN(d)) continue;
+    if (v1 < minSpeed || v2 < minSpeed) continue;
+    const bi = Math.floor(((d % 360) + 360) % 360 / binSize) % nBins;
+    binSums[bi] += (v2 - v1);
+    binCounts[bi]++;
+  }
+  for (let i = 0; i < nBins; i++) {
+    binMeans[i] = binCounts[i] > 0 ? binSums[i] / binCounts[i] : 0;
+  }
+  // Identify shadow sector: where sensor1 consistently reads lower (positive diff)
+  const overallMeanDiff = binCounts.filter(c => c > 0).length > 0 ? binSums.reduce((a, b) => a + b, 0) / binCounts.reduce((a, b) => a + b, 0) : 0;
+  const shadowThreshold = overallMeanDiff * 1.5; // sectors where deficit is significantly above average
+  let shadowSectors = [];
+  for (let i = 0; i < nBins; i++) {
+    if (binCounts[i] >= 3 && binMeans[i] > shadowThreshold && binMeans[i] > 0.1) {
+      shadowSectors.push(i);
+    }
+  }
+  // If no sectors detected above threshold, find the maximum deficit sector and use it
+  if (shadowSectors.length === 0) {
+    let maxDeficit = 0, maxIdx = 0;
+    for (let i = 0; i < nBins; i++) { if (binMeans[i] > maxDeficit && binCounts[i] >= 3) { maxDeficit = binMeans[i]; maxIdx = i; } }
+    shadowSectors = [maxIdx];
+  }
+  // Apply correction to sensor1 in shadow sectors
+  let corrected = 0;
+  for (let i = 0; i < N; i++) {
+    const v1 = s1.data[i], d = dc.data[i];
+    if (v1 === null || isNaN(v1) || d === null || isNaN(d) || v1 < minSpeed) continue;
+    const bi = Math.floor(((d % 360) + 360) % 360 / binSize) % nBins;
+    if (shadowSectors.includes(bi)) {
+      const correction = binMeans[bi];
+      s1.data[i] = v1 + correction;
+      corrected++;
+    }
+  }
+  W.towerShadowDone = true;
+  W.calibrationDone = true;
+  logCleaning('Tower shadow correction on ' + s1Name + ' using ' + s2Name + ' as reference: ' + corrected + ' records corrected in ' + shadowSectors.length + ' sector(s)');
+  // Draw polar plot
+  drawShadowPolarPlot(binMeans, binCounts, shadowSectors, nBins, s1Name, s2Name);
+  document.getElementById('shadowResult').innerHTML = '<div class="alert alert-success" style="margin:0">Corrected <strong>' + corrected + '</strong> records in ' + shadowSectors.length + ' shadow sector(s). Shadow sector mid-direction(s): ' + shadowSectors.map(s => (s * binSize + binSize / 2).toFixed(0) + '°').join(', ') + '</div>';
+  updatePipelineStatus();
+  updateCleaningStats();
+}
+
+function drawShadowPolarPlot(binMeans, binCounts, shadowSectors, nBins, s1Name, s2Name) {
+  const canvas = document.getElementById('shadowCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  const cx = w / 2, cy = h / 2;
+  const maxR = Math.min(w, h) / 2 - 60;
+  const maxDiff = Math.max(safeMax(binMeans.map((m, i) => binCounts[i] > 0 ? m : 0)), 0.5);
+  const binW = 360 / nBins;
+  // Circles
+  for (let i = 1; i <= 5; i++) {
+    const r = (maxR / 5) * i;
+    ctx.strokeStyle = 'rgba(255,255,255,.1)';
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.font = '9px Open Sans'; ctx.textAlign = 'center';
+    ctx.fillText((maxDiff / 5 * i).toFixed(2), cx, cy - r + 12);
+  }
+  // Sector lines
+  const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  for (let i = 0; i < nBins; i++) {
+    const angle = (i * binW - 90) * Math.PI / 180;
+    const lx = cx + Math.cos(angle) * (maxR + 25), ly = cy + Math.sin(angle) * (maxR + 25);
+    if (nBins <= 16 || i % (nBins / 12 | 0) === 0 || nBins === 36 && i % 3 === 0) {
+      ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = '10px Open Sans'; ctx.fillText(dirs[i % 16], lx, ly + 4);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,.05)';
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(angle) * maxR, cy + Math.sin(angle) * maxR); ctx.stroke();
+  }
+  // Data wedges
+  for (let i = 0; i < nBins; i++) {
+    if (binCounts[i] === 0) continue;
+    const baseAngle = (i * binW - 90) * Math.PI / 180;
+    const r = maxDiff > 0 ? Math.abs(binMeans[i]) / maxDiff * maxR : 0;
+    const isShadow = shadowSectors.includes(i);
+    ctx.fillStyle = isShadow ? 'rgba(231,76,60,.5)' : 'rgba(45,156,206,.35)';
+    ctx.strokeStyle = isShadow ? '#e74c3c' : '#2d9cce';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, Math.max(r, 2), baseAngle, baseAngle + binW * Math.PI / 180);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = '11px Open Sans'; ctx.textAlign = 'center';
+  ctx.fillText('Speed Difference (Ref - Target) by Direction', w / 2, h - 5);
+  ctx.fillStyle = 'rgba(231,76,60,.7)'; ctx.fillText('Red = Shadow Sector', w / 2, h - 20);
+}
+
+// ── DECLINATION CALIBRATION ────────────────────────────────────────────
+function applyDeclination() {
+  const angle = parseFloat(document.getElementById('declinationAngle').value) || 0;
+  const dirName = document.getElementById('declinationSensor').value;
+  const dc = findColumn(dirName);
+  if (!dc) { alert('Select a direction sensor'); return; }
+  if (angle === 0) { document.getElementById('declinationResult').innerHTML = '<div class="alert alert-info" style="margin:0">Declination is 0° — no correction applied.</div>'; return; }
+  let corrected = 0;
+  for (let i = 0; i < dc.data.length; i++) {
+    const v = dc.data[i];
+    if (v === null || isNaN(v)) continue;
+    dc.data[i] = ((v + angle) % 360 + 360) % 360;
+    corrected++;
+  }
+  W.declinationDone = true;
+  W.calibrationDone = true;
+  logCleaning('Declination correction: +' + angle + '° applied to ' + dirName + ' (' + corrected + ' records)');
+  document.getElementById('declinationResult').innerHTML = '<div class="alert alert-success" style="margin:0">Applied ' + angle + '° declination correction to <strong>' + dirName + '</strong> (' + corrected + ' records)</div>';
+  updatePipelineStatus();
+}
+
+// ── INTER-MAST CORRELATION ────────────────────────────────────────────
+function analyzeCorrelation() {
+  const targetName = document.getElementById('gapCol').value;
+  const refName = document.getElementById('intermastRefCol').value;
+  const targetCol = findColumn(targetName), refCol = findColumn(refName);
+  if (!targetCol || !refCol) { alert('Select target and reference columns'); return; }
+  const N = Math.min(targetCol.data.length, refCol.data.length);
+  const offsets = [0, 1, -1, 2, -2, 3, -3, 6, -6];
+  let results = [];
+  offsets.forEach(offset => {
+    const pairs = [];
+    for (let i = 0; i < N; i++) {
+      const j = i + offset;
+      if (j < 0 || j >= N) continue;
+      const t = targetCol.data[i], r = refCol.data[j];
+      if (t !== null && !isNaN(t) && r !== null && !isNaN(r)) pairs.push({ t, r });
+    }
+    if (pairs.length < 10) return;
+    const R = correlation(pairs.map(p => p.t), pairs.map(p => p.r));
+    results.push({ offset, R: R, R2: R * R, n: pairs.length });
+  });
+  results.sort((a, b) => Math.abs(b.R) - Math.abs(a.R));
+  const best = results[0];
+  W._intermastOffset = best.offset;
+  W._intermastRef = refName;
+  let html = '<table class="data-table" style="margin-top:.3rem"><thead><tr><th>Offset</th><th>R</th><th>R²</th><th>N pairs</th></tr></thead><tbody>';
+  results.forEach(r => {
+    const isBest = r === best;
+    html += '<tr style="' + (isBest ? 'background:rgba(29,184,126,.1)' : '') + '"><td>' + r.offset + (isBest ? ' <span class="badge badge-valid">Best</span>' : '') + '</td><td>' + r.R.toFixed(4) + '</td><td>' + r.R2.toFixed(4) + '</td><td>' + r.n + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('correlationResult').innerHTML = html;
+}
+
+// ── AIR DENSITY ANALYSIS ──────────────────────────────────────────────
+function renderAirDensity() {
+  const tempCols = W.rawColumns.filter(c => c.mappedAs === 'temp');
+  const presCols = W.rawColumns.filter(c => c.mappedAs === 'pressure');
+  const speedCols = getSpeedCols();
+  const sc = speedCols.length > 0 ? speedCols[0] : null;
+  const N = W.rawColumns[0] ? W.rawColumns[0].data.length : 0;
+  const R_air = 287.058; // J/(kg·K)
+  const elev = W.siteCoords.lat !== null ? 0 : 0; // use 0 if no coords
+  // Calculate air density for each record
+  const densities = [];
+  for (let i = 0; i < N; i++) {
+    let rho = NaN;
+    if (presCols.length > 0 && tempCols.length > 0) {
+      const P = presCols[0].data[i]; // hPa
+      const T = tempCols[0].data[i]; // °C
+      if (P !== null && !isNaN(P) && T !== null && !isNaN(T)) {
+        rho = (P * 100) / (R_air * (T + 273.15)); // convert hPa to Pa
+      }
+    } else if (tempCols.length > 0) {
+      const T = tempCols[0].data[i];
+      if (T !== null && !isNaN(T)) {
+        rho = 1.225 * (288.15 / (T + 273.15)) * Math.exp(-0.00012 * elev);
+      }
+    }
+    densities.push(rho);
+  }
+  const validRho = densities.filter(v => v !== null && !isNaN(v) && isFinite(v));
+  if (validRho.length === 0) {
+    const canvas = document.getElementById('airDensityCanvas');
+    if (canvas) { const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.font = '14px Open Sans'; ctx.textAlign = 'center'; ctx.fillText('No temperature or pressure data available', canvas.width / 2, canvas.height / 2); }
+    document.getElementById('airDensityStats').innerHTML = '<div class="alert alert-info" style="margin:0">Temperature and/or pressure data needed for air density calculation.</div>';
+    return;
+  }
+  const rhoMean = mean(validRho), rhoStd = std(validRho), rhoMin = safeMin(validRho), rhoMax = safeMax(validRho);
+  // Stats
+  document.getElementById('airDensityStats').innerHTML =
+    '<div class="stat-item"><span class="stat-val">' + rhoMean.toFixed(3) + '</span><span class="stat-lbl">Mean (kg/m³)</span></div>' +
+    '<div class="stat-item"><span class="stat-val">' + rhoStd.toFixed(4) + '</span><span class="stat-lbl">Std Dev</span></div>' +
+    '<div class="stat-item"><span class="stat-val">' + rhoMin.toFixed(3) + '</span><span class="stat-lbl">Min</span></div>' +
+    '<div class="stat-item"><span class="stat-val">' + rhoMax.toFixed(3) + '</span><span class="stat-lbl">Max</span></div>';
+  // Histogram
+  const canvas = document.getElementById('airDensityCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  const nBins = 25;
+  const rhoRange = rhoMax - rhoMin || 0.02;
+  const binW = rhoRange / nBins;
+  const hist = new Array(nBins).fill(0);
+  validRho.forEach(v => { const b = Math.min(Math.floor((v - rhoMin) / binW), nBins - 1); if (b >= 0) hist[b]++; });
+  const maxH = safeMax(hist);
+  const margin = { t: 20, r: 20, b: 45, l: 60 };
+  const pw = w - margin.l - margin.r, ph = h - margin.t - margin.b;
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,.08)';
+  ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.font = '10px Open Sans';
+  for (let i = 0; i <= 5; i++) {
+    const y = margin.t + ph * (1 - i / 5);
+    ctx.beginPath(); ctx.moveTo(margin.l, y); ctx.lineTo(w - margin.r, y); ctx.stroke();
+    ctx.textAlign = 'right'; ctx.fillText((maxH * i / 5).toFixed(0), margin.l - 5, y + 3);
+  }
+  const barW = pw / nBins - 1;
+  for (let i = 0; i < nBins; i++) {
+    const x = margin.l + i * (barW + 1);
+    const bh = maxH > 0 ? (hist[i] / maxH) * ph : 0;
+    ctx.fillStyle = hist[i] > 0 ? 'rgba(45,156,206,.5)' : 'rgba(255,255,255,.03)';
+    ctx.fillRect(x, margin.t + ph - bh, barW, bh);
+    ctx.textAlign = 'center';
+    if (i % 5 === 0) { ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.fillText((rhoMin + i * binW).toFixed(3), x + barW / 2, h - margin.b + 14); }
+  }
+  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = '11px Open Sans'; ctx.textAlign = 'center';
+  ctx.fillText('Air Density Distribution (kg/m³)', w / 2, h - 3);
+  // Scatter: Air Density vs Wind Speed
+  const sc2 = document.getElementById('airDensitySpeedCanvas');
+  if (sc2 && sc) {
+    const ctx2 = sc2.getContext('2d');
+    const w2 = sc2.width, h2 = sc2.height;
+    ctx2.clearRect(0, 0, w2, h2);
+    const pairs = [];
+    for (let i = 0; i < N; i++) {
+      const ws = sc.data[i], rho = densities[i];
+      if (ws !== null && !isNaN(ws) && rho !== null && !isNaN(rho) && isFinite(rho)) pairs.push({ x: ws, y: rho });
+    }
+    if (pairs.length > 0) {
+      const m2 = { t: 15, r: 15, b: 40, l: 55 };
+      const pw2 = w2 - m2.l - m2.r, ph2 = h2 - m2.t - m2.b;
+      const xMax2 = Math.ceil(safeMax(pairs.map(p => p.x)) / 5) * 5 || 25;
+      const yMin2 = Math.floor(rhoMin * 100) / 100 - 0.02;
+      const yMax2 = Math.ceil(rhoMax * 100) / 100 + 0.02;
+      const yRange2 = yMax2 - yMin2 || 0.1;
+      ctx2.strokeStyle = 'rgba(255,255,255,.08)';
+      for (let i = 0; i <= 5; i++) {
+        const y = m2.t + ph2 * (1 - i / 5); ctx2.beginPath(); ctx2.moveTo(m2.l, y); ctx2.lineTo(w2 - m2.r, y); ctx2.stroke();
+        ctx2.fillStyle = 'rgba(255,255,255,.3)'; ctx2.font = '9px Open Sans'; ctx2.textAlign = 'right';
+        ctx2.fillText((yMin2 + yRange2 * i / 5).toFixed(3), m2.l - 5, y + 3);
+        const x = m2.l + (i / 5) * pw2; ctx2.beginPath(); ctx2.moveTo(x, m2.t); ctx2.lineTo(x, m2.t + ph2); ctx2.stroke();
+        ctx2.textAlign = 'center'; ctx2.fillText((xMax2 * i / 5).toFixed(0), x, h2 - m2.b + 14);
+      }
+      // Points (downsample if needed)
+      const step = pairs.length > 3000 ? Math.ceil(pairs.length / 3000) : 1;
+      ctx2.fillStyle = 'rgba(45,156,206,.3)';
+      for (let i = 0; i < pairs.length; i += step) {
+        const p = pairs[i];
+        const px = m2.l + (p.x / xMax2) * pw2;
+        const py = m2.t + ph2 * (1 - (p.y - yMin2) / yRange2);
+        ctx2.beginPath(); ctx2.arc(px, py, 1.5, 0, Math.PI * 2); ctx2.fill();
+      }
+      ctx2.fillStyle = 'rgba(255,255,255,.5)'; ctx2.font = '10px Open Sans'; ctx2.textAlign = 'center';
+      ctx2.fillText('Wind Speed (m/s)', w2 / 2, h2 - 3);
+      ctx2.save(); ctx2.translate(10, h2 / 2); ctx2.rotate(-Math.PI / 2); ctx2.fillText('Air Density (kg/m³)', 0, 0); ctx2.restore();
+    }
+  }
+}
+
+// ── EXTREME WIND ANALYSIS (GUMBEL) ────────────────────────────────────
+function renderExtremeWind() {
+  const activeNames = getActiveSignals('extremeSignalToggles');
+  if (activeNames.length === 0) return;
+  const returnPeriod = parseFloat(document.getElementById('extremeReturnPeriod').value) || 50;
+  const method = document.getElementById('extremeMethod').value;
+  const N = W.rawColumns[0] ? W.rawColumns[0].data.length : 0;
+  // Get monthly or annual maxima for each active signal
+  const results = [];
+  activeNames.forEach(scName => {
+    const col = findColumn(scName);
+    if (!col) return;
+    const timestamps = getTimestamps();
+    const maxima = [];
+    if (method === 'annual_max') {
+      const byYear = {};
+      for (let i = 0; i < N; i++) {
+        const v = col.data[i];
+        if (v === null || isNaN(v)) continue;
+        let year = 0;
+        if (timestamps[i]) { const d = parseTimestamp(timestamps[i]); if (d) year = d.getFullYear(); }
+        if (year === 0) year = Math.floor(i / 52560); // estimate ~10-min records
+        if (!byYear[year]) byYear[year] = [];
+        byYear[year].push(v);
+      }
+      Object.values(byYear).forEach(arr => { if (arr.length > 100) maxima.push(safeMax(arr)); });
+    } else {
+      const byMonth = {};
+      for (let i = 0; i < N; i++) {
+        const v = col.data[i];
+        if (v === null || isNaN(v)) continue;
+        let key = '0-0';
+        if (timestamps[i]) { const d = parseTimestamp(timestamps[i]); if (d) key = d.getFullYear() + '-' + d.getMonth(); }
+        if (!byMonth[key]) byMonth[key] = [];
+        byMonth[key].push(v);
+      }
+      Object.values(byMonth).forEach(arr => { if (arr.length > 100) maxima.push(safeMax(arr)); });
+    }
+    if (maxima.length < 3) return;
+    // Fit Gumbel (method of moments)
+    const mu = mean(maxima), sigma = maxima.length > 1 ? std(maxima) : 1;
+    const gamma = 0.5772; // Euler-Mascheroni
+    const beta = sigma * Math.sqrt(6) / Math.PI;
+    const loc = mu - gamma * beta;
+    // Return level: x_T = loc - beta * ln(-ln(1 - 1/T))
+    const xT = loc - beta * Math.log(-Math.log(1 - 1 / returnPeriod));
+    results.push({ name: scName, maxima, loc, beta, xT, mu, sigma });
+  });
+  if (results.length === 0) {
+    document.getElementById('extremeWindStats').innerHTML = '<div class="alert alert-info" style="margin:0">Need at least 1 year of data for extreme wind analysis.</div>';
+    return;
+  }
+  // Stats
+  let statsHtml = '';
+  results.forEach(r => {
+    statsHtml += '<div class="stat-item"><span class="stat-val">' + r.xT.toFixed(1) + '</span><span class="stat-lbl">' + r.name + ' ' + returnPeriod + '-yr (m/s)</span></div>';
+    statsHtml += '<div class="stat-item"><span class="stat-val">' + r.mu.toFixed(1) + '</span><span class="stat-lbl">' + r.name + ' Mean Max</span></div>';
+  });
+  document.getElementById('extremeWindStats').innerHTML = statsHtml;
+  // IEC Wind Class Check
+  const iecClasses = [
+    { cls: 'I', vref: 50, vavg: 10 },
+    { cls: 'II', vref: 42.5, vavg: 8.5 },
+    { cls: 'III', vref: 37.5, vavg: 7.5 },
+    { cls: 'IV', vref: 25, vavg: 6 }
+  ];
+  let iecHtml = '<table class="risk-table"><thead><tr><th>IEC Class</th><th>Vref (m/s)</th><th>Vavg (m/s)</th><th>Status</th></tr></thead><tbody>';
+  results.forEach(r => {
+    const sc = findColumn(r.name);
+    const vals = sc ? sc.data.filter(v => v !== null && !isNaN(v)) : [];
+    const meanSpd = vals.length > 0 ? mean(vals) : 0;
+    iecClasses.forEach(iec => {
+      const extremeOk = r.xT <= iec.vref ? '<span class="risk-low">PASS</span>' : '<span class="risk-high">EXCEEDS Vref</span>';
+      const avgOk = meanSpd <= iec.vavg ? '<span class="risk-low">OK</span>' : '<span class="risk-medium">ABOVE Vavg</span>';
+      iecHtml += '<tr><td>Class ' + iec.cls + '</td><td>' + iec.vref + '</td><td>' + iec.vavg + '</td><td>' + extremeOk + ' / ' + avgOk + '</td></tr>';
+    });
+  });
+  iecHtml += '</tbody></table>';
+  document.getElementById('iecWindClass').innerHTML = iecHtml;
+  // Gumbel probability plot
+  const canvas = document.getElementById('extremeWindCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  const margin = { t: 20, r: 20, b: 45, l: 60 };
+  const pw = w - margin.l - margin.r, ph = h - margin.t - margin.b;
+  // Sort the maxima
+  const allMaxima = results.flatMap(r => r.maxima);
+  allMaxima.sort((a, b) => a - b);
+  const nMax = allMaxima.length;
+  const maxVal = safeMax(allMaxima) * 1.2;
+  const minVal = safeMin(allMaxima) * 0.9;
+  const valRange = maxVal - minVal || 1;
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,.08)';
+  ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.font = '10px Open Sans';
+  for (let i = 0; i <= 5; i++) {
+    const y = margin.t + ph * (1 - i / 5);
+    ctx.beginPath(); ctx.moveTo(margin.l, y); ctx.lineTo(w - margin.r, y); ctx.stroke();
+    ctx.textAlign = 'right'; ctx.fillText((minVal + valRange * i / 5).toFixed(1), margin.l - 5, y + 3);
+    const x = margin.l + (i / 5) * pw;
+    ctx.beginPath(); ctx.moveTo(x, margin.t); ctx.lineTo(x, margin.t + ph); ctx.stroke();
+    ctx.textAlign = 'center';
+    const pLabel = (i * 20) + '';
+    ctx.fillText(pLabel === '0' ? '0%' : pLabel === '100' ? '100%' : pLabel + '%', x, h - margin.b + 14);
+  }
+  // Plot each signal's Gumbel fit
+  const colors = ['#1db87e', '#2d9cce', '#f0a500', '#e74c3c'];
+  results.forEach((r, ri) => {
+    const sorted = [...r.maxima].sort((a, b) => a - b);
+    const nm = sorted.length;
+    // Plot data points
+    ctx.fillStyle = colors[ri % colors.length] + '80';
+    for (let i = 0; i < nm; i++) {
+      const p = (i + 0.5) / nm * 100;
+      const x = margin.l + (p / 100) * pw;
+      const y = margin.t + ph * (1 - (sorted[i] - minVal) / valRange);
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+    }
+    // Plot Gumbel CDF line
+    ctx.strokeStyle = colors[ri % colors.length];
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let p = 0.5; p <= 99.5; p += 0.5) {
+      const xT = r.loc - r.beta * Math.log(-Math.log(1 - p / 100));
+      const x = margin.l + (p / 100) * pw;
+      const y = margin.t + ph * (1 - (xT - minVal) / valRange);
+      if (p === 0.5) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    // Label
+    ctx.fillStyle = colors[ri % colors.length];
+    ctx.font = '10px Open Sans'; ctx.textAlign = 'left';
+    ctx.fillText(r.name + ': V' + returnPeriod + '=' + r.xT.toFixed(1) + ' m/s', margin.l + 10, margin.t + 15 + ri * 15);
+  });
+  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = '11px Open Sans'; ctx.textAlign = 'center';
+  ctx.fillText('Gumbel Probability Plot — Non-Exceedance Probability', w / 2, h - 3);
+  ctx.save(); ctx.translate(10, h / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('Wind Speed (m/s)', 0, 0); ctx.restore();
+}
+
+// ── UNCERTAINTY QUANTIFICATION ─────────────────────────────────────────
+function calculateUncertainty() {
+  const components = [
+    { name: 'Wind Speed Sensor', id: 'unc_speedSensor' },
+    { name: 'Wind Direction Sensor', id: 'unc_dirSensor' },
+    { name: 'Temperature Sensor', id: 'unc_tempSensor' },
+    { name: 'Data Recovery', id: 'unc_dataRecovery' },
+    { name: 'Shear Extrapolation', id: 'unc_shear' },
+    { name: 'MCP / Long-Term', id: 'unc_mcp' },
+    { name: 'Weibull Fit', id: 'unc_weibull' },
+    { name: 'CFD / Flow Model', id: 'unc_flowModel' },
+    { name: 'Wake Effect', id: 'unc_wake' },
+    { name: 'Power Curve', id: 'unc_powerCurve' },
+    { name: 'Availability', id: 'unc_availability' },
+    { name: 'Electrical Loss', id: 'unc_electrical' }
+  ];
+  components.forEach(c => { c.value = parseFloat(document.getElementById(c.id).value) || 0; });
+  const combined = Math.sqrt(components.reduce((s, c) => s + c.value * c.value, 0));
+  // P50/P75/P90 from energy results or generic
+  const baseEnergy = W.energyResults ? W.energyResults.netEnergy : 10000;
+  const p50 = baseEnergy;
+  const p75 = baseEnergy * (1 - 0.674 * combined / 100);
+  const p90 = baseEnergy * (1 - 1.282 * combined / 100);
+  // Results table
+  let html = '<div class="grid-2" style="margin-top:.5rem"><div><table class="data-table"><thead><tr><th>Component</th><th>Uncertainty (%)</th><th>Contribution (%)</th></tr></thead><tbody>';
+  components.sort((a, b) => b.value - a.value).forEach(c => {
+    const contrib = combined > 0 ? (c.value / combined * 100).toFixed(1) : 0;
+    html += '<tr><td>' + c.name + '</td><td>' + c.value.toFixed(1) + '%</td><td>' + contrib + '</td></tr>';
+  });
+  html += '<tr style="font-weight:700"><td>Combined (RSS)</td><td>' + combined.toFixed(1) + '%</td><td>100%</td></tr>';
+  html += '</tbody></table></div>';
+  html += '<div class="stat-grid">';
+  html += '<div class="stat-item"><span class="stat-val">' + combined.toFixed(1) + '%</span><span class="stat-lbl">Combined Uncertainty</span></div>';
+  html += '<div class="stat-item"><span class="stat-val">' + p50.toFixed(0) + '</span><span class="stat-lbl">P50 (MWh)</span></div>';
+  html += '<div class="stat-item"><span class="stat-val">' + p75.toFixed(0) + '</span><span class="stat-lbl">P75 (MWh)</span></div>';
+  html += '<div class="stat-item"><span class="stat-val">' + p90.toFixed(0) + '</span><span class="stat-lbl">P90 (MWh)</span></div>';
+  html += '</div></div>';
+  document.getElementById('uncertaintyResults').innerHTML = html;
+  // Tornado chart
+  const canvas = document.getElementById('uncertaintyCanvas');
+  const ctx = canvas.getContext('2d');
+  const cw = canvas.width, ch = canvas.height;
+  ctx.clearRect(0, 0, cw, ch);
+  const sorted = [...components].sort((a, b) => b.value - a.value);
+  const maxVal = Math.max(...sorted.map(c => c.value), 1);
+  const m2 = { t: 20, r: 100, b: 30, l: 140 };
+  const pw2 = cw - m2.l - m2.r, ph2 = ch - m2.t - m2.b;
+  const barH = Math.min(ph2 / sorted.length - 4, 22);
+  const colors2 = ['#e74c3c', '#e87d20', '#f0a500', '#f0a500', '#1db87e', '#1db87e', '#2d9cce', '#2d9cce', '#9b59b6', '#9b59b6', '#87ceeb', '#87ceeb'];
+  sorted.forEach((c, i) => {
+    const y = m2.t + i * (barH + 4);
+    const bw = maxVal > 0 ? (c.value / maxVal) * pw2 : 0;
+    ctx.fillStyle = colors2[i % colors2.length] + '80';
+    ctx.fillRect(m2.l, y, bw, barH);
+    ctx.strokeStyle = colors2[i % colors2.length];
+    ctx.lineWidth = 1;
+    ctx.strokeRect(m2.l, y, bw, barH);
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = '10px Open Sans'; ctx.textAlign = 'right';
+    ctx.fillText(c.name, m2.l - 8, y + barH / 2 + 3);
+    ctx.textAlign = 'left';
+    ctx.fillText(c.value.toFixed(1) + '%', m2.l + bw + 8, y + barH / 2 + 3);
+  });
+  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = '11px Open Sans'; ctx.textAlign = 'center';
+  ctx.fillText('Uncertainty Tornado Chart — RSS Combined: ' + combined.toFixed(1) + '%', cw / 2, ch - 5);
+}
+
+// ── WIND RESOURCE RISK CHECKLIST ──────────────────────────────────────
+function runRiskChecklist() {
+  if (W.rawColumns.length === 0) { alert('Load data first'); return; }
+  const N = W.rawColumns[0] ? W.rawColumns[0].data.length : 0;
+  const speedCols = getSpeedCols();
+  const checks = [];
+  // 1. Data Recovery Rate
+  let validRate = 0, colCount = 0;
+  W.rawColumns.forEach(c => { if (c.mappedAs !== 'timestamp' && c.mappedAs !== 'none') { const vc = validCount(c.data); validRate += N > 0 ? vc / N * 100 : 0; colCount++; } });
+  validRate = colCount > 0 ? validRate / colCount : 0;
+  checks.push({ item: 'Data Recovery Rate', value: validRate.toFixed(1) + '%', risk: validRate < 80 ? 'HIGH' : validRate < 90 ? 'MEDIUM' : 'LOW', rec: validRate < 80 ? 'Critical: Investigate data gaps and sensor issues.' : validRate < 90 ? 'Acceptable but review gap patterns.' : 'Good data quality.' });
+  // 2. Data Duration
+  const timestamps = getTimestamps();
+  let durationMonths = 0;
+  if (timestamps.length > 1 && timestamps[0] && timestamps[timestamps.length - 1]) {
+    const d1 = parseTimestamp(timestamps[0]), d2 = parseTimestamp(timestamps[timestamps.length - 1]);
+    if (d1 && d2) durationMonths = (d2 - d1) / (1000 * 60 * 60 * 24 * 30.44);
+  } else { durationMonths = N / 4380; // estimate from 10-min records }
+  checks.push({ item: 'Data Duration', value: durationMonths.toFixed(1) + ' months', risk: durationMonths < 6 ? 'HIGH' : durationMonths < 12 ? 'MEDIUM' : 'LOW', rec: durationMonths < 6 ? 'Very short. Long-term correction (MCP) essential.' : durationMonths < 12 ? 'Seasonal bias possible. MCP recommended.' : 'Good coverage for resource assessment.' });
+  // 3. Measurement Height
+  let minH = 999, heightCount = 0;
+  speedCols.forEach(c => { const m = c.name.match(/(\d+)/); if (m) { minH = Math.min(minH, parseInt(m[1])); heightCount++; } });
+  if (minH === 999) minH = 0;
+  checks.push({ item: 'Lowest Anemometer Height', value: minH + 'm', risk: minH < 20 ? 'HIGH' : minH < 30 ? 'MEDIUM' : 'LOW', rec: minH < 20 ? 'Below minimum recommended height. Shear extrapolation unreliable.' : minH < 30 ? 'Below 30m. Consider adding upper level measurements.' : 'Good measurement height.' });
+  // 4. Number of Speed Levels
+  checks.push({ item: 'Speed Measurement Levels', value: speedCols.length, risk: speedCols.length === 1 ? 'HIGH' : speedCols.length === 2 ? 'MEDIUM' : 'LOW', rec: speedCols.length < 3 ? 'Limited shear characterization. Add more measurement heights.' : 'Good multi-level setup.' });
+  // 5. Shear Exponent
+  checks.push({ item: 'Shear Exponent', value: W.shearAlpha !== null ? W.shearAlpha.toFixed(3) : 'N/A', risk: W.shearAlpha === null ? 'MEDIUM' : (W.shearAlpha < 0.1 || W.shearAlpha > 0.4) ? 'HIGH' : (W.shearAlpha < 0.15 || W.shearAlpha > 0.3) ? 'MEDIUM' : 'LOW', rec: W.shearAlpha === null ? 'Run shear analysis first.' : (W.shearAlpha < 0.1 || W.shearAlpha > 0.4) ? 'Unusual shear. Check for data quality issues or complex terrain.' : 'Normal shear range.' });
+  // 6. Direction Coverage
+  const dirCols = getDirCols();
+  let dirSectors = 0;
+  if (dirCols.length > 0) {
+    const dc = dirCols[0]; const nSec = 36;
+    const sectorCounts = new Array(nSec).fill(0);
+    dc.data.forEach(v => { if (v !== null && !isNaN(v)) sectorCounts[Math.floor(((v % 360) + 360) % 360 / 10) % nSec]++; });
+    dirSectors = sectorCounts.filter(c => c > 0).length;
+  }
+  checks.push({ item: 'Direction Coverage', value: dirSectors + '/36 sectors', risk: dirSectors < 29 ? 'MEDIUM' : 'LOW', rec: dirSectors < 29 ? 'Some sectors with no data. Check vane operation.' : 'Good directional coverage.' });
+  // 7. Turbulence
+  const sc = getFirstMapped('speed');
+  if (sc) {
+    const vals = sc.data.filter(v => v !== null && !isNaN(v) && v > 3);
+    const m = mean(vals), s = std(vals);
+    const meanTI = m > 0 ? s / m : 0;
+    checks.push({ item: 'Mean Turbulence Intensity', value: meanTI.toFixed(3), risk: meanTI > 0.18 ? 'MEDIUM' : 'LOW', rec: meanTI > 0.18 ? 'High turbulence. May affect turbine selection (IEC class).' : 'Normal turbulence levels.' });
+  }
+  // 8. MCP Correlation
+  if (W.mcpResults) {
+    checks.push({ item: 'MCP Correlation (R²)', value: W.mcpResults.R2.toFixed(3), risk: W.mcpResults.R2 < 0.7 ? 'HIGH' : W.mcpResults.R2 < 0.85 ? 'MEDIUM' : 'LOW', rec: W.mcpResults.R2 < 0.7 ? 'Poor MCP correlation. Seek better reference data.' : 'Good correlation for long-term correction.' });
+  }
+  // 9. Extreme Wind
+  if (W.shearAlpha !== null && sc) {
+    const vals = sc.data.filter(v => v !== null && !isNaN(v));
+    const maxWs = safeMax(vals);
+    checks.push({ item: 'Max Observed Wind Speed', value: maxWs.toFixed(1) + ' m/s', risk: maxWs > 50 ? 'HIGH' : maxWs > 37.5 ? 'MEDIUM' : 'LOW', rec: maxWs > 50 ? 'Exceeds IEC Class I Vref. Special turbine class may be needed.' : maxWs > 37.5 ? 'Above IEC Class III Vref. Check IEC classification.' : 'Within standard IEC ranges.' });
+  }
+  // 10. Data Cleaning
+  const totalFlagged = W.dataFlags ? W.dataFlags.filter(f => f > 0).length : 0;
+  const flagPct = N > 0 ? totalFlagged / N * 100 : 0;
+  checks.push({ item: 'Data Flagged', value: flagPct.toFixed(1) + '%', risk: flagPct > 20 ? 'HIGH' : flagPct > 10 ? 'MEDIUM' : 'LOW', rec: flagPct > 20 ? 'Very high flag rate. Review sensor installation and data collection.' : flagPct > 10 ? 'Moderate flag rate. Verify cleaning parameters.' : 'Good data quality.' });
+  // Render
+  let html = '<table class="risk-table"><thead><tr><th>Check</th><th>Value</th><th>Risk</th><th>Recommendation</th></tr></thead><tbody>';
+  checks.forEach(c => {
+    const cls = c.risk === 'HIGH' ? 'risk-high' : c.risk === 'MEDIUM' ? 'risk-medium' : 'risk-low';
+    html += '<tr><td>' + c.item + '</td><td>' + c.value + '</td><td class="' + cls + '">' + c.risk + '</td><td>' + c.rec + '</td></tr>';
+  });
+  const highCount = checks.filter(c => c.risk === 'HIGH').length;
+  const medCount = checks.filter(c => c.risk === 'MEDIUM').length;
+  html += '</tbody></table>';
+  html += '<div style="margin-top:.5rem;padding:.5rem;border-radius:6px;background:' + (highCount > 0 ? 'rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3)' : medCount > 0 ? 'rgba(240,165,0,.1);border:1px solid rgba(240,165,0,.3)' : 'rgba(29,184,126,.1);border:1px solid rgba(29,184,126,.3)') + ';font-size:.75rem;color:rgba(255,255,255,.7)">';
+  html += '<strong>Overall Assessment:</strong> ' + highCount + ' HIGH risk, ' + medCount + ' MEDIUM risk, ' + (checks.length - highCount - medCount) + ' LOW risk items.';
+  if (highCount > 3) html += ' <span style="color:#e74c3c;font-weight:700">Significant data quality concerns. Address before proceeding to energy yield.</span>';
+  else if (highCount > 0) html += ' <span style="color:var(--gold);font-weight:700">Some concerns to address.</span>';
+  else html += ' <span style="color:var(--mint);font-weight:700">Data quality is generally suitable for resource assessment.</span>';
+  html += '</div>';
+  document.getElementById('riskChecklistResults').innerHTML = html;
+}
+
+// ── ENHANCED QUALITY FLAGS (frozen sensor + anomaly detection) ────────
+const _origRunQA = runQualityAssessment;
+runQualityAssessment = function() {
+  _origRunQA();
+  if (W.rawColumns.length === 0) return;
+  const N = W.rawColumns[0].data.length;
+  const dirCols = getDirCols();
+  const tempCols = W.rawColumns.filter(c => c.mappedAs === 'temp');
+  const allNumeric = W.rawColumns.filter(c => c.mappedAs !== 'timestamp' && c.mappedAs !== 'none');
+  let frozenCount = 0, anomalyCount = 0;
+  // Frozen sensor: direction stddev < threshold for consecutive records while temp shows variation
+  dirCols.forEach(col => {
+    let runCount = 0, lastVal = null;
+    for (let i = 0; i < N; i++) {
+      const v = col.data[i];
+      if (v === null || isNaN(v)) { runCount = 0; lastVal = null; continue; }
+      if (lastVal !== null && Math.abs(v - lastVal) < 1) {
+        runCount++;
+        if (runCount >= 6 && W.dataFlags[i] === 0) { col.data[i] = null; W.dataFlags[i] = 7; frozenCount++; }
+      } else { runCount = 1; }
+      lastVal = v;
+    }
+  });
+  // Sensor anomaly: same value repeated for N+ consecutive records
+  allNumeric.forEach(col => {
+    let runCount = 0, lastVal = null;
+    const maxRun = 12;
+    for (let i = 0; i < N; i++) {
+      const v = col.data[i];
+      if (v === null || isNaN(v)) { runCount = 0; lastVal = null; continue; }
+      if (lastVal !== null && Math.abs(v - lastVal) < 0.001) {
+        runCount++;
+        if (runCount >= maxRun && W.dataFlags[i] === 0) { W.dataFlags[i] = 8; anomalyCount++; }
+      } else { runCount = 1; }
+      lastVal = v;
+    }
+  });
+  if (frozenCount > 0) {
+    const issues = W.qualityReport ? W.qualityReport.issues : [];
+    issues.push({ type: 'Frozen Sensor', column: dirCols.map(c => c.name).join(', '), count: frozenCount, severity: frozenCount / N > 0.05 ? 'error' : 'warn' });
+  }
+  if (anomalyCount > 0) {
+    const issues = W.qualityReport ? W.qualityReport.issues : [];
+    issues.push({ type: 'Sensor Anomaly', column: 'Multiple', count: anomalyCount, severity: 'warn' });
+  }
+};
+
 // ── MATH GAMMA POLYFILL ─────────────────────────────────────────────────
 if (typeof Math.gamma === 'undefined') {
   Math.gamma = function(z) {
@@ -4181,6 +5404,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 console.log('Part D complete: MCP + Reports + Energy Yield.');
 console.log('Wind Data Analysis Tool fully loaded — all 7 steps operational.');
+console.log('Greenwich enhancements loaded: Pipeline Status, Tower Shadow, Declination, Inter-Mast, Air Density, Extreme Wind, Uncertainty, Risk Checklist.');
 </script>
 </body>
 </html>
