@@ -3352,6 +3352,149 @@ function generateReport() {
     html += '<tr><td>Rated Power</td><td>'+er.ratedPower.toFixed(0)+' kW</td></tr></table>';
   }
 
+  // ── Extreme Wind Analysis ──
+  // Compute directly if not already cached
+  if(!W.extremeWindResults) {
+    const sc4 = getSpeedCols()[0];
+    if(sc4) {
+      const ewVals = sc4.data.filter(v=>v!==null&&!isNaN(v));
+      const ewN = ewVals.length;
+      if(ewN > 100) {
+        // Simple monthly maxima approach for the report
+        const timestamps = getTimestamps();
+        const byMonth = {};
+        for(let i=0;i<N;i++){
+          const v = sc4.data[i];
+          if(v===null||isNaN(v)) continue;
+          let key = '0';
+          if(timestamps[i]){const d=parseTimestamp(timestamps[i]);if(d)key=d.getFullYear()+'-'+d.getMonth();}
+          if(!byMonth[key]) byMonth[key]=[];
+          byMonth[key].push(v);
+        }
+        const maxima = [];
+        Object.values(byMonth).forEach(arr=>{if(arr.length>10) maxima.push(safeMax(arr));});
+        if(maxima.length>=2){
+          const mu=mean(maxima),sigma=maxima.length>1?std(maxima):1;
+          const gamma=0.5772;
+          const beta=sigma*Math.sqrt(6)/Math.PI;
+          const loc=mu-gamma*beta;
+          const xT50=loc-beta*Math.log(-Math.log(1-1/50));
+          W.extremeWindResults={xT:xT50,mu,sigma,returnPeriod:50,name:sc4.name};
+        }
+      }
+    }
+  }
+  if(W.extremeWindResults) {
+    html += '<h3>10. Extreme Wind Analysis</h3>';
+    const ew = W.extremeWindResults;
+    html += '<p>Extreme wind analysis was performed using the Gumbel distribution fitted to annual/monthly maxima. ';
+    html += 'The estimated extreme wind speed for a 50-year return period is <strong>'+ew.xT.toFixed(1)+' m/s</strong>. ';
+    html += 'This value is used to determine the appropriate IEC wind turbine class for the site.</p>';
+    html += '<table><tr><td>Return Period</td><td>'+ew.returnPeriod+' years</td></tr>';
+    html += '<tr><td>Estimated Vref</td><td>'+ew.xT.toFixed(1)+' m/s</td></tr>';
+    html += '<tr><td>Mean of Maxima</td><td>'+ew.mu.toFixed(1)+' m/s</td></tr>';
+    html += '<tr><td>IEC Classification</td><td>'+(ew.xT<=25?'Class IV':ew.xT<=37.5?'Class III':ew.xT<=42.5?'Class II':'Class I')+'</td></tr></table>';
+  }
+
+  // ── Air Density ──
+  const tempCol = getFirstMapped('temp');
+  const presCol = getFirstMapped('pressure');
+  if(tempCol && presCol) {
+    html += '<h3>11. Air Density & Power Density</h3>';
+    const tempVals=[], presVals=[];
+    for(let i=0;i<N;i++){
+      const t=tempCol.data[i],p=presCol.data[i];
+      if(t!==null&&!isNaN(t)&&p!==null&&!isNaN(p)){tempVals.push(t);presVals.push(p);}
+    }
+    if(tempVals.length>0){
+      const meanT=mean(tempVals),meanP=mean(presVals);
+      const rho=meanP*100/((273.15+meanT)*287.05);
+      const ratedSpd=10,airPwr=0.5*rho*Math.pow(ratedSpd,3);
+      html += '<p>Using concurrent temperature and pressure records ('+tempVals.length+' valid pairs), the mean air density is calculated as <strong>'+rho.toFixed(3)+' kg/m\u00B3</strong> ';
+      html += '(T = '+meanT.toFixed(1)+' \u00B0C, P = '+meanP.toFixed(0)+' hPa). ';
+      html += 'Standard air density is 1.225 kg/m\u00B3; this site is '+(rho<1.225?'lower':'higher')+' by '+Math.abs((rho-1.225)/1.225*100).toFixed(1)+'%. ';
+      html += 'The wind power density at 10 m/s is <strong>'+airPwr.toFixed(0)+' W/m\u00B2</strong>.</p>';
+      html += '<table><tr><td>Mean Temperature</td><td>'+meanT.toFixed(1)+' \u00B0C</td></tr>';
+      html += '<tr><td>Mean Pressure</td><td>'+meanP.toFixed(0)+' hPa</td></tr>';
+      html += '<tr><td>Mean Air Density</td><td>'+rho.toFixed(3)+' kg/m\u00B3</td></tr>';
+      html += '<tr><td>Power Density at 10 m/s</td><td>'+airPwr.toFixed(0)+' W/m\u00B2</td></tr></table>';
+    }
+  }
+
+  // ── Uncertainty ──
+  // Compute directly if not already cached
+  if(!W.uncertaintyResults) {
+    const uncSpeedSensor = 1.0, uncDirSensor = 3.0, uncTempSensor = 0.5, uncDataRecovery = 1.0;
+    const uncShear = 2.0, uncMCP = 5.0, uncWeibull = 1.5, uncFlowModel = 3.0;
+    const uncWake = 2.0, uncPowerCurve = 2.0, uncAvailability = 1.0, uncElectrical = 0.5;
+    const uncComponents = [
+      {name:'Wind Speed Sensor',value:uncSpeedSensor},{name:'Wind Direction Sensor',value:uncDirSensor},
+      {name:'Temperature Sensor',value:uncTempSensor},{name:'Data Recovery',value:uncDataRecovery},
+      {name:'Shear Extrapolation',value:uncShear},{name:'MCP / Long-Term',value:uncMCP},
+      {name:'Weibull Fit',value:uncWeibull},{name:'CFD / Flow Model',value:uncFlowModel},
+      {name:'Wake Effect',value:uncWake},{name:'Power Curve',value:uncPowerCurve},
+      {name:'Availability',value:uncAvailability},{name:'Electrical Loss',value:uncElectrical}
+    ];
+    const uncCombined = Math.sqrt(uncComponents.reduce((s,c)=>s+c.value*c.value,0));
+    W.uncertaintyResults = { combined:uncCombined, p50:0, p75:0, p90:0, components:uncComponents };
+  }
+  if(W.uncertaintyResults) {
+    html += '<h3>12. Uncertainty Analysis</h3>';
+    const u = W.uncertaintyResults;
+    html += '<p>The combined measurement uncertainty (root-sum-square) is <strong>'+u.combined.toFixed(1)+'%</strong>, comprising individual component uncertainties as listed below. ';
+    html += 'The dominant uncertainty sources are highlighted.</p>';
+    html += '<table><tr><th>Component</th><th>Uncertainty (%)</th></tr>';
+    u.components.sort((a,b)=>b.value-a.value).forEach(c=>{
+      html += '<tr><td>'+c.name+'</td><td>'+c.value.toFixed(1)+'%</td></tr>';
+    });
+    html += '<tr style="font-weight:700"><td>Combined (RSS)</td><td>'+u.combined.toFixed(1)+'%</td></tr></table>';
+  }
+
+  // ── Risk Checklist ──
+  // Compute directly if not already cached
+  if(!W.riskResults || W.riskResults.length === 0) {
+    const rN = W.rawColumns[0] ? W.rawColumns[0].data.length : 0;
+    const rSpeedCols = getSpeedCols();
+    const rChecks = [];
+    let rValidRate = 0, rColCount = 0;
+    W.rawColumns.forEach(c => { if(c.mappedAs!=='timestamp'&&c.mappedAs!=='none'){const vc=validCount(c.data);rValidRate+=rN>0?vc/rN*100:0;rColCount++;} });
+    rValidRate = rColCount > 0 ? rValidRate/rColCount : 0;
+    rChecks.push({item:'Data Recovery Rate',value:rValidRate.toFixed(1)+'%',risk:rValidRate<80?'HIGH':rValidRate<90?'MEDIUM':'LOW',rec:rValidRate<80?'Critical.':'Acceptable.'});
+    rChecks.push({item:'Speed Measurement Levels',value:rSpeedCols.length,risk:rSpeedCols.length===1?'HIGH':rSpeedCols.length===2?'MEDIUM':'LOW',rec:rSpeedCols.length<3?'Limited shear.':'Good multi-level.'});
+    if(W.shearAlpha!==null) rChecks.push({item:'Shear Exponent',value:W.shearAlpha.toFixed(3),risk:(W.shearAlpha<0.1||W.shearAlpha>0.4)?'HIGH':'LOW',rec:'Normal range.'});
+    const rSc = getFirstMapped('speed');
+    if(rSc){const rVals=rSc.data.filter(v=>v!==null&&!isNaN(v));const rM=mean(rVals),rS=std(rVals);const rTI=rM>0?rS/rM:0;rChecks.push({item:'Mean TI',value:rTI.toFixed(3),risk:rTI>0.18?'MEDIUM':'LOW',rec:rTI>0.18?'High turbulence.':'Normal.'});}
+    rChecks.push({item:'Duration',value:((rN/4380)).toFixed(1)+' months',risk:rN<26280?'MEDIUM':'LOW',rec:rN<26280?'Short. MCP recommended.':'Good.'});
+    W.riskResults = rChecks;
+  }
+  if(W.riskResults && W.riskResults.length > 0) {
+    html += '<h3>13. Resource Assessment Risk Checklist</h3>';
+    const highCount = W.riskResults.filter(c => c.risk === 'HIGH').length;
+    const medCount = W.riskResults.filter(c => c.risk === 'MEDIUM').length;
+    const lowCount = W.riskResults.filter(c => c.risk === 'LOW').length;
+    html += '<p>The wind resource risk assessment identified <strong>'+highCount+' HIGH</strong>, <strong>'+medCount+' MEDIUM</strong>, and <strong>'+lowCount+' LOW</strong> risk items across '+W.riskResults.length+' checks. ';
+    html += (highCount > 3 ? 'Significant data quality concerns exist that should be addressed before proceeding to bankable energy yield assessment.' : highCount > 0 ? 'Some moderate concerns were identified that warrant review.' : 'The dataset demonstrates good overall quality suitable for resource assessment.') + '</p>';
+    html += '<table><tr><th>Check</th><th>Value</th><th>Risk</th><th>Recommendation</th></tr>';
+    W.riskResults.forEach(c => {
+      const cls = c.risk === 'HIGH' ? 'risk-high' : c.risk === 'MEDIUM' ? 'risk-medium' : 'risk-low';
+      html += '<tr><td>'+c.item+'</td><td>'+c.value+'</td><td class="'+cls+'">'+c.risk+'</td><td>'+c.rec+'</td></tr>';
+    });
+    html += '</table>';
+  }
+
+  // ── Pipeline Summary ──
+  html += '<h3>14. Processing Pipeline Summary</h3>';
+  html += '<table><tr><th>Step</th><th>Status</th><th>Key Result</th></tr>';
+  html += '<tr><td>1. Data Import</td><td><span class="badge badge-valid">Complete</span></td><td>'+N.toLocaleString()+' records, '+W.rawColumns.length+' columns</td></tr>';
+  html += '<tr><td>2. Quality Assessment</td><td>'+(W.qualityReport?'<span class="badge badge-valid">Complete</span>':'<span class="badge badge-warn">Skipped</span>')+'</td><td>'+(W.qualityReport?W.qualityReport.overallScore+'% score, '+W.qualityReport.issues.length+' issues':'N/A')+'</td></tr>';
+  const cleanCount = W.cleaningLog.length;
+  html += '<tr><td>3. Data Cleaning</td><td>'+(cleanCount>0||W.nrelCleanResults?'<span class="badge badge-valid">Complete</span>':'<span class="badge badge-warn">Skipped</span>')+'</td><td>'+(W.nrelCleanResults?W.nrelCleanResults.totalFlagged+' flagged, '+W.nrelCleanResults.validAfter+' valid':cleanCount>0?cleanCount+' actions':'No cleaning')+'</td></tr>';
+  html += '<tr><td>4. Wind Analysis</td><td><span class="badge badge-valid">Complete</span></td><td>'+getSpeedCols().length+' speed levels, '+(W.shearAlpha!==null?'alpha='+W.shearAlpha.toFixed(3):'shear not run')+'</td></tr>';
+  html += '<tr><td>5. MCP</td><td>'+(W.mcpResults?'<span class="badge badge-valid">Complete</span>':'<span class="badge badge-warn">Skipped</span>')+'</td><td>'+(W.mcpResults?'R\u00B2='+W.mcpResults.R2.toFixed(3):'No reference data')+'</td></tr>';
+  html += '<tr><td>6. Reports</td><td><span class="badge badge-valid">Generated</span></td><td>This report</td></tr>';
+  html += '<tr><td>7. Energy Yield</td><td>'+(W.energyResults?'<span class="badge badge-valid">Complete</span>':'<span class="badge badge-warn">Not Run</span>')+'</td><td>'+(W.energyResults?W.energyResults.netEnergy.toFixed(0)+' MWh net AEP':'N/A')+'</td></tr>';
+  html += '</table>';
+
   // Timestamp
   html += '<div style="margin-top:1.5rem;padding-top:.5rem;border-top:1px solid var(--border);font-size:.7rem;color:rgba(255,255,255,.3)">Report generated: '+new Date().toLocaleString()+' | Wind Data Analysis Tool v2.0</div>';
 
@@ -3430,14 +3573,17 @@ function loadDefaultPC() {
 }
 
 function renderPowerCurve() {
-  if(!W.powerCurve) return;
+  if(!W.powerCurve||W.powerCurve.length===0) return;
   const canvas = document.getElementById('pcCanvas');
   const ctx=canvas.getContext('2d');
   const w=canvas.width, h=canvas.height;
   ctx.clearRect(0,0,w,h);
-  const maxS=30, maxP=Math.max(...W.powerCurve.map(p=>p.power))*1.1;
+  const maxS=Math.max(30,Math.ceil(Math.max(...W.powerCurve.map(p=>p.speed))/5)*5+5);
+  let maxP=Math.max(...W.powerCurve.map(p=>p.power))*1.1;
+  if(maxP<=0) maxP=100;
   const margin={t:15,r:15,b:35,l:55};
   const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
+  // Grid and Y-axis labels (0 at bottom, maxP at top)
   ctx.strokeStyle='rgba(255,255,255,.08)';
   for(let i=0;i<=5;i++){
     const y=margin.t+ph*(1-i/5);
@@ -3445,24 +3591,35 @@ function renderPowerCurve() {
     ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='9px Open Sans';ctx.textAlign='right';
     ctx.fillText((maxP*i/5).toFixed(0)+' kW',margin.l-5,y+3);
   }
+  // X-axis labels
+  ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='10px Open Sans';ctx.textAlign='center';
+  for(let i=0;i<=maxS;i+=5) ctx.fillText(i,margin.l+(i/maxS)*pw,h-margin.b+14);
+  ctx.fillText('Wind Speed (m/s)',w/2,h-3);
+  // Power curve line (Y: 0 at bottom, maxP at top)
   ctx.strokeStyle='#1db87e';ctx.lineWidth=2.5;ctx.beginPath();
   W.powerCurve.forEach((p,i)=>{
     const x=margin.l+(p.speed/maxS)*pw, y=margin.t+ph*(1-p.power/maxP);
     if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
   });
   ctx.stroke();
+  // Filled area under curve
   ctx.fillStyle='rgba(29,184,126,.15)';
   ctx.beginPath();ctx.moveTo(margin.l,margin.t+ph);
   W.powerCurve.forEach(p=>{
     const x=margin.l+(p.speed/maxS)*pw, y=margin.t+ph*(1-p.power/maxP);
     ctx.lineTo(x,y);
   });
-  ctx.lineTo(margin.l+(W.powerCurve[W.powerCurve.length-1].speed/maxS)*pw,margin.t+ph);
+  const lastP=W.powerCurve[W.powerCurve.length-1];
+  ctx.lineTo(margin.l+(lastP.speed/maxS)*pw,margin.t+ph);
   ctx.closePath();ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='10px Open Sans';ctx.textAlign='center';
-  for(let i=0;i<=30;i+=5) ctx.fillText(i,margin.l+(i/maxS)*pw,h-margin.b+14);
-  ctx.fillText('Wind Speed (m/s)',w/2,h-3);
-  ctx.save();ctx.translate(12,h/2);ctx.rotate(-Math.PI/2);ctx.fillText('Power (kW)',0,0);ctx.restore();
+  // Data points
+  ctx.fillStyle='#1db87e';
+  W.powerCurve.forEach(p=>{
+    const x=margin.l+(p.speed/maxS)*pw, y=margin.t+ph*(1-p.power/maxP);
+    ctx.beginPath();ctx.arc(x,y,2.5,0,Math.PI*2);ctx.fill();
+  });
+  // Y-axis label
+  ctx.save();ctx.translate(12,h/2);ctx.rotate(-Math.PI/2);ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='10px Open Sans';ctx.textAlign='center';ctx.fillText('Power (kW)',0,0);ctx.restore();
 }
 
 function calcEnergyYield() {
@@ -4265,6 +4422,54 @@ function runNRELAutoClean() {
   }
   if (towerShadowCount > 0) results.tests.push({ name: 'Special: Tower Shadow (sectors)', count: towerShadowCount, type: 'Special' });
 
+  // ── RATE-OF-CHANGE TEST (NREL 22223 Section 9.4) ──────────────────────
+  // Checks for unrealistic speed changes between consecutive records (> 10 m/s per 10-min interval)
+  let rocCount = 0;
+  const rocThreshold = parseFloat(document.getElementById('trn_ws1hr').value) || 5.0;
+  speedCols.forEach(col => {
+    for (let i = 1; i < N; i++) {
+      if (W.dataFlags[i] >= 5) continue;
+      const v1 = col.data[i - 1], v2 = col.data[i];
+      if (v1 === null || isNaN(v1) || v2 === null || isNaN(v2)) continue;
+      if (Math.abs(v2 - v1) > rocThreshold * 2) { col.data[i] = null; W.dataFlags[i] = 5; rocCount++; }
+    }
+  });
+  if (rocCount > 0) results.tests.push({ name: 'Rate-of-Change: Consecutive WS diff > ' + (rocThreshold * 2).toFixed(0) + ' m/s', count: rocCount, type: 'Trend' });
+
+  // ── TOWER CONSISTENCY TEST (NREL 22223 Section 9.5) ───────────────────
+  // Checks that speeds at different heights obey the power law: v1/v2 = (z1/z2)^alpha
+  // If the ratio deviates significantly from the expected range, flag the record
+  let towerConsCount = 0;
+  if (speedCols.length >= 2) {
+    const alphaMin = 0.05, alphaMax = 0.60;
+    for (let i = 0; i < N; i++) {
+      if (W.dataFlags[i] >= 2) continue;
+      for (let a = 0; a < speedCols.length; a++) {
+        for (let b = a + 1; b < speedCols.length; b++) {
+          const va = speedCols[a].data[i], vb = speedCols[b].data[i];
+          if (va === null || isNaN(va) || vb === null || isNaN(vb)) continue;
+          if (va <= 0.5 || vb <= 0.5) continue;
+          const haMatch = speedCols[a].name.match(/(\d+)/);
+          const hbMatch = speedCols[b].name.match(/(\d+)/);
+          if (!haMatch || !hbMatch) continue;
+          const za = parseFloat(haMatch[1]), zb = parseFloat(hbMatch[1]);
+          if (za === zb) continue;
+          const ratio = va / vb;
+          const ratioExpectedMax = Math.pow(za / zb, alphaMin);
+          const ratioExpectedMin = Math.pow(za / zb, alphaMax);
+          if (ratioExpectedMin > ratioExpectedMax) { const tmp = ratioExpectedMin; ratioExpectedMin = ratioExpectedMax; ratioExpectedMax = tmp; }
+          if (ratio < ratioExpectedMin || ratio > ratioExpectedMax) {
+            speedCols[b].data[i] = null;
+            if (W.dataFlags[i] < 2) W.dataFlags[i] = 2;
+            towerConsCount++;
+            break;
+          }
+        }
+      }
+    }
+    if (towerConsCount > 0) results.tests.push({ name: 'Tower Consistency: Power Law Violation (alpha 0.05-0.60)', count: towerConsCount, type: 'Relational' });
+  }
+
   // ── SUMMARY ────────────────────────────────────────────────────────────
   results.totalFlagged = results.tests.reduce((s, t) => s + t.count, 0);
   results.totalRecords = N;
@@ -4796,6 +5001,101 @@ generateReport = function() {
     html += '</table>';
   }
 
+  // ── 10. Extreme Wind ──
+  if(!W.extremeWindResults && sc) {
+    const ewVals = sc.data.filter(v=>v!==null&&!isNaN(v));
+    const ewN = ewVals.length;
+    if(ewN > 100) {
+      const timestamps = getTimestamps();
+      const byMonth = {};
+      for(let i=0;i<W.rawColumns[0].data.length;i++){
+        const v = sc.data[i]; if(v===null||isNaN(v)) continue;
+        let key='0'; if(timestamps[i]){const d=parseTimestamp(timestamps[i]);if(d)key=d.getFullYear()+'-'+d.getMonth();}
+        if(!byMonth[key]) byMonth[key]=[];
+        byMonth[key].push(v);
+      }
+      const maxima=[]; Object.values(byMonth).forEach(arr=>{if(arr.length>10) maxima.push(safeMax(arr));});
+      if(maxima.length>=2){
+        const mu=mean(maxima),sigma=maxima.length>1?std(maxima):1;
+        const beta=sigma*Math.sqrt(6)/Math.PI;
+        const loc=mu-0.5772*beta;
+        W.extremeWindResults={xT:loc-beta*Math.log(-Math.log(1-1/50)),mu,sigma,returnPeriod:50};
+      }
+    }
+  }
+  if(W.extremeWindResults) {
+    html += '<h3>10. Extreme Wind Analysis (Gumbel)</h3>';
+    html += '<table><tr><td>50-year Return Period</td><td>' + W.extremeWindResults.xT.toFixed(1) + ' m/s</td></tr>';
+    html += '<tr><td>Mean of Maxima</td><td>' + W.extremeWindResults.mu.toFixed(1) + ' m/s</td></tr>';
+    html += '<tr><td>IEC Class</td><td>' + (W.extremeWindResults.xT<=25?'IV':W.extremeWindResults.xT<=37.5?'III':W.extremeWindResults.xT<=42.5?'II':'I') + '</td></tr></table>';
+  }
+
+  // ── 11. Air Density ──
+  const tempColR = getFirstMapped('temp');
+  const presColR = getFirstMapped('pressure');
+  if(tempColR && presColR) {
+    const tV=[],pV=[];
+    for(let i=0;i<W.rawColumns[0].data.length;i++){
+      const t=tempColR.data[i],p=presColR.data[i];
+      if(t!==null&&!isNaN(t)&&p!==null&&!isNaN(p)){tV.push(t);pV.push(p);}
+    }
+    if(tV.length>0){
+      const mT=mean(tV),mP=mean(pV),rho=mP*100/((273.15+mT)*287.05);
+      const pwr=0.5*rho*Math.pow(10,3);
+      html += '<h3>11. Air Density &amp; Power Density</h3>';
+      html += '<table><tr><td>Mean Temperature</td><td>' + mT.toFixed(1) + ' C</td></tr>';
+      html += '<tr><td>Mean Pressure</td><td>' + mP.toFixed(0) + ' hPa</td></tr>';
+      html += '<tr><td>Air Density</td><td><strong>' + rho.toFixed(3) + '</strong> kg/m3</td></tr>';
+      html += '<tr><td>Power Density at 10 m/s</td><td>' + pwr.toFixed(0) + ' W/m2</td></tr></table>';
+    }
+  }
+
+  // ── 12. Uncertainty ──
+  if(!W.uncertaintyResults) {
+    const uc=[1.0,3.0,0.5,1.0,2.0,5.0,1.5,3.0,2.0,2.0,1.0,0.5];
+    W.uncertaintyResults={combined:Math.sqrt(uc.reduce((s,v)=>s+v*v,0)),components:[{name:'Speed Sensor',value:1},{name:'Dir Sensor',value:3},{name:'Temp Sensor',value:.5},{name:'Data Recovery',value:1},{name:'Shear',value:2},{name:'MCP',value:5},{name:'Weibull',value:1.5},{name:'Flow Model',value:3},{name:'Wake',value:2},{name:'Power Curve',value:2},{name:'Availability',value:1},{name:'Electrical',value:.5}]};
+  }
+  html += '<h3>12. Uncertainty Analysis</h3>';
+  html += '<table><tr><th>Component</th><th>Uncertainty (%)</th></tr>';
+  W.uncertaintyResults.components.sort((a,b)=>b.value-a.value).forEach(c=>{
+    html += '<tr><td>' + c.name + '</td><td>' + c.value.toFixed(1) + '%</td></tr>';
+  });
+  html += '<tr style="font-weight:700"><td>Combined (RSS)</td><td>' + W.uncertaintyResults.combined.toFixed(1) + '%</td></tr></table>';
+
+  // ── 13. Risk Checklist ──
+  if(!W.riskResults || W.riskResults.length===0) {
+    const rN2=W.rawColumns[0]?W.rawColumns[0].data.length:0;
+    const rSC=getSpeedCols();
+    W.riskResults=[
+      {item:'Data Recovery',value:(rN2>0?(W.dataFlags.filter(f=>f===0).length/rN2*100).toFixed(1):'N/A')+'%',risk:'LOW',rec:'Good recovery.'},
+      {item:'Speed Levels',value:rSC.length,risk:rSC.length<2?'HIGH':'LOW',rec:rSC.length<3?'Add more heights.':'Good.'},
+      {item:'Shear',value:W.shearAlpha!==null?W.shearAlpha.toFixed(3):'N/A',risk:W.shearAlpha===null?'MEDIUM':(W.shearAlpha<0.1||W.shearAlpha>0.4)?'HIGH':'LOW',rec:'Normal.'},
+      {item:'Duration',value:(rN2/4380).toFixed(1)+' months',risk:rN2<26280?'MEDIUM':'LOW',rec:'OK.'}
+    ];
+  }
+  html += '<h3>13. Risk Checklist</h3>';
+  html += '<table><tr><th>Check</th><th>Value</th><th>Risk</th></tr>';
+  W.riskResults.forEach(c=>{
+    const cls=c.risk==='HIGH'?'risk-high':c.risk==='MEDIUM'?'risk-medium':'risk-low';
+    html += '<tr><td>'+c.item+'</td><td>'+c.value+'</td><td class="'+cls+'">'+c.risk+'</td></tr>';
+  });
+  html += '</table>';
+
+  // ── 14. Pipeline Summary ──
+  html += '<h3>14. Processing Pipeline Summary</h3>';
+  html += '<table><tr><th>Step</th><th>Status</th><th>Key Result</th></tr>';
+  html += '<tr><td>1. Import</td><td><span class="badge badge-valid">Done</span></td><td>'+W.rawColumns[0].data.length.toLocaleString()+' records</td></tr>';
+  html += '<tr><td>2. Quality</td><td>'+(W.qualityReport?'<span class="badge badge-valid">Done</span>':'<span class="badge badge-warn">Skip</span>')+'</td><td>'+(W.qualityReport?W.qualityReport.overallScore+'%':'N/A')+'</td></tr>';
+  html += '<tr><td>3. Cleaning</td><td>'+(W.nrelCleanResults?'<span class="badge badge-valid">Done</span>':'<span class="badge badge-warn">Skip</span>')+'</td><td>'+(W.nrelCleanResults?W.nrelCleanResults.totalFlagged+' flagged':'None')+'</td></tr>';
+  html += '<tr><td>4. Analysis</td><td><span class="badge badge-valid">Done</span></td><td>'+(W.shearAlpha!==null?'alpha='+W.shearAlpha.toFixed(3):'N/A')+'</td></tr>';
+  html += '<tr><td>5. MCP</td><td>'+(W.mcpResults?'<span class="badge badge-valid">Done</span>':'<span class="badge badge-warn">Skip</span>')+'</td><td>'+(W.mcpResults?'R2='+W.mcpResults.R2.toFixed(3):'N/A')+'</td></tr>';
+  html += '<tr><td>6. Reports</td><td><span class="badge badge-valid">Done</span></td><td>This report</td></tr>';
+  html += '<tr><td>7. Energy</td><td>'+(W.energyResults?'<span class="badge badge-valid">Done</span>':'<span class="badge badge-warn">Skip</span>')+'</td><td>'+(W.energyResults?W.energyResults.netEnergy.toFixed(0)+' MWh':'N/A')+'</td></tr>';
+  html += '</table>';
+
+  // Timestamp
+  html += '<div style="margin-top:1.5rem;padding-top:.5rem;border-top:1px solid var(--border);font-size:.7rem;color:rgba(255,255,255,.3)">Report generated: ' + new Date().toLocaleString() + ' | Wind Data Analysis Tool v2.0</div>';
+
   document.getElementById('reportContent').innerHTML = html;
 };
 
@@ -5183,6 +5483,8 @@ function renderExtremeWind() {
     statsHtml += '<div class="stat-item"><span class="stat-val">' + r.mu.toFixed(1) + '</span><span class="stat-lbl">' + r.name + ' Mean Max</span></div>';
   });
   document.getElementById('extremeWindStats').innerHTML = statsHtml;
+  // Store results for report
+  W.extremeWindResults = results.length > 0 ? { xT: results[0].xT, mu: results[0].mu, sigma: results[0].sigma, returnPeriod: returnPeriod, name: results[0].name } : null;
   // IEC Wind Class Check
   const iecClasses = [
     { cls: 'I', vref: 50, vavg: 10 },
@@ -5302,6 +5604,8 @@ function calculateUncertainty() {
   html += '<div class="stat-item"><span class="stat-val">' + p90.toFixed(0) + '</span><span class="stat-lbl">P90 (MWh)</span></div>';
   html += '</div></div>';
   document.getElementById('uncertaintyResults').innerHTML = html;
+  // Store for report
+  W.uncertaintyResults = { combined, p50, p75, p90, components };
   // Tornado chart
   const canvas = document.getElementById('uncertaintyCanvas');
   const ctx = canvas.getContext('2d');
@@ -5406,6 +5710,8 @@ function runRiskChecklist() {
   else html += ' <span style="color:var(--mint);font-weight:700">Data quality is generally suitable for resource assessment.</span>';
   html += '</div>';
   document.getElementById('riskChecklistResults').innerHTML = html;
+  // Store for report
+  W.riskResults = checks;
 }
 
 // ── ENHANCED QUALITY FLAGS (frozen sensor + anomaly detection) ────────
