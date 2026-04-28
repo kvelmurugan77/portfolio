@@ -369,7 +369,7 @@ table.data-table tr:hover td{background:rgba(29,184,126,.04)}
 <div class="step-panel" id="step5">
   <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
     <button class="btn btn-primary" onclick="runFullAnalysis()" id="runAnalysisBtn">🚀 Propose Mast Locations</button>
-    <span style="font-size:.68rem;color:rgba(255,255,255,.35);font-weight:300">Automatically identifies optimal met mast positions per IEC 61400-12-1</span>
+    <span style="font-size:.68rem;color:rgba(255,255,255,.35);font-weight:300">IEC 61400-12-1: mast placed 2D–4D from test WTG (ideal 2.5D)</span>
   </div>
   <div id="analysisProgress" style="display:none"><div class="progress"><div class="progress-bar" id="analysisProgressBar" style="width:0%"></div></div><div id="analysisStatusText" style="font-size:.7rem;color:var(--mint);margin-top:.4rem">Analyzing...</div></div>
   <div id="analysisAlerts"></div>
@@ -384,8 +384,30 @@ table.data-table tr:hover td{background:rgba(29,184,126,.04)}
         <div class="table-wrap" id="firstRowTable"></div>
       </div>
       <div class="card">
-        <div class="card-title">Proposed Mast Locations (Ranked)</div>
+        <div class="card-title">Proposed Mast Locations (Ranked) — Click to Inspect</div>
         <div class="table-wrap" id="mastProposalTable"></div>
+      </div>
+    </div>
+    <!-- Interactive Mast–WTG Inspector -->
+    <div id="mastInspector" style="display:none;margin-top:1rem">
+      <div class="card">
+        <div class="card-title" id="inspectorTitle">Mast–WTG Terrain Assessment &amp; Measurement Sector</div>
+        <div class="grid-2">
+          <div class="canvas-wrap"><canvas id="mastInspectorPolar" width="460" height="460"></canvas></div>
+          <div>
+            <div class="card-title">Terrain Assessment (windPRO-style)</div>
+            <div class="table-wrap" id="mastInspectorTerrainTable" style="max-height:360px"></div>
+            <div style="margin-top:.8rem">
+              <div class="card-title">Mast–WTG Parameters</div>
+              <div class="stat-grid" id="mastInspectorParams"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:1rem">
+          <div class="card-title">Terrain Profile — Selected Sector</div>
+          <div class="form-group"><label class="form-label">View Direction (°)</label><select class="form-select" id="mastInspectorDirSel" onchange="renderMastInspectorProfile()"></select></div>
+          <div class="canvas-wrap"><canvas id="mastInspectorProfile" width="1100" height="300"></canvas></div>
+        </div>
       </div>
     </div>
     <div class="card" style="margin-top:.5rem">
@@ -399,7 +421,7 @@ table.data-table tr:hover td{background:rgba(29,184,126,.04)}
   </div>
   <div class="nav-row">
     <button class="btn btn-secondary" onclick="goToStep(4)">← Back: Visualize</button>
-    <button class="btn btn-primary" id="step5Next" onclick="goToStep(6)" disabled>Next: Detailed Report →</button>
+    <button class="btn btn-primary" id="step5Next" onclick="goToStep(6)">Next: Detailed Report →</button>
   </div>
 </div>
 
@@ -494,6 +516,16 @@ function goToStep(n) {
   if (n === 2) autoFillERA5();
   if (n === 3) renderWindRose();
   if (n === 4) renderLayout();
+  if (n === 6) {
+    if (!STATE.analysisResults || STATE.analysisResults.proposedMasts.length === 0) {
+      document.getElementById('noAnalysisAlert').style.display = 'block';
+      document.getElementById('reportSection').style.display = 'none';
+    } else {
+      document.getElementById('noAnalysisAlert').style.display = 'none';
+      document.getElementById('reportSection').style.display = 'block';
+      switchReportTab('terrain');
+    }
+  }
 }
 
 function markStepDone(n) { const el = document.querySelector(`.step-item[data-step="${n}"]`); if (el) el.classList.add('done'); }
@@ -984,9 +1016,9 @@ function runFullAnalysis() {
       if (qualifying.length === 0) { qualifying = firstRowWTGs.filter(w => w.isFirstRow); }
       if (qualifying.length === 0) { qualifying = [...firstRowWTGs].sort((a, b) => b.freeSectorSpan - a.freeSectorSpan).slice(0, 3); }
 
-      // Generate candidate mast positions
+      // Generate candidate mast positions (IEC 61400-12-1: mast at 2D–4D, ideal 2.5D)
       const candidates = [];
-      const distances = [2, 2.5, 3, 3.5, 4, 5];
+      const distances = [2, 2.2, 2.5, 2.5, 2.8, 3, 3.5, 4];
       const offsets = [0, -5, -10, 5, 10];
       for (const wtg of qualifying) {
         for (const distD of distances) {
@@ -1090,16 +1122,23 @@ function calcFreeSector(wtg, allWtgs, config) {
 }
 
 function scoreAssessment(a) {
+  // IEC 61400-12-1: ideal 2.5D, acceptable 2D–4D
   let distScore = 100;
   if (a.distanceD < 2) distScore = a.distanceD / 2 * 50;
-  else if (a.distanceD > 6) distScore = Math.max(0, 80 - (a.distanceD - 6) * 10);
+  else if (a.distanceD > 4) distScore = Math.max(0, 100 - (a.distanceD - 4) * 25);
+  else if (a.distanceD >= 2 && a.distanceD <= 3) distScore = 100; // sweet spot
+  else distScore = 85;
   return (distScore * 0.3 + a.validPct * 0.4 + (a.freestreamCount / a.numSectors) * 100 * 0.3);
 }
 
 function scoreCandidate(c, assessment, secondaries) {
+  // IEC 61400-12-1: ideal 2.5D, acceptable 2D–4D, penalize outside range
   let distScore = 100;
-  if (c.distanceD < 2) distScore = c.distanceD / 2 * 50;
-  else if (c.distanceD > 6) distScore = Math.max(0, 80 - (c.distanceD - 6) * 10);
+  if (c.distanceD < 2) distScore = c.distanceD / 2 * 40; // too close
+  else if (c.distanceD > 4) distScore = Math.max(0, 60 - (c.distanceD - 4) * 20); // too far
+  else if (c.distanceD >= 2.2 && c.distanceD <= 2.8) distScore = 100; // ideal ~2.5D
+  else if (c.distanceD >= 2 && c.distanceD <= 3.5) distScore = 90; // good range
+  else distScore = 75;
   const terrainScore = assessment.validPct;
   const freeScore = (assessment.freestreamCount / assessment.numSectors) * 100;
   const frBonus = c.targetWTG.isFirstRow ? 15 : 0;
@@ -1107,7 +1146,9 @@ function scoreCandidate(c, assessment, secondaries) {
   const freeSpanBonus = freeSpan >= 40 ? 10 : freeSpan >= 20 ? 5 : 0;
   const multiBonus = secondaries.length > 0 ? Math.min(15, 5 + secondaries[0].score / 20) : 0;
   const offsetPenalty = Math.abs(c.offset) * 0.3;
-  return Math.round(Math.min(100, Math.max(0, distScore * 0.25 + terrainScore * 0.25 + freeScore * 0.2 + frBonus + freeSpanBonus + multiBonus - offsetPenalty)) * 10) / 10;
+  // Hard penalty for outside IEC range
+  const rangePenalty = (c.distanceD < 2 || c.distanceD > 4) ? 30 : 0;
+  return Math.round(Math.min(100, Math.max(0, distScore * 0.25 + terrainScore * 0.25 + freeScore * 0.2 + frBonus + freeSpanBonus + multiBonus - offsetPenalty - rangePenalty)) * 10) / 10;
 }
 
 function renderProposalResults() {
@@ -1120,20 +1161,26 @@ function renderProposalResults() {
   document.getElementById('proposalMetrics').innerHTML = `
     <div class="metric-item"><span class="metric-val">${r.proposedMasts.length}</span><span class="metric-label">Proposed Mast Sites</span></div>
     <div class="metric-item"><span class="metric-val">${frCount}</span><span class="metric-label">First-Row WTGs</span></div>
-    <div class="metric-item"><span class="metric-val">${bestScore}</span><span class="metric-label">Best Score</span></div>
+    <div class="metric-item"><span class="metric-val" ${bestScore < 50 ? 'class="bad"' : bestScore < 70 ? 'class="warn"' : ''}>${bestScore}</span><span class="metric-label">Best Score</span></div>
     <div class="metric-item"><span class="metric-val">${multiConfigs}</span><span class="metric-label">2-WTG Configs</span></div>`;
 
-  // First-row table
+  // First-row table (clickable WTG names)
   let html = '<table class="data-table"><thead><tr><th>WTG</th><th>First Row</th><th>Free Sector</th><th>Blocking</th><th>Qualifies</th></tr></thead><tbody>';
   const minFree = parseFloat(document.getElementById('cfgMinFree').value) || 20;
-  for (const w of r.firstRowWTGs) { const qualifies = w.isFirstRow && w.freeSectorSpan >= minFree; html += `<tr><td><strong>${w.name}</strong></td><td>${w.isFirstRow ? '<span class="badge badge-first">YES</span>' : '<span class="badge badge-warn">NO</span>'}</td><td>${w.freeSectorSpan}°</td><td>${w.blockingWTGs.length > 0 ? w.blockingWTGs.join(', ') : '<span style="color:var(--mint)">—</span>'}</td><td>${qualifies ? '<span class="badge badge-valid">YES</span>' : '<span class="badge badge-invalid">NO</span>'}</td></tr>`; }
+  for (let i = 0; i < r.firstRowWTGs.length; i++) {
+    const w = r.firstRowWTGs[i]; const qualifies = w.isFirstRow && w.freeSectorSpan >= minFree;
+    html += `<tr><td><a href="javascript:void(0)" onclick="inspectWTG(${i})" style="color:var(--sky4);text-decoration:none;font-weight:600" title="Click to inspect">${w.name}</a></td><td>${w.isFirstRow ? '<span class="badge badge-first">YES</span>' : '<span class="badge badge-warn">NO</span>'}</td><td>${w.freeSectorSpan}°</td><td>${w.blockingWTGs.length > 0 ? w.blockingWTGs.join(', ') : '<span style="color:var(--mint)">—</span>'}</td><td>${qualifies ? '<span class="badge badge-valid">YES</span>' : '<span class="badge badge-invalid">NO</span>'}</td></tr>`;
+  }
   html += '</tbody></table>'; document.getElementById('firstRowTable').innerHTML = html;
 
-  // Proposed masts table
-  html = '<table class="data-table"><thead><tr><th>#</th><th>Proposed Mast</th><th>Coordinates</th><th>Target WTG</th><th>Dist (D)</th><th>Valid Sec.</th><th>Terrain</th><th>Serve</th><th>Score</th></tr></thead><tbody>';
+  // Proposed masts table (clickable rows)
+  html = '<table class="data-table"><thead><tr><th>#</th><th>Proposed Mast</th><th>Target WTG</th><th>Dist</th><th>IEC Range</th><th>Valid Sec.</th><th>Terrain</th><th>Serve</th><th>Score</th></tr></thead><tbody>';
   r.proposedMasts.forEach((m, i) => {
     const scoreClass = m.score >= 70 ? 'color:var(--mint)' : m.score >= 50 ? 'color:var(--sky4)' : m.score >= 30 ? 'color:var(--gold)' : 'color:#e74c3c';
-    html += `<tr><td>${i + 1}</td><td><strong>${m.name}</strong></td><td>${m.lat.toFixed(0)}, ${m.lon.toFixed(0)}</td><td>${m.targetWTG.name}</td><td>${m.distanceD.toFixed(1)}</td><td>${m.assessment.validCount}/${m.assessment.numSectors}</td><td><span class="badge ${m.assessment.terrainClass === 'A' ? 'badge-valid' : m.assessment.terrainClass === 'B' ? 'badge-warn' : 'badge-invalid'}">${m.assessment.terrainClass}</span></td><td>${m.numServeable} WTG${m.numServeable > 1 ? 's' : ''}</td><td><strong style="${scoreClass}">${m.score}</strong></td></tr>`;
+    const inRange = m.distanceD >= 2 && m.distanceD <= 4;
+    const distBadge = inRange ? (m.distanceD >= 2.2 && m.distanceD <= 2.8 ? 'badge-valid' : 'badge-free') : 'badge-invalid';
+    const distLabel = inRange ? (m.distanceD >= 2.2 && m.distanceD <= 2.8 ? 'IDEAL' : 'OK') : 'OUT';
+    html += `<tr style="cursor:pointer" onclick="inspectMast(${i})" title="Click to view terrain assessment & measurement sector"><td>${i + 1}</td><td><strong>${m.name}</strong></td><td>${m.targetWTG.name}</td><td><strong>${m.distanceD.toFixed(1)}D</strong></td><td><span class="badge ${distBadge}">${distLabel}</span></td><td>${m.assessment.validCount}/${m.assessment.numSectors}</td><td><span class="badge ${m.assessment.terrainClass === 'A' ? 'badge-valid' : m.assessment.terrainClass === 'B' ? 'badge-warn' : 'badge-invalid'}">${m.assessment.terrainClass}</span></td><td>${m.numServeable} WTG${m.numServeable > 1 ? 's' : ''}</td><td><strong style="${scoreClass}">${m.score}</strong></td></tr>`;
   });
   html += '</tbody></table>'; document.getElementById('mastProposalTable').innerHTML = html;
 
@@ -1144,8 +1191,137 @@ function renderProposalResults() {
 
   // Recommendations
   let recHtml = '';
-  for (const rec of r.recommendations) { const type = rec.includes('⚠') || rec.includes('No first-row') || rec.includes('below 50') ? 'warning' : 'success'; recHtml += `<div class="alert alert-${type}">${rec}</div>`; }
+  for (const rec of r.recommendations) { const type = rec.includes('No first-row') || rec.includes('below 50') ? 'warning' : 'success'; recHtml += `<div class="alert alert-${type}">${rec}</div>`; }
   document.getElementById('recommendations').innerHTML = recHtml;
+}
+
+// ── MAST–WTG INSPECTOR (Step 5 interactive click) ──────────────────────────
+function inspectMast(mastIdx) {
+  const r = STATE.analysisResults; if (!r || !r.proposedMasts[mastIdx]) return;
+  const m = r.proposedMasts[mastIdx];
+  const mast = { id: m.name, name: m.name, lat: m.lat, lon: m.lon, height: m.height };
+  const wtg = m.targetWTG;
+  const config = r.config;
+  const assessment = performTerrainAssessment(mast, wtg, STATE.wtgs, STATE.extWtgs, STATE.terrainPoints, config);
+
+  document.getElementById('inspectorTitle').textContent = `${m.name} → ${wtg.name}  |  Distance: ${m.distanceD.toFixed(1)}D (${m.distance.toFixed(0)}m)  |  Score: ${m.score}/100`;
+  document.getElementById('mastInspector').style.display = 'block';
+  document.getElementById('mastInspector').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Draw polar measurement sector
+  drawInspectorPolar('mastInspectorPolar', assessment, m, wtg);
+
+  // Terrain assessment table (windPRO-style)
+  let thtml = '<table class="data-table"><thead><tr><th>Dir°</th><th>Compass</th><th>Max Slope</th><th>Class</th><th>Freestream</th><th>Wake Sources</th><th>Valid</th></tr></thead><tbody>';
+  for (const s of assessment.sectors) {
+    const cc = s.terrainClass === 'A' ? 'badge-valid' : s.terrainClass === 'B' ? 'badge-warn' : 'badge-invalid';
+    thtml += `<tr><td>${s.dir}°</td><td>${degToCompass(s.dir)}</td><td>${s.maxSlopeDeg.toFixed(2)}°</td><td><span class="badge ${cc}">Class ${s.terrainClass}</span></td><td>${s.isFreestream ? '<span style="color:var(--mint)">YES</span>' : '<span style="color:#e74c3c">NO</span>'}</td><td style="font-size:.62rem">${s.wakeAffected.length > 0 ? s.wakeAffected.join(', ') : '—'}</td><td>${s.isValid ? '<span style="color:var(--mint)">YES</span>' : '<span style="color:#e74c3c">NO</span>'}</td></tr>`;
+  }
+  thtml += '</tbody></table>';
+  document.getElementById('mastInspectorTerrainTable').innerHTML = thtml;
+
+  // Mast–WTG parameters grid
+  document.getElementById('mastInspectorParams').innerHTML = `
+    <div class="stat-item"><span class="stat-val">${m.distanceD.toFixed(2)}D</span><span class="stat-lbl">Mast–WTG Distance</span></div>
+    <div class="stat-item"><span class="stat-val">${m.distance.toFixed(0)}m</span><span class="stat-lbl">Distance (m)</span></div>
+    <div class="stat-item"><span class="stat-val">${assessment.validCount}/${assessment.numSectors}</span><span class="stat-lbl">Valid Sectors</span></div>
+    <div class="stat-item"><span class="stat-val">${assessment.validPct.toFixed(0)}%</span><span class="stat-lbl">Valid Sector %</span></div>
+    <div class="stat-item"><span class="stat-val">Class ${assessment.terrainClass}</span><span class="stat-lbl">Terrain Class</span></div>
+    <div class="stat-item"><span class="stat-val">${assessment.freestreamCount}</span><span class="stat-lbl">Freestream Sectors</span></div>
+    <div class="stat-item"><span class="stat-val">${m.distanceD >= 2 && m.distanceD <= 4 ? (m.distanceD >= 2.2 && m.distanceD <= 2.8 ? 'IDEAL' : 'OK') : 'OUT OF RANGE'}</span><span class="stat-lbl">IEC Compliance</span></div>
+    <div class="stat-item"><span class="stat-val">${m.numServeable}</span><span class="stat-lbl">WTGs Serveable</span></div>`;
+
+  // Profile direction selector
+  const dirSel = document.getElementById('mastInspectorDirSel'); dirSel.innerHTML = '';
+  for (const s of assessment.sectors) {
+    dirSel.innerHTML += `<option value="${s.dir}">${s.dir}° (${degToCompass(s.dir)}) ${s.isFreestream ? '[Freestream]' : ''} ${!s.isValid ? '[Invalid]' : ''}</option>`;
+  }
+  renderMastInspectorProfile();
+}
+
+function inspectWTG(wtgIdx) {
+  const r = STATE.analysisResults; if (!r) return;
+  const wtg = r.firstRowWTGs[wtgIdx]; if (!wtg) return;
+  // Find the best mast targeting this WTG
+  const mastEntry = r.proposedMasts.find(m => m.targetWTG.id === wtg.id);
+  if (!mastEntry) {
+    // Show WTG-only assessment from centroid
+    document.getElementById('inspectorTitle').textContent = `WTG: ${wtg.name} — No mast proposed for this WTG`;
+    document.getElementById('mastInspector').style.display = 'block';
+    document.getElementById('mastInspector').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('mastInspectorTerrainTable').innerHTML = '<div class="alert alert-warning">This WTG does not qualify for PCV mast placement. Check first-row status and free sector criteria.</div>';
+    return;
+  }
+  // Reuse inspectMast
+  const mastIdx = r.proposedMasts.indexOf(mastEntry);
+  inspectMast(mastIdx);
+}
+
+function drawInspectorPolar(canvasId, assessment, mastEntry, wtg) {
+  const canvas = document.getElementById(canvasId); if (!canvas) return;
+  const ctx = canvas.getContext('2d'), W = canvas.width, H = canvas.height, cx = W / 2, cy = H / 2, maxR = Math.min(W, H) / 2 - 55;
+  ctx.clearRect(0, 0, W, H); ctx.fillStyle = 'rgba(11,31,58,0.5)'; ctx.beginPath(); ctx.arc(cx, cy, maxR + 10, 0, Math.PI * 2); ctx.fill();
+  // Grid
+  for (let r = 1; r <= 4; r++) { ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.beginPath(); ctx.arc(cx, cy, maxR * r / 4, 0, Math.PI * 2); ctx.stroke(); }
+  // Direction labels
+  ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'].forEach((d, i) => { const ang = (i * 45 - 90) * Math.PI / 180; ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = 'bold 10px Open Sans'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(d, cx + (maxR + 25) * Math.cos(ang), cy + (maxR + 25) * Math.sin(ang)); });
+  // Sector wedges
+  const sectorAng = (2 * Math.PI) / assessment.numSectors;
+  for (const s of assessment.sectors) {
+    const sAng = (s.dir - 90) * Math.PI / 180 - sectorAng / 2, eAng = sAng + sectorAng;
+    let color = (!s.isValid && !s.isFreestream) ? 'rgba(231,76,60,.5)' : (!s.isValid || !s.isFreestream) ? 'rgba(240,165,0,.5)' : 'rgba(29,184,126,.6)';
+    const slopeNorm = Math.min(s.maxSlopeDeg / 15, 1), r = maxR * (0.3 + slopeNorm * 0.7);
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, sAng, eAng); ctx.closePath(); ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1; ctx.stroke();
+  }
+  // Predominant wind direction arrow
+  if (STATE.analysisResults) {
+    const predAng = (STATE.analysisResults.predDir - 90) * Math.PI / 180;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + maxR * 0.85 * Math.cos(predAng), cy + maxR * 0.85 * Math.sin(predAng));
+    ctx.strokeStyle = '#f0a500'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#f0a500'; ctx.font = 'bold 9px Open Sans'; ctx.textAlign = 'center';
+    ctx.fillText('Pred. Wind', cx + maxR * 0.85 * Math.cos(predAng), cy + maxR * 0.85 * Math.sin(predAng) + 14);
+  }
+  // Mast–WTG bearing line
+  if (mastEntry) {
+    const mBearing = mastEntry.bearingFromWTG || 0;
+    const mAng = (mBearing - 90) * Math.PI / 180;
+    ctx.beginPath(); ctx.moveTo(cx + maxR * 0.2 * Math.cos(mAng), cy + maxR * 0.2 * Math.sin(mAng));
+    ctx.lineTo(cx + maxR * 0.7 * Math.cos(mAng), cy + maxR * 0.7 * Math.sin(mAng));
+    ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 3; ctx.setLineDash([8, 4]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 9px Open Sans'; ctx.textAlign = 'center';
+    ctx.fillText('Mast', cx + maxR * 0.15 * Math.cos(mAng), cy + maxR * 0.15 * Math.sin(mAng) - 8);
+  }
+  // WTG indicator at center
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 11px Open Sans'; ctx.textAlign = 'center'; ctx.fillText('WTG', cx, cy + 4);
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.stroke();
+  // Legend
+  [{ c: 'rgba(29,184,126,.6)', l: 'Valid + Freestream' }, { c: 'rgba(240,165,0,.5)', l: 'Partial (slope/wake)' }, { c: 'rgba(231,76,60,.5)', l: 'Invalid' }, { c: '#e74c3c', l: 'Mast direction', dash: true }].forEach((item, i) => {
+    ctx.fillStyle = item.c; ctx.fillRect(10, H - 12 - i * 15, 12, 10);
+    if (item.dash) { ctx.strokeStyle = item.c; ctx.lineWidth = 2; ctx.setLineDash([3, 2]); ctx.beginPath(); ctx.moveTo(10, H - 7 - i * 15); ctx.lineTo(22, H - 7 - i * 15); ctx.stroke(); ctx.setLineDash([]); }
+    ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = '9px Open Sans'; ctx.textAlign = 'left'; ctx.fillText(item.l, 26, H - 2 - i * 15);
+  });
+}
+
+function renderMastInspectorProfile() {
+  if (!STATE.analysisResults) return;
+  const selKey = document.querySelector('#mastProposalTable tr[style*="cursor"]') ? null : null;
+  // Get current inspector mast/wtg from state
+  const r = STATE.analysisResults;
+  const sel = document.getElementById('mastInspectorDirSel');
+  const selDir = parseInt(sel.value);
+  // Re-run assessment for the currently inspected pair
+  const titleEl = document.getElementById('inspectorTitle');
+  const titleText = titleEl.textContent;
+  // Extract mast name from title
+  const mastNameMatch = titleText.match(/^(Mast-\d+)/);
+  if (!mastNameMatch) return;
+  const m = r.proposedMasts.find(p => p.name === mastNameMatch[1]);
+  if (!m) return;
+  const mast = { id: m.name, name: m.name, lat: m.lat, lon: m.lon, height: m.height };
+  const config = r.config;
+  const assessment = performTerrainAssessment(mast, m.targetWTG, STATE.wtgs, STATE.extWtgs, STATE.terrainPoints, config);
+  const selSector = assessment.sectors.find(s => s.dir === selDir) || assessment.sectors[0];
+  drawTerrainProfile('mastInspectorProfile', selSector);
 }
 
 // ── STEP 6: DETAILED REPORT ─────────────────────────────────────────────────
@@ -1285,7 +1461,7 @@ function drawWakeRose(canvasId, assessment) {
 
 function generateReport() {
   const r = STATE.analysisResults; if (!r) return;
-  const best = r.proposedMasts[0]; const iec = document.getElementById('cfgIEC').value;
+  const best = r.proposedMasts[0]; const iec = document.getElementById('cfgIEC').value; const config = r.config;
   let html = `
 <h3>1. Executive Summary</h3>
 <p>This report presents the results of a Power Curve Verification (PCV) site suitability assessment for a wind farm comprising <strong>${STATE.wtgs.length} target WTGs</strong>. ${STATE.extWtgs.length > 0 ? `${STATE.extWtgs.length} external WTGs from a neighboring wind farm were also considered for wake effects. ` : ''}The analysis follows IEC 61400-12-1:${iec} methodology to identify optimal met mast placement locations for PCV testing campaigns.</p>
@@ -1308,7 +1484,7 @@ ${best ? `<p>The recommended primary mast location is <strong>${best.name}</stro
   html += `</table>
 
 <h3>4. Proposed Met Mast Locations</h3>
-<p>The tool evaluated ${r.candidates.length} candidate positions at varying distances (${r.config.minDistanceD}D to 5D) upstream of qualifying first-row WTGs. After deduplication and scoring, ${r.proposedMasts.length} optimal mast locations are recommended.</p>
+<p>The tool evaluated ${r.candidates.length} candidate positions at varying distances (2D to 4D, ideal 2.5D per IEC 61400-12-1) upstream of qualifying first-row WTGs. After deduplication and IEC-compliant scoring, ${r.proposedMasts.length} optimal mast locations are recommended.</p>
 <table><tr><th>#</th><th>Mast ID</th><th>Coordinates</th><th>Target WTG</th><th>Distance</th><th>Valid Sectors</th><th>Terrain</th><th>Score</th></tr>`;
   r.proposedMasts.forEach((m, i) => { html += `<tr><td>${i + 1}</td><td>${m.name}</td><td>${m.lat.toFixed(1)}, ${m.lon.toFixed(1)}</td><td>${m.targetWTG.name}</td><td>${m.distanceD.toFixed(1)}D</td><td>${m.assessment.validCount}/${m.assessment.numSectors}</td><td>Class ${m.assessment.terrainClass}</td><td>${m.score}</td></tr>`; });
   html += `</table>
@@ -1330,7 +1506,19 @@ ${best ? `<p>The recommended primary mast location is <strong>${best.name}</stro
 <tr><td>Min Free Sector</td><td>${r.config.minFreeSector}°</td></tr>
 <tr><td>Terrain Has Real Data</td><td>${STATE.hasMapData ? 'Yes (.map file)' : 'No (synthetic terrain)'}</td></tr></table>
 
-<h3>7. Recommendations</h3>`;
+<h3>7. Terrain Assessment — Best Mast (${best ? best.name : 'N/A'})</h3>`;
+  if (best) {
+    const bmast = { id: best.name, name: best.name, lat: best.lat, lon: best.lon, height: best.height };
+    const bAssess = performTerrainAssessment(bmast, best.targetWTG, STATE.wtgs, STATE.extWtgs, STATE.terrainPoints, config);
+    html += `<p>Terrain assessment for the best-scoring mast location <strong>${best.name}</strong> targeting <strong>${best.targetWTG.name}</strong> at ${best.distanceD.toFixed(1)}D distance. Assessment radius: ${config.assessmentRadius}m.</p>`;
+    html += `<table><tr><th>Sector</th><th>Direction</th><th>Max Slope</th><th>Class</th><th>Freestream</th><th>Wake Sources</th><th>Valid</th></tr>`;
+    for (const s of bAssess.sectors) {
+      html += `<tr><td>${s.dir}°</td><td>${degToCompass(s.dir)}</td><td>${s.maxSlopeDeg.toFixed(2)}°</td><td>Class ${s.terrainClass}</td><td>${s.isFreestream ? 'YES' : 'NO'}</td><td>${s.wakeAffected.length > 0 ? s.wakeAffected.join(', ') : '—'}</td><td>${s.isValid ? 'YES' : 'NO'}</td></tr>`;
+    }
+    html += `</table><p><strong>Summary:</strong> ${bAssess.validCount}/${bAssess.numSectors} valid sectors (${bAssess.validPct.toFixed(0)}%), ${bAssess.freestreamCount} freestream sectors, Overall Terrain Class: ${bAssess.terrainClass}.</p>`;
+  }
+
+  html += `<h3>8. Recommendations</h3>`;
   for (const rec of r.recommendations) html += `<p>${rec}</p>`;
   document.getElementById('reportContent').innerHTML = html;
 }
