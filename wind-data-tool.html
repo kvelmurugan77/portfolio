@@ -691,6 +691,9 @@ function median(arr) { const v=arr.filter(x=>x!==null&&!isNaN(x)).sort((a,b)=>a-
 function skewness(arr) { const m=mean(arr); const s=std(arr); const n=arr.length; if(n<3||s===0)return NaN; return arr.reduce((a,x)=>a+((x-m)/s)**3,0)*(n/((n-1)*(n-2))); }
 function kurtosis(arr) { const m=mean(arr); const s=std(arr); const n=arr.length; if(n<4||s===0)return NaN; const k=arr.reduce((a,x)=>a+((x-m)/s)**4,0); return (k*(n*(n+1))/((n-1)*(n-2)*(n-3)))-(3*(n-1)**2/((n-2)*(n-3))); }
 function percentile(arr, p) { const v=arr.filter(x=>x!==null&&!isNaN(x)).sort((a,b)=>a-b); const i=(p/100)*(v.length-1); const lo=Math.floor(i), hi=Math.ceil(i); return lo===hi?v[lo]:v[lo]*(hi-i)+v[hi]*(i-lo); }
+// Safe array min/max that don't crash with large arrays (>100K elements)
+function safeMin(arr) { let m=Infinity; for(let i=0;i<arr.length;i++){const v=arr[i]; if(v!==null&&!isNaN(v)&&v<m)m=v;} return m===Infinity?NaN:m; }
+function safeMax(arr) { let m=-Infinity; for(let i=0;i<arr.length;i++){const v=arr[i]; if(v!==null&&!isNaN(v)&&v>m)m=v;} return m===-Infinity?NaN:m; }
 function correlation(x, y) {
   const pairs = [];
   for (let i=0;i<x.length;i++) { if(x[i]!==null&&!isNaN(x[i])&&y[i]!==null&&!isNaN(y[i])) pairs.push({x:x[i],y:y[i]}); }
@@ -711,6 +714,40 @@ function downloadFile(content, filename, mimeType) {
 function degToCompass(d) {
   const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   return dirs[Math.round(d/22.5)%16];
+}
+
+// Parse timestamp strings safely, handling DD-MM-YYYY and YYYY-MM-DD formats
+function parseTimestamp(ts) {
+  if (!ts || typeof ts !== 'string') return null;
+  ts = ts.trim();
+  // Try DD-MM-YYYY HH:MM(:SS) format
+  let m = ts.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (m) {
+    // Determine if DD-MM or MM-DD: if first number > 12, it must be day
+    const a = parseInt(m[1]), b = parseInt(m[2]);
+    let day, month;
+    if (a > 12) { day = a; month = b; }      // e.g., 15-05-2023 => day=15, month=5
+    else if (b > 12) { day = b; month = a; }   // e.g., 05-15-2023 => day=15, month=5
+    else { day = a; month = b; }               // ambiguous, assume DD-MM
+    return new Date(parseInt(m[3]), month-1, day, parseInt(m[4]), parseInt(m[5]), m[6]?parseInt(m[6]):0);
+  }
+  // Try YYYY-MM-DD HH:MM(:SS) format
+  m = ts.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (m) {
+    return new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]), parseInt(m[4]), parseInt(m[5]), m[6]?parseInt(m[6]):0);
+  }
+  // Fallback to native parser
+  const d = new Date(ts);
+  return isNaN(d) ? null : d;
+}
+
+function getTimestampHour(ts) {
+  const d = parseTimestamp(ts);
+  return d ? d.getHours() : -1;
+}
+function getTimestampMonth(ts) {
+  const d = parseTimestamp(ts);
+  return d ? d.getMonth() : -1;
 }
 
 // ── STEP 1: DATA IMPORT ──────────────────────────────────────────────────
@@ -750,31 +787,55 @@ function handleMainUpload(e) {
 function parseGenericCSV(text) {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) throw new Error('File has too few lines');
-  const delim = lines[0].includes('\t')?'\t':lines[0].includes(';')?';':',';
-  // Find header row (skip comment lines)
-  let headerIdx = 0;
-  for (let i=0;i<Math.min(20,lines.length);i++) {
-    if (/^[\d#"\s]/.test(lines[i].trim()) && !/^[a-zA-Z]/.test(lines[i].trim())) { headerIdx=i; break; }
-    if (i===Math.min(20,lines.length)-1) headerIdx=0;
+  // Smart header detection: skip metadata/empty lines, find the line with most delimiters
+  // This handles Windographer, NRG text exports, and other formats with comment headers
+  let headerIdx = -1;
+  let maxCols = 0;
+  let detectedDelim = ',';
+  const candidateDelims = ['\t', ',', ';'];
+  for (let i = 0; i < Math.min(40, lines.length); i++) {
+    const line = lines[i].trim();
+    if (!line) continue; // skip empty lines
+    // Try each delimiter and count columns
+    for (const d of candidateDelims) {
+      const colCount = line.split(d).length;
+      if (colCount > maxCols) {
+        maxCols = colCount;
+        headerIdx = i;
+        detectedDelim = d;
+      }
+    }
   }
+  if (headerIdx < 0 || maxCols < 3) {
+    // Fallback: try first line
+    headerIdx = 0;
+    detectedDelim = lines[0].includes('\t') ? '\t' : lines[0].includes(';') ? ';' : ',';
+  }
+  const delim = detectedDelim;
   const headers = lines[headerIdx].split(delim).map(h=>h.trim().replace(/^["']|["']$/g,''));
   const columns = headers.map(h=>({name:h, data:[], unit:'', mappedAs:'none'}));
   let count=0;
   for (let i=headerIdx+1;i<lines.length;i++) {
     const vals = lines[i].split(delim).map(v=>v.trim().replace(/^["']|["']$/g,''));
-    if (vals.length < headers.length || vals[0]==='') continue;
-    let hasNumeric = false;
-    for (let j=0;j<headers.length;j++) {
-      const num = parseFloat(vals[j]);
-      const isTimestamp = j===0 && isNaN(num) && vals[j].match(/\d{4}[-/]\d{2}[-/]\d{2}/);
-      columns[j].data.push(isTimestamp ? vals[j] : (isNaN(num) ? null : num));
-      if (!isNaN(num) && num!==null) hasNumeric=true;
+    if (vals.length < Math.min(headers.length, 3) || vals[0]==='') continue;
+    for (let j=0;j<Math.min(vals.length, headers.length);j++) {
+      const raw = vals[j] || '';
+      const num = parseFloat(raw);
+      // Detect timestamp: first column, non-numeric, contains date pattern
+      const isTimestamp = j===0 && isNaN(num) && (
+        raw.match(/\d{4}[-/]\d{2}[-/]\d{2}/) ||  // YYYY-MM-DD or YYYY/MM/DD
+        raw.match(/\d{2}[-/]\d{2}[-/]\d{4}/)     // DD-MM-YYYY or MM/DD/YYYY
+      );
+      columns[j].data.push(isTimestamp ? raw : (raw==='' || isNaN(num) ? null : num));
     }
     count++;
   }
-  // Try to detect timestamp column
+  // Try to detect timestamp column (support DD-MM-YYYY and YYYY-MM-DD)
   columns.forEach((c,i) => {
-    if (c.data[0] && typeof c.data[0]==='string' && c.data[0].match(/\d{4}[-/]\d{2}[-/]\d{2}/)) c.mappedAs='timestamp';
+    if (c.data[0] && typeof c.data[0]==='string' && (
+      c.data[0].match(/\d{4}[-/]\d{2}[-/]\d{2}/) ||
+      c.data[0].match(/\d{2}[-/]\d{2}[-/]\d{4}/)
+    )) c.mappedAs='timestamp';
   });
   return { columns };
 }
@@ -801,6 +862,11 @@ function autoMapColumns() {
   W.rawColumns.forEach(col => {
     const n = col.name.toLowerCase().replace(/[^a-z0-9]/g,'');
     if (col.mappedAs !== 'none') return;
+    // Skip SD (standard deviation) columns — check original name for _SD pattern
+    const origLower = col.name.toLowerCase();
+    if (/\b_sd\b/.test(origLower) || /\bstd\b/.test(origLower) || /_sd\s/.test(origLower) || origLower.endsWith('_sd')) {
+      col.mappedAs = 'none'; return;
+    }
     if (/timestamp|date|time|datetime/.test(n)) col.mappedAs = 'timestamp';
     else if (/ws|windspeed|wind_spd|spd|speed/.test(n) && !/dir|temp|pres|hum/.test(n)) col.mappedAs = 'speed';
     else if (/wd|winddir|wind_dir|direction|dir_/.test(n)) col.mappedAs = 'dir';
@@ -808,11 +874,19 @@ function autoMapColumns() {
     else if (/pres|pressure|baro/.test(n)) col.mappedAs = 'pressure';
     else if (/hum|rh|humidity|moist/.test(n)) col.mappedAs = 'humidity';
   });
-  // Extract height from name
+  // Extract height from column name (handles Windographer format like "WS_135_0_Mean /s]")
   W.rawColumns.forEach(col => {
     const m = col.name.match(/(\d+)\s*m/i);
     if (m) col.unit = m[1]+'m';
-    else if (col.mappedAs==='speed' || col.mappedAs==='dir') col.unit='?m';
+    else {
+      // Try to extract first number as height (for Windographer columns like WS_135_0_Mean)
+      const hm = col.name.match(/^(?:WS|WD|Hum|Temp|Press)[_ ](\d+)/i);
+      if (hm && (col.mappedAs==='speed' || col.mappedAs==='dir' || col.mappedAs==='temp' || col.mappedAs==='humidity' || col.mappedAs==='pressure')) {
+        col.unit = hm[1]+'m';
+      } else if (col.mappedAs==='speed' || col.mappedAs==='dir') {
+        col.unit='?m';
+      }
+    }
   });
 }
 
@@ -821,25 +895,49 @@ function showFilePreview() {
   document.getElementById('filePreviewSection').style.display='block';
   // File info
   const recCount = W.rawColumns[0].data.length;
-  const speedCols = getSpeedCols().map(c=>c.name).join(', ') || 'None detected';
-  const dirCols = getDirCols().map(c=>c.name).join(', ') || 'None detected';
+  const speedCols = getSpeedCols().map(c=>c.name+' ('+c.unit+')').join(', ') || 'None detected';
+  const dirCols = getDirCols().map(c=>c.name+' ('+c.unit+')').join(', ') || 'None detected';
+  const tempCols = getMappedColumns('temp').map(c=>c.name).join(', ');
+  const presCols = getMappedColumns('pressure').map(c=>c.name).join(', ');
+  const humCols = getMappedColumns('humidity').map(c=>c.name).join(', ');
+  const tsCol = getFirstMapped('timestamp');
   document.getElementById('fileInfoGrid').innerHTML = `
     <div class="metric-item"><span class="metric-val" style="font-size:1.2rem">${recCount.toLocaleString()}</span><span class="metric-label">Records</span></div>
-    <div class="metric-item"><span class="metric-val" style="font-size:1.2rem">${W.rawColumns.length}</span><span class="metric-label">Columns</span></div>
+    <div class="metric-item"><span class="metric-val" style="font-size:1.2rem">${W.rawColumns.length}</span><span class="metric-label">Total Columns</span></div>
     <div class="metric-item"><span class="metric-val" style="font-size:.9rem">${W.detectedFormat}</span><span class="metric-label">Format</span></div>
     <div class="metric-item"><span class="metric-val" style="font-size:.9rem">${(W.fileSize/1024).toFixed(1)} KB</span><span class="metric-label">Size</span></div>
   `;
+  // Show detected mappings summary
+  const mapInfo = document.getElementById('fileFormatInfo');
+  mapInfo.innerHTML = `<div class="alert alert-success" style="margin:0"><strong>Auto-detected mappings:</strong><br>
+    Wind Speed (${getSpeedCols().length} heights): ${speedCols}<br>
+    Wind Direction (${getDirCols().length}): ${dirCols}<br>
+    ${tempCols?'Temperature: '+tempCols+'<br>':''}
+    ${presCols?'Pressure: '+presCols+'<br>':''}
+    ${humCols?'Humidity: '+humCols+'<br>':''}
+    ${tsCol?'Timestamp: '+tsCol.name:''}
+  </div>`;
   // Column mapping
   const mappingPanel = document.getElementById('columnMappingPanel');
   const types = [{key:'timestamp',label:'Timestamp'},{key:'speed',label:'Wind Speed'},{key:'dir',label:'Wind Direction'},{key:'temp',label:'Temperature'},{key:'pressure',label:'Pressure'},{key:'humidity',label:'Humidity'},{key:'none',label:'(Unused)'}];
   mappingPanel.innerHTML = types.map(t => {
+    const isMulti = (t.key==='speed'||t.key==='dir'||t.key==='none');
     const current = W.rawColumns.filter(c=>c.mappedAs===t.key);
+    if (isMulti) {
+      // Use checkboxes for multi-select types
+      return `<div class="column-map-row" style="grid-template-columns:200px 1fr 120px"><span class="column-map-label">${t.label}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem;max-height:120px;overflow-y:auto">${
+          W.rawColumns.map((c,i)=>`<label class="form-check" style="font-size:.62rem"><input type="checkbox" data-type="${t.key}" data-col="${i}" ${current.includes(c)?'checked':''}>${c.name}</label>`).join('')
+        }</div>
+        <span style="font-size:.55rem;color:rgba(255,255,255,.3)">multi</span>
+      </div>`;
+    }
     return `<div class="column-map-row"><span class="column-map-label">${t.label}</span>
       <select class="form-select" data-type="${t.key}">
         <option value="">-- none --</option>
         ${W.rawColumns.map((c,i)=>`<option value="${i}" ${current.includes(c)?'selected':''}>${c.name}</option>`).join('')}
       </select>
-      <span style="font-size:.65rem;color:rgba(255,255,255,.35)">${t.key==='speed'?'(multi)':''}</span>
+      <span style="font-size:.65rem;color:rgba(255,255,255,.35)"></span>
     </div>`;
   }).join('');
   // Data preview table
@@ -865,17 +963,33 @@ function renderDataPreview() {
 }
 
 function applyColumnMapping() {
+  // First reset all mappings to none (except keep timestamp)
+  W.rawColumns.forEach(c => { if (c.mappedAs !== 'timestamp') c.mappedAs = 'none'; });
+  // Apply single-select dropdowns (timestamp, temp, pressure, humidity)
   document.querySelectorAll('#columnMappingPanel select[data-type]').forEach(sel => {
     const type = sel.dataset.type;
     const colIdx = sel.value;
-    // Remove current mappings for this type (except timestamp which is single)
-    if (type !== 'timestamp') {
-      W.rawColumns.forEach(c => { if (c.mappedAs===type) c.mappedAs='none'; });
-    } else {
-      W.rawColumns.forEach(c => { if (c.mappedAs==='timestamp') c.mappedAs='none'; });
-    }
     if (colIdx !== '') {
       W.rawColumns[parseInt(colIdx)].mappedAs = type;
+    }
+  });
+  // Apply multi-select checkboxes (speed, dir, none)
+  document.querySelectorAll('#columnMappingPanel input[type=checkbox][data-type]').forEach(cb => {
+    if (cb.checked) {
+      W.rawColumns[parseInt(cb.dataset.col)].mappedAs = cb.dataset.type;
+    }
+  });
+  // Re-extract heights
+  W.rawColumns.forEach(col => {
+    const m = col.name.match(/(\d+)\s*m/i);
+    if (m) col.unit = m[1]+'m';
+    else {
+      const hm = col.name.match(/^(?:WS|WD|Hum|Temp|Press)[_ ](\d+)/i);
+      if (hm && (col.mappedAs==='speed' || col.mappedAs==='dir' || col.mappedAs==='temp' || col.mappedAs==='humidity' || col.mappedAs==='pressure')) {
+        col.unit = hm[1]+'m';
+      } else if (col.mappedAs==='speed' || col.mappedAs==='dir') {
+        col.unit='?m';
+      }
     }
   });
   renderDataPreview();
@@ -965,8 +1079,8 @@ function runQualityAssessment() {
     const nulls = N - valid;
     const recoveryRate = N > 0 ? (valid/N*100) : 0;
     const vals = col.data.filter(v=>v!==null&&!isNaN(v));
-    const minVal = vals.length ? Math.min(...vals) : NaN;
-    const maxVal = vals.length ? Math.max(...vals) : NaN;
+    const minVal = vals.length ? safeMin(vals) : NaN;
+    const maxVal = vals.length ? safeMax(vals) : NaN;
     // Range flags
     let rangeFlags = 0;
     if (col.mappedAs==='speed') { col.data.forEach(v=>{ if(v!==null&&!isNaN(v)&&(v<0||v>50)) rangeFlags++; }); }
@@ -1111,12 +1225,12 @@ function renderGapHistogram() {
     ctx.fillText('No gaps detected in selected column',w/2,h/2); return;
   }
   // Histogram
-  const maxGap = Math.max(...gaps);
+  const maxGap = safeMax(gaps);
   const bins = Math.min(20, maxGap);
   const binSize = Math.ceil(maxGap/bins) || 1;
   const hist = new Array(bins).fill(0);
   gaps.forEach(g => { const b=Math.min(Math.floor(g/binSize),bins-1); hist[b]++; });
-  const maxH = Math.max(...hist);
+  const maxH = safeMax(hist);
   const margin={t:20,r:20,b:50,l:50};
   const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
   const barW = pw/bins-2;
@@ -1174,6 +1288,7 @@ function renderSpikePlot() {
 }
 
 // ── STEP 3: DATA CLEANING ────────────────────────────────────────────────
+let _cleaningInit = false;
 function initCleaningStep() {
   const speedCols = getSpeedCols();
   const allNumeric = W.rawColumns.filter(c=>c.mappedAs!=='timestamp'&&c.mappedAs!=='none');
@@ -1182,13 +1297,17 @@ function initCleaningStep() {
     sel.innerHTML = allNumeric.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
   });
   document.getElementById('ratioRefGroup').style.display='none';
-  document.getElementById('gapMethod').addEventListener('change', function() {
-    document.getElementById('ratioRefGroup').style.display = this.value==='ratio'?'block':'none';
-    if(this.value==='ratio') {
-      const gc=document.getElementById('gapCol').value;
-      document.getElementById('ratioRefCol').innerHTML = allNumeric.filter(c=>c.name!==gc).map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
-    }
-  });
+  if (!_cleaningInit) {
+    document.getElementById('gapMethod').addEventListener('change', function() {
+      document.getElementById('ratioRefGroup').style.display = this.value==='ratio'?'block':'none';
+      if(this.value==='ratio') {
+        const gc=document.getElementById('gapCol').value;
+        const allNum = W.rawColumns.filter(c=>c.mappedAs!=='timestamp'&&c.mappedAs!=='none');
+        document.getElementById('ratioRefCol').innerHTML = allNum.filter(c=>c.name!==gc).map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+      }
+    });
+    _cleaningInit = true;
+  }
   updateCleaningStats();
 }
 
@@ -1419,11 +1538,11 @@ function renderWindRose() {
   }
   // Direction labels & sector lines
   const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-  for(let i=0;i<nSectors;i++) {
+  for(let i=0;i<nSec;i++) {
     const angle = (i*wr.sectorWidth-90)*Math.PI/180;
     const lx=cx+Math.cos(angle)*(maxR+25), ly=cy+Math.sin(angle)*(maxR+25);
-    if(nSectors<=16) { ctx.fillStyle='rgba(255,255,255,.5)'; ctx.font='11px Open Sans'; ctx.fillText(dirs[i%16],lx,ly+4); }
-    else if(i%(nSectors/12|0)===0||nSectors===36&&i%3===0) {
+    if(nSec<=16) { ctx.fillStyle='rgba(255,255,255,.5)'; ctx.font='11px Open Sans'; ctx.fillText(dirs[i%16],lx,ly+4); }
+    else if(i%(nSec/12|0)===0||nSec===36&&i%3===0) {
       ctx.fillStyle='rgba(255,255,255,.5)'; ctx.font='11px Open Sans'; ctx.fillText(dirs[i%16],lx,ly+4);
     }
     // Sector line
@@ -1431,7 +1550,7 @@ function renderWindRose() {
     ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(angle)*maxR,cy+Math.sin(angle)*maxR); ctx.stroke();
   }
   // Speed bin wedges
-  for(let i=0;i<nSectors;i++) {
+  for(let i=0;i<nSec;i++) {
     const s=wr.sectors[i];
     if(s.count===0) continue;
     const baseAngle = (s.start-90)*Math.PI/180;
@@ -1485,7 +1604,7 @@ function renderFreqDist() {
   const binWidth=1, maxBin=35;
   const hist=new Array(maxBin).fill(0);
   vals.forEach(v=>{const b=Math.floor(v);if(b>=0&&b<maxBin)hist[b]++;});
-  const maxCount=Math.max(...hist);
+  const maxCount=safeMax(hist);
   const margin={t:20,r:20,b:45,l:55};
   const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
   // Grid
@@ -1543,43 +1662,69 @@ function renderFreqDist() {
 
 // ── Weibull Analysis ─────────────────────────────────────────────────────
 function weibullFit(vals) {
-  // MLE Weibull fitting using Newton-Raphson
-  const v = vals.filter(x=>x>0); const n=v.length;
+  // MLE Weibull fitting using damped Newton-Raphson
+  let v = vals.filter(x=>x>0); const nRaw=v.length;
+  if(nRaw<10) return null;
+  // Pre-filter extreme outliers (>99.5th percentile or >3σ) to prevent divergence
+  const mv = mean(v), sv = std(v);
+  const p995 = percentile(v, 99.5);
+  v = v.filter(x => x <= Math.max(p995, mv + 4*sv) && x >= 0.01);
+  const n=v.length;
   if(n<10) return null;
   const lnV = v.map(x=>Math.log(x));
-  const m = mean(lnV), s2 = lnV.reduce((a,x)=>a+(x-m)**2,0)/n;
+  const meanLn = mean(lnV);
   // Initial estimate: method of moments
-  const mv = mean(v), sv = std(v);
-  let k = sv>0 ? Math.pow(sv/mv, -1.086) : 2;
-  let a = mv / Math.pow(Math.gamma(1+1/k), 1);
-  // Newton-Raphson for k
-  for(let iter=0;iter<50;iter++) {
-    const sum1 = lnV.reduce((s,x)=>s+Math.pow(x/a,k)*Math.log(x/a),0);
-    const sum2 = lnV.reduce((s,x)=>s+Math.pow(x/a,k),0);
-    const g = 1/k + (m - sum1/sum2);
-    const gk = -1/(k*k) + (sum1/sum2)*((1/k)+(1/Math.pow(sum2,2))*sum2*(k)*0); // simplified
-    const dg = -1/(k*k);
-    let dSum=0;
-    for(const x of v) { const u=x/a; if(u>0&&u<1e10) dSum+=Math.pow(u,k)*Math.pow(Math.log(u),2); }
-    const dgk = 1/(k*k) + dSum/sum2 - sum1*sum1/(sum2*sum2);
-    const dk = -g/dgk;
+  const mvClean = mean(v), svClean = std(v);
+  let k = svClean>0 ? Math.pow(svClean/mvClean, -1.086) : 2;
+  k = Math.max(0.5, Math.min(k, 8));
+  // Damped Newton-Raphson for k
+  for(let iter=0;iter<200;iter++) {
+    let sum1=0, sum2=0, sum3=0;
+    for(const x of v) {
+      const logX = Math.log(x);
+      // Use log-space to prevent overflow: x^k = exp(k * ln(x))
+      const lkx = k * logX;
+      if(lkx > 500) continue; // skip values that would overflow
+      const uk = Math.exp(lkx);
+      sum1 += uk;
+      sum2 += uk * logX;
+      sum3 += uk * logX * logX;
+    }
+    if(!isFinite(sum1) || sum1 <= 0) break;
+    // g(k) = 1/k + mean(ln x) - sum2/sum1
+    const g = 1/k + meanLn - sum2/sum1;
+    // dg/dk = -1/k^2 + (sum3*sum1 - sum2^2) / sum1^2
+    const dg = -1/(k*k) + (sum3*sum1 - sum2*sum2)/(sum1*sum1);
+    if(!isFinite(dg) || Math.abs(dg) < 1e-15) break;
+    let dk = -g/dg;
+    // Damping: limit step size to prevent oscillation
+    const maxStep = 0.3;
+    dk = Math.max(-maxStep, Math.min(maxStep, dk));
     k += dk;
     if(Math.abs(dk)<1e-8) break;
-    if(k<=0.1) k=0.1; if(k>20) k=20;
+    if(k<=0.3) k=0.3; if(k>12) k=12;
   }
-  a = mv / Math.pow(Math.gamma(1+1/k), 1);
+  // Calculate a from final k
+  let sumXk = 0;
+  for(const x of v) {
+    const lkx = k * Math.log(x);
+    if(lkx < 500) sumXk += Math.exp(lkx);
+  }
+  const a = sumXk > 0 ? Math.pow(sumXk/n, 1/k) : mv;
+  // Sanity check
+  if(a <= 0 || !isFinite(a) || k <= 0) return { A: Math.round(mv*100)/100, K: 2, R2: 0 };
   // R² goodness of fit
-  const bins=20, maxV=Math.ceil(Math.max(...v)), binW=maxV/bins;
+  const bins=20, maxV=Math.ceil(safeMax(v)), binW=Math.max(maxV/bins, 0.5);
   const hist=new Array(bins).fill(0);
   v.forEach(x=>{const b=Math.min(Math.floor(x/binW),bins-1);hist[b]++;});
   let ssTot=0,ssRes=0,meanH=mean(hist);
   for(let i=0;i<bins;i++) {
     const mid=(i+0.5)*binW;
     const expected=n*binW*(k/a)*Math.pow(mid/a,k-1)*Math.exp(-Math.pow(mid/a,k));
-    ssTot+=(hist[i]-meanH)**2; ssRes+=(hist[i]-expected)**2;
+    if(isFinite(expected)) { ssTot+=(hist[i]-meanH)**2; ssRes+=(hist[i]-expected)**2; }
   }
   const r2 = ssTot>0 ? 1-ssRes/ssTot : 0;
-  return { A:Math.round(a*100)/100, K:Math.round(k*100)/100, R2:Math.round(r2*1000)/1000 };
+  return { A:Math.round(a*100)/100, K:Math.round(k*100)/100, R2:Math.round(Math.max(0,r2)*1000)/1000 };
 }
 
 function renderWeibull() {
@@ -1599,7 +1744,7 @@ function renderWeibull() {
   const binWidth=1, maxBin=30;
   const hist=new Array(maxBin).fill(0);
   vals.forEach(v=>{const b=Math.floor(v);if(b>=0&&b<maxBin)hist[b]++;});
-  const maxCount=Math.max(...hist);
+  const maxCount=safeMax(hist);
   const margin={t:20,r:20,b:45,l:55};
   const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
   // Normalize to probability density
@@ -1640,7 +1785,7 @@ function renderWeibull() {
     <tr><td>Scale A</td><td><strong>${wb.A} m/s</strong></td></tr>
     <tr><td>Shape K</td><td><strong>${wb.K}</strong></td></tr>
     <tr><td>R²</td><td><strong>${wb.R2.toFixed(4)}</strong></td></tr>
-    <tr><td>Energy Pattern Factor</td><td><strong>${(Math.pow(Math.gamma(1+3/wb.K)/Math.gamma(1+1/wb.K),wb.K)?Math.pow(Math.gamma(1+3/wb.K)/Math.pow(Math.gamma(1+1/wb.K),3):0).toFixed(3)}</strong></td></tr>
+    <tr><td>Energy Pattern Factor</td><td><strong>${(Math.gamma(1+3/wb.K)/Math.pow(Math.gamma(1+1/wb.K),3)).toFixed(3)}</strong></td></tr>
   </tbody></table>`;
 }
 
@@ -1664,7 +1809,7 @@ function renderTurbulence() {
     if(bVals.length<3) continue;
     bins.push({center:b+binWidth/2, mean:mean(bVals), std:std(bVals), n:bVals.length, ti:mean(bVals)>0?std(bVals)/mean(bVals):0});
   }
-  const maxTI=Math.max(...bins.map(b=>b.ti),0.3);
+  const maxTI=Math.max(safeMax(bins.map(b=>b.ti)),0.3);
   const margin={t:20,r:20,b:45,l:55};
   const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
   // Grid
@@ -1722,7 +1867,7 @@ function renderTIDirPolar() {
   }
   sectors.forEach(s=>{if(s.spd.length>2){s.ti=std(s.spd)/mean(s.spd);s.count=s.spd.length;}});
   const cx=w/2,cy=h/2,maxR=Math.min(w,h)/2-50;
-  const maxTI=Math.max(...sectors.map(s=>s.ti),0.2);
+  const maxTI=Math.max(safeMax(sectors.map(s=>s.ti)),0.2);
   // Circles
   for(let i=1;i<=4;i++){
     ctx.strokeStyle='rgba(255,255,255,.08)';ctx.beginPath();ctx.arc(cx,cy,maxR/4*i,0,Math.PI*2);ctx.stroke();
@@ -1839,7 +1984,7 @@ function renderShearDiurnal() {
     const alpha = Math.log(v1/v0)/Math.log(pairs[1].h/pairs[0].h);
     const ts = timestamps[i];
     let hour = 0;
-    if(typeof ts==='string'){ const d=new Date(ts); if(!isNaN(d))hour=d.getHours(); }
+    if(typeof ts==='string'){ const h=getTimestampHour(ts); if(h>=0)hour=h; }
     else hour=i%144/6|0;
     hourShear[hour]+=alpha; hourCount[hour]++;
   }
@@ -1882,7 +2027,7 @@ function renderDiurnal() {
   for(let i=0;i<col.data.length;i++){
     const v=col.data[i]; if(v===null||isNaN(v)) continue;
     let hour=0;
-    if(timestamps[i]&&typeof timestamps[i]==='string'){const d=new Date(timestamps[i]);if(!isNaN(d))hour=d.getHours();}
+    if(timestamps[i]&&typeof timestamps[i]==='string'){const h=getTimestampHour(timestamps[i]);if(h>=0)hour=h;}
     else hour=(i%144)/6|0;
     hourMeans[hour]+=v; hourCounts[hour]++;
   }
@@ -1932,7 +2077,7 @@ function renderMonthly() {
     for(let i=0;i<col.data.length;i++){
       const v=col.data[i]; if(v===null||isNaN(v)) continue;
       let month=0;
-      if(timestamps[i]&&typeof timestamps[i]==='string'){const d=new Date(timestamps[i]);if(!isNaN(d))month=d.getMonth();}
+      if(timestamps[i]&&typeof timestamps[i]==='string'){const m=getTimestampMonth(timestamps[i]);if(m>=0)month=m;}
       else month=Math.floor((i/144)%12);
       months[month]+=v; counts[month]++;
     }
@@ -1940,7 +2085,7 @@ function renderMonthly() {
     const mv=Math.max(...months); if(mv>maxV)maxV=mv;
     return {name:col.name,months};
   });
-  maxV*=1.15||10;
+  maxV = (maxV*1.15)||10;
   ctx.strokeStyle='rgba(255,255,255,.08)';
   for(let i=0;i<=5;i++){
     const y=margin.t+ph*(1-i/5);
@@ -1980,11 +2125,11 @@ function renderTempAnalysis() {
   if(tempCol) {
     const vals = tempCol.data.filter(v=>v!==null&&!isNaN(v));
     if(vals.length>0) {
-      const minT=Math.floor(Math.min(...vals)), maxT=Math.ceil(Math.max(...vals));
+      const minT=Math.floor(safeMin(vals)), maxT=Math.ceil(safeMax(vals));
       const bins=Math.min(40,maxT-minT||20), binW=(maxT-minT)/bins;
       const hist=new Array(bins).fill(0);
       vals.forEach(v=>{const b=Math.min(Math.floor((v-minT)/binW),bins-1);if(b>=0)hist[b]++;});
-      const maxC=Math.max(...hist);
+      const maxC=safeMax(hist);
       const mg={t:15,r:15,b:35,l:45}, pw=tw-mg.l-mg.r, ph=th-mg.t-mg.b;
       tCtx.fillStyle='rgba(240,165,0,.4)';
       const bw=pw/bins-1;
@@ -2044,7 +2189,7 @@ function renderStatsTable() {
     const vals=c.data.filter(v=>v!==null&&!isNaN(v));
     html+=`<tr><td>${c.name}</td><td><span class="badge badge-info">${c.mappedAs}</span></td>
       <td>${vals.length.toLocaleString()}</td><td>${mean(vals).toFixed(2)}</td><td>${std(vals).toFixed(2)}</td>
-      <td>${vals.length?Math.min(...vals).toFixed(2):'-'}</td><td>${vals.length?Math.max(...vals).toFixed(2):'-'}</td>
+      <td>${vals.length?safeMin(vals).toFixed(2):'-'}</td><td>${vals.length?safeMax(vals).toFixed(2):'-'}</td>
       <td>${median(vals).toFixed(2)}</td><td>${skewness(vals).toFixed(3)}</td><td>${kurtosis(vals).toFixed(3)}</td></tr>`;
   });
   html+='</tbody></table>';
@@ -2198,8 +2343,8 @@ function renderMCPScatter() {
   const res = W.mcpResults; if(!res) return;
   const pairs = res.pairs;
   const allR = pairs.map(p=>p.r), allT = pairs.map(p=>p.t);
-  const maxR = Math.ceil(Math.max(...allR)*1.1/5)*5;
-  const maxT = Math.ceil(Math.max(...allT)*1.1/5)*5;
+  const maxR = Math.ceil(safeMax(allR)*1.1/5)*5;
+  const maxT = Math.ceil(safeMax(allT)*1.1/5)*5;
   const maxV = Math.max(maxR, maxT);
   const margin={t:20,r:20,b:45,l:55};
   const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
@@ -2256,7 +2401,7 @@ function renderMCPFreq() {
   // Normalize to frequency
   const obsN=observed.length, corN=corrected.length;
   for(let i=0;i<maxBin;i++){obsHist[i]=obsN>0?obsHist[i]/obsN*100:0;corHist[i]=corN>0?corHist[i]/corN*100:0;}
-  const maxF=Math.max(...obsHist,...corHist)*1.1||1;
+  const maxF=Math.max(safeMax(obsHist),safeMax(corHist))*1.1||1;
   const margin={t:20,r:20,b:40,l:50};
   const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
   const barW=pw/maxBin-2;
@@ -2339,7 +2484,7 @@ function generateReport() {
   const vals = sc.data.filter(v=>v!==null&&!isNaN(v));
   const wb = W.weibullCache[sc.name] || weibullFit(vals);
   let html = '<h3>Executive Summary</h3>';
-  html += '<p>This report presents the wind data analysis for the dataset <strong>'+W.fileName+'</strong> containing '+W.rawColumns[0].data.length.toLocaleString().' records. ';
+  html += '<p>This report presents the wind data analysis for the dataset <strong>'+W.fileName+'</strong> containing '+W.rawColumns[0].data.length.toLocaleString()+' records. ';
   html += 'The observed mean wind speed at '+sc.name+' is <strong>'+mean(vals).toFixed(1)+' m/s</strong> with a Weibull A = '+(wb?wb.A:'N/A')+' m/s and K = '+(wb?wb.K:'N/A')+'. ';
   if(W.mcpResults) { const best=W.mcpResults.methods.reduce((a,b)=>a.mae<b.mae?a:b); html+='After long-term correction, the adjusted mean wind speed is <strong>'+best.correctedMean.toFixed(1)+' m/s</strong> ('+best.name+').'; }
   html += '</p>';
@@ -2355,7 +2500,7 @@ function generateReport() {
   html += '<table><tr><th>Column</th><th>Mean</th><th>Std</th><th>Min</th><th>Max</th></tr>';
   W.rawColumns.filter(c=>c.mappedAs!=='none'&&c.mappedAs!=='timestamp').forEach(c=>{
     const cv=c.data.filter(v=>v!==null&&!isNaN(v));
-    html += '<tr><td>'+c.name+'</td><td>'+mean(cv).toFixed(2)+'</td><td>'+std(cv).toFixed(2)+'</td><td>'+(cv.length?Math.min(...cv).toFixed(2):'-')+'</td><td>'+(cv.length?Math.max(...cv).toFixed(2):'-')+'</td></tr>';
+    html += '<tr><td>'+c.name+'</td><td>'+mean(cv).toFixed(2)+'</td><td>'+std(cv).toFixed(2)+'</td><td>'+(cv.length?safeMin(cv).toFixed(2):'-')+'</td><td>'+(cv.length?safeMax(cv).toFixed(2):'-')+'</td></tr>';
   });
   html += '</table>';
   if(wb) {
@@ -2543,12 +2688,26 @@ function calcEnergyYield() {
   W.energyResults = {grossMWh, netEnergy, capacityFactor, p50, p75, p90, ratedPower};
 }
 
+// ── MATH GAMMA POLYFILL ─────────────────────────────────────────────────
+if (typeof Math.gamma === 'undefined') {
+  Math.gamma = function(z) {
+    if (z < 0.5) return Math.PI / (Math.sin(Math.PI * z) * Math.gamma(1 - z));
+    z -= 1;
+    const g = 7;
+    const c = [0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+    let x = c[0];
+    for (let i = 1; i < g + 2; i++) x += c[i] / (z + i);
+    const t = z + g + 0.5;
+    return Math.sqrt(2 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * x;
+  };
+}
+
 // ── INIT ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Initialize gap method listener
-  const gapMethodEl = document.getElementById('gapMethod');
-  if(gapMethodEl) gapMethodEl.addEventListener('change', function() {
-    document.getElementById('ratioRefGroup').style.display = this.value==='ratio'?'block':'none';
+  // Prevent default drag behavior on upload zones
+  document.querySelectorAll('.upload-zone').forEach(zone => {
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('loaded'); });
+    zone.addEventListener('dragleave', () => { zone.classList.remove('loaded'); });
   });
 });
 
