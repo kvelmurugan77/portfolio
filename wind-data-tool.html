@@ -5347,7 +5347,7 @@ function runRiskChecklist() {
   if (timestamps.length > 1 && timestamps[0] && timestamps[timestamps.length - 1]) {
     const d1 = parseTimestamp(timestamps[0]), d2 = parseTimestamp(timestamps[timestamps.length - 1]);
     if (d1 && d2) durationMonths = (d2 - d1) / (1000 * 60 * 60 * 24 * 30.44);
-  } else { durationMonths = N / 4380; // estimate from 10-min records }
+  } else { durationMonths = N / 4380; } // estimate from 10-min records
   checks.push({ item: 'Data Duration', value: durationMonths.toFixed(1) + ' months', risk: durationMonths < 6 ? 'HIGH' : durationMonths < 12 ? 'MEDIUM' : 'LOW', rec: durationMonths < 6 ? 'Very short. Long-term correction (MCP) essential.' : durationMonths < 12 ? 'Seasonal bias possible. MCP recommended.' : 'Good coverage for resource assessment.' });
   // 3. Measurement Height
   let minH = 999, heightCount = 0;
