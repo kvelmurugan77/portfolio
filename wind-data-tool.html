@@ -283,7 +283,10 @@ table.data-table td.cleaned{color:var(--mint)}
       <div class="coord-row">
         <div class="form-group"><label class="form-label">Latitude</label><input class="form-input" type="number" id="siteLat" step="0.0001" placeholder="e.g. 13.0827"></div>
         <div class="form-group"><label class="form-label">Longitude</label><input class="form-input" type="number" id="siteLon" step="0.0001" placeholder="e.g. 80.2707"></div>
-        <div class="form-group"><button class="btn btn-sm btn-secondary" onclick="saveCoords()" style="margin-top:auto">Save</button></div>
+        <div class="form-group" style="display:flex;gap:.4rem;align-items:end">
+          <button class="btn btn-sm btn-primary" onclick="captureGeolocation()" title="Use browser GPS location" style="margin:0;white-space:nowrap">GPS</button>
+          <button class="btn btn-sm btn-secondary" onclick="saveCoords()" style="margin:0">Save</button>
+        </div>
       </div>
       <div id="coordStatus"></div>
     </div>
@@ -389,6 +392,7 @@ table.data-table td.cleaned{color:var(--mint)}
             <div class="form-group"><label class="form-label">Frozen Sensor: WD StdDev Min (deg)</label><input class="form-input thresh-input" type="number" id="spc_frozenWD" value="1" step="0.5" style="width:100%"></div>
             <div class="form-group"><label class="form-label">Tower Shadow Sectors (deg)</label><input class="form-input thresh-input" type="number" id="spc_towerShadow" value="30" step="5" style="width:100%"><span style="font-size:.5rem;color:rgba(255,255,255,.3)">half-width each side of tower boom</span></div>
             <div class="form-group"><label class="form-label">Constancy: Max identical WD runs</label><input class="form-input thresh-input" type="number" id="spc_constWD" value="6" step="1" style="width:100%"><span style="font-size:.5rem;color:rgba(255,255,255,.3)">consecutive records</span></div>
+            <div class="form-group"><label class="form-label">Persistence: Stuck sensor threshold</label><input class="form-input thresh-input" type="number" id="spc_persistRuns" value="12" step="1" style="width:100%"><span style="font-size:.5rem;color:rgba(255,255,255,.3)">consecutive identical values</span></div>
           </div>
         </div>
       </div>
@@ -3542,6 +3546,31 @@ function saveCoords() {
   }
   W.siteCoords = { lat, lon };
   document.getElementById('coordStatus').innerHTML = '<div class="alert alert-success" style="margin:.3rem 0">Coordinates saved: '+lat.toFixed(4)+', '+lon.toFixed(4)+'</div>';
+  updatePipelineStatus();
+}
+
+function captureGeolocation() {
+  if (!navigator.geolocation) {
+    document.getElementById('coordStatus').innerHTML = '<div class="alert alert-error" style="margin:.3rem 0">Geolocation not supported by this browser. Enter coordinates manually.</div>';
+    return;
+  }
+  document.getElementById('coordStatus').innerHTML = '<div class="alert alert-info" style="margin:.3rem 0">Requesting GPS location... Please allow location access when prompted.</div>';
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      document.getElementById('siteLat').value = lat.toFixed(4);
+      document.getElementById('siteLon').value = lon.toFixed(4);
+      W.siteCoords = { lat, lon };
+      document.getElementById('coordStatus').innerHTML = '<div class="alert alert-success" style="margin:.3rem 0">GPS location captured: '+lat.toFixed(4)+', '+lon.toFixed(4)+' (accuracy: '+Math.round(pos.coords.accuracy)+'m)</div>';
+      updatePipelineStatus();
+    },
+    function(err) {
+      const msgs = { 1: 'Permission denied. Enter coordinates manually.', 2: 'Position unavailable. Enter coordinates manually.', 3: 'Request timed out. Try again or enter manually.' };
+      document.getElementById('coordStatus').innerHTML = '<div class="alert alert-error" style="margin:.3rem 0">Geolocation failed: '+(msgs[err.code]||'Unknown error')+'</div>';
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
 }
 
 // ── ERA5 AUTO-DOWNLOAD (via Open-Meteo Historical API) ──────────────────
@@ -4175,6 +4204,40 @@ function runNRELAutoClean() {
   });
   if (frozenCount > 0) results.tests.push({ name: 'Special: Frozen Wind Vane', count: frozenCount, type: 'Special' });
 
+  // Persistence test: consecutive identical values for all numeric sensors (NREL 22223)
+  let persistCount = 0;
+  const persistThreshold = parseInt(document.getElementById('spc_persistRuns').value) || 12;
+  const allNumericClean = W.rawColumns.filter(c => c.mappedAs !== 'timestamp' && c.mappedAs !== 'none' && c.mappedAs !== 'dir');
+  allNumericClean.forEach(col => {
+    let runLen = 0, lastVal = null;
+    for (let i = 0; i < N; i++) {
+      const v = col.data[i];
+      if (v === null || isNaN(v)) { runLen = 0; lastVal = null; continue; }
+      if (lastVal !== null && Math.abs(v - lastVal) < 0.0001) {
+        runLen++;
+        if (runLen >= persistThreshold && W.dataFlags[i] === 0) {
+          col.data[i] = null; W.dataFlags[i] = 8; persistCount++;
+        }
+      } else { runLen = 1; }
+      lastVal = v;
+    }
+  });
+  dirCols.forEach(col => {
+    let runLen = 0, lastVal = null;
+    for (let i = 0; i < N; i++) {
+      const v = col.data[i];
+      if (v === null || isNaN(v)) { runLen = 0; lastVal = null; continue; }
+      if (lastVal !== null && Math.abs(v - lastVal) < 0.5) {
+        runLen++;
+        if (runLen >= persistThreshold && W.dataFlags[i] === 0) {
+          col.data[i] = null; W.dataFlags[i] = 7; persistCount++;
+        }
+      } else { runLen = 1; }
+      lastVal = v;
+    }
+  });
+  if (persistCount > 0) results.tests.push({ name: 'Special: Persistence (stuck sensor)', count: persistCount, type: 'Special' });
+
   // Tower shadow detection: reduced wind speed in specific direction sectors
   // If we have direction data at the same height as speed data, flag points in the tower shadow zone
   let towerShadowCount = 0;
@@ -4525,102 +4588,115 @@ initCleaningStep = function() {
   updatePipelineStatus();
 };
 
-// ── ENHANCED TURBULENCE WITH STD COLUMNS ────────────────────────────────
+// ── ENHANCED TURBULENCE WITH STD COLUMNS (signal-toggle-aware) ──────────
 const _origRenderTurbulence = renderTurbulence;
 renderTurbulence = function() {
   const canvas = document.getElementById('tiCanvas');
   const ctx = canvas.getContext('2d');
   const w = canvas.width, h = canvas.height;
   ctx.clearRect(0, 0, w, h);
-  const scName = document.getElementById('tiHeight') ? document.getElementById('tiHeight').value : null;
-  if (!scName) return;
-  const col = findColumn(scName); if (!col) return;
-  // Try to find corresponding std column
-  const baseName = col.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i, '');
-  const stdCol = W.rawColumns.find(c => c.mappedAs === 'speed_std' && c.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i, '') === baseName);
-  const timestamps = getTimestamps();
-  const dc = getDirCols()[0];
-  const N = col.data.length;
-  // Calculate TI per time step if std column exists, otherwise use binned approach
-  const binWidth = 2, maxBin = 25;
-  const bins = [];
-  if (stdCol) {
-    // Per-timestep TI from std column
-    const tiData = [];
-    for (let i = 0; i < N; i++) {
-      const m = col.data[i], s = stdCol.data[i];
-      if (m !== null && !isNaN(m) && s !== null && !isNaN(s) && m > 0) {
-        tiData.push({ speed: m, ti: s / m, idx: i });
+  // Use signal toggles to determine which signals to plot
+  const activeNames = getActiveSignals('tiSignalToggles');
+  if (activeNames.length === 0) { ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='14px Open Sans';ctx.textAlign='center';ctx.fillText('Select at least one signal above',w/2,h/2);return; }
+  const colors=['#1db87e','#2d9cce','#f0a500','#e74c3c','#e87d20','#9b59b6','#87ceeb'];
+  const binWidth=2, maxBin=25;
+  const margin={t:20,r:20,b:45,l:55};
+  const pw=w-margin.l-margin.r, ph=h-margin.t-margin.b;
+  let globalMaxTI=0.3;
+  const allBins=[];
+  const stdCols = getMappedColumns('speed_std');
+  activeNames.forEach((scName,ci)=>{
+    const col=findColumn(scName); if(!col) return;
+    const baseName = col.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i, '');
+    const stdCol = stdCols.find(c => c.name.replace(/_SD$|_Std$|_STD$|_sd$|_StdDev$/i, '') === baseName);
+    const N = col.data.length;
+    const bins=[];
+    if (stdCol) {
+      // Per-timestep TI from std column
+      const tiData = [];
+      for (let i = 0; i < N; i++) {
+        const m = col.data[i], s = stdCol.data[i];
+        if (m !== null && !isNaN(m) && s !== null && !isNaN(s) && m > 0) {
+          tiData.push({ speed: m, ti: s / m });
+        }
+      }
+      for (let b = 0; b < maxBin; b += binWidth) {
+        const bData = tiData.filter(d => d.speed >= b && d.speed < b + binWidth);
+        if (bData.length < 3) continue;
+        const tiVals = bData.map(d => d.ti);
+        bins.push({ center: b + binWidth / 2, n: bData.length, ti: mean(tiVals), tiStd: std(tiVals) });
+      }
+    } else {
+      // Fallback: binned TI from data variability
+      const vals = col.data.filter(v=>v!==null&&!isNaN(v)&&v>0);
+      for (let b=0;b<maxBin;b+=binWidth){
+        const bVals=vals.filter(v=>v>=b&&v<b+binWidth);
+        if(bVals.length<3) continue;
+        bins.push({center:b+binWidth/2,n:bVals.length,ti:mean(bVals)>0?std(bVals)/mean(bVals):0,tiStd:0});
       }
     }
-    // Bin by speed
-    for (let b = 0; b < maxBin; b += binWidth) {
-      const bData = tiData.filter(d => d.speed >= b && d.speed < b + binWidth);
-      if (bData.length < 3) continue;
-      const tiVals = bData.map(d => d.ti);
-      bins.push({ center: b + binWidth / 2, mean: mean(bData.map(d => d.speed)), std: std(bData.map(d => d.speed)), n: bData.length, ti: mean(tiVals), tiStd: std(tiVals) });
-    }
-  } else {
-    // Fallback: binned TI from data variability
-    const vals = col.data.filter(v => v !== null && !isNaN(v) && v > 0);
-    for (let b = 0; b < maxBin; b += binWidth) {
-      const bVals = vals.filter(v => v >= b && v < b + binWidth);
-      if (bVals.length < 3) continue;
-      bins.push({ center: b + binWidth / 2, mean: mean(bVals), std: std(bVals), n: bVals.length, ti: mean(bVals) > 0 ? std(bVals) / mean(bVals) : 0, tiStd: 0 });
-    }
-  }
-  if (bins.length === 0) return;
-  const maxTI = Math.max(Math.max(...bins.map(b => b.ti)) * 1.2, 0.3);
-  const margin = { t: 20, r: 20, b: 45, l: 55 };
-  const pw = w - margin.l - margin.r, ph = h - margin.t - margin.b;
-  // Grid
-  ctx.strokeStyle = 'rgba(255,255,255,.08)';
-  for (let i = 0; i <= 5; i++) {
-    const y = margin.t + ph * (1 - i / 5);
-    ctx.beginPath(); ctx.moveTo(margin.l, y); ctx.lineTo(w - margin.r, y); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.font = '10px Open Sans';
-    ctx.fillText((maxTI * i / 5).toFixed(2), 2, y + 3);
-  }
-  // Bars + line with error bars
-  ctx.strokeStyle = '#2d9cce'; ctx.lineWidth = 2; ctx.beginPath();
-  bins.forEach((b, bi) => {
-    const x = margin.l + (b.center / maxBin) * pw;
-    const y = margin.t + ph * (1 - b.ti / maxTI);
-    ctx.fillStyle = 'rgba(45,156,206,.4)';
-    ctx.fillRect(x - 8, y, pw / maxBin * 0.6 - 2, margin.t + ph - y);
-    if (bi === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    // Error bars if std available
-    if (b.tiStd > 0) {
-      ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, margin.t + ph * (1 - Math.max(0, b.ti - b.tiStd) / maxTI));
-      ctx.lineTo(x, margin.t + ph * (1 - Math.min(maxTI, b.ti + b.tiStd) / maxTI));
-      ctx.stroke();
-      ctx.strokeStyle = '#2d9cce'; ctx.lineWidth = 2;
-    }
+    const mTI=safeMax(bins.map(b=>b.ti));
+    if(mTI>globalMaxTI) globalMaxTI=mTI;
+    allBins.push({scName,bins,color:colors[ci%colors.length],hasStd:!!stdCol});
   });
-  ctx.stroke();
-  // IEC envelopes
-  ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
-  [{ c: 'A', f: 0.16 }, { c: 'B', f: 0.14 }, { c: 'C', f: 0.12 }].forEach(iec => {
-    ctx.strokeStyle = iec.c === 'A' ? 'rgba(231,76,60,.5)' : iec.c === 'B' ? 'rgba(240,165,0,.5)' : 'rgba(29,184,126,.5)';
+  if(allBins.length===0) return;
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,.08)';
+  for(let i=0;i<=5;i++){
+    const y=margin.t+ph*(1-i/5);
+    ctx.beginPath();ctx.moveTo(margin.l,y);ctx.lineTo(w-margin.r,y);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='10px Open Sans';
+    ctx.textAlign='right';ctx.fillText((globalMaxTI*i/5).toFixed(2),margin.l-5,y+3);
+  }
+  for(let i=0;i<=5;i++){
+    const x=margin.l+(i/5)*pw;
+    ctx.beginPath();ctx.moveTo(x,margin.t);ctx.lineTo(x,margin.t+ph);ctx.stroke();
+    ctx.textAlign='center';ctx.fillText((maxBin*i/5).toFixed(0),x,h-margin.b+14);
+  }
+  // Plot each signal
+  allBins.forEach(({scName,bins,color,hasStd})=>{
+    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();
+    // Bars + line with error bars
+    bins.forEach((b,bi)=>{
+      const x=margin.l+(b.center/maxBin)*pw;
+      const y=margin.t+ph*(1-b.ti/globalMaxTI);
+      ctx.fillStyle='rgba(45,156,206,.35)';
+      ctx.fillRect(x-6,y,pw/maxBin*0.5-2,margin.t+ph-y);
+      if(bi===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      if(b.tiStd>0){
+        ctx.strokeStyle='rgba(255,255,255,.3)';ctx.lineWidth=1;
+        ctx.beginPath();
+        ctx.moveTo(x,margin.t+ph*(1-Math.max(0,b.ti-b.tiStd)/globalMaxTI));
+        ctx.lineTo(x,margin.t+ph*(1-Math.min(globalMaxTI,b.ti+b.tiStd)/globalMaxTI));
+        ctx.stroke();ctx.strokeStyle=color;ctx.lineWidth=2;
+      }
+    });
+    ctx.stroke();
+  });
+  // IEC TI envelope
+  ctx.setLineDash([4,4]);ctx.lineWidth=1;
+  [{c:'A',f:0.16},{c:'B',f:0.14},{c:'C',f:0.12}].forEach(iec=>{
+    ctx.strokeStyle=iec.c==='A'?'rgba(231,76,60,.4)':iec.c==='B'?'rgba(240,165,0,.4)':'rgba(29,184,126,.4)';
     ctx.beginPath();
-    for (let v = 0; v < maxBin; v += 0.5) {
-      const ti = iec.f * (0.75 * v + 5.6);
-      const x = margin.l + (v / maxBin) * pw, y = margin.t + ph * (1 - Math.min(ti, maxTI) / maxTI);
-      if (v === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    for(let v=0;v<maxBin;v+=0.5){
+      const ti=iec.f*(0.75*v+5.6);
+      const x=margin.l+(v/maxBin)*pw, y=margin.t+ph*(1-Math.min(ti,globalMaxTI)/globalMaxTI);
+      if(v===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
     }
     ctx.stroke();
   });
   ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='11px Open Sans';ctx.textAlign='center';
+  ctx.fillText('Turbulence Intensity vs Wind Speed',w/2,h-5);
   // Legend
-  ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = '9px Open Sans'; ctx.textAlign = 'left';
-  ctx.fillStyle = 'rgba(231,76,60,.7)'; ctx.fillText('IEC A', w - 120, margin.t + 12);
-  ctx.fillStyle = 'rgba(240,165,0,.7)'; ctx.fillText('IEC B', w - 120, margin.t + 23);
-  ctx.fillStyle = 'rgba(29,184,126,.7)'; ctx.fillText('IEC C', w - 120, margin.t + 34);
-  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = '11px Open Sans'; ctx.textAlign = 'center';
-  ctx.fillText('Turbulence Intensity vs Wind Speed - ' + scName + (stdCol ? ' (from StdDev column)' : ' (binned)'), w / 2, h - 5);
-  // Representative TI table
+  ctx.font='9px Open Sans';ctx.textAlign='left';
+  allBins.forEach((item,ci)=>{
+    ctx.fillStyle=item.color;
+    ctx.fillText(item.scName+(item.hasStd?' (from StdDev)':''),margin.l+10,margin.t+15+ci*13);
+  });
+  ctx.fillStyle='rgba(255,255,255,.3)';
+  ctx.fillText('IEC A/B/C envelopes',margin.l+10,margin.t+15+allBins.length*13);
+  // TI by direction polar plot
   renderTIDirPolar();
 };
 
