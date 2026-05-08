@@ -758,9 +758,40 @@ function getElev(ox,oy,bearing,dist){
   let px,py;
   if(isGeo(ox,oy)){const pt=destPt(ox,oy,bearing,dist);px=pt.lat;py=pt.lon;}
   else{px=ox+dist*Math.sin(bearing*Math.PI/180);py=oy+dist*Math.cos(bearing*Math.PI/180);}
-  if(S.terrainPoints.length>50){
+
+  // Fast grid-based lookup when SRTM elevation grid is available
+  if(S.elevGrid&&S.terrainGrid){
+    const{latArr,lonArr,nLats,nLons,minLon,maxLon,minLat,maxLat}=S.terrainGrid;
+    // Determine if px,py are lat/lon or easting/northing
+    const coordsAreGeo=isGeo(px,py);
+    let lat,lon;
+    if(coordsAreGeo){lat=px;lon=py;}
+    else{
+      // UTM stored as lat=easting, lon=northing — convert to geo for grid lookup
+      const geo=detectUTMAndConvert(px,py);
+      if(geo){lat=geo.lat;lon=geo.lon;}else{lat=px;lon=py;}
+    }
+    // Bilinear interpolation in the grid
+    // Find grid indices
+    const latIdx=(lat-minLat)/(maxLat-minLat)*(nLats-1);
+    const lonIdx=(lon-minLon)/(maxLon-minLon)*(nLons-1);
+    const i0=Math.floor(latIdx),j0=Math.floor(lonIdx);
+    if(i0<0||i0>=nLats-1||j0<0||j0>=nLons-1)return synthElev(px,py);
+    const fi=latIdx-i0,fj=lonIdx-j0;
+    const v00=S.elevGrid[i0*nLons+j0];
+    const v10=S.elevGrid[i0*nLons+j0+1];
+    const v01=S.elevGrid[(i0+1)*nLons+j0];
+    const v11=S.elevGrid[(i0+1)*nLons+j0+1];
+    if(v00==null||v10==null||v01==null||v11==null)return synthElev(px,py);
+    if(!isFinite(v00)||!isFinite(v10)||!isFinite(v01)||!isFinite(v11))return synthElev(px,py);
+    const v=v00*(1-fi)*(1-fj)+v10*(1-fi)*fj+v01*fi*(1-fj)+v11*fi*fj;
+    if(Math.abs(v)<9000)return v;
+    return synthElev(px,py);
+  }
+
+  // Fallback: IDW from terrain points (only for uploaded .map files with limited points)
+  if(S.terrainPoints.length>50&&S.terrainPoints.length<50000){
     const near=S.terrainPoints.map(p=>{const d=Math.hypot(p.x-px,p.y-py);return{z:p.z,d:Math.max(d,0.1)};}).sort((a,b)=>a.d-b.d).slice(0,8);
-    // Sanity check: if nearest terrain point is >20km away, CRS mismatch → use synthetic
     if(near[0].d<20000){
       let ws=0,es=0;for(const p of near){const w=1/p.d**2;ws+=w;es+=p.z*w;}
       return ws>0?es/ws:synthElev(px,py);
@@ -3522,7 +3553,7 @@ function runDirectPCVAssessment(){
       html+='</tbody></table></div></div>';
       
       // Terrain profile canvas
-      html+='<div class="card"><div class="card-title gold">Terrain Profile — Mast to WTG</div><div class="canvas-wrap"><canvas id="directProfileCanvas" width="1100" height="280"></canvas></div></div>';
+      html+='<div class="card"><div class="card-title gold">Terrain Cross-Section — Mast to WTG</div><div class="canvas-wrap"><canvas id="directProfileCanvas" width="1100" height="350"></canvas></div></div>';
       
       // Summary
       html+=`<div class="card"><div class="card-title">Assessment Summary</div>`;
@@ -3558,94 +3589,197 @@ function drawDirectProfile(cv,mast,wtg,assessment){
   const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle='rgba(7,17,30,.95)';ctx.fillRect(0,0,W,H);
-  
+
   const brng=getBrng(mast,wtg);
   const dist=getDist(mast,wtg);
-  const profile=buildProfile(mast.lat,mast.lon,brng,Math.max(dist*1.2,4*wtg.rd),dist/200);
-  if(!profile.length)return;
-  
-  const pad={t:30,r:50,b:40,l:60};
+  const distD=dist/wtg.rd;
+  const rd=wtg.rd,hh=wtg.hh;
+  const innerR=2*rd, outerR=Math.min(4*rd,dist*1.3);
+  const extDist=Math.max(dist+rd,outerR+rd);
+
+  // Build the profile from mast along the bearing direction
+  const profileStep=Math.max(15,extDist/200);
+  const profile=buildProfile(mast.lat,mast.lon,brng,extDist,profileStep);
+  if(profile.length<2)return;
+
+  const pad={t:45,r:40,b:50,l:65};
   const pW=W-pad.l-pad.r,pH=H-pad.t-pad.b;
   const maxD=profile[profile.length-1].d;
   const zs=profile.map(p=>p.e);
-  const minZ=Math.min(...zs),maxZ=Math.max(...zs);
+  const baseE=profile[0].e;
+  const minZ=Math.min(...zs)-3;
+  const maxZ=Math.max(...zs,baseE+hh)+20;
   const zRange=Math.max(maxZ-minZ,1);
-  
-  // Grid lines
-  ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=.5;
-  for(let i=0;i<=5;i++){
-    const y=pad.t+pH*(i/5);
-    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
-    const elev=maxZ-zRange*(i/5);
-    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='9px IBM Plex Mono';ctx.textAlign='right';
-    ctx.fillText(elev.toFixed(0)+'m',pad.l-5,y+3);
-  }
-  
-  // Elevation profile fill
-  const grad=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
-  grad.addColorStop(0,'rgba(0,214,143,.25)');grad.addColorStop(1,'rgba(0,214,143,.02)');
-  ctx.beginPath();
-  ctx.moveTo(pad.l,H-pad.b);
-  for(const p of profile){
-    const x=pad.l+(p.d/maxD)*pW;
-    const y=pad.t+pH*(1-(p.e-minZ)/zRange);
-    ctx.lineTo(x,y);
-  }
-  ctx.lineTo(pad.l+pW,H-pad.b);ctx.closePath();
-  ctx.fillStyle=grad;ctx.fill();
-  
-  // Profile line
-  ctx.beginPath();
-  for(let i=0;i<profile.length;i++){
-    const p=profile[i];
-    const x=pad.l+(p.d/maxD)*pW;
-    const y=pad.t+pH*(1-(p.e-minZ)/zRange);
-    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-  }
-  ctx.strokeStyle='#00d68f';ctx.lineWidth=1.8;ctx.stroke();
-  
-  // 2D and 4D markers
-  const rd=wtg.rd;
-  [2,4].forEach((mult,idx)=>{
-    const d=mult*rd;
-    if(d<=maxD){
-      const x=pad.l+(d/maxD)*pW;
-      ctx.setLineDash([4,3]);ctx.strokeStyle=idx===0?'rgba(0,214,143,.6)':'rgba(245,166,35,.6)';
-      ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,H-pad.b);ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle=idx===0?'#00d68f':'#f5a623';ctx.font='bold 9px IBM Plex Mono';ctx.textAlign='center';
-      ctx.fillText(`${mult}D`,x,pad.t-8);
-    }
+
+  function tx(d){return pad.l+(d/maxD)*pW;}
+  function ty(e){return pad.t+pH*(1-(e-minZ)/zRange);}
+
+  // ── IEC Zone shading ──
+  const innerX=tx(innerR),outerX=tx(outerR);
+  // Inner zone (0-2D) — green tint
+  ctx.fillStyle='rgba(0,214,143,.06)';ctx.fillRect(pad.l,pad.t,innerX-pad.l,pH);
+  // Outer zone (2D-4D) — blue tint
+  ctx.fillStyle='rgba(74,179,232,.04)';ctx.fillRect(innerX,pad.t,outerX-innerX,pH);
+  // Beyond 4D — faint
+  ctx.fillStyle='rgba(255,255,255,.015)';ctx.fillRect(outerX,pad.t,W-pad.r-outerX,pH);
+
+  // Zone labels
+  ctx.font='bold 8px IBM Plex Mono';ctx.textAlign='center';
+  ctx.fillStyle='rgba(0,214,143,.35)';
+  if(innerX-pad.l>50)ctx.fillText('INNER ZONE (0–2D)',pad.l+(innerX-pad.l)/2,pad.t+14);
+  ctx.fillStyle='rgba(74,179,232,.35)';
+  if(outerX-innerX>60)ctx.fillText('OUTER ZONE (2D–4D)',innerX+(outerX-innerX)/2,pad.t+14);
+  ctx.fillStyle='rgba(255,255,255,.15)';
+  if(W-pad.r-outerX>60)ctx.fillText('BEYOND 4D',outerX+(W-pad.r-outerX)/2,pad.t+14);
+
+  // ── IEC Zone boundaries (vertical dashed lines) ──
+  const zoneLines=[
+    {d:innerR,color:'rgba(0,214,143,.5)',label:`2D = ${innerR.toFixed(0)}m`},
+    {d:outerR,color:'rgba(74,179,232,.4)',label:`4D = ${outerR.toFixed(0)}m`},
+    {d:dist,color:'rgba(245,166,35,.6)',label:`WTG ${distD.toFixed(2)}D`},
+  ];
+  zoneLines.forEach(({d,color,label})=>{
+    if(d>maxD)return;
+    const x=tx(d);
+    ctx.strokeStyle=color;ctx.lineWidth=1.2;ctx.setLineDash([5,4]);
+    ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+pH);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=color;ctx.font='bold 8px IBM Plex Mono';ctx.textAlign='center';
+    ctx.fillText(label,x,pad.t+pH+18);
   });
-  
-  // Mast marker
-  const mastE=profile[0]?.e||0;
-  const mastX=pad.l;
-  const mastY=pad.t+pH*(1-(mastE-minZ)/zRange);
-  ctx.fillStyle='#00d68f';ctx.beginPath();ctx.moveTo(mastX,mastY-15);ctx.lineTo(mastX-5,mastY);ctx.lineTo(mastX+5,mastY);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#fff';ctx.font='bold 8px IBM Plex Mono';ctx.textAlign='left';
-  ctx.fillText('MAST',mastX+8,mastY-10);
-  
-  // WTG marker
-  const wtgD=dist;
-  if(wtgD<=maxD){
-    const wtgX=pad.l+(wtgD/maxD)*pW;
-    const wtgPt=profile.find(p=>Math.abs(p.d-wtgD)<maxD/100);
-    const wtgY=wtgPt?pad.t+pH*(1-(wtgPt.e-minZ)/zRange):H-pad.b;
-    ctx.fillStyle='#f5a623';ctx.fillRect(wtgX-3,wtgY-15,6,15);
-    ctx.fillStyle='#fff';ctx.font='bold 8px IBM Plex Mono';ctx.textAlign='right';
-    ctx.fillText(wtg.name||wtg.id,wtgX-8,wtgY-10);
+
+  // ── Slope limit reference lines from mast base ──
+  // ±3° reference for inner zone
+  const slope3Up=Math.tan(3*Math.PI/180)*innerR;
+  const slope3Dn=Math.tan(3*Math.PI/180)*innerR;
+  ctx.strokeStyle='rgba(0,214,143,.2)';ctx.lineWidth=.8;ctx.setLineDash([3,5]);
+  ctx.beginPath();ctx.moveTo(tx(0),ty(baseE));ctx.lineTo(tx(innerR),ty(baseE+slope3Up));ctx.stroke();
+  ctx.beginPath();ctx.moveTo(tx(0),ty(baseE));ctx.lineTo(tx(innerR),ty(baseE-slope3Dn));ctx.stroke();
+  // ±5° reference for outer zone
+  const outerBaseE=profile.find(p=>Math.abs(p.d-innerR)<profileStep)?.e||baseE;
+  const slope5Up=Math.tan(5*Math.PI/180)*(outerR-innerR);
+  ctx.strokeStyle='rgba(74,179,232,.15)';
+  ctx.beginPath();ctx.moveTo(tx(innerR),ty(outerBaseE));ctx.lineTo(tx(outerR),ty(outerBaseE+slope5Up));ctx.stroke();
+  ctx.beginPath();ctx.moveTo(tx(innerR),ty(outerBaseE));ctx.lineTo(tx(outerR),ty(outerBaseE-slope5Up));ctx.stroke();
+  ctx.setLineDash([]);
+  // Slope limit labels
+  ctx.font='7px IBM Plex Mono';ctx.textAlign='left';
+  ctx.fillStyle='rgba(0,214,143,.35)';ctx.fillText('±3° limit',tx(innerR)+4,ty(baseE+slope3Up)-3);
+  ctx.fillStyle='rgba(74,179,232,.3)';ctx.fillText('±5° limit',tx(outerR)+4,ty(outerBaseE+slope5Up)-3);
+
+  // ── Grid lines ──
+  ctx.strokeStyle='rgba(255,255,255,.05)';ctx.lineWidth=.5;
+  const nY=6;
+  for(let i=0;i<=nY;i++){
+    const y=pad.t+pH*(i/nY);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    const elev=maxZ-zRange*(i/nY);
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='9px IBM Plex Mono';ctx.textAlign='right';
+    ctx.fillText(elev.toFixed(0)+'m',pad.l-6,y+3);
   }
-  
-  // Distance axis
-  ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='9px IBM Plex Mono';ctx.textAlign='center';
   for(let i=0;i<=5;i++){
-    const d=maxD*(i/5);
-    const x=pad.l+(d/maxD)*pW;
-    ctx.fillText((d/1000).toFixed(1)+'km',x,H-pad.b+15);
+    const x=pad.l+pW*(i/5);
+    ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+pH);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.25)';ctx.font='9px IBM Plex Mono';ctx.textAlign='center';
+    ctx.fillText((maxD*i/5/1000).toFixed(1)+'km',x,pad.t+pH+34);
   }
+
+  // ── Terrain fill (gradient) ──
+  ctx.beginPath();ctx.moveTo(tx(0),ty(profile[0].e));
+  for(const p of profile)ctx.lineTo(tx(p.d),ty(p.e));
+  ctx.lineTo(tx(maxD),pad.t+pH);ctx.lineTo(tx(0),pad.t+pH);ctx.closePath();
+  const tGrad=ctx.createLinearGradient(0,pad.t,0,pad.t+pH);
+  tGrad.addColorStop(0,'rgba(0,180,120,.3)');tGrad.addColorStop(1,'rgba(0,180,120,.02)');
+  ctx.fillStyle=tGrad;ctx.fill();
+
+  // ── Terrain profile line ──
+  ctx.beginPath();ctx.moveTo(tx(0),ty(profile[0].e));
+  for(const p of profile)ctx.lineTo(tx(p.d),ty(p.e));
+  ctx.strokeStyle='#00d68f';ctx.lineWidth=2.2;ctx.stroke();
+
+  // ── Mean slope line (inner zone) ──
+  const innerPts=profile.filter(p=>p.d<=innerR);
+  if(innerPts.length>2){
+    const innerLast=innerPts[innerPts.length-1];
+    ctx.strokeStyle='rgba(255,255,100,.3)';ctx.lineWidth=1;ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.moveTo(tx(0),ty(baseE));ctx.lineTo(tx(innerLast.d),ty(innerLast.e));ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ── WTG tower, nacelle, rotor ──
+  const wtgPt=profile.find(p=>Math.abs(p.d-dist)<profileStep*2);
+  const wtgE=wtgPt?wtgPt.e:baseE;
+  const wtgX=tx(dist),wtgBaseY=ty(wtgE);
+  // Foundation
+  ctx.fillStyle='rgba(0,214,143,.15)';ctx.fillRect(wtgX-12,wtgBaseY,24,4);
+  // Tower (tapered)
+  ctx.strokeStyle='rgba(0,214,143,.7)';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.moveTo(wtgX-4,wtgBaseY);ctx.lineTo(wtgX,ty(wtgE+hh));ctx.stroke();
+  ctx.beginPath();ctx.moveTo(wtgX+4,wtgBaseY);ctx.lineTo(wtgX,ty(wtgE+hh));ctx.stroke();
+  // Nacelle
+  const nacY=ty(wtgE+hh);
+  ctx.fillStyle='rgba(0,214,143,.8)';ctx.fillRect(wtgX-10,nacY-4,20,6);
+  // Rotor
+  const rr=Math.max(10,rd*pW/(maxD*2.5));
+  ctx.strokeStyle='rgba(0,214,143,.5)';ctx.lineWidth=1.8;
+  ctx.beginPath();ctx.moveTo(wtgX-rr,nacY);ctx.lineTo(wtgX+rr,nacY);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(wtgX,nacY-rr*0.3);ctx.lineTo(wtgX,nacY+rr*0.3);ctx.stroke();
+  // Labels
+  ctx.fillStyle='#00d68f';ctx.font='bold 9px IBM Plex Mono';ctx.textAlign='center';
+  ctx.fillText(wtg.name||wtg.id,wtgX,nacY-14);
+  ctx.fillStyle='rgba(0,214,143,.5)';ctx.font='7px IBM Plex Mono';
+  ctx.fillText(`HH=${hh}m · D=${rd}m`,wtgX,wtgBaseY+14);
+
+  // ── Mast at x=0 ──
+  const mastE=profile[0].e;
+  const mastBaseY=ty(mastE);
+  // Mast pole
+  ctx.strokeStyle='rgba(224,80,80,.8)';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.moveTo(tx(0),mastBaseY);ctx.lineTo(tx(0),ty(mastE+hh));ctx.stroke();
+  // Anemometer levels
+  [1,.67,.33].forEach(frac=>{
+    const aY=ty(mastE+hh*frac);
+    ctx.fillStyle='rgba(224,80,80,.9)';ctx.fillRect(tx(0)-10,aY-2,20,4);
+    // Anemometer cups
+    ctx.strokeStyle='rgba(224,80,80,.5)';ctx.lineWidth=.8;
+    ctx.beginPath();ctx.arc(tx(0)+12,aY,3,0,Math.PI*2);ctx.stroke();
+  });
+  ctx.fillStyle='#e05050';ctx.font='bold 9px IBM Plex Mono';ctx.textAlign='center';
+  ctx.fillText('MAST',tx(0),ty(mastE+hh)-12);
+  ctx.fillStyle='rgba(224,80,80,.5)';ctx.font='7px IBM Plex Mono';
+  ctx.fillText(`${hh}m`,tx(0),mastBaseY+14);
+
+  // ── Hub height reference line ──
+  const hubRefY=ty(mastE+hh);
+  ctx.strokeStyle='rgba(255,255,255,.1)';ctx.lineWidth=.7;ctx.setLineDash([6,6]);
+  ctx.beginPath();ctx.moveTo(tx(0),hubRefY);ctx.lineTo(wtgX+20,hubRefY);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,.2)';ctx.font='7px IBM Plex Mono';ctx.textAlign='left';
+  ctx.fillText(`Hub Height = ${hh}m`,pad.l+4,hubRefY-4);
+
+  // ── Title bar ──
+  ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='bold 10px IBM Plex Sans';ctx.textAlign='left';
+  ctx.fillText(`Terrain Cross-Section · ${mast.name||'MAST'} → ${wtg.name||'WTG'} · ${distD.toFixed(2)}D · Bearing ${brng.toFixed(1)}°`,pad.l+2,pad.t-20);
+  // Status badge
+  const tOk=assessment&&assessment.terrainClass;
+  const badgeColor=tOk==='A'?'rgba(0,214,143,.8)':tOk==='B'?'rgba(245,166,35,.8)':'rgba(224,80,80,.8)';
+  ctx.fillStyle=badgeColor;ctx.fillRect(pad.l,pad.t-24,4,16);
+
+  // ── Axis labels ──
   ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='bold 9px IBM Plex Mono';
-  ctx.fillText('Distance →',W/2,H-5);
+  ctx.textAlign='center';ctx.fillText('Distance from Mast',W/2,H-4);
+  ctx.save();ctx.translate(12,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('Elevation (m)',0,0);ctx.restore();
+
+  // ── Annotations at bottom ──
+  const sec0=assessment?.sectors?.[0];
+  const annotParts=[];
+  if(assessment){
+    annotParts.push(`Terrain: Class ${assessment.terrainClass||'?'}`);
+    annotParts.push(`Valid: ${assessment.validCount}/${assessment.nsec} sectors`);
+    annotParts.push(`Max Arc: ${assessment.maxArcDeg}°`);
+  }
+  ctx.fillStyle='rgba(255,255,255,.25)';ctx.font='7px IBM Plex Mono';ctx.textAlign='center';
+  ctx.fillText(annotParts.join('  ·  '),W/2,H-16);
 }
 
 function clearAll(){
