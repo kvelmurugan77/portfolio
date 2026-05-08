@@ -206,16 +206,6 @@ table.terrain-dt td{font-size:.68rem;padding:.4rem .55rem}
   .step-label{display:none}
 }
 
-/* ── CLIPBOARD PASTE AREA ── */
-.clip-paste-area{display:none;margin-top:.7rem;padding:.8rem;background:var(--bg3);border-radius:var(--radius2);border:1px solid var(--border)}
-.clip-paste-area.show{display:block}
-.clip-paste-area textarea{width:100%;height:120px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius2);font-family:var(--mono);font-size:.72rem;color:var(--text);padding:.5rem;resize:vertical;outline:none}
-.clip-paste-area textarea:focus{border-color:var(--mint)}
-.clip-paste-actions{display:flex;gap:.5rem;margin-top:.5rem;align-items:center}
-
-/* ── SRTM SECTION ── */
-.srtm-section{margin-top:.7rem;padding:.7rem;background:var(--bg3);border-radius:var(--radius2);border:1px solid var(--border)}
-
 /* ── REPORT PRINT ── */
 @media print{
   .topbar,.stepper,.nav-row,.btn{display:none!important}
@@ -270,22 +260,15 @@ table.terrain-dt td{font-size:.68rem;padding:.4rem .55rem}
     <div class="card">
       <div class="card-title green">Target WTG Layout <span style="color:var(--red);font-size:.55rem">★ Required</span></div>
       <div class="upload-zone" id="wtgUploadZone">
-        <input type="file" accept=".kmz,.kml,.csv,.txt,.xlsx" id="wtgFileInput" onchange="handleWTGUpload(event)">
+        <input type="file" accept=".csv,.txt,.kmz,.kml,.xlsx,.json,.geojson" id="wtgFileInput" onchange="handleWTGUpload(event)">
         <span class="upload-icon">⚡</span>
-        <span class="upload-text">Click or drag WTG Layout (CSV / KML / KMZ)</span>
-        <span class="upload-hint">CSV: id, x, y, rd, hh | KML/KMZ: placemarks with coordinates | Headers auto-detected</span>
+        <span class="upload-text">Click or drag WTG Layout CSV</span>
+        <span class="upload-hint">Columns: id, x (easting), y (northing), rd (m), hh (m) | Also accepts KMZ, KML, GeoJSON</span>
       </div>
       <div class="upload-info" id="wtgUploadInfo" style="display:none"></div>
       <div style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap">
         <button class="btn btn-sm btn-ghost" onclick="toggleManual('wtgManual')">+ Manual Entry</button>
-        <button class="btn btn-sm btn-ghost" onclick="toggleClipboardPaste('wtgClipPaste')">📋 Paste from Clipboard</button>
-      </div>
-      <div class="clip-paste-area" id="wtgClipPaste">
-        <textarea id="wtgClipText" placeholder="Paste tabular data here (CSV/TSV). Columns: id, x, y, rd, hh"></textarea>
-        <div class="clip-paste-actions">
-          <button class="btn btn-sm btn-primary" onclick="handleWTGClipboardPaste()">Parse &amp; Load</button>
-          <button class="btn btn-sm btn-ghost" onclick="document.getElementById('wtgClipPaste').classList.remove('show')">Cancel</button>
-        </div>
+        <button class="btn btn-sm btn-ghost" onclick="showPasteModal()">📋 Paste from Clipboard</button>
       </div>
       <div class="manual-entry" id="wtgManual">
         <div class="manual-row">
@@ -303,46 +286,77 @@ table.terrain-dt td{font-size:.68rem;padding:.4rem .55rem}
       <div class="card" style="margin-bottom:1rem">
         <div class="card-title">External / Neighboring Farm WTGs <span style="color:var(--text3);font-weight:300">Optional</span></div>
         <div class="upload-zone" id="extUploadZone">
-          <input type="file" accept=".kmz,.kml,.csv,.txt,.xlsx" id="extFileInput" onchange="handleExtUpload(event)">
+          <input type="file" accept=".csv,.txt,.kmz,.kml,.geojson" id="extFileInput" onchange="handleExtUpload(event)">
           <span class="upload-icon">🏭</span>
-          <span class="upload-text">Upload Neighboring Farm (CSV / KML / KMZ)</span>
+          <span class="upload-text">Upload Neighboring Farm CSV</span>
           <span class="upload-hint">Same format — for external wake exclusion</span>
         </div>
         <div class="upload-info" id="extUploadInfo" style="display:none"></div>
-        <div style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap">
-          <button class="btn btn-sm btn-ghost" onclick="toggleClipboardPaste('extClipPaste')">📋 Paste from Clipboard</button>
-        </div>
-        <div class="clip-paste-area" id="extClipPaste">
-          <textarea id="extClipText" placeholder="Paste tabular data here (CSV/TSV). Columns: id, x, y, rd, hh"></textarea>
-          <div class="clip-paste-actions">
-            <button class="btn btn-sm btn-primary" onclick="handleExtClipboardPaste()">Parse &amp; Load</button>
-            <button class="btn btn-sm btn-ghost" onclick="document.getElementById('extClipPaste').classList.remove('show')">Cancel</button>
-          </div>
-        </div>
       </div>
       <div class="card">
         <div class="card-title">Terrain Map File <span style="color:var(--text3);font-weight:300">Optional</span></div>
         <div class="upload-zone" id="mapUploadZone">
-          <input type="file" accept=".map,.kmz,.kml,.csv,.txt,.xyz" id="mapFileInput" onchange="handleMapUpload(event)">
+          <input type="file" accept=".map,.csv,.txt,.xyz,.kmz,.tif,.tiff,.asc" id="mapFileInput" onchange="handleMapUpload(event)">
           <span class="upload-icon">🏔</span>
-          <span class="upload-text">Upload .map / .kmz / .xyz / elevation CSV</span>
-          <span class="upload-hint">WAsP .map, KMZ/KML terrain, XYZ, or x,y,z CSV — synthetic terrain used if absent</span>
+          <span class="upload-text">Upload .map / .xyz / elevation CSV</span>
+          <span class="upload-hint">WAsP .map, XYZ, CSV, KMZ — or use SRTM1 download below</span>
         </div>
         <div class="upload-info" id="mapUploadInfo" style="display:none"></div>
-        <div class="srtm-section">
-          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap">
-            <button class="btn btn-sm btn-primary" onclick="downloadSRTM()" id="srtmBtn">🗺 Download SRTM1 Terrain (30m)</button>
-            <span style="font-size:.55rem;color:var(--text3);font-family:var(--mono)">OpenTopoData API · Free · No key required</span>
+        <div style="margin-top:.8rem">
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+            <button class="btn btn-sm btn-gold" onclick="downloadSRTM1()">⬇ Download SRTM1 Elevation</button>
           </div>
-          <div class="form-row" style="margin-bottom:.3rem">
-            <div class="fg" style="flex:.5"><label class="fl">Lat (°N)</label><input class="fi" type="number" step="0.001" id="srtmLat" placeholder="Auto from WTGs" style="font-size:.7rem;padding:.35rem .5rem"></div>
-            <div class="fg" style="flex:.5"><label class="fl">Lon (°E)</label><input class="fi" type="number" step="0.001" id="srtmLon" placeholder="Auto from WTGs" style="font-size:.7rem;padding:.35rem .5rem"></div>
+          <div class="form-row" style="margin-top:.5rem">
+            <div class="fg" style="max-width:100px"><label class="fl">Buffer (km)</label><input class="fi" type="number" id="srtmBuffer" value="20" min="5" max="75"></div>
+            <div class="fg" style="max-width:110px"><label class="fl">Grid Spacing</label><select class="fs" id="srtmRes"><option value="0.00027">~30m (SRTM1)</option><option value="0.00083" selected>~90m (SRTM3)</option><option value="0.00167">~180m</option><option value="0.0045">~500m (fast)</option><option value="0.009">~1km (preview)</option></select></div>
+            <div class="fg" style="max-width:100px"><label class="fl">Contour (m)</label><input class="fi" type="number" id="srtmContour" value="5" min="1" max="50"></div>
           </div>
-          <div class="form-row">
-            <div class="fg" style="flex:.5"><label class="fl">Buffer (km)</label><input class="fi" type="number" id="srtmBuffer" value="20" min="1" max="100" style="font-size:.7rem;padding:.35rem .5rem"></div>
-            <div class="fg" style="flex:.5"><label class="fl">Resolution (m)</label><select class="fs" id="srtmRes" style="font-size:.7rem;padding:.35rem .5rem"><option value="90">~90m (default)</option><option value="180">~180m (faster)</option><option value="30">~30m (fine)</option></select></div>
+          <div style="font-size:.58rem;color:var(--text3);font-family:var(--mono);margin-top:.3rem">Open-Meteo Elevation API · Auto UTM→WGS84 · Up to 150×150km area</div>
+          <div id="srtmStatus" style="margin-top:.5rem"></div>
+        </div>
+        <!-- TERRAIN ELEVATION MAP (windPRO/surfer style) -->
+        <div id="terrainVizSection" style="display:none;margin-top:1rem">
+          <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;flex-wrap:wrap">
+            <button class="btn btn-sm btn-ghost" onclick="renderTerrainMap()">🔄 Refresh Map</button>
+            <button class="btn btn-sm btn-ghost" onclick="exportTerrainCSV()">💾 Export Terrain CSV</button>
+            <button class="btn btn-sm btn-ghost" onclick="exportTerrainImage()">🖼 Save as Image</button>
+            <select class="fs" id="terrainColorScheme" onchange="renderTerrainMap()" style="font-size:.6rem;padding:.25rem .5rem">
+              <option value="terrain">Terrain (green-brown-white)</option>
+              <option value="viridis">Viridis</option>
+              <option value="plasma">Plasma</option>
+              <option value="ocean">Ocean (blue-white)</option>
+              <option value="grayscale">Grayscale</option>
+            </select>
+            <label style="font-size:.58rem;color:var(--text3);display:flex;align-items:center;gap:.3rem">
+              <input type="checkbox" id="showContours" checked onchange="renderTerrainMap()"> Contours
+            </label>
+            <label style="font-size:.58rem;color:var(--text3);display:flex;align-items:center;gap:.3rem">
+              <input type="checkbox" id="showWTGs" checked onchange="renderTerrainMap()"> WTGs
+            </label>
           </div>
-          <div id="srtmStatus" style="margin-top:.4rem"></div>
+          <div class="canvas-wrap" style="position:relative">
+            <canvas id="terrainMapCanvas" width="1200" height="700" style="cursor:crosshair"></canvas>
+            <div id="terrainTooltip" style="display:none;position:absolute;background:rgba(7,17,30,.92);border:1px solid var(--border);border-radius:4px;padding:.4rem .6rem;font-family:var(--mono);font-size:.65rem;color:var(--text);pointer-events:none;z-index:10;white-space:nowrap"></div>
+            <div id="terrainCrosshair" style="display:none;position:absolute;width:1px;height:100%;top:0;background:rgba(255,255,255,.15);pointer-events:none;z-index:5"></div>
+            <div id="terrainCrosshairH" style="display:none;position:absolute;height:1px;width:100%;left:0;background:rgba(255,255,255,.15);pointer-events:none;z-index:5"></div>
+          </div>
+          <div style="display:flex;gap:1.5rem;margin-top:.5rem;flex-wrap:wrap;align-items:center">
+            <div id="terrainColorBar" style="width:200px;height:14px;border-radius:3px;border:1px solid var(--border)"></div>
+            <div style="display:flex;justify-content:space-between;width:200px;font-size:.55rem;color:var(--text3);font-family:var(--mono)">
+              <span id="colorBarMin">—</span><span id="colorBarMax">—</span>
+            </div>
+            <div style="font-size:.58rem;color:var(--text3);font-family:var(--mono)" id="terrainMapMeta"></div>
+          </div>
+          <!-- Elevation Profile Cross-Section -->
+          <div id="terrainProfileSection" style="display:none;margin-top:1rem">
+            <div class="card-title gold" style="margin-bottom:.5rem">Terrain Profile Cross-Section</div>
+            <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem">
+              <span style="font-size:.58rem;color:var(--text3);font-family:var(--mono)">Click & drag on map above to draw profile line</span>
+              <button class="btn btn-sm btn-ghost" onclick="clearProfileLine()">✕ Clear</button>
+            </div>
+            <div class="canvas-wrap"><canvas id="terrainProfileCanvas" width="1200" height="250"></canvas></div>
+            <div id="terrainProfileMeta" style="font-size:.58rem;color:var(--text3);font-family:var(--mono);margin-top:.3rem"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -357,6 +371,34 @@ table.terrain-dt td{font-size:.68rem;padding:.4rem .55rem}
       <div class="fg"><label class="fl">Wake Exclusion Radius (D)</label><input class="fi" type="number" id="cfgWakeDist" value="20" min="5" max="30"></div>
       <div class="fg"><label class="fl">Assessment Radius (m)</label><input class="fi" type="number" id="cfgRadius" value="5000"></div>
     </div>
+  </div>
+  <!-- Proposed Mast & Nominated WTG -->
+  <div class="card" style="margin-top:1rem">
+    <div class="card-title green">Proposed Mast &amp; Nominated WTG <span style="color:var(--text3);font-weight:300">Optional — skip auto-proposal</span></div>
+    <div class="alert alert-info" style="margin-bottom:.8rem;font-size:.7rem">If you already have a proposed met mast location and nominated WTG(s), enter them here. The tool will perform the full IEC 61400-12-1 terrain assessment and wake sector calculation (windPRO-style) directly — skipping Step 5 auto-proposal.</div>
+    <div class="g2">
+      <div>
+        <div style="font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mint);margin-bottom:.5rem">Proposed Mast Location</div>
+        <div class="form-row">
+          <div class="fg"><label class="fl">Mast ID</label><input class="fi" id="mastId" placeholder="MM1" style="max-width:80px"></div>
+          <div class="fg"><label class="fl">X / Easting</label><input class="fi" type="number" id="mastX" placeholder="e.g. 594000"></div>
+          <div class="fg"><label class="fl">Y / Northing</label><input class="fi" type="number" id="mastY" placeholder="e.g. 4893000"></div>
+          <div class="fg"><label class="fl">Height (m)</label><input class="fi" type="number" id="mastH" placeholder="138" style="max-width:90px"></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem">Nominated WTG(s)</div>
+        <div class="form-row">
+          <div class="fg"><label class="fl">Primary WTG</label><select class="fs" id="nominatedWTG1"><option value="">-- select from layout --</option></select></div>
+          <div class="fg"><label class="fl">Secondary WTG</label><select class="fs" id="nominatedWTG2"><option value="">-- optional --</option></select></div>
+        </div>
+        <div style="display:flex;gap:.5rem;margin-top:.7rem">
+          <button class="btn btn-sm btn-primary" onclick="setProposedMast()">📐 Set Mast Location</button>
+          <button class="btn btn-sm btn-gold" onclick="runDirectPCVAssessment()">🚀 Run PCV Assessment Now</button>
+        </div>
+      </div>
+    </div>
+    <div id="directAssessResult" style="display:none;margin-top:1rem"></div>
   </div>
   <div class="nav-row"><div></div><button class="btn btn-primary" id="step1Next" onclick="goToStep(2)" disabled>Next: Wind Data →</button></div>
 </div>
@@ -373,16 +415,6 @@ table.terrain-dt td{font-size:.68rem;padding:.4rem .55rem}
         <span class="upload-hint">Columns: timestamp, wind_speed (m/s), wind_direction (°) — headers auto-detected</span>
       </div>
       <div class="upload-info" id="windUploadInfo" style="display:none"></div>
-      <div style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap">
-        <button class="btn btn-sm btn-ghost" onclick="toggleClipboardPaste('windClipPaste')">📋 Paste from Clipboard</button>
-      </div>
-      <div class="clip-paste-area" id="windClipPaste">
-        <textarea id="windClipText" placeholder="Paste wind data here (CSV/TSV). Columns: speed, direction" style="height:150px"></textarea>
-        <div class="clip-paste-actions">
-          <button class="btn btn-sm btn-primary" onclick="handleWindClipboardPaste()">Parse &amp; Load</button>
-          <button class="btn btn-sm btn-ghost" onclick="document.getElementById('windClipPaste').classList.remove('show')">Cancel</button>
-        </div>
-      </div>
       <div style="margin-top:.8rem;font-size:.65rem;color:var(--text3)">Accepted column names: <span style="font-family:var(--mono)">speed / ws / windspeed</span> and <span style="font-family:var(--mono)">dir / direction / wd / winddir</span></div>
     </div>
     <div class="card">
@@ -566,6 +598,20 @@ table.terrain-dt td{font-size:.68rem;padding:.4rem .55rem}
   </div>
 </div>
 
+<!-- PASTE MODAL -->
+<div id="pasteModal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(3,8,18,.92);backdrop-filter:blur(8px);align-items:center;justify-content:center">
+  <div style="width:100%;max-width:700px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:2rem;position:relative;margin:auto">
+    <button onclick="closePasteModal()" style="position:absolute;top:1rem;right:1rem;background:var(--red2);border:1px solid rgba(224,80,80,.3);color:var(--red);border-radius:var(--radius2);padding:.35rem .8rem;cursor:pointer;font-family:var(--mono);font-size:.65rem;font-weight:600">✕ Close</button>
+    <div style="font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:.3rem">Paste Layout Data</div>
+    <div style="font-size:.68rem;color:var(--text3);margin-bottom:1rem">Paste CSV, tab-separated, or space-separated data. Columns: id, x/easting, y/northing, rd, hh</div>
+    <textarea id="pasteTextarea" style="width:100%;height:200px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);font-family:var(--mono);font-size:.75rem;color:var(--text);padding:.8rem;resize:vertical;outline:none" placeholder="Paste your data here...&#10;Example:&#10;T1, 594263, 4892488, 163, 138&#10;T2, 594973, 4892211, 163, 138"></textarea>
+    <div style="display:flex;gap:.6rem;margin-top:1rem;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closePasteModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="processPastedData()">Import Data</button>
+    </div>
+  </div>
+</div>
+
 </div><!-- .main -->
 
 <!-- ========================================================================
@@ -579,7 +625,8 @@ table.terrain-dt td{font-size:.68rem;padding:.4rem .55rem}
 const S = {
   wtgs:[], extWtgs:[], terrainPoints:[], windData:[], windRoseData:null,
   proposedMasts:[], analysisResults:null, hasMapData:false, layoutCentroid:null,
-  currentPairAssessment:null, currentPairIdx:0
+  currentPairAssessment:null, currentPairIdx:0,
+  elevGrid:null, profileLine:null, contourInterval:5, srtmMeta:null, terrainGrid:null, proposedMastManual:null
 };
 
 // ============================================================================
@@ -831,129 +878,48 @@ function assessTerrain(mast, wtg, allWtgs, extWtgs, cfg){
 }
 
 // ============================================================================
-// KML / KMZ PARSERS
-// ============================================================================
-function parseKMLPlacemarks(xmlText, defaultRD, defaultHH) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlText, 'application/xml');
-  const placemarks = doc.querySelectorAll('Placemark');
-  const results = [];
-  let cnt = 0;
-  placemarks.forEach(pm => {
-    const nameEl = pm.querySelector('name');
-    const name = nameEl ? nameEl.textContent.trim() : `W${cnt+1}`;
-    const coordEl = pm.querySelector('Point coordinates');
-    if (!coordEl) return;
-    const coordText = coordEl.textContent.trim();
-    const parts = coordText.split(/\s+/);
-    const lon = parseFloat(parts[0]);
-    const lat = parseFloat(parts[1]);
-    if (isNaN(lon) || isNaN(lat)) return;
-    let rd = defaultRD || 100;
-    let hh = defaultHH || 90;
-    pm.querySelectorAll('Data').forEach(d => {
-      const key = d.getAttribute('name');
-      const val = parseFloat(d.querySelector('value')?.textContent);
-      if (key && val) {
-        const kl = key.toLowerCase();
-        if (kl.includes('rd') || kl.includes('rotor') || kl.includes('diameter')) rd = val;
-        if (kl.includes('hh') || kl.includes('hub')) hh = val;
-      }
-    });
-    results.push({ id: cnt, name, lat, lon, rd, hh, model: '' });
-    cnt++;
-  });
-  return results;
-}
-
-async function parseKMZPlacemarks(arrayBuffer, defaultRD, defaultHH) {
-  if (typeof JSZip === 'undefined') throw new Error('JSZip library not loaded. Check your internet connection.');
-  const zip = await JSZip.loadAsync(arrayBuffer);
-  let kmlText = '';
-  for (const [fname, file] of Object.entries(zip.files)) {
-    if (fname.toLowerCase().endsWith('.kml') && !fname.startsWith('__MACOSX')) {
-      kmlText = await file.async('text');
-      break;
-    }
-  }
-  if (!kmlText) throw new Error('No KML file found inside KMZ archive');
-  return parseKMLPlacemarks(kmlText, defaultRD, defaultHH);
-}
-
-function parseKMLTerrain(kmlText) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(kmlText, 'application/xml');
-  const points = [];
-  doc.querySelectorAll('LineString coordinates, Polygon outerBoundaryIs LinearRing coordinates').forEach(el => {
-    const ct = el.textContent.trim();
-    const tuples = ct.split(/\s+/);
-    for (let i = 0; i < tuples.length; i++) {
-      const parts = tuples[i].split(',');
-      if (parts.length >= 3) {
-        const lon = parseFloat(parts[0]), lat = parseFloat(parts[1]), z = parseFloat(parts[2]);
-        if (!isNaN(lon) && !isNaN(lat) && !isNaN(z)) points.push({ x: lat, y: lon, z });
-      }
-    }
-  });
-  doc.querySelectorAll('Placemark Point coordinates').forEach(el => {
-    const ct = el.textContent.trim();
-    const parts = ct.split(/\s+/)[0].split(',');
-    if (parts.length >= 3) {
-      const lon = parseFloat(parts[0]), lat = parseFloat(parts[1]), z = parseFloat(parts[2]);
-      if (!isNaN(lon) && !isNaN(lat) && !isNaN(z)) points.push({ x: lat, y: lon, z });
-    }
-  });
-  return points;
-}
-
-async function parseKMZTerrain(arrayBuffer) {
-  if (typeof JSZip === 'undefined') throw new Error('JSZip library not loaded.');
-  const zip = await JSZip.loadAsync(arrayBuffer);
-  let kmlText = '';
-  for (const [fname, file] of Object.entries(zip.files)) {
-    if (fname.toLowerCase().endsWith('.kml') && !fname.startsWith('__MACOSX')) {
-      kmlText = await file.async('text');
-      break;
-    }
-  }
-  if (!kmlText) throw new Error('No KML found inside KMZ');
-  return parseKMLTerrain(kmlText);
-}
-
-function toggleClipboardPaste(id) {
-  document.getElementById(id).classList.toggle('show');
-}
-
-// ============================================================================
 // UPLOAD HANDLERS
 // ============================================================================
 function handleWTGUpload(e){
   const f=e.target.files[0];if(!f)return;
-  const ext=f.name.toLowerCase().split('.').pop();
+  const ext=f.name.split('.').pop().toLowerCase();
+  
+  // KMZ file → unzip and parse KML
   if(ext==='kmz'){
     const r=new FileReader();
     r.onload=async ev=>{
       try{
-        const wtgs=await parseKMZPlacemarks(ev.target.result,100,90);
-        if(!wtgs.length)throw new Error('No valid Placemarks with <Point> found in KMZ');
-        S.wtgs=wtgs;S.wtgs.forEach((w,i)=>w.id=i);
-        setUpload('wtgUploadZone','wtgUploadInfo','ok',f.name,`${wtgs.length} WTGs from KMZ`);
-        renderWTGTable();calcCentroid();checkStep1();
-      }catch(err){setUpload('wtgUploadZone','wtgUploadInfo','err',f.name,err.message);}
-    };r.readAsArrayBuffer(f);return;
+        const zip=await JSZip.loadAsync(ev.target.result);
+        const kmlFile=Object.keys(zip.files).find(n=>n.endsWith('.kml'));
+        if(!kmlFile)throw new Error('No KML file found inside KMZ');
+        const kmlText=await zip.files[kmlFile].async('string');
+        parseKMLToWTGs(kmlText,f.name);
+      }catch(err){setUpload('wtgUploadZone','wtgUploadInfo','err',f.name,'KMZ error: '+err.message);}
+    };r.readAsArrayBuffer(f);
+    return;
   }
+  
+  // KML file → parse directly
   if(ext==='kml'){
     const r=new FileReader();
     r.onload=ev=>{
-      try{
-        const wtgs=parseKMLPlacemarks(ev.target.result,100,90);
-        if(!wtgs.length)throw new Error('No valid Placemarks with <Point> found in KML');
-        S.wtgs=wtgs;S.wtgs.forEach((w,i)=>w.id=i);
-        setUpload('wtgUploadZone','wtgUploadInfo','ok',f.name,`${wtgs.length} WTGs from KML`);
-        renderWTGTable();calcCentroid();checkStep1();
-      }catch(err){setUpload('wtgUploadZone','wtgUploadInfo','err',f.name,err.message);}
-    };r.readAsText(f);return;
+      try{parseKMLToWTGs(ev.target.result,f.name);}
+      catch(err){setUpload('wtgUploadZone','wtgUploadInfo','err',f.name,'KML error: '+err.message);}
+    };r.readAsText(f);
+    return;
   }
+  
+  // GeoJSON file
+  if(ext==='geojson'||ext==='json'){
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{parseGeoJSONToWTGs(ev.target.result,f.name);}
+      catch(err){setUpload('wtgUploadZone','wtgUploadInfo','err',f.name,'GeoJSON error: '+err.message);}
+    };r.readAsText(f);
+    return;
+  }
+  
+  // CSV/TXT — original parsing
   const r=new FileReader();
   r.onload=ev=>{
     try{
@@ -975,9 +941,112 @@ function handleWTGUpload(e){
   };r.readAsText(f);
 }
 
-function handleWTGClipboardPaste(){
-  const text=document.getElementById('wtgClipText').value.trim();
-  if(!text){alert('Paste some data first');return;}
+// Parse KML XML to extract WTG coordinates
+function parseKMLToWTGs(kmlText,fileName){
+  const parser=new DOMParser();
+  const doc=parser.parseFromString(kmlText,'text/xml');
+  const placemarks=doc.querySelectorAll('Placemark');
+  if(!placemarks.length)throw new Error('No Placemark elements found in KML');
+  S.wtgs=[];let cnt=0;
+  for(const pm of placemarks){
+    let name=(pm.querySelector('name')?.textContent||'').trim()||`W${cnt+1}`;
+    // Try ExtendedData first for WTG properties
+    const extData=pm.querySelectorAll('ExtendedData Data');
+    let rd=NaN,hh=NaN,model='';
+    for(const d of extData){
+      const attr=d.getAttribute('name')?.toLowerCase()||'';
+      const val=d.querySelector('value')?.textContent||'';
+      if(attr.includes('rotor')||attr.includes('diameter')||attr.includes('rd'))rd=parseFloat(val);
+      if(attr.includes('hub')||attr.includes('height')||attr.includes('hh'))hh=parseFloat(val);
+      if(attr.includes('model')||attr.includes('type'))model=val;
+    }
+    // Parse coordinates — try Point first, then LineString, then Polygon
+    const coordEls=pm.querySelectorAll('coordinates');
+    let x=NaN,y=NaN;
+    for(const cel of coordEls){
+      const txt=cel.textContent.trim();
+      if(!txt)continue;
+      // KML coordinates: lon,lat,alt (space-separated groups, comma-separated values)
+      const groups=txt.split(/\s+/).filter(g=>g.includes(','));
+      // Use centroid of all coordinate groups (for polygons/lines), or first point
+      let sumLon=0,sumLat=0;
+      for(const g of groups){
+        const parts=g.split(',').map(Number);
+        if(parts.length>=2&&!isNaN(parts[0])&&!isNaN(parts[1])){sumLon+=parts[0];sumLat+=parts[1];}
+      }
+      const n=groups.length||1;
+      const lon=sumLon/n, lat=sumLat/n;
+      // Detect if these are UTM or geographic
+      if(Math.abs(lon)<=180&&Math.abs(lat)<=90){x=lat;y=lon;}
+      else{x=lon;y=lat;}
+      if(!isNaN(x)&&!isNaN(y))break;
+    }
+    // If still no coords, try Point coordinates
+    if(isNaN(x)){
+      const point=pm.querySelector('Point coordinates');
+      if(point){
+        const parts=point.textContent.trim().split(',').map(Number);
+        if(parts.length>=2){x=parts[1];y=parts[0];}
+      }
+    }
+    if(isNaN(x)||isNaN(y))continue;
+    // Default values if not found in ExtendedData
+    if(isNaN(rd))rd=parseFloat(prompt(`Enter rotor diameter for ${name} (m):`,'150'))||150;
+    if(isNaN(hh))hh=parseFloat(prompt(`Enter hub height for ${name} (m):`,'120'))||120;
+    S.wtgs.push({id:name,name,lat:x,lon:y,rd,hh,model});cnt++;
+  }
+  if(!cnt)throw new Error('No valid coordinates found in KML Placemarks');
+  setUpload('wtgUploadZone','wtgUploadInfo','ok',fileName,`${cnt} WTGs from KML`);
+  renderWTGTable();calcCentroid();checkStep1();
+}
+
+// Parse GeoJSON to extract WTG coordinates
+function parseGeoJSONToWTGs(geoText,fileName){
+  const geo=JSON.parse(geoText);
+  const features=geo.features||[];
+  if(!features.length)throw new Error('No features found in GeoJSON');
+  S.wtgs=[];let cnt=0;
+  for(const f of features){
+    const props=f.properties||{};
+    const name=props.name||props.id||props.label||`W${cnt+1}`;
+    const coords=f.geometry?.coordinates;
+    if(!coords)continue;
+    let x,y;
+    if(f.geometry.type==='Point'){x=coords[1];y=coords[0];}
+    else if(f.geometry.type==='Polygon'||f.geometry.type==='MultiPolygon'){
+      // Centroid approximation
+      let sumLon=0,sumLat=0,n=0;
+      const rings=f.geometry.type==='Polygon'?[coords[0]]:coords.map(c=>c[0]);
+      for(const ring of rings)for(const c of ring){sumLon+=c[0];sumLat+=c[1];n++;}
+      if(!n)continue;
+      y=sumLon/n;x=sumLat/n;
+    }else if(f.geometry.type==='LineString'){
+      let sumLon=0,sumLat=0;for(const c of coords){sumLon+=c[0];sumLat+=c[1];}
+      y=sumLon/coords.length;x=sumLat/coords.length;
+    }else continue;
+    if(isNaN(x)||isNaN(y))continue;
+    const rd=parseFloat(props.rotor_diameter||props.rd||props.D||'')||150;
+    const hh=parseFloat(props.hub_height||props.hh||props.H||'')||120;
+    const model=props.model||props.turbine_type||'';
+    S.wtgs.push({id:String(name),name:String(name),lat:x,lon:y,rd,hh,model});cnt++;
+  }
+  if(!cnt)throw new Error('No valid features with coordinates found');
+  setUpload('wtgUploadZone','wtgUploadInfo','ok',fileName,`${cnt} WTGs from GeoJSON`);
+  renderWTGTable();calcCentroid();checkStep1();
+}
+
+// Clipboard paste modal
+function showPasteModal(){
+  document.getElementById('pasteModal').style.display='flex';
+  document.getElementById('pasteTextarea').value='';
+  document.getElementById('pasteTextarea').focus();
+}
+function closePasteModal(){
+  document.getElementById('pasteModal').style.display='none';
+}
+function processPastedData(){
+  const text=document.getElementById('pasteTextarea').value.trim();
+  if(!text){alert('No data pasted');return;}
   try{
     const{headers,rows}=parseCSV(text);S.wtgs=[];let cnt=0;
     for(const row of rows){
@@ -985,43 +1054,645 @@ function handleWTGClipboardPaste(){
       const id=findColVal(headers,vals,['id','name','wtg','turbine'])||`W${cnt+1}`;
       const x=parseFloat(findColVal(headers,vals,['lat','latitude','x','easting','east','xcoord']));
       const y=parseFloat(findColVal(headers,vals,['lon','longitude','y','northing','north','ycoord']));
-      const rd=parseFloat(findColVal(headers,vals,['rd','rotordiameter','rotor','diameter']));
-      const hh=parseFloat(findColVal(headers,vals,['hh','hubheight','hub']));
+      const rd=parseFloat(findColVal(headers,vals,['rd','rotordiameter','rotor','diameter']))||150;
+      const hh=parseFloat(findColVal(headers,vals,['hh','hubheight','hub']))||120;
       const model=findColVal(headers,vals,['model','type','wtgtype'])||'';
-      if(!isNaN(x)&&!isNaN(y)&&!isNaN(rd)&&!isNaN(hh)){S.wtgs.push({id,name:id,lat:x,lon:y,rd,hh,model});cnt++;}
+      if(!isNaN(x)&&!isNaN(y)){S.wtgs.push({id,name:id,lat:x,lon:y,rd,hh,model});cnt++;}
     }
-    if(!cnt)throw new Error('No valid WTG rows found');
-    setUpload('wtgUploadZone','wtgUploadInfo','ok','Clipboard',`${cnt} WTGs loaded`);
-    document.getElementById('wtgClipPaste').classList.remove('show');
+    if(!cnt)throw new Error('No valid data rows found — ensure columns have x/y coordinates');
+    setUpload('wtgUploadZone','wtgUploadInfo','ok','Clipboard paste',`${cnt} WTGs loaded`);
     renderWTGTable();calcCentroid();checkStep1();
+    closePasteModal();
   }catch(err){alert('Parse error: '+err.message);}
+}
+
+// SRTM elevation data download — robust with rate limiting, retry, and terrain visualization
+async function downloadSRTM1(){
+  if(!S.wtgs.length){alert('Load WTG layout first');return;}
+  const st=document.getElementById('srtmStatus');
+  const bufferKm=parseFloat(document.getElementById('srtmBuffer')?.value)||20;
+  const step=parseFloat(document.getElementById('srtmRes')?.value)||0.00083;
+  const contourInt=parseFloat(document.getElementById('srtmContour')?.value)||5;
+  S.contourInterval=contourInt;
+  S.srtmCancel=false;
+
+  // Cancel button
+  const cancelId='srtmCancel_'+Date.now();
+  const showCancel=()=>{
+    if(!document.getElementById(cancelId)){
+      const btn=document.createElement('button');
+      btn.id=cancelId;btn.className='btn btn-sm btn-danger';btn.style.marginLeft='.5rem';
+      btn.textContent='✕ Cancel';btn.onclick=()=>{S.srtmCancel=true;};
+      st.querySelector('div')?.after(btn);
+    }
+  };
+
+  // Calculate bounding box
+  const xs=S.wtgs.map(w=>w.lat),ys=S.wtgs.map(w=>w.lon);
+  let cMinX=Math.min(...xs),cMaxX=Math.max(...xs),cMinY=Math.min(...ys),cMaxY=Math.max(...ys);
+  const isGeographic=Math.abs(cMinX)<=180&&Math.abs(cMaxX)<=180&&Math.abs(cMinY)<=90&&Math.abs(cMaxY)<=90;
+  let minLon,minLat,maxLon,maxLat;
+  if(isGeographic){
+    minLon=cMinX;maxLon=cMaxX;minLat=cMinY;maxLat=cMaxY;
+    const bufDeg=bufferKm/111;
+    minLon-=bufDeg;maxLon+=bufDeg;minLat-=bufDeg;maxLat+=bufDeg;
+  }else{
+    const buf=bufferKm*1000;
+    const tl=detectUTMAndConvert(cMinX-buf,cMaxY+buf);
+    const tr=detectUTMAndConvert(cMaxX+buf,cMaxY+buf);
+    const bl=detectUTMAndConvert(cMinX-buf,cMinY-buf);
+    const br=detectUTMAndConvert(cMaxX+buf,cMinY-buf);
+    minLon=Math.min(tl.lon,tr.lon,bl.lon,br.lon);maxLon=Math.max(tl.lon,tr.lon,bl.lon,br.lon);
+    minLat=Math.min(tl.lat,tr.lat,bl.lat,br.lat);maxLat=Math.max(tl.lat,tr.lat,bl.lat,br.lat);
+  }
+  const maxSpan=1.35;
+  if(maxLon-minLon>maxSpan){const c=(minLon+maxLon)/2;minLon=c-maxSpan/2;maxLon=c+maxSpan/2;}
+  if(maxLat-minLat>maxSpan){const c=(minLat+maxLat)/2;minLat=c-maxSpan/2;maxLat=c+maxSpan/2;}
+
+  const nLats=Math.round((maxLat-minLat)/step)+1;
+  const nLons=Math.round((maxLon-minLon)/step)+1;
+  const totalPts=nLats*nLons;
+  const areaKm=`${Math.round((maxLon-minLon)*111)}×${Math.round((maxLat-minLat)*111)}`;
+
+  st.innerHTML=`<div style="font-family:var(--mono);font-size:.7rem;color:var(--gold)">⏳ ${nLats}×${nLons} = ${totalPts.toLocaleString()} pts · ${areaKm} km · Preparing…</div>`;
+  showCancel();
+
+  if(totalPts>500000){
+    if(!confirm(`Large area: ${totalPts.toLocaleString()} points (${nLats}×${nLons}).\n\nRecommend: use coarser spacing (500m or 1km).\n\nContinue anyway?`)){S.srtmCancel=true;return;}
+  }
+
+  try{
+    const latArr=[],lonArr=[];
+    for(let i=0;i<nLats;i++)latArr.push(+(minLat+i*step).toFixed(6));
+    for(let j=0;j<nLons;j++)lonArr.push(+(minLon+j*step).toFixed(6));
+
+    const allElev=new Float32Array(totalPts);
+    // Adaptive delay: start at 150ms, increase on 429
+    let delay=150;
+    let totalRetries=0;
+    const maxRetries=50;
+    const startTime=Date.now();
+
+    for(let i=0;i<nLats;i++){
+      if(S.srtmCancel)throw new Error('Cancelled by user');
+      const lat=latArr[i];
+      const rowBatches=Math.ceil(nLons/2000);
+
+      for(let b=0;b<rowBatches;b++){
+        if(S.srtmCancel)throw new Error('Cancelled by user');
+        const jStart=b*2000;
+        const jEnd=Math.min(jStart+2000,nLons);
+        const subLons=lonArr.slice(jStart,jEnd);
+        const n=subLons.length;
+        const subLats=new Array(n).fill(lat);
+        const url=`https://api.open-meteo.com/v1/elevation?latitude=${subLats.join(',')}&longitude=${subLons.join(',')}`;
+
+        let resp=null;
+        let retries=0;
+        const maxPerReq=5;
+
+        while(!resp&&retries<=maxPerReq){
+          try{
+            const controller=new AbortController();
+            const tid=setTimeout(()=>controller.abort(),45000);
+            resp=await fetch(url,{signal:controller.signal});
+            clearTimeout(tid);
+          }catch(e){
+            if(S.srtmCancel)throw new Error('Cancelled by user');
+            retries++;totalRetries++;
+            if(retries>maxPerReq)throw new Error(`Network error after ${retries} retries: ${e.message}`);
+            await new Promise(r=>setTimeout(r,delay));
+            continue;
+          }
+
+          if(resp.ok){
+            // Success
+            const data=await resp.json();
+            if(data.elevation){
+              for(let k=0;k<data.elevation.length;k++){
+                allElev[i*nLons+jStart+k]=data.elevation[k]??null;
+              }
+            }
+          }else if(resp.status===429){
+            // Rate limited — exponential backoff
+            retries++;totalRetries++;
+            resp=null;
+            if(totalRetries>maxRetries)throw new Error(`Rate limited after ${totalRetries} retries. Use coarser grid spacing.`);
+            delay=Math.min(delay*2,30000); // double delay, max 30s
+            st.innerHTML=`<div style="font-family:var(--mono);font-size:.7rem;color:var(--gold)">⏳ Rate limited — waiting ${delay/1000}s (retry ${totalRetries}/${maxRetries})…</div>`;
+            showCancel();
+            await new Promise(r=>setTimeout(r,delay));
+          }else{
+            throw new Error(`HTTP ${resp.status}`);
+          }
+        }
+
+        // Inter-request delay (gentle throttling)
+        if(delay>150)delay=Math.max(150,delay*0.8); // slowly recover
+        await new Promise(r=>setTimeout(r,delay));
+      }
+
+      // Progress every 5 rows
+      if(i%5===0||i===nLats-1){
+        const pct=((i+1)/nLats*100).toFixed(1);
+        const elapsed=(Date.now()-startTime)/1000;
+        const rate=((i+1)*nLons/elapsed).toFixed(0);
+        const remaining=(nLats-i-1)*nLons/parseFloat(rate||1);
+        const remStr=remaining>60?`${(remaining/60).toFixed(1)}m`:`${remaining.toFixed(0)}s`;
+        st.innerHTML=`<div style="font-family:var(--mono);font-size:.7rem;color:var(--gold)">⏳ ${pct}% — ${((i+1)*nLons).toLocaleString()} / ${totalPts.toLocaleString()} pts — ${rate} pts/s — ~${remStr} left</div>`;
+        showCancel();
+      }
+    }
+
+    if(S.srtmCancel)throw new Error('Cancelled by user');
+
+    // Build terrain data
+    S.terrainPoints=[];
+    S.elevGrid=null;
+    const elevGrid=new Float32Array(nLats*nLons);
+    for(let i=0;i<nLats;i++){
+      for(let j=0;j<nLons;j++){
+        const e=allElev[i*nLons+j];
+        elevGrid[i*nLons+j]=e;
+        if(e!=null&&isFinite(e))S.terrainPoints.push({x:latArr[i],y:lonArr[j],z:e});
+      }
+    }
+
+    if(!S.terrainPoints.length)throw new Error('No elevation data returned');
+    S.hasMapData=true;
+    S.terrainGrid={latArr,lonArr,nLats,nLons,minLon,maxLon,minLat,maxLat};
+    S.elevGrid=elevGrid;
+    S.srtmMeta={source:'SRTM',resolution:Math.round(step*111000),points:totalPts,grid:`${nLats}×${nLons}`,area:`${areaKm} km`,contour:contourInt};
+
+    setUpload('mapUploadZone','mapUploadInfo','ok','SRTM Download',`${S.terrainPoints.length.toLocaleString()} pts · ${S.srtmMeta.grid} · ${S.srtmMeta.area}`);
+    st.innerHTML=`<div class="alert alert-ok" style="margin:0">✓ ${S.terrainPoints.length.toLocaleString()} pts · ${S.srtmMeta.grid} · ${S.srtmMeta.area} · ${contourInt}m contours · Downloaded in ${((Date.now()-startTime)/1000).toFixed(1)}s</div>`;
+
+    // Auto-show terrain map
+    document.getElementById('terrainVizSection').style.display='block';
+    setTimeout(()=>renderTerrainMap(),100);
+
+  }catch(err){
+    if(err.message==='Cancelled by user'){
+      st.innerHTML=`<div class="alert alert-warn" style="margin:0">✗ Download cancelled.</div>`;
+    }else{
+      st.innerHTML=`<div class="alert alert-err" style="margin:0">✗ ${err.message}<br><span style="font-size:.6rem;opacity:.7">Tip: Use coarser grid (500m/1km) or smaller buffer (10-15km)</span></div>`;
+    }
+    console.error('SRTM error:',err);
+  }
+}
+
+// Generate contour lines from terrain grid using marching squares
+function generateContours(contourInterval){
+  if(!S.elevGrid||!S.terrainGrid)return[];
+  const{latArr,lonArr,nLats,nLons}=S.terrainGrid;
+  const grid=S.elevGrid;
+  let minZ=Infinity,maxZ=-Infinity;
+  for(let k=0;k<grid.length;k++){
+    const v=grid[k];
+    if(v!=null&&isFinite(v)){if(v<minZ)minZ=v;if(v>maxZ)maxZ=v;}
+  }
+  if(!isFinite(minZ))return[];
+
+  const contours=[];
+  const startZ=Math.ceil(minZ/contourInterval)*contourInterval;
+  for(let z=startZ;z<=maxZ;z+=contourInterval){
+    const segments=[];
+    for(let i=0;i<nLats-1;i++){
+      for(let j=0;j<nLons-1;j++){
+        const v0=grid[i*nLons+j],v1=grid[i*nLons+j+1],v2=grid[(i+1)*nLons+j+1],v3=grid[(i+1)*nLons+j];
+        if(v0==null||v1==null||v2==null||v3==null)continue;
+        const vals=[v0,v1,v2,v3];
+        let code=0;
+        for(let k=0;k<4;k++)if(vals[k]>=z)code|=1<<k;
+        if(code===0||code===15)continue;
+
+        const lerpF=(va,vb)=>va===vb?0.5:(z-va)/(vb-va);
+        const x0=latArr[i],x1=latArr[i+1],y0=lonArr[j],y1=lonArr[j+1];
+
+        const top_x=x0, top_y=y0+lerpF(v0,v1)*(y1-y0);
+        const right_x=x0+lerpF(v1,v2)*(x1-x0), right_y=y1;
+        const bot_x=x1, bot_y=y0+lerpF(v3,v2)*(y1-y0);
+        const left_x=x0+lerpF(v0,v3)*(x1-x0), left_y=y0;
+
+        const pts=[[top_x,top_y],[right_x,right_y],[bot_x,bot_y],[left_x,left_y]];
+        // edge pairs: top=0-1, right=1-2, bottom=3-2, left=0-3
+        switch(code){
+          case 1:case 14:segments.push([pts[0],pts[3]]);break;
+          case 2:case 13:segments.push([pts[0],pts[1]]);break;
+          case 3:case 12:segments.push([pts[3],pts[1]]);break;
+          case 4:case 11:segments.push([pts[1],pts[2]]);break;
+          case 5:segments.push([pts[0],pts[1]]);segments.push([pts[3],pts[2]]);break;
+          case 6:case 9:segments.push([pts[0],pts[2]]);break;
+          case 7:case 8:segments.push([pts[3],pts[2]]);break;
+          case 10:segments.push([pts[0],pts[3]]);segments.push([pts[1],pts[2]]);break;
+        }
+      }
+    }
+    contours.push({elevation:z,segments,isMajor:z%(contourInterval*5)===0});
+  }
+  return contours;
+}
+
+// ── TERRAIN ELEVATION MAP (windPRO/surfer style) ──────────────────────────
+const TERRAIN_COLORS={
+  terrain:[[0,.15,.27,.13],[.2,.22,.42,.18],[.35,.36,.52,.22],[.5,.55,.48,.2],[.65,.73,.63,.25],[.8,.85,.8,.55],[.9,.95,.93,.78],[1,1,1,1]],
+  viridis:[[0,.267,.004,.329],[.15,.282,.141,.458],[.3,.231,.322,.545],[.45,.168,.498,.547],[.6,.127,.566,.551],[.75,.134,.658,.517],[.9,.478,.821,.318],[1,.993,.906,.144]],
+  plasma:[[0,.050,.030,.528],[.15,.218,.137,.753],[.3,.407,.160,.743],[.45,.592,.181,.629],[.6,.752,.228,.463],[.75,.894,.341,.241],[.9,.977,.561,.065],[1,.94,.975,.131]],
+  ocean:[[0,.012,.035,.15],[.2,.039,.118,.31],[.4,.098,.239,.49],[.55,.18,.38,.63],[.7,.34,.56,.74],[.85,.55,.76,.87],[.95,.78,.91,.96],[1,.96,.98,1]],
+  grayscale:[[0,0,0,0],[1,1,1,1]]
+};
+
+function getTerrainColor(t,scheme){
+  const stops=TERRAIN_COLORS[scheme]||TERRAIN_COLORS.terrain;
+  t=Math.max(0,Math.min(1,t));
+  for(let i=0;i<stops.length-1;i++){
+    const t0=stops[i][0],r0=stops[i][1],g0=stops[i][2],b0=stops[i][3];
+    const t1=stops[i+1][0],r1=stops[i+1][1],g1=stops[i+1][2],b1=stops[i+1][3];
+    if(t>=t0&&t<=t1){
+      const f=(t-t0)/(t1-t0);
+      return[Math.round((r0+(r1-r0)*f)*255),Math.round((g0+(g1-g0)*f)*255),Math.round((b0+(b1-b0)*f)*255)];
+    }
+  }
+  const last=stops[stops.length-1];
+  return[Math.round(last[1]*255),Math.round(last[2]*255),Math.round(last[3]*255)];
+}
+
+function renderTerrainMap(){
+  if(!S.elevGrid||!S.terrainGrid)return;
+  const cv=document.getElementById('terrainMapCanvas');if(!cv)return;
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const{latArr,lonArr,nLats,nLons,minLon,maxLon,minLat,maxLat}=S.terrainGrid;
+  const scheme=document.getElementById('terrainColorScheme')?.value||'terrain';
+  const showCont=document.getElementById('showContours')?.checked!==false;
+  const showWTG=document.getElementById('showWTGs')?.checked!==false;
+  const contourInt=S.contourInterval||5;
+
+  // Find elevation range
+  let minZ=Infinity,maxZ=-Infinity;
+  for(let k=0;k<S.elevGrid.length;k++){
+    const v=S.elevGrid[k];
+    if(v!=null&&isFinite(v)){if(v<minZ)minZ=v;if(v>maxZ)maxZ=v;}
+  }
+  if(!isFinite(minZ))return;
+  const zRange=Math.max(maxZ-minZ,1);
+
+  // Draw elevation grid as ImageData (fast pixel-by-pixel rendering)
+  const imgData=ctx.createImageData(W,H);
+  const pixels=imgData.data;
+
+  for(let py=0;py<H;py++){
+    const latIdx=(1-py/H)*(nLats-1);
+    const i=Math.floor(latIdx);
+    const fi=latIdx-i;
+    for(let px=0;px<W;px++){
+      const lonIdx=(px/W)*(nLons-1);
+      const j=Math.floor(lonIdx);
+      const fj=lonIdx-j;
+
+      // Bilinear interpolation
+      const v00=S.elevGrid[i*nLons+j]??null;
+      const v10=S.elevGrid[i*nLons+j+1]??null;
+      const v01=S.elevGrid[(i+1)*nLons+j]??null;
+      const v11=S.elevGrid[(i+1)*nLons+j+1]??null;
+
+      let e=null;
+      if(v00!=null&&v10!=null&&v01!=null&&v11!=null){
+        e=v00*(1-fi)*(1-fj)+v10*(1-fi)*fj+v01*fi*(1-fj)+v11*fi*fj;
+      }else if(v00!=null){
+        e=v00;
+      }
+      const idx=(py*W+px)*4;
+      if(e!=null){
+        const t=(e-minZ)/zRange;
+        const[r,g,b]=getTerrainColor(t,scheme);
+        pixels[idx]=r;pixels[idx+1]=g;pixels[idx+2]=b;pixels[idx+3]=255;
+      }else{
+        pixels[idx]=7;pixels[idx+1]=17;pixels[idx+2]=30;pixels[idx+3]=255;
+      }
+    }
+  }
+  ctx.putImageData(imgData,0,0);
+
+  // Contour lines
+  if(showCont&&zRange>0){
+    const contours=generateContours(contourInt);
+    for(const cont of contours){
+      const isMajor=cont.isMajor;
+      ctx.strokeStyle=isMajor?'rgba(0,0,0,0.5)':'rgba(0,0,0,0.2)';
+      ctx.lineWidth=isMajor?1.2:0.5;
+      ctx.beginPath();
+      for(const seg of cont.segments){
+        const px0=(seg[0][1]-minLon)/(maxLon-minLon)*W;
+        const py0=(1-(seg[0][0]-minLat)/(maxLat-minLat))*H;
+        const px1=(seg[1][1]-minLon)/(maxLon-minLon)*W;
+        const py1=(1-(seg[1][0]-minLat)/(maxLat-minLat))*H;
+        ctx.moveTo(px0,py0);ctx.lineTo(px1,py1);
+      }
+      ctx.stroke();
+      // Major contour labels
+      if(isMajor&&cont.segments.length>0){
+        const labelPt=cont.segments[Math.floor(cont.segments.length/2)];
+        const lx=(labelPt[0][1]-minLon)/(maxLon-minLon)*W;
+        const ly=(1-(labelPt[0][0]-minLat)/(maxLat-minLat))*H;
+        if(lx>30&&lx<W-30&&ly>15&&ly<H-5){
+          ctx.fillStyle='rgba(255,255,255,0.85)';
+          ctx.font='bold 9px IBM Plex Mono';ctx.textAlign='center';ctx.textBaseline='middle';
+          ctx.fillText(Math.round(cont.elevation)+'m',lx,ly);
+        }
+      }
+    }
+  }
+
+  // WTG markers
+  if(showWTG){
+    const allPts=[...S.wtgs.map(w=>({...w,color:'#00d68f'})),...S.extWtgs.map(w=>({...w,color:'#f5a623'})),...(S.proposedMastManual?[S.proposedMastManual]:[]).map(m=>({...m,color:'#ff5555'}))];
+    for(const w of allPts){
+      const wx=(w.lon-minLon)/(maxLon-minLon)*W;
+      const wy=(1-(w.lat-minLat)/(maxLat-minLat))*H;
+      if(wx<0||wx>W||wy<0||wy>H)continue;
+      // Circle
+      ctx.beginPath();ctx.arc(wx,wy,6,0,Math.PI*2);
+      ctx.fillStyle=w.color||'#00d68f';ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
+      // Label
+      ctx.fillStyle='#fff';ctx.font='bold 8px IBM Plex Mono';ctx.textAlign='left';
+      ctx.fillText(w.name||w.id,wx+10,wy+3);
+    }
+  }
+
+  // Crosshair for profile
+  if(S.profileLine&&S.profileLine.length>=2){
+    ctx.strokeStyle='rgba(255,80,80,0.8)';ctx.lineWidth=2;ctx.setLineDash([6,3]);
+    ctx.beginPath();
+    for(let i=0;i<S.profileLine.length;i++){
+      const px=(S.profileLine[i].lon-minLon)/(maxLon-minLon)*W;
+      const py=(1-(S.profileLine[i].lat-minLat)/(maxLat-minLat))*H;
+      i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+    }
+    ctx.stroke();ctx.setLineDash([]);
+    // Endpoints
+    for(const pt of[S.profileLine[0],S.profileLine[S.profileLine.length-1]]){
+      const px=(pt.lon-minLon)/(maxLon-minLon)*W;
+      const py=(1-(pt.lat-minLat)/(maxLat-minLat))*H;
+      ctx.fillStyle='#ff5050';ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);ctx.fill();
+    }
+  }
+
+  // Color bar
+  const barEl=document.getElementById('terrainColorBar');
+  if(barEl){
+    let barCSS='linear-gradient(to right';
+    for(let t=0;t<=1;t+=.05){
+      const[r,g,b]=getTerrainColor(t,scheme);
+      barCSS+=`,rgb(${r},${g},${b})`;
+    }
+    barCSS+=')';
+    barEl.style.background=barCSS;
+  }
+  document.getElementById('colorBarMin').textContent=Math.round(minZ)+'m';
+  document.getElementById('colorBarMax').textContent=Math.round(maxZ)+'m';
+  document.getElementById('terrainMapMeta').textContent=
+    `Resolution: ${S.srtmMeta?.resolution||'?'}m · Range: ${Math.round(minZ)}–${Math.round(maxZ)}m · Grid: ${nLats}×${nLons}`;
+}
+
+// Terrain map mouse interaction for tooltip + profile line
+function initTerrainMapInteraction(){
+  const cv=document.getElementById('terrainMapCanvas');if(!cv)return;
+  let drawing=false;
+  S.profileLine=null;
+
+  cv.addEventListener('mousemove',function(e){
+    const rect=cv.getBoundingClientRect();
+    const px=(e.clientX-rect.left)*(cv.width/rect.width);
+    const py=(e.clientY-rect.top)*(cv.height/rect.height);
+    if(!S.terrainGrid)return;
+
+    const{latArr,lonArr,nLats,nLons,minLon,maxLon,minLat,maxLat}=S.terrainGrid;
+    const lat=minLat+(1-py/cv.height)*(maxLat-minLat);
+    const lon=minLon+(px/cv.width)*(maxLon-minLon);
+
+    // Get elevation at cursor
+    let elev=null;
+    if(S.elevGrid){
+      const gi=Math.round((1-(lat-minLat)/(maxLat-minLat))*(nLats-1));
+      const gj=Math.round((lon-minLon)/(maxLon-minLon)*(nLons-1));
+      if(gi>=0&&gi<nLats&&gj>=0&&gj<nLons){
+        elev=S.elevGrid[gi*nLons+gj];
+      }
+    }
+
+    const tooltip=document.getElementById('terrainTooltip');
+    tooltip.style.display='block';
+    tooltip.style.left=(e.clientX-cv.getBoundingClientRect().left+15)+'px';
+    tooltip.style.top=(e.clientY-cv.getBoundingClientRect().top-10)+'px';
+    tooltip.innerHTML=`${lat.toFixed(5)}°N, ${lon.toFixed(5)}°E${elev!=null?' · <b style="color:var(--mint)">'+elev.toFixed(1)+'m</b>':''}`;
+
+    // Crosshair
+    const ch=document.getElementById('terrainCrosshair');
+    const chH=document.getElementById('terrainCrosshairH');
+    ch.style.display='block';ch.style.left=px*(rect.width/cv.width)+'px';
+    chH.style.display='block';chH.style.top=py*(rect.height/cv.height)+'px';
+
+    // Profile line drawing
+    if(drawing&&S.profileLine){
+      S.profileLine.push({lat,lon});
+      renderTerrainMap();
+      drawTerrainProfile();
+    }
+  });
+
+  cv.addEventListener('mouseleave',function(){
+    document.getElementById('terrainTooltip').style.display='none';
+    document.getElementById('terrainCrosshair').style.display='none';
+    document.getElementById('terrainCrosshairH').style.display='none';
+  });
+
+  cv.addEventListener('mousedown',function(e){
+    if(e.button!==0)return;
+    const rect=cv.getBoundingClientRect();
+    const px=(e.clientX-rect.left)*(cv.width/rect.width);
+    const py=(e.clientY-rect.top)*(cv.height/rect.height);
+    if(!S.terrainGrid)return;
+    const{minLon,maxLon,minLat,maxLat}=S.terrainGrid;
+    const lat=minLat+(1-py/cv.height)*(maxLat-minLat);
+    const lon=minLon+(px/cv.width)*(maxLon-minLon);
+    drawing=true;
+    S.profileLine=[{lat,lon}];
+    document.getElementById('terrainProfileSection').style.display='block';
+  });
+
+  cv.addEventListener('mouseup',function(){
+    drawing=false;
+    if(S.profileLine&&S.profileLine.length>=2){
+      drawTerrainProfile();
+    }
+  });
+}
+
+function drawTerrainProfile(){
+  if(!S.profileLine||S.profileLine.length<2||!S.elevGrid||!S.terrainGrid)return;
+  const cv=document.getElementById('terrainProfileCanvas');if(!cv)return;
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='rgba(7,17,30,.95)';ctx.fillRect(0,0,W,H);
+
+  const{latArr,lonArr,nLats,nLons,minLon,maxLon,minLat,maxLat}=S.terrainGrid;
+
+  // Build profile along the line
+  const profile=[];
+  const p0=S.profileLine[0],pN=S.profileLine[S.profileLine.length-1];
+  const totalDist=Math.hypot(pN.lat-p0.lat,pN.lon-p0.lon)*111000; // approx metres
+  const nSamples=Math.max(200,Math.round(totalDist/50)); // sample every ~50m
+  const elevs=[];
+
+  for(let s=0;s<=nSamples;s++){
+    const t=s/nSamples;
+    const lat=p0.lat+(pN.lat-p0.lat)*t;
+    const lon=p0.lon+(pN.lon-p0.lon)*t;
+    const d=t*totalDist;
+
+    let e=null;
+    if(S.elevGrid){
+      const gi=Math.round((1-(lat-minLat)/(maxLat-minLat))*(nLats-1));
+      const gj=Math.round((lon-minLon)/(maxLon-minLon)*(nLons-1));
+      if(gi>=0&&gi<nLats&&gj>=0&&gj<nLons)e=S.elevGrid[gi*nLons+gj];
+    }
+    if(e!=null){profile.push({d,e});elevs.push(e);}
+  }
+
+  if(profile.length<2)return;
+
+  const pad={t:25,r:30,b:35,l:55};
+  const pW=W-pad.l-pad.r,pH=H-pad.t-pad.b;
+  const maxD=profile[profile.length-1].d;
+  const minE=Math.min(...elevs),maxE=Math.max(...elevs);
+  const eRange=Math.max(maxE-minE,1);
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=.5;
+  for(let i=0;i<=5;i++){
+    const y=pad.t+pH*(i/5);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.35)';ctx.font='9px IBM Plex Mono';ctx.textAlign='right';
+    ctx.fillText((maxE-eRange*(i/5)).toFixed(0)+'m',pad.l-5,y+3);
+  }
+  for(let i=0;i<=5;i++){
+    const x=pad.l+pW*(i/5);
+    ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,H-pad.b);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.35)';ctx.font='9px IBM Plex Mono';ctx.textAlign='center';
+    ctx.fillText((maxD*i/5/1000).toFixed(1)+'km',x,H-pad.b+15);
+  }
+
+  // Fill
+  const grad=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+  grad.addColorStop(0,'rgba(0,214,143,.2)');grad.addColorStop(1,'rgba(0,214,143,.02)');
+  ctx.beginPath();ctx.moveTo(pad.l,H-pad.b);
+  for(const p of profile){
+    const x=pad.l+(p.d/maxD)*pW;
+    const y=pad.t+pH*(1-(p.e-minE)/eRange);
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(pad.l+pW,H-pad.b);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  for(let i=0;i<profile.length;i++){
+    const x=pad.l+(profile[i].d/maxD)*pW;
+    const y=pad.t+pH*(1-(profile[i].e-minE)/eRange);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle='#00d68f';ctx.lineWidth=1.8;ctx.stroke();
+
+  // Mark WTGs that fall near profile
+  const allW=[...S.wtgs,...S.extWtgs];
+  for(const w of allW){
+    const wLat=w.lat,wLon=w.lon;
+    const t=totalDist>0?((wLat-p0.lat)*(pN.lat-p0.lat)+(wLon-p0.lon)*(pN.lon-p0.lon))/Math.pow(totalDist/111000,2):0;
+    if(t<0||t>1)continue;
+    const d=t*totalDist;
+    let wE=null;
+    const gi=Math.round((1-(wLat-minLat)/(maxLat-minLat))*(nLats-1));
+    const gj=Math.round((wLon-minLon)/(maxLon-minLon)*(nLons-1));
+    if(gi>=0&&gi<nLats&&gj>=0&&gj<nLons)wE=S.elevGrid[gi*nLons+gj];
+    if(wE==null)continue;
+    const x=pad.l+(d/maxD)*pW;
+    const y=pad.t+pH*(1-(wE-minE)/eRange);
+    ctx.fillStyle='#f5a623';ctx.fillRect(x-3,y-12,6,12);
+    ctx.fillStyle='#fff';ctx.font='bold 7px IBM Plex Mono';ctx.textAlign='center';
+    ctx.fillText(w.name||w.id,x,y-16);
+  }
+
+  // Axis labels
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='bold 9px IBM Plex Mono';
+  ctx.textAlign='center';ctx.fillText('Distance →',W/2,H-3);
+  ctx.save();ctx.translate(10,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('Elevation',0,0);ctx.restore();
+
+  const distKm=(totalDist/1000).toFixed(2);
+  document.getElementById('terrainProfileMeta').textContent=
+    `Length: ${distKm}km · Elevation: ${Math.round(minE)}–${Math.round(maxE)}m · ${profile.length} samples`;
+}
+
+function clearProfileLine(){
+  S.profileLine=null;
+  document.getElementById('terrainProfileSection').style.display='none';
+  renderTerrainMap();
+}
+
+function exportTerrainCSV(){
+  if(!S.terrainPoints.length){alert('No terrain data');return;}
+  let csv='latitude,longitude,elevation_m\n';
+  for(const p of S.terrainPoints)csv+=`${p.x},${p.y},${p.z}\n`;
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='terrain_elevation.csv';a.click();URL.revokeObjectURL(a.href);
+}
+
+function exportTerrainImage(){
+  const cv=document.getElementById('terrainMapCanvas');if(!cv)return;
+  const a=document.createElement('a');a.href=cv.toDataURL('image/png');
+  a.download='terrain_elevation_map.png';a.click();
 }
 
 function handleExtUpload(e){
   const f=e.target.files[0];if(!f)return;
-  const ext=f.name.toLowerCase().split('.').pop();
+  const ext=f.name.split('.').pop().toLowerCase();
+  
+  // KMZ file → unzip and parse KML
   if(ext==='kmz'){
     const r=new FileReader();
     r.onload=async ev=>{
       try{
-        const wtgs=await parseKMZPlacemarks(ev.target.result,100,90);
-        if(!wtgs.length)throw new Error('No valid Placemarks found in KMZ');
-        S.extWtgs=wtgs;S.extWtgs.forEach((w,i)=>w.id=i);
-        setUpload('extUploadZone','extUploadInfo','ok',f.name,`${wtgs.length} ext. WTGs from KMZ`);
-      }catch(err){setUpload('extUploadZone','extUploadInfo','err',f.name,err.message);}
-    };r.readAsArrayBuffer(f);return;
+        const zip=await JSZip.loadAsync(ev.target.result);
+        const kmlFile=Object.keys(zip.files).find(n=>n.endsWith('.kml'));
+        if(!kmlFile)throw new Error('No KML file found inside KMZ');
+        const kmlText=await zip.files[kmlFile].async('string');
+        parseKMLToExtWTGs(kmlText,f.name);
+      }catch(err){setUpload('extUploadZone','extUploadInfo','err',f.name,'KMZ error: '+err.message);}
+    };r.readAsArrayBuffer(f);
+    return;
   }
+  
+  // KML file → parse directly
   if(ext==='kml'){
     const r=new FileReader();
     r.onload=ev=>{
-      try{
-        const wtgs=parseKMLPlacemarks(ev.target.result,100,90);
-        if(!wtgs.length)throw new Error('No valid Placemarks found in KML');
-        S.extWtgs=wtgs;S.extWtgs.forEach((w,i)=>w.id=i);
-        setUpload('extUploadZone','extUploadInfo','ok',f.name,`${wtgs.length} ext. WTGs from KML`);
-      }catch(err){setUpload('extUploadZone','extUploadInfo','err',f.name,err.message);}
-    };r.readAsText(f);return;
+      try{parseKMLToExtWTGs(ev.target.result,f.name);}
+      catch(err){setUpload('extUploadZone','extUploadInfo','err',f.name,'KML error: '+err.message);}
+    };r.readAsText(f);
+    return;
   }
+  
+  // GeoJSON file
+  if(ext==='geojson'||ext==='json'){
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{parseGeoJSONToExtWTGs(ev.target.result,f.name);}
+      catch(err){setUpload('extUploadZone','extUploadInfo','err',f.name,'GeoJSON error: '+err.message);}
+    };r.readAsText(f);
+    return;
+  }
+  
+  // CSV/TXT — original parsing
   const r=new FileReader();
   r.onload=ev=>{
     try{
@@ -1040,74 +1711,197 @@ function handleExtUpload(e){
   };r.readAsText(f);
 }
 
-function handleExtClipboardPaste(){
-  const text=document.getElementById('extClipText').value.trim();
-  if(!text){alert('Paste some data first');return;}
-  try{
-    const{headers,rows}=parseCSV(text);S.extWtgs=[];let cnt=0;
-    for(const row of rows){
-      const vals=Object.values(row);
-      const id=findColVal(headers,vals,['id','name','wtg'])||`E${cnt+1}`;
-      const x=parseFloat(findColVal(headers,vals,['lat','latitude','x','easting']));
-      const y=parseFloat(findColVal(headers,vals,['lon','longitude','y','northing']));
-      const rd=parseFloat(findColVal(headers,vals,['rd','rotordiameter','rotor','diameter']))||100;
-      const hh=parseFloat(findColVal(headers,vals,['hh','hubheight','hub']))||90;
-      if(!isNaN(x)&&!isNaN(y))S.extWtgs.push({id,name:id,lat:x,lon:y,rd,hh});cnt++;
+// Parse KML for External WTGs
+function parseKMLToExtWTGs(kmlText,fileName){
+  const parser=new DOMParser();
+  const doc=parser.parseFromString(kmlText,'text/xml');
+  const placemarks=doc.querySelectorAll('Placemark');
+  if(!placemarks.length)throw new Error('No Placemark elements found in KML');
+  S.extWtgs=[];let cnt=0;
+  for(const pm of placemarks){
+    let name=(pm.querySelector('name')?.textContent||'').trim()||`E${cnt+1}`;
+    const coordEls=pm.querySelectorAll('coordinates');
+    let x=NaN,y=NaN;
+    for(const cel of coordEls){
+      const txt=cel.textContent.trim();if(!txt)continue;
+      const groups=txt.split(/\s+/).filter(g=>g.includes(','));
+      let sumLon=0,sumLat=0;
+      for(const g of groups){const parts=g.split(',').map(Number);if(parts.length>=2&&!isNaN(parts[0])&&!isNaN(parts[1])){sumLon+=parts[0];sumLat+=parts[1];}}
+      const n=groups.length||1;const lon=sumLon/n,lat=sumLat/n;
+      if(Math.abs(lon)<=180&&Math.abs(lat)<=90){x=lat;y=lon;}else{x=lon;y=lat;}
+      if(!isNaN(x)&&!isNaN(y))break;
     }
-    setUpload('extUploadZone','extUploadInfo','ok','Clipboard',`${cnt} external WTGs`);
-    document.getElementById('extClipPaste').classList.remove('show');
-  }catch(err){alert('Parse error: '+err.message);}
+    if(isNaN(x)||isNaN(y))continue;
+    const extData=pm.querySelectorAll('ExtendedData Data');
+    let rd=100,hh=90;
+    for(const d of extData){const attr=d.getAttribute('name')?.toLowerCase()||'';const val=d.querySelector('value')?.textContent||'';if(attr.includes('rotor')||attr.includes('diameter'))rd=parseFloat(val)||100;if(attr.includes('hub')||attr.includes('height'))hh=parseFloat(val)||90;}
+    S.extWtgs.push({id:name,name,lat:x,lon:y,rd,hh});cnt++;
+  }
+  if(!cnt)throw new Error('No valid coordinates found in KML Placemarks');
+  setUpload('extUploadZone','extUploadInfo','ok',fileName,`${cnt} external WTGs from KML`);
+}
+
+// Parse GeoJSON for External WTGs
+function parseGeoJSONToExtWTGs(geoText,fileName){
+  const geo=JSON.parse(geoText);const features=geo.features||[];if(!features.length)throw new Error('No features found');
+  S.extWtgs=[];let cnt=0;
+  for(const f of features){
+    const props=f.properties||{};const name=props.name||props.id||`E${cnt+1}`;
+    const coords=f.geometry?.coordinates;if(!coords)continue;
+    let x,y;
+    if(f.geometry.type==='Point'){x=coords[1];y=coords[0];}
+    else if(f.geometry.type==='LineString'){let sL=0,sA=0;for(const c of coords){sL+=c[0];sA+=c[1];}y=sL/coords.length;x=sA/coords.length;}
+    else continue;
+    if(isNaN(x)||isNaN(y))continue;
+    S.extWtgs.push({id:String(name),name:String(name),lat:x,lon:y,rd:parseFloat(props.rd||'')||100,hh:parseFloat(props.hh||'')||90});cnt++;
+  }
+  if(!cnt)throw new Error('No valid features with coordinates found');
+  setUpload('extUploadZone','extUploadInfo','ok',fileName,`${cnt} external WTGs from GeoJSON`);
 }
 
 function handleMapUpload(e){
   const f=e.target.files[0];if(!f)return;
-  const ext=f.name.toLowerCase().split('.').pop();
-  if(ext==='kmz'){
-    const r=new FileReader();
-    r.onload=async ev=>{
-      try{
-        const pts=await parseKMZTerrain(ev.target.result);
-        if(!pts.length)throw new Error('No elevation coordinates found in KMZ');
-        S.terrainPoints=pts;S.hasMapData=pts.length>50;
-        setUpload('mapUploadZone','mapUploadInfo','ok',f.name,`${pts.length.toLocaleString()} terrain pts from KMZ`);
-      }catch(err){setUpload('mapUploadZone','mapUploadInfo','err',f.name,err.message);}
-    };r.readAsArrayBuffer(f);return;
-  }
-  if(ext==='kml'){
-    const r=new FileReader();
-    r.onload=ev=>{
-      try{
-        const pts=parseKMLTerrain(ev.target.result);
-        if(!pts.length)throw new Error('No elevation coordinates found in KML');
-        S.terrainPoints=pts;S.hasMapData=pts.length>50;
-        setUpload('mapUploadZone','mapUploadInfo','ok',f.name,`${pts.length.toLocaleString()} terrain pts from KML`);
-      }catch(err){setUpload('mapUploadZone','mapUploadInfo','err',f.name,err.message);}
-    };r.readAsText(f);return;
-  }
+  const ext=f.name.split('.').pop().toLowerCase();
   const r=new FileReader();
   r.onload=ev=>{
     try{
-      const lines=ev.target.result.split(/\r?\n/);S.terrainPoints=[];
-      for(const line of lines){
-        const t=line.trim();
-        if(!t||/^["+]/.test(t))continue;
-        if(/^[A-Za-z]/.test(t)&&!/\d/.test(t))continue;
-        const pts=t.split(/[\s,;]+/);
-        if(pts.length>=3){const x=parseFloat(pts[0]),y=parseFloat(pts[1]),z=parseFloat(pts[2]);if(!isNaN(x)&&!isNaN(y)&&!isNaN(z))S.terrainPoints.push({x,y,z});}
-      }
-      S.hasMapData=S.terrainPoints.length>50;
-      setUpload('mapUploadZone','mapUploadInfo','ok',f.name,`${S.terrainPoints.length.toLocaleString()} terrain points`);
-    }catch(err){setUpload('mapUploadZone','mapUploadInfo','err',f.name,err.message);}
-  };r.readAsText(f);
-}
+      const text=ev.target.result;
+      S.terrainPoints=[];
 
+      if(ext==='map'){
+        // WAsP .map format: lines with record types, followed by coordinate data
+        const lines=text.split(/\r?\n/);
+        let readingCoords=false;
+        let coordCount=0;
+
+        for(const line of lines){
+          const t=line.trim();
+          if(!t||t.startsWith('*')||t.startsWith('!'))continue;
+
+          if(/^[0-9]+\.[0-9]+\s/.test(t)||/^[A-Za-z]/.test(t)){
+            const parts=t.split(/[\s,;]+/);
+            if(parts.length>=3){
+              const maybeCount=parseInt(parts[1]);
+              if(!isNaN(maybeCount)&&maybeCount>0&&maybeCount<100000){
+                readingCoords=true;
+                coordCount=maybeCount;
+                continue;
+              }
+            }
+          }
+
+          const pts=t.split(/[\s,;]+/);
+          if(pts.length>=3){
+            const x=parseFloat(pts[0]),y=parseFloat(pts[1]),z=parseFloat(pts[2]);
+            if(!isNaN(x)&&!isNaN(y)&&!isNaN(z)){
+              S.terrainPoints.push({x,y,z});
+              if(readingCoords){coordCount--;if(coordCount<=0)readingCoords=false;}
+            }
+          }
+        }
+      }else{
+        // XYZ, CSV, TXT — simple numeric coordinate parsing
+        const lines=text.split(/\r?\n/);
+        for(const line of lines){
+          const t=line.trim();
+          if(!t||/^[+"#;*!]/.test(t))continue;
+          const pts=t.split(/[\s,;]+/);
+          if(pts.length>=3){
+            const x=parseFloat(pts[0]),y=parseFloat(pts[1]),z=parseFloat(pts[2]);
+            if(!isNaN(x)&&!isNaN(y)&&!isNaN(z))S.terrainPoints.push({x,y,z});
+          }
+        }
+      }
+
+      S.hasMapData=S.terrainPoints.length>50;
+      if(!S.terrainPoints.length)throw new Error('No valid coordinate triples (x y z) found in file');
+      setUpload('mapUploadZone','mapUploadInfo','ok',f.name,`${S.terrainPoints.length.toLocaleString()} terrain points`);
+      // Build grid for visualization if points are in geographic coords
+      if(S.terrainPoints.length>50){
+        const xs=S.terrainPoints.map(p=>p.x),ys=S.terrainPoints.map(p=>p.y);
+        const mnX=Math.min(...xs),mxX=Math.max(...xs),mnY=Math.min(...ys),mxY=Math.max(...ys);
+        if(Math.abs(mnX)<=180&&Math.abs(mxX)<=180){
+          const step=Math.max((mxX-mnX)/200,(mxY-mnY)/200);
+          const nL=Math.round((mxX-mnX)/step)+1;
+          const nLo=Math.round((mxY-mnY)/step)+1;
+          const latArr=[],lonArr=[];
+          for(let i=0;i<nL;i++)latArr.push(+(mnX+i*step).toFixed(6));
+          for(let j=0;j<nLo;j++)lonArr.push(+(mnY+j*step).toFixed(6));
+          const elevGrid=new Float32Array(nL*nLo);
+          for(const p of S.terrainPoints){
+            const gi=Math.round((p.x-mnX)/step);
+            const gj=Math.round((p.y-mnY)/step);
+            if(gi>=0&&gi<nL&&gj>=0&&gj<nLo)elevGrid[gi*nLo+gj]=p.z;
+          }
+          S.terrainGrid={latArr,lonArr,nLats:nL,nLons:nLo,minLon:mnY,maxLon:mxY,minLat:mnX,maxLat:mxX};
+          S.elevGrid=elevGrid;
+          document.getElementById('terrainVizSection').style.display='block';
+          setTimeout(()=>renderTerrainMap(),100);
+        }
+      }
+    }catch(err){setUpload('mapUploadZone','mapUploadInfo','err',f.name,err.message);}
+  };
+
+  if(ext==='kmz'){
+    r.onload=async ev=>{
+      try{
+        const zip=await JSZip.loadAsync(ev.target.result);
+        const coordFile=Object.keys(zip.files).find(n=>n.endsWith('.txt')||n.endsWith('.csv')||n.endsWith('.xyz')||n.endsWith('.map'));
+        if(coordFile){
+          const coordText=await zip.files[coordFile].async('string');
+          S.terrainPoints=[];
+          for(const line of coordText.split(/\r?\n/)){
+            const t=line.trim();
+            if(!t||/^[+"#;]/.test(t))continue;
+            const pts=t.split(/[\s,;]+/);
+            if(pts.length>=3){const x=parseFloat(pts[0]),y=parseFloat(pts[1]),z=parseFloat(pts[2]);if(!isNaN(x)&&!isNaN(y)&&!isNaN(z))S.terrainPoints.push({x,y,z});}
+          }
+          S.hasMapData=S.terrainPoints.length>50;
+          setUpload('mapUploadZone','mapUploadInfo','ok',f.name,`${S.terrainPoints.length.toLocaleString()} terrain points from KMZ`);
+          // Build grid for visualization if points are in geographic coords
+          if(S.terrainPoints.length>50){
+            const xs=S.terrainPoints.map(p=>p.x),ys=S.terrainPoints.map(p=>p.y);
+            const mnX=Math.min(...xs),mxX=Math.max(...xs),mnY=Math.min(...ys),mxY=Math.max(...ys);
+            if(Math.abs(mnX)<=180&&Math.abs(mxX)<=180){
+              const step=Math.max((mxX-mnX)/200,(mxY-mnY)/200);
+              const nL=Math.round((mxX-mnX)/step)+1;
+              const nLo=Math.round((mxY-mnY)/step)+1;
+              const latArr=[],lonArr=[];
+              for(let i=0;i<nL;i++)latArr.push(+(mnX+i*step).toFixed(6));
+              for(let j=0;j<nLo;j++)lonArr.push(+(mnY+j*step).toFixed(6));
+              const elevGrid=new Float32Array(nL*nLo);
+              for(const p of S.terrainPoints){
+                const gi=Math.round((p.x-mnX)/step);
+                const gj=Math.round((p.y-mnY)/step);
+                if(gi>=0&&gi<nL&&gj>=0&&gj<nLo)elevGrid[gi*nLo+gj]=p.z;
+              }
+              S.terrainGrid={latArr,lonArr,nLats:nL,nLons:nLo,minLon:mnY,maxLon:mxY,minLat:mnX,maxLat:mxX};
+              S.elevGrid=elevGrid;
+              document.getElementById('terrainVizSection').style.display='block';
+              setTimeout(()=>renderTerrainMap(),100);
+            }
+          }
+        }else{
+          throw new Error('No coordinate file (.txt/.csv/.xyz) found inside KMZ');
+        }
+      }catch(err){setUpload('mapUploadZone','mapUploadInfo','err',f.name,'KMZ error: '+err.message);}
+    };
+    r.readAsArrayBuffer(f);
+  }else{
+    r.readAsText(f);
+  }
+}
 function handleWindUpload(e){
   const f=e.target.files[0];if(!f)return;
   const r=new FileReader();
   r.onload=ev=>{
     try{
       const{headers,rows}=parseCSV(ev.target.result);
-      const dataRows=rows.filter(row=>{const vals=Object.values(row);return vals.some(v=>!isNaN(parseFloat(v)));});
+      // Skip unit row if present (e.g. row 1 = 'm/s')
+      const dataRows=rows.filter(row=>{
+        const vals=Object.values(row);
+        return vals.some(v=>!isNaN(parseFloat(v)));
+      });
       const speedIdx=findCol(headers,['speed','windspeed','ws','meanwindspeed','meanwindspeeduid']);
       const dirIdx=findCol(headers,['dir','direction','winddir','wd','directionuid']);
       if(speedIdx<0||dirIdx<0)throw new Error(`Cannot detect speed/direction columns. Found: ${headers.join(', ')}`);
@@ -1120,86 +1914,10 @@ function handleWindUpload(e){
       }
       if(!S.windData.length)throw new Error('No valid wind records');
       setUpload('windUploadZone','windUploadInfo','ok',f.name,`${S.windData.length.toLocaleString()} records`);
-      computeWindRose();markDone(2);document.getElementById('step2Next').disabled=false;
+      computeWindRose();markDone(2);
+      document.getElementById('step2Next').disabled=false;
     }catch(err){setUpload('windUploadZone','windUploadInfo','err',f.name,err.message);}
   };r.readAsText(f);
-}
-
-function handleWindClipboardPaste(){
-  const text=document.getElementById('windClipText').value.trim();
-  if(!text){alert('Paste wind data first');return;}
-  try{
-    const{headers,rows}=parseCSV(text);
-    const dataRows=rows.filter(row=>{const vals=Object.values(row);return vals.some(v=>!isNaN(parseFloat(v)));});
-    const speedIdx=findCol(headers,['speed','windspeed','ws','meanwindspeed','meanwindspeeduid']);
-    const dirIdx=findCol(headers,['dir','direction','winddir','wd','directionuid']);
-    if(speedIdx<0||dirIdx<0)throw new Error('Cannot detect speed/direction columns');
-    S.windData=[];
-    for(const row of dataRows){
-      const vals=Object.values(row);
-      const sp=parseFloat(vals[speedIdx]),dr=parseFloat(vals[dirIdx]);
-      if(!isNaN(sp)&&!isNaN(dr)&&sp>=0&&sp<100&&dr>=0&&dr<360)
-        S.windData.push({speed:sp,direction:dr});
-    }
-    if(!S.windData.length)throw new Error('No valid wind records');
-    setUpload('windUploadZone','windUploadInfo','ok','Clipboard',`${S.windData.length.toLocaleString()} records`);
-    document.getElementById('windClipPaste').classList.remove('show');
-    computeWindRose();markDone(2);document.getElementById('step2Next').disabled=false;
-  }catch(err){alert('Parse error: '+err.message);}
-}
-
-// ============================================================================
-// SRTM1 TERRAIN DOWNLOAD (OpenTopoData API)
-// ============================================================================
-async function downloadSRTM(){
-  let lat,lon;
-  if(S.wtgs.length>0 && S.layoutCentroid){
-    const cx=S.layoutCentroid.lat, cy=S.layoutCentroid.lon;
-    if(Math.abs(cx)<=90&&Math.abs(cy)<=180){lat=cx;lon=cy;}
-    else{const conv=detectUTMAndConvert(cx,cy);if(conv.lat!==undefined){lat=conv.lat;lon=conv.lon;}}
-  }
-  const manualLat=parseFloat(document.getElementById('srtmLat').value);
-  const manualLon=parseFloat(document.getElementById('srtmLon').value);
-  if(!isNaN(manualLat))lat=manualLat;
-  if(!isNaN(manualLon))lon=manualLon;
-  if(isNaN(lat)||isNaN(lon)){alert('Enter lat/lon or load WTG layout first');return;}
-  const bufferKm=parseFloat(document.getElementById('srtmBuffer').value)||20;
-  const resM=parseFloat(document.getElementById('srtmRes').value)||90;
-  const st=document.getElementById('srtmStatus');
-  const btn=document.getElementById('srtmBtn');
-  btn.disabled=true;
-  const latDelta=bufferKm/111.32;
-  const lonDelta=bufferKm/(111.32*Math.cos(lat*Math.PI/180));
-  const minLat=Math.max(-90,lat-latDelta), maxLat=Math.min(90,lat+latDelta);
-  const minLon=Math.max(-180,lon-lonDelta), maxLon=Math.min(180,lon+lonDelta);
-  const latStep=resM/111320;
-  const lonStep=resM/(111320*Math.cos(lat*Math.PI/180));
-  const gridPts=[];
-  for(let la=minLat;la<=maxLat;la+=latStep)for(let lo=minLon;lo<=maxLon;lo+=lonStep)gridPts.push({lat:+la.toFixed(5),lon:+lo.toFixed(5)});
-  const total=gridPts.length;
-  if(total>50000){st.innerHTML='<div class="alert alert-warn" style="margin:0">Grid too large ('+total.toLocaleString()+' pts). Increase resolution or reduce buffer.</div>';btn.disabled=false;return;}
-  st.innerHTML='<div style="font-family:var(--mono);font-size:.68rem;color:var(--mint)">Generating '+total.toLocaleString()+' elevation points...</div>';
-  try{
-    const batchSize=100;S.terrainPoints=[];let done=0;
-    for(let i=0;i<total;i+=batchSize){
-      const batch=gridPts.slice(i,i+batchSize);
-      const locations=batch.map(p=>p.lat+','+p.lon).join('|');
-      const url='https://api.opentopodata.org/v1/srtm30m?locations='+locations;
-      const resp=await fetch(url);
-      if(!resp.ok){
-        if(resp.status===429){st.innerHTML='<div style="font-family:var(--mono);font-size:.68rem;color:var(--gold)">Rate limited, waiting 2s... ('+done+'/'+total+')</div>';await new Promise(r=>setTimeout(r,2000));i-=batchSize;continue;}
-        throw new Error('API error: HTTP '+resp.status);
-      }
-      const data=await resp.json();
-      if(data.results){for(let j=0;j<data.results.length;j++){const r=data.results[j];if(r.elevation!==undefined&&!isNaN(r.elevation))S.terrainPoints.push({x:r.location.lat,y:r.location.lng,z:r.elevation});}}
-      done+=batch.length;
-      if(done%500<batchSize||done>=total){const pct=Math.min(100,Math.round(done/total*100));st.innerHTML='<div style="font-family:var(--mono);font-size:.68rem;color:var(--mint)">Fetching SRTM... '+done.toLocaleString()+'/'+total.toLocaleString()+' ('+pct+'%)</div><div class="progress"><div class="progress-bar" style="width:'+pct+'%"></div></div>';}
-    }
-    S.hasMapData=S.terrainPoints.length>50;
-    st.innerHTML='<div class="alert alert-ok" style="margin:0">Downloaded '+S.terrainPoints.length.toLocaleString()+' SRTM terrain points</div>';
-    setUpload('mapUploadZone','mapUploadInfo','ok','SRTM1 '+resM+'m',S.terrainPoints.length.toLocaleString()+' pts');
-  }catch(err){st.innerHTML='<div class="alert alert-err" style="margin:0">SRTM download failed: '+err.message+'</div>';}
-  btn.disabled=false;
 }
 
 function addManualWTG(){
@@ -1223,7 +1941,7 @@ function calcCentroid(){
 }
 function checkStep1(){
   document.getElementById('step1Next').disabled=S.wtgs.length===0;
-  if(S.wtgs.length)markDone(1);
+  if(S.wtgs.length){markDone(1);populateNominatedWTGs();}
 }
 
 // ============================================================================
@@ -1437,25 +2155,109 @@ function renderLayout(){
   for(let gx=Math.ceil(minX/gs)*gs;gx<=maxX;gx+=gs){const{sx}=ts(gx,0);ctx.beginPath();ctx.moveTo(sx,oy-10);ctx.lineTo(sx,H-oy+10);ctx.stroke();}
   for(let gy=Math.ceil(minY/gs)*gs;gy<=maxY;gy+=gs){const{sy}=ts(0,gy);ctx.beginPath();ctx.moveTo(ox-10,sy);ctx.lineTo(W-ox+10,sy);ctx.stroke();}
 
-  // First-row detection
+  // First-row detection — Industry best practice (IEC 61400-12-1 / windPRO)
+  // Step 1: Determine predominant wind sector(s)
   const predDir=S.windRoseData?S.windRoseData.predDir:0;
+  const predSectors=[]; // collect top sectors by frequency
+  if(S.windRoseData&&S.windRoseData.sectors){
+    const sorted=[...S.windRoseData.sectors].sort((a,b)=>b.count-a.count);
+    // Use top 3 directional sectors that are contiguous or near the predominant direction
+    for(const s of sorted){
+      if(angDev(s.dir,predDir)<=60) predSectors.push(s.dir);
+      if(predSectors.length>=3) break;
+    }
+  }
+  if(!predSectors.length) predSectors.push(predDir);
+
+  // Step 2: Projection method — project all WTGs onto the prevailing wind axis
+  // Wind comes FROM predDir, so the upstream direction IS predDir
+  // Unit vector in upstream direction (predDir = meteorological FROM direction)
+  const upAng=predDir*Math.PI/180; // direction wind comes from
+  const upX=Math.sin(upAng), upY=Math.cos(upAng); // sin/cos for geographic bearing
+
+  // For UTM coords: lat=easting, lon=northing; getBrng = atan2(dE, dN) = atan2(dLat, dLon)
+  //   → bearing b → unit vector (sin(b), cos(b)) in (lat, lon) space
+  // For geographic coords: getBrng = atan2(east_comp, north_comp) ≈ atan2(dLon, dLat) at local scale
+  //   → bearing b → unit vector (cos(b), sin(b)) in (lat, lon) space
+  const useGeo=S.wtgs.length>0&&isGeo(S.wtgs[0].lat,S.wtgs[0].lon);
+  const projX=useGeo?Math.cos(upAng):Math.sin(upAng);
+  const projY=useGeo?Math.sin(upAng):Math.cos(upAng);
+
+  // Project each WTG onto the upstream axis
+  const projections=S.wtgs.map(w=>{
+    const cx=S.centroid?S.centroid.lat:S.wtgs.reduce((s,v)=>s+v.lat,0)/S.wtgs.length;
+    const cy=S.centroid?S.centroid.lon:S.wtgs.reduce((s,v)=>s+v.lon,0)/S.wtgs.length;
+    return {
+      w,
+      proj: (w.lat-cx)*projX + (w.lon-cy)*projY // dot product with upstream unit vector
+    };
+  });
+  const maxProj=Math.max(...projections.map(p=>p.proj));
+  // First-row candidates: WTGs within 2D of the maximum upstream projection
+  const avgRD=S.wtgs.reduce((s,w)=>s+(w.rd||100),0)/S.wtgs.length;
+  const frCandidates=projections.filter(p=>p.proj>=maxProj-2*avgRD).map(p=>p.w);
+
+  // Step 3: Filter by wake exclusion — check upstream sectors (±30° half-angle, industry standard)
+  const WAKE_HALF_ANG=30; // ±30° per IEC 61400-12-1 / windPRO practice
+  const WAKE_DIST_D=20;
   const frIds=new Set();
-  for(const w of S.wtgs){
-    let fr=true;
+  for(const w of frCandidates){
+    let blocked=false;
     for(const o of [...S.wtgs,...S.extWtgs]){
       if(o.id===w.id)continue;
       const bd=getBrng(w,o),dd=getDist(w,o);
-      if(angDev(bd,predDir)<=15&&dd<=20*w.rd){fr=false;break;}
+      // Check if o is upstream of w (bearing from w to o ≈ predDir)
+      // Use the predominant sector directions, not just the single predDir
+      let inWakeSector=false;
+      for(const pDir of predSectors){
+        if(angDev(bd,pDir)<=WAKE_HALF_ANG){inWakeSector=true;break;}
+      }
+      if(inWakeSector&&dd<=WAKE_DIST_D*(w.rd||100)){blocked=true;break;}
     }
-    if(fr)frIds.add(w.id);
+    if(!blocked)frIds.add(w.id);
+  }
+  // Fallback: if no first-row found, relax to ±45° and 10D
+  if(frIds.size===0){
+    for(const w of frCandidates){
+      let blocked=false;
+      for(const o of [...S.wtgs,...S.extWtgs]){
+        if(o.id===w.id)continue;
+        const bd=getBrng(w,o),dd=getDist(w,o);
+        let inWakeSector=false;
+        for(const pDir of predSectors){
+          if(angDev(bd,pDir)<=45){inWakeSector=true;break;}
+        }
+        if(inWakeSector&&dd<=10*(w.rd||100)){blocked=true;break;}
+      }
+      if(!blocked)frIds.add(w.id);
+    }
   }
 
-  // 20D wake exclusion circles (very faint)
+  // Wake exclusion cones on first-row WTGs (±30° upstream, 20D)
   for(const w of S.wtgs){
     if(!frIds.has(w.id))continue;
-    const p=ts(w.lat,w.lon),r20=20*w.rd*sc;
-    ctx.beginPath();ctx.arc(p.sx,p.sy,r20,0,Math.PI*2);
-    ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=.7;ctx.stroke();
+    const p=ts(w.lat,w.lon);
+    // Draw wake exclusion cone: ±30° around predDir, extending 20D downstream
+    const coneLen=20*(w.rd||100)*sc;
+    const baseAng=predDir; // meteorological FROM direction
+    // Convert to canvas angle: (baseAng-90)*PI/180 for the FROM direction
+    const cAng=(baseAng-90)*Math.PI/180;
+    ctx.beginPath();
+    ctx.moveTo(p.sx,p.sy);
+    // Arc from -30° to +30° around the upstream direction, projected 20D downwind
+    for(let a=-30;a<=30;a+=2){
+      const dir=(baseAng+a)*Math.PI/180;
+      // Downstream direction = opposite of FROM direction, so we go in (baseAng+180) direction
+      // But the cone shows WHERE wake comes FROM, so we draw upstream
+      const canAng=(baseAng+a-90)*Math.PI/180;
+      ctx.lineTo(p.sx+coneLen*Math.cos(canAng),p.sy+coneLen*Math.sin(canAng));
+    }
+    ctx.closePath();
+    ctx.fillStyle='rgba(245,166,35,.04)';ctx.fill();
+    ctx.strokeStyle='rgba(245,166,35,.12)';ctx.lineWidth=.5;ctx.stroke();
+    // 20D distance circle (very faint)
+    ctx.beginPath();ctx.arc(p.sx,p.sy,coneLen,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=.5;ctx.setLineDash([3,6]);ctx.stroke();ctx.setLineDash([]);
   }
 
   // Mast lines
@@ -1526,7 +2328,7 @@ function renderLayout(){
   ctx.fillText(`${sbDist>=1000?(sbDist/1000).toFixed(1)+'km':sbDist.toFixed(0)+'m'}`,sbX+Math.min(sbPx,150)/2,sbY-5);
 
   // Legend
-  const items=[{col:'#00d68f',lbl:'First-Row WTG'},{col:'#4ab3e8',lbl:'Other WTG'},{col:'#f5a623',lbl:'External WTG'},{col:'#e05050',lbl:'Proposed Mast'}];
+  const items=[{col:'#00d68f',lbl:'First-Row WTG'},{col:'#4ab3e8',lbl:'Other WTG'},{col:'#f5a623',lbl:'External WTG'},{col:'#e05050',lbl:'Proposed Mast'},{col:'rgba(245,166,35,.3)',lbl:'Wake Exclusion (±30°/20D)'}];
   let legHtml='';for(const li of items)legHtml+=`<span style="display:inline-flex;align-items:center;gap:.4rem;font-size:.62rem;color:rgba(255,255,255,.5);font-family:var(--mono)"><span style="width:10px;height:10px;background:${li.col};border-radius:2px;display:inline-block"></span>${li.lbl}</span>`;
   document.getElementById('layoutLegend').innerHTML=legHtml;
 
@@ -1536,7 +2338,8 @@ function renderLayout(){
     <div class="metric-item"><span class="metric-val" style="color:var(--mint)">${frIds.size}</span><span class="metric-label">First-Row WTGs</span></div>
     <div class="metric-item"><span class="metric-val sky">${S.extWtgs.length}</span><span class="metric-label">External WTGs</span></div>
     <div class="metric-item"><span class="metric-val gold">${S.proposedMasts.length}</span><span class="metric-label">Proposed Masts</span></div>
-    <div class="metric-item"><span class="metric-val" style="color:var(--text2)">${S.windRoseData?S.windRoseData.predDir+'°':'—'}</span><span class="metric-label">Prevailing Direction</span></div>`;
+    <div class="metric-item"><span class="metric-val" style="color:var(--text2)">${S.windRoseData?S.windRoseData.predDir+'°':'—'}</span><span class="metric-label">Prevailing Direction</span></div>
+    <div class="metric-item"><span class="metric-val" style="color:var(--text3);font-size:.55rem">±30° / 20D</span><span class="metric-label">Wake Sector</span></div>`;
 }
 
 // ============================================================================
@@ -1588,13 +2391,49 @@ function runFullAnalysis(){
       const predDir=S.windRoseData.predDir;
       bar.style.width='15%';stat.textContent='Identifying first-row WTGs…';
 
-      // First-row + free sector
+      // First-row detection — Industry best practice (IEC 61400-12-1 / windPRO)
+      // Collect predominant wind sectors (top 3 near predDir)
+      const predSectors=[];
+      if(S.windRoseData&&S.windRoseData.sectors){
+        const sorted=[...S.windRoseData.sectors].sort((a,b)=>b.count-a.count);
+        for(const s of sorted){
+          if(angDev(s.dir,predDir)<=60) predSectors.push(s.dir);
+          if(predSectors.length>=3) break;
+        }
+      }
+      if(!predSectors.length) predSectors.push(predDir);
+
+      // Projection method — find upstream edge WTGs
+      const WAKE_HALF_ANG=30; // ±30° per IEC 61400-12-1 / windPRO practice
+      const WAKE_DIST_D=20;
+      const cx=S.wtgs.reduce((s,v)=>s+v.lat,0)/S.wtgs.length;
+      const cy=S.wtgs.reduce((s,v)=>s+v.lon,0)/S.wtgs.length;
+      const upAng=predDir*Math.PI/180;
+      const useGeo=S.wtgs.length>0&&isGeo(S.wtgs[0].lat,S.wtgs[0].lon);
+      const projX=useGeo?Math.cos(upAng):Math.sin(upAng);
+      const projY=useGeo?Math.sin(upAng):Math.cos(upAng);
+      const projections=S.wtgs.map(w=>({w, proj:(w.lat-cx)*projX+(w.lon-cy)*projY}));
+      const maxProj=Math.max(...projections.map(p=>p.proj));
+      const avgRD=S.wtgs.reduce((s,w)=>s+(w.rd||100),0)/S.wtgs.length;
+      const frCandidateIds=new Set(projections.filter(p=>p.proj>=maxProj-2*avgRD).map(p=>p.w.id));
+
+      // First-row + free sector + blocking analysis
       const frWTGs=S.wtgs.map(w=>{
-        let isFR=true;const blocking=[];
+        const blocking=[];
+        // Only candidate edge WTGs can be first-row
+        if(!frCandidateIds.has(w.id)){
+          const freeSec=calcFreeSector(w,cfg);
+          return{...w,isFirstRow:false,blocking:['Not at upstream edge'],freeSec};
+        }
+        let isFR=true;
         for(const o of [...S.wtgs,...S.extWtgs]){
           if(o.id===w.id)continue;
           const bd=getBrng(w,o),dd=getDist(w,o);
-          if(angDev(bd,predDir)<=15&&dd<=20*w.rd){isFR=false;blocking.push(o.name||o.id);}
+          let inWakeSector=false;
+          for(const pDir of predSectors){
+            if(angDev(bd,pDir)<=WAKE_HALF_ANG){inWakeSector=true;break;}
+          }
+          if(inWakeSector&&dd<=WAKE_DIST_D*(w.rd||100)){isFR=false;blocking.push(o.name||o.id);}
         }
         const freeSec=calcFreeSector(w,cfg);
         return{...w,isFirstRow:isFR,blocking,freeSec};
@@ -1657,6 +2496,7 @@ function runFullAnalysis(){
       const recs=[];
       const frCnt=frWTGs.filter(w=>w.isFirstRow).length;
       recs.push(`<strong>${frCnt} of ${S.wtgs.length} WTGs</strong> identified as first-row in prevailing sector (${predDir}°).`);
+      recs.push(`Method: Projection onto wind axis (upstream edge ±2D) + wake exclusion (±30°, 20D) per IEC 61400-12-1.`);
       const qualCnt=qualifying.filter(w=>w.isFirstRow&&w.freeSec>=cfg.minFree).length;
       recs.push(`<strong>${qualCnt} WTGs</strong> meet first-row AND ≥${cfg.minFree}° free sector requirement.`);
       if(selected.length>0){
@@ -2474,7 +3314,7 @@ function generateReport(){
   </table>`:'<p style="color:var(--text3)">No wind data loaded.</p>'}
 
   <h3 style="color:var(--mint);font-size:.65rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-family:var(--mono);margin:.8rem 0 .5rem;padding-bottom:.3rem;border-bottom:1px solid var(--border)">3. FIRST-ROW WTG IDENTIFICATION</h3>
-  <p style="color:var(--text2);margin-bottom:.5rem;font-size:.76rem">Per IEC 61400-12-1:${iec}, the test turbine shall be free from upstream wake influences in the prevailing sector. A free measurement sector of ≥${r.cfg?.minFree||20}° is required. Wake exclusion applied to all WTGs within ${r.cfg?.wakeDist||20}D at ±${r.cfg?.wakeAng||30}°/2.</p>
+  <p style="color:var(--text2);margin-bottom:.5rem;font-size:.76rem">Per IEC 61400-12-1:${iec}, the test turbine shall be free from upstream wake influences in the prevailing sector. <strong>Method:</strong> (1) All WTGs projected onto the prevailing wind axis to identify upstream-edge candidates (within 2D of max projection). (2) Each candidate checked for blocking WTGs within ±30° of the predominant wind sector(s) and within 20D — following IEC 61400-12-1 Annex B wake exclusion practice. (3) Top 3 predominant sectors by frequency used for robustness. A free measurement sector of ≥${r.cfg?.minFree||20}° is also required.</p>
   <table style="width:100%;border-collapse:collapse;font-size:.75rem;margin-bottom:.8rem">
     <tr><th style="text-align:left;padding:.4rem .6rem;background:rgba(0,214,143,.08);border:1px solid var(--border);font-family:var(--mono);font-size:.55rem;text-transform:uppercase">WTG</th><th style="text-align:left;padding:.4rem .6rem;background:rgba(0,214,143,.08);border:1px solid var(--border);font-family:var(--mono);font-size:.55rem;text-transform:uppercase">First Row?</th><th style="text-align:left;padding:.4rem .6rem;background:rgba(0,214,143,.08);border:1px solid var(--border);font-family:var(--mono);font-size:.55rem;text-transform:uppercase">Max Free Sector (°)</th><th style="text-align:left;padding:.4rem .6rem;background:rgba(0,214,143,.08);border:1px solid var(--border);font-family:var(--mono);font-size:.55rem;text-transform:uppercase">Blocking WTGs</th><th style="text-align:left;padding:.4rem .6rem;background:rgba(0,214,143,.08);border:1px solid var(--border);font-family:var(--mono);font-size:.55rem;text-transform:uppercase">Qualifies?</th></tr>
     ${r.frWTGs.map(w=>{const q=w.isFirstRow&&w.freeSec>=(r.cfg?.minFree||20);return`<tr style="${q?'background:rgba(0,214,143,.03)':''}"><td style="padding:.35rem .6rem;border:1px solid var(--border);color:var(--text);font-family:var(--mono)">${w.name}</td><td style="padding:.35rem .6rem;border:1px solid var(--border);font-family:var(--mono);color:${w.isFirstRow?'var(--mint)':'var(--text3)'}">${w.isFirstRow?'YES':'NO'}</td><td style="padding:.35rem .6rem;border:1px solid var(--border);color:var(--text);font-family:var(--mono)">${w.freeSec}°</td><td style="padding:.35rem .6rem;border:1px solid var(--border);color:var(--text3);font-size:.68rem">${w.blocking.slice(0,4).join(', ')||'None'}</td><td style="padding:.35rem .6rem;border:1px solid var(--border);font-family:var(--mono);color:${q?'var(--mint)':'var(--red)'}">${q?'✓ YES':'✗ NO'}</td></tr>`;}).join('')}
@@ -2533,13 +3373,216 @@ function loadDemoLayout(){
   // Auto-trigger ERA5 coord fill for step 2
   autoFillERA5();
 }
+// ── PROPOSED MAST & DIRECT PCV ASSESSMENT ──────────────────────────────────
+function populateNominatedWTGs(){
+  const s1=document.getElementById('nominatedWTG1');
+  const s2=document.getElementById('nominatedWTG2');
+  if(!s1)return;
+  const val1=s1.value,val2=s2.value;
+  s1.innerHTML='<option value="">-- select from layout --</option>';
+  s2.innerHTML='<option value="">-- optional --</option>';
+  S.wtgs.forEach((w,i)=>{
+    const opt=w.name||w.id;
+    s1.innerHTML+=`<option value="${i}">${opt} (${w.rd}m / ${w.hh}m)</option>`;
+    s2.innerHTML+=`<option value="${i}">${opt} (${w.rd}m / ${w.hh}m)</option>`;
+  });
+  s1.value=val1;s2.value=val2;
+}
+
+function setProposedMast(){
+  const id=document.getElementById('mastId').value||'MM1';
+  const x=parseFloat(document.getElementById('mastX').value);
+  const y=parseFloat(document.getElementById('mastY').value);
+  const h=parseFloat(document.getElementById('mastH').value)||138;
+  if(isNaN(x)||isNaN(y)){alert('Enter mast X/Y coordinates');return;}
+  S.proposedMastManual={id,name:id,lat:x,lon:y,height:h};
+  document.getElementById('directAssessResult').style.display='block';
+  document.getElementById('directAssessResult').innerHTML=`<div class="alert alert-ok" style="margin:0">✓ Mast "${id}" set at (${x.toLocaleString()}, ${y.toLocaleString()}) height ${h}m</div>`;
+}
+
+function runDirectPCVAssessment(){
+  if(!S.proposedMastManual){alert('Set the proposed mast location first');return;}
+  const wtgIdx=parseInt(document.getElementById('nominatedWTG1').value);
+  if(isNaN(wtgIdx)&&wtgIdx<0){alert('Select a nominated WTG');return;}
+  const wtg=S.wtgs[wtgIdx];
+  if(!wtg){alert('Invalid WTG selection');return;}
+  
+  const secIdx=parseInt(document.getElementById('nominatedWTG2').value);
+  const secWtg=!isNaN(secIdx)?S.wtgs[secIdx]:null;
+  
+  const cfg=getConfig();
+  const mast=S.proposedMastManual;
+  
+  // Run terrain assessment for primary WTG
+  const result=document.getElementById('directAssessResult');
+  result.style.display='block';
+  result.innerHTML='<div style="font-family:var(--mono);font-size:.7rem;color:var(--gold)">⏳ Running IEC 61400-12-1 terrain assessment…</div>';
+  
+  setTimeout(()=>{
+    try{
+      const a=assessTerrain(mast,wtg,S.wtgs,S.extWtgs,cfg);
+      const dist=getDist(mast,wtg),distD=dist/wtg.rd;
+      const brng=getBrng(mast,wtg);
+      const compliant=distD>=2&&distD<=4;
+      
+      let html=`<div class="kpi-strip" style="margin-bottom:1rem">
+        <div class="kpi"><span class="kpi-v ${compliant?'g':'r'}">${distD.toFixed(2)}D</span><span class="kpi-l">Mast Distance</span></div>
+        <div class="kpi"><span class="kpi-v">${a.validCount}/${a.nsec}</span><span class="kpi-l">Valid Sectors</span></div>
+        <div class="kpi"><span class="kpi-v ${a.maxArcDeg>=60?'g':a.maxArcDeg>=20?'o':'r'}">${a.maxArcDeg}°</span><span class="kpi-l">Max Valid Arc</span></div>
+        <div class="kpi"><span class="kpi-v ${a.terrainClass==='A'?'g':a.terrainClass==='B'?'o':'r'}">Class ${a.terrainClass}</span><span class="kpi-l">Terrain</span></div>
+        <div class="kpi"><span class="kpi-v">${brng.toFixed(1)}°</span><span class="kpi-l">Bearing</span></div>
+        <div class="kpi"><span class="kpi-v">${(dist/1000).toFixed(2)}km</span><span class="kpi-l">Distance</span></div>
+      </div>`;
+      
+      // Sector table
+      html+='<div class="card"><div class="card-title">IEC 61400-12-1 Sector Assessment</div><div class="tbl-wrap" style="max-height:250px"><table class="dt terrain-dt"><thead><tr>';
+      html+='<th>Sector</th><th>Dir</th><th>Slope In</th><th>Slope Out</th><th>H.Dev In</th><th>H.Dev Out</th><th>Terrain</th><th>Wake</th><th>Valid</th><th>Wind %</th>';
+      html+='</tr></thead><tbody>';
+      for(const s of a.sectors){
+        const tc=s.terrainClass==='A'?'pass':s.terrainClass==='B'?'warn-t':'fail';
+        html+=`<tr><td>${s.dir}°</td><td>${degToCompass(s.dir)}</td><td class="${s.inSlopeOk?'pass':'fail'}">${s.slopeIn}°</td><td class="${s.outSlopeOk?'pass':'fail'}">${s.slopeOut}°</td><td class="${s.inHOk?'pass':'fail'}">${s.hDevIn}m</td><td class="${s.outHOk?'pass':'fail'}">${s.hDevOut}m</td><td class="${tc}">${s.terrainClass}</td><td class="${s.freestm?'pass':'warn-t'}">${s.freestm?'FREE':'WAKE'}</td><td class="${s.valid?'pass':'fail'}">${s.valid?'✓':'✗'}</td><td class="num">${s.windFreq.toFixed(1)}%</td></tr>`;
+      }
+      html+='</tbody></table></div></div>';
+      
+      // Terrain profile canvas
+      html+='<div class="card"><div class="card-title gold">Terrain Profile — Mast to WTG</div><div class="canvas-wrap"><canvas id="directProfileCanvas" width="1100" height="280"></canvas></div></div>';
+      
+      // Summary
+      html+=`<div class="card"><div class="card-title">Assessment Summary</div>`;
+      const recs=[];
+      if(!compliant)recs.push(`<span class="fail">✗</span> Mast distance ${distD.toFixed(2)}D ${distD<2?'below minimum 2D':'exceeds maximum 4D'} — relocate mast`);
+      else recs.push(`<span class="pass">✓</span> Mast distance ${distD.toFixed(2)}D within IEC 2D–4D range`);
+      if(a.terrainClass!=='A')recs.push(`<span class="warn-t">⚠</span> Terrain class ${a.terrainClass} — ${a.terrainClass==='B'?'complex terrain, additional characterization needed':'very complex terrain, site likely unsuitable'}`);
+      if(a.validFreq<25)recs.push(`<span class="fail">✗</span> Valid wind frequency ${a.validFreq.toFixed(1)}% below recommended 25% minimum`);
+      else recs.push(`<span class="pass">✓</span> Valid wind frequency ${a.validFreq.toFixed(1)}% ${a.validFreq>=50?'excellent':'adequate'}`);
+      if(a.maxArcDeg<20)recs.push(`<span class="fail">✗</span> Maximum valid arc ${a.maxArcDeg}° below recommended 20° minimum`);
+      recs.forEach(r=>html+=`<div style="font-size:.76rem;color:var(--text2);margin-bottom:.4rem;padding:.4rem .7rem;border-left:2px solid var(--mint);background:rgba(0,214,143,.04);line-height:1.6">${r}</div>`);
+      html+='</div>';
+      
+      result.innerHTML=html;
+      
+      // Draw profile
+      setTimeout(()=>{
+        const cv=document.getElementById('directProfileCanvas');
+        if(cv)drawDirectProfile(cv,mast,wtg,a);
+      },100);
+      
+      // Store for report
+      S.analysisResults={proposedMasts:[{name:mast.name,lat:mast.lat,lon:mast.lon,height:mast.height,targetWTG:wtg,secondaries:secWtg?[{wtg:secWtg,score:0}]:[],distD,score:0}],wtgs:S.wtgs,extWtgs:S.extWtgs,cfg,cfgIEC:cfg.iec,frWTGs:S.wtgs.filter(w=>true),recs:['Direct PCV assessment — mast manually positioned'],mastCount:1};
+      document.getElementById('step5Next').disabled=false;
+      
+    }catch(err){
+      result.innerHTML=`<div class="alert alert-err">Assessment error: ${err.message}</div>`;
+    }
+  },50);
+}
+
+function drawDirectProfile(cv,mast,wtg,assessment){
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='rgba(7,17,30,.95)';ctx.fillRect(0,0,W,H);
+  
+  const brng=getBrng(mast,wtg);
+  const dist=getDist(mast,wtg);
+  const profile=buildProfile(mast.lat,mast.lon,brng,Math.max(dist*1.2,4*wtg.rd),dist/200);
+  if(!profile.length)return;
+  
+  const pad={t:30,r:50,b:40,l:60};
+  const pW=W-pad.l-pad.r,pH=H-pad.t-pad.b;
+  const maxD=profile[profile.length-1].d;
+  const zs=profile.map(p=>p.e);
+  const minZ=Math.min(...zs),maxZ=Math.max(...zs);
+  const zRange=Math.max(maxZ-minZ,1);
+  
+  // Grid lines
+  ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=.5;
+  for(let i=0;i<=5;i++){
+    const y=pad.t+pH*(i/5);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    const elev=maxZ-zRange*(i/5);
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='9px IBM Plex Mono';ctx.textAlign='right';
+    ctx.fillText(elev.toFixed(0)+'m',pad.l-5,y+3);
+  }
+  
+  // Elevation profile fill
+  const grad=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+  grad.addColorStop(0,'rgba(0,214,143,.25)');grad.addColorStop(1,'rgba(0,214,143,.02)');
+  ctx.beginPath();
+  ctx.moveTo(pad.l,H-pad.b);
+  for(const p of profile){
+    const x=pad.l+(p.d/maxD)*pW;
+    const y=pad.t+pH*(1-(p.e-minZ)/zRange);
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(pad.l+pW,H-pad.b);ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
+  
+  // Profile line
+  ctx.beginPath();
+  for(let i=0;i<profile.length;i++){
+    const p=profile[i];
+    const x=pad.l+(p.d/maxD)*pW;
+    const y=pad.t+pH*(1-(p.e-minZ)/zRange);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle='#00d68f';ctx.lineWidth=1.8;ctx.stroke();
+  
+  // 2D and 4D markers
+  const rd=wtg.rd;
+  [2,4].forEach((mult,idx)=>{
+    const d=mult*rd;
+    if(d<=maxD){
+      const x=pad.l+(d/maxD)*pW;
+      ctx.setLineDash([4,3]);ctx.strokeStyle=idx===0?'rgba(0,214,143,.6)':'rgba(245,166,35,.6)';
+      ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,H-pad.b);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle=idx===0?'#00d68f':'#f5a623';ctx.font='bold 9px IBM Plex Mono';ctx.textAlign='center';
+      ctx.fillText(`${mult}D`,x,pad.t-8);
+    }
+  });
+  
+  // Mast marker
+  const mastE=profile[0]?.e||0;
+  const mastX=pad.l;
+  const mastY=pad.t+pH*(1-(mastE-minZ)/zRange);
+  ctx.fillStyle='#00d68f';ctx.beginPath();ctx.moveTo(mastX,mastY-15);ctx.lineTo(mastX-5,mastY);ctx.lineTo(mastX+5,mastY);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='bold 8px IBM Plex Mono';ctx.textAlign='left';
+  ctx.fillText('MAST',mastX+8,mastY-10);
+  
+  // WTG marker
+  const wtgD=dist;
+  if(wtgD<=maxD){
+    const wtgX=pad.l+(wtgD/maxD)*pW;
+    const wtgPt=profile.find(p=>Math.abs(p.d-wtgD)<maxD/100);
+    const wtgY=wtgPt?pad.t+pH*(1-(wtgPt.e-minZ)/zRange):H-pad.b;
+    ctx.fillStyle='#f5a623';ctx.fillRect(wtgX-3,wtgY-15,6,15);
+    ctx.fillStyle='#fff';ctx.font='bold 8px IBM Plex Mono';ctx.textAlign='right';
+    ctx.fillText(wtg.name||wtg.id,wtgX-8,wtgY-10);
+  }
+  
+  // Distance axis
+  ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='9px IBM Plex Mono';ctx.textAlign='center';
+  for(let i=0;i<=5;i++){
+    const d=maxD*(i/5);
+    const x=pad.l+(d/maxD)*pW;
+    ctx.fillText((d/1000).toFixed(1)+'km',x,H-pad.b+15);
+  }
+  ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='bold 9px IBM Plex Mono';
+  ctx.fillText('Distance →',W/2,H-5);
+}
+
 function clearAll(){
-  Object.assign(S,{wtgs:[],extWtgs:[],terrainPoints:[],windData:[],windRoseData:null,proposedMasts:[],analysisResults:null,hasMapData:false,layoutCentroid:null,currentPairAssessment:null});
+  Object.assign(S,{wtgs:[],extWtgs:[],terrainPoints:[],windData:[],windRoseData:null,proposedMasts:[],analysisResults:null,hasMapData:false,layoutCentroid:null,currentPairAssessment:null,proposedMastManual:null,terrainGrid:null,srtmMeta:null,contourInterval:5});
   renderWTGTable();checkStep1();
   ['wtgUploadZone','extUploadZone','mapUploadZone','windUploadZone'].forEach(z=>document.getElementById(z)?.classList.remove('loaded','error'));
   ['wtgUploadInfo','extUploadInfo','mapUploadInfo','windUploadInfo'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  const pm=document.getElementById('pasteModal');if(pm)pm.style.display='none';
+  const ss=document.getElementById('srtmStatus');if(ss)ss.innerHTML='';
   document.getElementById('step2Next').disabled=true;
+  if(document.getElementById('directAssessResult'))document.getElementById('directAssessResult').style.display='none';
 }
+// Initialize terrain map interaction when DOM is ready
+document.addEventListener('DOMContentLoaded',()=>{setTimeout(initTerrainMapInteraction,500);});
 </script>
 </body>
 </html>
