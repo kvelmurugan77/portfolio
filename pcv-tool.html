@@ -1067,11 +1067,59 @@ function processPastedData(){
 }
 
 // SRTM elevation data download — robust with rate limiting, retry, and terrain visualization
+// ── SRTM TILE HELPERS ──────────────────────────────────────────────────────────
+// AWS Open Data Terrain Tiles (Tilezen/Mapzen Joerd SRTM):
+//   https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png
+// Each tile is 256×256 pixels, Terrarium encoding:
+//   elevation = (R * 256 + G + B / 256) - 32768
+// Zoom level z: each tile covers (360/2^z)°
+// At z=9:  ~0.070°/tile ≈ 7.8 km/tile, pixel res ≈ 30m (SRTM1 native)
+// At z=10: ~0.035°/tile ≈ 3.9 km/tile, pixel res ≈ 15m
+// At z=11: ~0.018°/tile ≈ 2.0 km/tile, pixel res ≈ 7.8m
+// No API key required, no rate limits, global coverage.
+const SRTM_TILE_BASE='https://s3.amazonaws.com/elevation-tiles-prod/terrarium';
+function tileBounds(z,x,y){
+  const n=Math.pow(2,z);
+  const lonMin=x/n*360-180, lonMax=(x+1)/n*360-180;
+  const latRad=Math.atan(Math.sinh(Math.PI*(1-2*y/n)));
+  const latMin=latRad*180/Math.PI;
+  const latRad2=Math.atan(Math.sinh(Math.PI*(1-2*(y+1)/n)));
+  const latMax=latRad2*180/Math.PI;
+  return{lonMin,lonMax,latMin,latMax};
+}
+function lonLatToTile(z,lon,lat){
+  const n=Math.pow(2,z);
+  const x=Math.floor((lon+180)/360*n);
+  const latRad=lat*Math.PI/180;
+  const y=Math.floor((1-Math.log(Math.tan(latRad)+1/Math.cos(latRad))/Math.PI)/2*n);
+  return{x:Math.max(0,Math.min(x,n-1)),y:Math.max(0,Math.min(y,n-1))};
+}
+function decodeTerrarium(r,g,b){return(r*256+g+b/256)-32768;}
+
+async function fetchTileAndDecode(z,x,y){
+  const url=`${SRTM_TILE_BASE}/${z}/${x}/${y}.png`;
+  const resp=await fetch(url);
+  if(!resp.ok)throw new Error(`Tile ${z}/${x}/${y}: HTTP ${resp.status}`);
+  const blob=await resp.blob();
+  const bitmap=await createImageBitmap(blob);
+  const{width,height}=bitmap;
+  const cvs=document.createElement('canvas');cvs.width=width;cvs.height=height;
+  const cx=cvs.getContext('2d');cx.drawImage(bitmap,0,0);
+  const imgData=cx.getImageData(0,0,width,height);
+  const elev=new Float32Array(width*height);
+  for(let i=0;i<width*height;i++){
+    const off=i*4;
+    elev[i]=decodeTerrarium(imgData.data[off],imgData.data[off+1],imgData.data[off+2]);
+  }
+  bitmap.close();
+  return{elev,width,height};
+}
+
 async function downloadSRTM1(){
   if(!S.wtgs.length){alert('Load WTG layout first');return;}
   const st=document.getElementById('srtmStatus');
   const bufferKm=parseFloat(document.getElementById('srtmBuffer')?.value)||20;
-  const step=parseFloat(document.getElementById('srtmRes')?.value)||0.00083;
+  const step=parseFloat(document.getElementById('srtmRes')?.value)||0.00027; // ~30m default
   const contourInt=parseFloat(document.getElementById('srtmContour')?.value)||5;
   S.contourInterval=contourInt;
   S.srtmCancel=false;
@@ -1087,119 +1135,150 @@ async function downloadSRTM1(){
     }
   };
 
-  // Calculate bounding box
+  // Calculate bounding box in WGS84
   const xs=S.wtgs.map(w=>w.lat),ys=S.wtgs.map(w=>w.lon);
   let cMinX=Math.min(...xs),cMaxX=Math.max(...xs),cMinY=Math.min(...ys),cMaxY=Math.max(...ys);
   const isGeographic=Math.abs(cMinX)<=180&&Math.abs(cMaxX)<=180&&Math.abs(cMinY)<=90&&Math.abs(cMaxY)<=90;
   let minLon,minLat,maxLon,maxLat;
   if(isGeographic){
-    minLon=cMinX;maxLon=cMaxX;minLat=cMinY;maxLat=cMaxY;
+    // lat stored in x-field, lon in y-field for CSV import
+    const allLats=[...xs,...S.extWtgs.map(w=>w.lat)];
+    const allLons=[...ys,...S.extWtgs.map(w=>w.lon)];
+    minLat=Math.min(...allLats);maxLat=Math.max(...allLats);
+    minLon=Math.min(...allLons);maxLon=Math.max(...allLons);
     const bufDeg=bufferKm/111;
     minLon-=bufDeg;maxLon+=bufDeg;minLat-=bufDeg;maxLat+=bufDeg;
   }else{
+    // UTM — convert to geographic
     const buf=bufferKm*1000;
-    const tl=detectUTMAndConvert(cMinX-buf,cMaxY+buf);
-    const tr=detectUTMAndConvert(cMaxX+buf,cMaxY+buf);
-    const bl=detectUTMAndConvert(cMinX-buf,cMinY-buf);
-    const br=detectUTMAndConvert(cMaxX+buf,cMinY-buf);
-    minLon=Math.min(tl.lon,tr.lon,bl.lon,br.lon);maxLon=Math.max(tl.lon,tr.lon,bl.lon,br.lon);
-    minLat=Math.min(tl.lat,tr.lat,bl.lat,br.lat);maxLat=Math.max(tl.lat,tr.lat,bl.lat,br.lat);
+    const allPts=[...S.wtgs.map(w=>({x:w.lat,y:w.lon})),...S.extWtgs.map(w=>({x:w.lat,y:w.lon}))];
+    const geos=allPts.map(p=>detectUTMAndConvert(p.x,p.y));
+    minLat=Math.min(...geos.map(g=>g.lat));maxLat=Math.max(...geos.map(g=>g.lat));
+    minLon=Math.min(...geos.map(g=>g.lon));maxLon=Math.max(...geos.map(g=>g.lon));
+    const bufDeg=bufferKm/111;
+    minLon-=bufDeg;maxLon+=bufDeg;minLat-=bufDeg;maxLat+=bufDeg;
   }
-  const maxSpan=1.35;
-  if(maxLon-minLon>maxSpan){const c=(minLon+maxLon)/2;minLon=c-maxSpan/2;maxLon=c+maxSpan/2;}
-  if(maxLat-minLat>maxSpan){const c=(minLat+maxLat)/2;minLat=c-maxSpan/2;maxLat=c+maxSpan/2;}
+  // Clamp to valid ranges
+  minLat=Math.max(-85,minLat);maxLat=Math.min(85,maxLat);
+  minLon=Math.max(-180,minLon);maxLon=Math.min(180,maxLon);
 
-  const nLats=Math.round((maxLat-minLat)/step)+1;
-  const nLons=Math.round((maxLon-minLon)/step)+1;
-  const totalPts=nLats*nLons;
-  const areaKm=`${Math.round((maxLon-minLon)*111)}×${Math.round((maxLat-minLat)*111)}`;
+  const spanDeg=Math.max(maxLon-minLon,maxLat-minLat);
+  const areaKm=`${Math.round(spanDeg*111)}×${Math.round(spanDeg*111)}`;
 
-  st.innerHTML=`<div style="font-family:var(--mono);font-size:.7rem;color:var(--gold)">⏳ ${nLats}×${nLons} = ${totalPts.toLocaleString()} pts · ${areaKm} km · Preparing…</div>`;
+  // Choose tile zoom level based on step size
+  // At zoom z, pixel resolution ≈ 360/(256*2^z) degrees
+  // We want pixel resolution ≤ step for best quality
+  let tileZoom=11; // default ~15m per pixel
+  const pixResAtZ=(z)=>360/(256*Math.pow(2,z));
+  for(let z=8;z<=13;z++){
+    if(pixResAtZ(z)<=step){tileZoom=z;break;}
+  }
+  const pixelDeg=pixResAtZ(tileZoom);
+  const pixelM=pixelDeg*111000;
+
+  st.innerHTML=`<div style="font-family:var(--mono);font-size:.7rem;color:var(--gold)">⏳ Calculating tiles for ${areaKm} km at zoom ${tileZoom} (~${pixelM.toFixed(0)}m/px)…</div>`;
   showCancel();
 
-  if(totalPts>500000){
-    if(!confirm(`Large area: ${totalPts.toLocaleString()} points (${nLats}×${nLons}).\n\nRecommend: use coarser spacing (500m or 1km).\n\nContinue anyway?`)){S.srtmCancel=true;return;}
+  // Determine which tiles we need
+  const tl=lonLatToTile(tileZoom,minLon,maxLat);  // top-left
+  const br=lonLatToTile(tileZoom,maxLon,minLat);  // bottom-right
+  const tileXMin=tl.x,tileXMax=br.x,tileYMin=tl.y,tileYMax=br.y;
+  const nTilesX=tileXMax-tileXMin+1,nTilesY=tileYMax-tileYMin+1;
+  const nTiles=nTilesX*nTilesY;
+
+  if(nTiles>200){
+    if(!confirm(`Large area: ${nTiles} tiles (${nTilesX}×${nTilesY}) at zoom ${tileZoom}.\n\nThis covers approximately ${areaKm} km.\nFor faster downloads, use a coarser grid spacing or smaller buffer.\n\nContinue?`)){S.srtmCancel=true;return;}
   }
 
   try{
-    const latArr=[],lonArr=[];
-    for(let i=0;i<nLats;i++)latArr.push(+(minLat+i*step).toFixed(6));
-    for(let j=0;j<nLons;j++)lonArr.push(+(minLon+j*step).toFixed(6));
-
-    const allElev=new Float32Array(totalPts);
-    // Adaptive delay: start at 150ms, increase on 429
-    let delay=150;
-    let totalRetries=0;
-    const maxRetries=50;
     const startTime=Date.now();
 
+    // Fetch all needed tiles
+    const tileData=new Map();
+    let tilesDone=0;
+    // Fetch in batches of 4 concurrent for speed
+    const batchSize=4;
+    const tileKeys=[];
+    for(let ty=tileYMin;ty<=tileYMax;ty++){
+      for(let tx=tileXMin;tx<=tileXMax;tx++){
+        tileKeys.push({z:tileZoom,x:tx,y:ty});
+      }
+    }
+
+    for(let i=0;i<tileKeys.length;i+=batchSize){
+      if(S.srtmCancel)throw new Error('Cancelled by user');
+      const batch=tileKeys.slice(i,i+batchSize);
+      const results=await Promise.all(batch.map(async t=>{
+        const key=`${t.x},${t.y}`;
+        try{
+          const data=await fetchTileAndDecode(t.z,t.x,t.y);
+          return{key,t,data};
+        }catch(e){
+          // Tiles over ocean may fail — fill with zeros
+          const emptyElev=new Float32Array(256*256);
+          return{key,t,data:{elev:emptyElev,width:256,height:256}};
+        }
+      }));
+      for(const r of results){
+        tileData.set(r.key,r.data);
+        tilesDone++;
+      }
+      const pct=(tilesDone/nTiles*100).toFixed(0);
+      st.innerHTML=`<div style="font-family:var(--mono);font-size:.7rem;color:var(--gold)">⏳ Fetching SRTM tiles: ${pct}% — ${tilesDone}/${nTiles} tiles</div>`;
+      showCancel();
+    }
+
+    if(S.srtmCancel)throw new Error('Cancelled by user');
+
+    // Stitch tiles into a single elevation grid at the requested step resolution
+    // First, compute the stitched pixel grid bounds
+    const stitchedBounds={lonMin:Infinity,latMin:Infinity,lonMax:-Infinity,latMax:-Infinity};
+    for(const[key,data]of tileData){
+      const tx=parseInt(key.split(',')[0]),ty=parseInt(key.split(',')[1]);
+      const b=tileBounds(tileZoom,tx,ty);
+      stitchedBounds.lonMin=Math.min(stitchedBounds.lonMin,b.lonMin);
+      stitchedBounds.latMin=Math.min(stitchedBounds.latMin,b.latMin);
+      stitchedBounds.lonMax=Math.max(stitchedBounds.lonMax,b.lonMax);
+      stitchedBounds.latMax=Math.max(stitchedBounds.latMax,b.latMax);
+    }
+
+    // Sample the stitched tiles at the requested grid spacing
+    const latArr=[],lonArr=[];
+    for(let lat=minLat;lat<=maxLat;lat+=step)latArr.push(+lat.toFixed(7));
+    for(let lon=minLon;lon<=maxLon;lon+=step)lonArr.push(+lon.toFixed(7));
+    const nLats=latArr.length,nLons=lonArr.length;
+    const totalPts=nLats*nLons;
+    const elevGrid=new Float32Array(totalPts);
+
+    // For each output grid point, find which tile and pixel it falls in
+    const totalPixels=nTiles*256*256;
     for(let i=0;i<nLats;i++){
       if(S.srtmCancel)throw new Error('Cancelled by user');
       const lat=latArr[i];
-      const rowBatches=Math.ceil(nLons/2000);
-
-      for(let b=0;b<rowBatches;b++){
-        if(S.srtmCancel)throw new Error('Cancelled by user');
-        const jStart=b*2000;
-        const jEnd=Math.min(jStart+2000,nLons);
-        const subLons=lonArr.slice(jStart,jEnd);
-        const n=subLons.length;
-        const subLats=new Array(n).fill(lat);
-        const url=`https://api.open-meteo.com/v1/elevation?latitude=${subLats.join(',')}&longitude=${subLons.join(',')}`;
-
-        let resp=null;
-        let retries=0;
-        const maxPerReq=5;
-
-        while(!resp&&retries<=maxPerReq){
-          try{
-            const controller=new AbortController();
-            const tid=setTimeout(()=>controller.abort(),45000);
-            resp=await fetch(url,{signal:controller.signal});
-            clearTimeout(tid);
-          }catch(e){
-            if(S.srtmCancel)throw new Error('Cancelled by user');
-            retries++;totalRetries++;
-            if(retries>maxPerReq)throw new Error(`Network error after ${retries} retries: ${e.message}`);
-            await new Promise(r=>setTimeout(r,delay));
-            continue;
-          }
-
-          if(resp.ok){
-            // Success
-            const data=await resp.json();
-            if(data.elevation){
-              for(let k=0;k<data.elevation.length;k++){
-                allElev[i*nLons+jStart+k]=data.elevation[k]??null;
-              }
-            }
-          }else if(resp.status===429){
-            // Rate limited — exponential backoff
-            retries++;totalRetries++;
-            resp=null;
-            if(totalRetries>maxRetries)throw new Error(`Rate limited after ${totalRetries} retries. Use coarser grid spacing.`);
-            delay=Math.min(delay*2,30000); // double delay, max 30s
-            st.innerHTML=`<div style="font-family:var(--mono);font-size:.7rem;color:var(--gold)">⏳ Rate limited — waiting ${delay/1000}s (retry ${totalRetries}/${maxRetries})…</div>`;
-            showCancel();
-            await new Promise(r=>setTimeout(r,delay));
-          }else{
-            throw new Error(`HTTP ${resp.status}`);
-          }
-        }
-
-        // Inter-request delay (gentle throttling)
-        if(delay>150)delay=Math.max(150,delay*0.8); // slowly recover
-        await new Promise(r=>setTimeout(r,delay));
+      for(let j=0;j<nLons;j++){
+        const lon=lonArr[j];
+        const tile=lonLatToTile(tileZoom,lon,lat);
+        const key=`${tile.x},${tile.y}`;
+        const td=tileData.get(key);
+        if(!td){elevGrid[i*nLons+j]=null;continue;}
+        const b=tileBounds(tileZoom,tile.x,tile.y);
+        // Pixel coordinates within the tile
+        const px=(lon-b.lonMin)/(b.lonMax-b.lonMin)*td.width;
+        const py=(lat-b.latMax)/(b.latMin-b.latMax)*td.height; // lat decreases with y
+        const px0=Math.floor(px),py0=Math.floor(py);
+        const fx=px-px0,fy=py-py0;
+        // Bilinear interpolation for smooth result
+        const gElev=(r,c)=>{
+          if(r<0||r>=td.height||c<0||c>=td.width)return null;
+          return td.elev[r*td.width+c];
+        };
+        const v00=gElev(py0,px0),v10=gElev(py0,px0+1),v01=gElev(py0+1,px0),v11=gElev(py0+1,px0+1);
+        if(v00==null||v10==null||v01==null||v11==null){elevGrid[i*nLons+j]=null;continue;}
+        elevGrid[i*nLons+j]=v00*(1-fx)*(1-fy)+v10*fx*(1-fy)+v01*(1-fx)*fy+v11*fx*fy;
       }
-
-      // Progress every 5 rows
-      if(i%5===0||i===nLats-1){
-        const pct=((i+1)/nLats*100).toFixed(1);
-        const elapsed=(Date.now()-startTime)/1000;
-        const rate=((i+1)*nLons/elapsed).toFixed(0);
-        const remaining=(nLats-i-1)*nLons/parseFloat(rate||1);
-        const remStr=remaining>60?`${(remaining/60).toFixed(1)}m`:`${remaining.toFixed(0)}s`;
-        st.innerHTML=`<div style="font-family:var(--mono);font-size:.7rem;color:var(--gold)">⏳ ${pct}% — ${((i+1)*nLons).toLocaleString()} / ${totalPts.toLocaleString()} pts — ${rate} pts/s — ~${remStr} left</div>`;
+      if(i%20===0||i===nLats-1){
+        const pct=(i/nLats*100).toFixed(0);
+        st.innerHTML=`<div style="font-family:var(--mono);font-size:.7rem;color:var(--gold)">⏳ Sampling grid: ${pct}% — ${i*nLons.toLocaleString()} / ${totalPts.toLocaleString()} pts</div>`;
         showCancel();
       }
     }
@@ -1208,24 +1287,22 @@ async function downloadSRTM1(){
 
     // Build terrain data
     S.terrainPoints=[];
-    S.elevGrid=null;
-    const elevGrid=new Float32Array(nLats*nLons);
     for(let i=0;i<nLats;i++){
       for(let j=0;j<nLons;j++){
-        const e=allElev[i*nLons+j];
-        elevGrid[i*nLons+j]=e;
-        if(e!=null&&isFinite(e))S.terrainPoints.push({x:latArr[i],y:lonArr[j],z:e});
+        const e=elevGrid[i*nLons+j];
+        if(e!=null&&isFinite(e)&&Math.abs(e)<9000)S.terrainPoints.push({x:latArr[i],y:lonArr[j],z:e});
       }
     }
 
-    if(!S.terrainPoints.length)throw new Error('No elevation data returned');
+    if(!S.terrainPoints.length)throw new Error('No elevation data returned — check coordinates are valid land area');
     S.hasMapData=true;
     S.terrainGrid={latArr,lonArr,nLats,nLons,minLon,maxLon,minLat,maxLat};
     S.elevGrid=elevGrid;
-    S.srtmMeta={source:'SRTM',resolution:Math.round(step*111000),points:totalPts,grid:`${nLats}×${nLons}`,area:`${areaKm} km`,contour:contourInt};
+    const elapsed=((Date.now()-startTime)/1000).toFixed(1);
+    S.srtmMeta={source:'SRTM1 (AWS)',resolution:Math.round(pixelM),points:totalPts,grid:`${nLats}×${nLons}`,area:`${areaKm} km`,contour:contourInt,tiles:nTiles,zoom:tileZoom};
 
     setUpload('mapUploadZone','mapUploadInfo','ok','SRTM Download',`${S.terrainPoints.length.toLocaleString()} pts · ${S.srtmMeta.grid} · ${S.srtmMeta.area}`);
-    st.innerHTML=`<div class="alert alert-ok" style="margin:0">✓ ${S.terrainPoints.length.toLocaleString()} pts · ${S.srtmMeta.grid} · ${S.srtmMeta.area} · ${contourInt}m contours · Downloaded in ${((Date.now()-startTime)/1000).toFixed(1)}s</div>`;
+    st.innerHTML=`<div class="alert alert-ok" style="margin:0">✓ ${S.terrainPoints.length.toLocaleString()} pts · ${S.srtmMeta.grid} · ${S.srtmMeta.area} · ${contourInt}m contours · ${nTiles} tiles · ${elapsed}s</div>`;
 
     // Auto-show terrain map
     document.getElementById('terrainVizSection').style.display='block';
@@ -1235,7 +1312,7 @@ async function downloadSRTM1(){
     if(err.message==='Cancelled by user'){
       st.innerHTML=`<div class="alert alert-warn" style="margin:0">✗ Download cancelled.</div>`;
     }else{
-      st.innerHTML=`<div class="alert alert-err" style="margin:0">✗ ${err.message}<br><span style="font-size:.6rem;opacity:.7">Tip: Use coarser grid (500m/1km) or smaller buffer (10-15km)</span></div>`;
+      st.innerHTML=`<div class="alert alert-err" style="margin:0">✗ ${err.message}</div>`;
     }
     console.error('SRTM error:',err);
   }
