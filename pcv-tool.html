@@ -6,6 +6,7 @@
 <title>PCV Site Selection Tool — IEC 61400-12-1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 :root{
   --bg:#07111e;--bg2:#0d1e30;--bg3:#132435;--bg4:#1a2f42;
@@ -205,6 +206,16 @@ table.terrain-dt td{font-size:.68rem;padding:.4rem .55rem}
   .step-label{display:none}
 }
 
+/* ── CLIPBOARD PASTE AREA ── */
+.clip-paste-area{display:none;margin-top:.7rem;padding:.8rem;background:var(--bg3);border-radius:var(--radius2);border:1px solid var(--border)}
+.clip-paste-area.show{display:block}
+.clip-paste-area textarea{width:100%;height:120px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius2);font-family:var(--mono);font-size:.72rem;color:var(--text);padding:.5rem;resize:vertical;outline:none}
+.clip-paste-area textarea:focus{border-color:var(--mint)}
+.clip-paste-actions{display:flex;gap:.5rem;margin-top:.5rem;align-items:center}
+
+/* ── SRTM SECTION ── */
+.srtm-section{margin-top:.7rem;padding:.7rem;background:var(--bg3);border-radius:var(--radius2);border:1px solid var(--border)}
+
 /* ── REPORT PRINT ── */
 @media print{
   .topbar,.stepper,.nav-row,.btn{display:none!important}
@@ -259,14 +270,22 @@ table.terrain-dt td{font-size:.68rem;padding:.4rem .55rem}
     <div class="card">
       <div class="card-title green">Target WTG Layout <span style="color:var(--red);font-size:.55rem">★ Required</span></div>
       <div class="upload-zone" id="wtgUploadZone">
-        <input type="file" accept=".csv,.txt" id="wtgFileInput" onchange="handleWTGUpload(event)">
+        <input type="file" accept=".kmz,.kml,.csv,.txt,.xlsx" id="wtgFileInput" onchange="handleWTGUpload(event)">
         <span class="upload-icon">⚡</span>
-        <span class="upload-text">Click or drag WTG Layout CSV</span>
-        <span class="upload-hint">Columns: id, x (easting), y (northing), rd (m), hh (m) [, model]</span>
+        <span class="upload-text">Click or drag WTG Layout (CSV / KML / KMZ)</span>
+        <span class="upload-hint">CSV: id, x, y, rd, hh | KML/KMZ: placemarks with coordinates | Headers auto-detected</span>
       </div>
       <div class="upload-info" id="wtgUploadInfo" style="display:none"></div>
       <div style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap">
         <button class="btn btn-sm btn-ghost" onclick="toggleManual('wtgManual')">+ Manual Entry</button>
+        <button class="btn btn-sm btn-ghost" onclick="toggleClipboardPaste('wtgClipPaste')">📋 Paste from Clipboard</button>
+      </div>
+      <div class="clip-paste-area" id="wtgClipPaste">
+        <textarea id="wtgClipText" placeholder="Paste tabular data here (CSV/TSV). Columns: id, x, y, rd, hh"></textarea>
+        <div class="clip-paste-actions">
+          <button class="btn btn-sm btn-primary" onclick="handleWTGClipboardPaste()">Parse &amp; Load</button>
+          <button class="btn btn-sm btn-ghost" onclick="document.getElementById('wtgClipPaste').classList.remove('show')">Cancel</button>
+        </div>
       </div>
       <div class="manual-entry" id="wtgManual">
         <div class="manual-row">
@@ -284,22 +303,47 @@ table.terrain-dt td{font-size:.68rem;padding:.4rem .55rem}
       <div class="card" style="margin-bottom:1rem">
         <div class="card-title">External / Neighboring Farm WTGs <span style="color:var(--text3);font-weight:300">Optional</span></div>
         <div class="upload-zone" id="extUploadZone">
-          <input type="file" accept=".csv,.txt" id="extFileInput" onchange="handleExtUpload(event)">
+          <input type="file" accept=".kmz,.kml,.csv,.txt,.xlsx" id="extFileInput" onchange="handleExtUpload(event)">
           <span class="upload-icon">🏭</span>
-          <span class="upload-text">Upload Neighboring Farm CSV</span>
+          <span class="upload-text">Upload Neighboring Farm (CSV / KML / KMZ)</span>
           <span class="upload-hint">Same format — for external wake exclusion</span>
         </div>
         <div class="upload-info" id="extUploadInfo" style="display:none"></div>
+        <div style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap">
+          <button class="btn btn-sm btn-ghost" onclick="toggleClipboardPaste('extClipPaste')">📋 Paste from Clipboard</button>
+        </div>
+        <div class="clip-paste-area" id="extClipPaste">
+          <textarea id="extClipText" placeholder="Paste tabular data here (CSV/TSV). Columns: id, x, y, rd, hh"></textarea>
+          <div class="clip-paste-actions">
+            <button class="btn btn-sm btn-primary" onclick="handleExtClipboardPaste()">Parse &amp; Load</button>
+            <button class="btn btn-sm btn-ghost" onclick="document.getElementById('extClipPaste').classList.remove('show')">Cancel</button>
+          </div>
+        </div>
       </div>
       <div class="card">
         <div class="card-title">Terrain Map File <span style="color:var(--text3);font-weight:300">Optional</span></div>
         <div class="upload-zone" id="mapUploadZone">
-          <input type="file" accept=".map,.csv,.txt,.xyz" id="mapFileInput" onchange="handleMapUpload(event)">
+          <input type="file" accept=".map,.kmz,.kml,.csv,.txt,.xyz" id="mapFileInput" onchange="handleMapUpload(event)">
           <span class="upload-icon">🏔</span>
-          <span class="upload-text">Upload .map / .xyz / elevation CSV</span>
-          <span class="upload-hint">WAsP .map, XYZ, or x,y,z CSV — synthetic terrain used if absent</span>
+          <span class="upload-text">Upload .map / .kmz / .xyz / elevation CSV</span>
+          <span class="upload-hint">WAsP .map, KMZ/KML terrain, XYZ, or x,y,z CSV — synthetic terrain used if absent</span>
         </div>
         <div class="upload-info" id="mapUploadInfo" style="display:none"></div>
+        <div class="srtm-section">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap">
+            <button class="btn btn-sm btn-primary" onclick="downloadSRTM()" id="srtmBtn">🗺 Download SRTM1 Terrain (30m)</button>
+            <span style="font-size:.55rem;color:var(--text3);font-family:var(--mono)">OpenTopoData API · Free · No key required</span>
+          </div>
+          <div class="form-row" style="margin-bottom:.3rem">
+            <div class="fg" style="flex:.5"><label class="fl">Lat (°N)</label><input class="fi" type="number" step="0.001" id="srtmLat" placeholder="Auto from WTGs" style="font-size:.7rem;padding:.35rem .5rem"></div>
+            <div class="fg" style="flex:.5"><label class="fl">Lon (°E)</label><input class="fi" type="number" step="0.001" id="srtmLon" placeholder="Auto from WTGs" style="font-size:.7rem;padding:.35rem .5rem"></div>
+          </div>
+          <div class="form-row">
+            <div class="fg" style="flex:.5"><label class="fl">Buffer (km)</label><input class="fi" type="number" id="srtmBuffer" value="20" min="1" max="100" style="font-size:.7rem;padding:.35rem .5rem"></div>
+            <div class="fg" style="flex:.5"><label class="fl">Resolution (m)</label><select class="fs" id="srtmRes" style="font-size:.7rem;padding:.35rem .5rem"><option value="90">~90m (default)</option><option value="180">~180m (faster)</option><option value="30">~30m (fine)</option></select></div>
+          </div>
+          <div id="srtmStatus" style="margin-top:.4rem"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -329,6 +373,16 @@ table.terrain-dt td{font-size:.68rem;padding:.4rem .55rem}
         <span class="upload-hint">Columns: timestamp, wind_speed (m/s), wind_direction (°) — headers auto-detected</span>
       </div>
       <div class="upload-info" id="windUploadInfo" style="display:none"></div>
+      <div style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap">
+        <button class="btn btn-sm btn-ghost" onclick="toggleClipboardPaste('windClipPaste')">📋 Paste from Clipboard</button>
+      </div>
+      <div class="clip-paste-area" id="windClipPaste">
+        <textarea id="windClipText" placeholder="Paste wind data here (CSV/TSV). Columns: speed, direction" style="height:150px"></textarea>
+        <div class="clip-paste-actions">
+          <button class="btn btn-sm btn-primary" onclick="handleWindClipboardPaste()">Parse &amp; Load</button>
+          <button class="btn btn-sm btn-ghost" onclick="document.getElementById('windClipPaste').classList.remove('show')">Cancel</button>
+        </div>
+      </div>
       <div style="margin-top:.8rem;font-size:.65rem;color:var(--text3)">Accepted column names: <span style="font-family:var(--mono)">speed / ws / windspeed</span> and <span style="font-family:var(--mono)">dir / direction / wd / winddir</span></div>
     </div>
     <div class="card">
@@ -777,10 +831,129 @@ function assessTerrain(mast, wtg, allWtgs, extWtgs, cfg){
 }
 
 // ============================================================================
+// KML / KMZ PARSERS
+// ============================================================================
+function parseKMLPlacemarks(xmlText, defaultRD, defaultHH) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, 'application/xml');
+  const placemarks = doc.querySelectorAll('Placemark');
+  const results = [];
+  let cnt = 0;
+  placemarks.forEach(pm => {
+    const nameEl = pm.querySelector('name');
+    const name = nameEl ? nameEl.textContent.trim() : `W${cnt+1}`;
+    const coordEl = pm.querySelector('Point coordinates');
+    if (!coordEl) return;
+    const coordText = coordEl.textContent.trim();
+    const parts = coordText.split(/\s+/);
+    const lon = parseFloat(parts[0]);
+    const lat = parseFloat(parts[1]);
+    if (isNaN(lon) || isNaN(lat)) return;
+    let rd = defaultRD || 100;
+    let hh = defaultHH || 90;
+    pm.querySelectorAll('Data').forEach(d => {
+      const key = d.getAttribute('name');
+      const val = parseFloat(d.querySelector('value')?.textContent);
+      if (key && val) {
+        const kl = key.toLowerCase();
+        if (kl.includes('rd') || kl.includes('rotor') || kl.includes('diameter')) rd = val;
+        if (kl.includes('hh') || kl.includes('hub')) hh = val;
+      }
+    });
+    results.push({ id: cnt, name, lat, lon, rd, hh, model: '' });
+    cnt++;
+  });
+  return results;
+}
+
+async function parseKMZPlacemarks(arrayBuffer, defaultRD, defaultHH) {
+  if (typeof JSZip === 'undefined') throw new Error('JSZip library not loaded. Check your internet connection.');
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  let kmlText = '';
+  for (const [fname, file] of Object.entries(zip.files)) {
+    if (fname.toLowerCase().endsWith('.kml') && !fname.startsWith('__MACOSX')) {
+      kmlText = await file.async('text');
+      break;
+    }
+  }
+  if (!kmlText) throw new Error('No KML file found inside KMZ archive');
+  return parseKMLPlacemarks(kmlText, defaultRD, defaultHH);
+}
+
+function parseKMLTerrain(kmlText) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(kmlText, 'application/xml');
+  const points = [];
+  doc.querySelectorAll('LineString coordinates, Polygon outerBoundaryIs LinearRing coordinates').forEach(el => {
+    const ct = el.textContent.trim();
+    const tuples = ct.split(/\s+/);
+    for (let i = 0; i < tuples.length; i++) {
+      const parts = tuples[i].split(',');
+      if (parts.length >= 3) {
+        const lon = parseFloat(parts[0]), lat = parseFloat(parts[1]), z = parseFloat(parts[2]);
+        if (!isNaN(lon) && !isNaN(lat) && !isNaN(z)) points.push({ x: lat, y: lon, z });
+      }
+    }
+  });
+  doc.querySelectorAll('Placemark Point coordinates').forEach(el => {
+    const ct = el.textContent.trim();
+    const parts = ct.split(/\s+/)[0].split(',');
+    if (parts.length >= 3) {
+      const lon = parseFloat(parts[0]), lat = parseFloat(parts[1]), z = parseFloat(parts[2]);
+      if (!isNaN(lon) && !isNaN(lat) && !isNaN(z)) points.push({ x: lat, y: lon, z });
+    }
+  });
+  return points;
+}
+
+async function parseKMZTerrain(arrayBuffer) {
+  if (typeof JSZip === 'undefined') throw new Error('JSZip library not loaded.');
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  let kmlText = '';
+  for (const [fname, file] of Object.entries(zip.files)) {
+    if (fname.toLowerCase().endsWith('.kml') && !fname.startsWith('__MACOSX')) {
+      kmlText = await file.async('text');
+      break;
+    }
+  }
+  if (!kmlText) throw new Error('No KML found inside KMZ');
+  return parseKMLTerrain(kmlText);
+}
+
+function toggleClipboardPaste(id) {
+  document.getElementById(id).classList.toggle('show');
+}
+
+// ============================================================================
 // UPLOAD HANDLERS
 // ============================================================================
 function handleWTGUpload(e){
   const f=e.target.files[0];if(!f)return;
+  const ext=f.name.toLowerCase().split('.').pop();
+  if(ext==='kmz'){
+    const r=new FileReader();
+    r.onload=async ev=>{
+      try{
+        const wtgs=await parseKMZPlacemarks(ev.target.result,100,90);
+        if(!wtgs.length)throw new Error('No valid Placemarks with <Point> found in KMZ');
+        S.wtgs=wtgs;S.wtgs.forEach((w,i)=>w.id=i);
+        setUpload('wtgUploadZone','wtgUploadInfo','ok',f.name,`${wtgs.length} WTGs from KMZ`);
+        renderWTGTable();calcCentroid();checkStep1();
+      }catch(err){setUpload('wtgUploadZone','wtgUploadInfo','err',f.name,err.message);}
+    };r.readAsArrayBuffer(f);return;
+  }
+  if(ext==='kml'){
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const wtgs=parseKMLPlacemarks(ev.target.result,100,90);
+        if(!wtgs.length)throw new Error('No valid Placemarks with <Point> found in KML');
+        S.wtgs=wtgs;S.wtgs.forEach((w,i)=>w.id=i);
+        setUpload('wtgUploadZone','wtgUploadInfo','ok',f.name,`${wtgs.length} WTGs from KML`);
+        renderWTGTable();calcCentroid();checkStep1();
+      }catch(err){setUpload('wtgUploadZone','wtgUploadInfo','err',f.name,err.message);}
+    };r.readAsText(f);return;
+  }
   const r=new FileReader();
   r.onload=ev=>{
     try{
@@ -801,8 +974,54 @@ function handleWTGUpload(e){
     }catch(err){setUpload('wtgUploadZone','wtgUploadInfo','err',f.name,err.message);}
   };r.readAsText(f);
 }
+
+function handleWTGClipboardPaste(){
+  const text=document.getElementById('wtgClipText').value.trim();
+  if(!text){alert('Paste some data first');return;}
+  try{
+    const{headers,rows}=parseCSV(text);S.wtgs=[];let cnt=0;
+    for(const row of rows){
+      const vals=Object.values(row);
+      const id=findColVal(headers,vals,['id','name','wtg','turbine'])||`W${cnt+1}`;
+      const x=parseFloat(findColVal(headers,vals,['lat','latitude','x','easting','east','xcoord']));
+      const y=parseFloat(findColVal(headers,vals,['lon','longitude','y','northing','north','ycoord']));
+      const rd=parseFloat(findColVal(headers,vals,['rd','rotordiameter','rotor','diameter']));
+      const hh=parseFloat(findColVal(headers,vals,['hh','hubheight','hub']));
+      const model=findColVal(headers,vals,['model','type','wtgtype'])||'';
+      if(!isNaN(x)&&!isNaN(y)&&!isNaN(rd)&&!isNaN(hh)){S.wtgs.push({id,name:id,lat:x,lon:y,rd,hh,model});cnt++;}
+    }
+    if(!cnt)throw new Error('No valid WTG rows found');
+    setUpload('wtgUploadZone','wtgUploadInfo','ok','Clipboard',`${cnt} WTGs loaded`);
+    document.getElementById('wtgClipPaste').classList.remove('show');
+    renderWTGTable();calcCentroid();checkStep1();
+  }catch(err){alert('Parse error: '+err.message);}
+}
+
 function handleExtUpload(e){
   const f=e.target.files[0];if(!f)return;
+  const ext=f.name.toLowerCase().split('.').pop();
+  if(ext==='kmz'){
+    const r=new FileReader();
+    r.onload=async ev=>{
+      try{
+        const wtgs=await parseKMZPlacemarks(ev.target.result,100,90);
+        if(!wtgs.length)throw new Error('No valid Placemarks found in KMZ');
+        S.extWtgs=wtgs;S.extWtgs.forEach((w,i)=>w.id=i);
+        setUpload('extUploadZone','extUploadInfo','ok',f.name,`${wtgs.length} ext. WTGs from KMZ`);
+      }catch(err){setUpload('extUploadZone','extUploadInfo','err',f.name,err.message);}
+    };r.readAsArrayBuffer(f);return;
+  }
+  if(ext==='kml'){
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const wtgs=parseKMLPlacemarks(ev.target.result,100,90);
+        if(!wtgs.length)throw new Error('No valid Placemarks found in KML');
+        S.extWtgs=wtgs;S.extWtgs.forEach((w,i)=>w.id=i);
+        setUpload('extUploadZone','extUploadInfo','ok',f.name,`${wtgs.length} ext. WTGs from KML`);
+      }catch(err){setUpload('extUploadZone','extUploadInfo','err',f.name,err.message);}
+    };r.readAsText(f);return;
+  }
   const r=new FileReader();
   r.onload=ev=>{
     try{
@@ -820,15 +1039,59 @@ function handleExtUpload(e){
     }catch(err){setUpload('extUploadZone','extUploadInfo','err',f.name,err.message);}
   };r.readAsText(f);
 }
+
+function handleExtClipboardPaste(){
+  const text=document.getElementById('extClipText').value.trim();
+  if(!text){alert('Paste some data first');return;}
+  try{
+    const{headers,rows}=parseCSV(text);S.extWtgs=[];let cnt=0;
+    for(const row of rows){
+      const vals=Object.values(row);
+      const id=findColVal(headers,vals,['id','name','wtg'])||`E${cnt+1}`;
+      const x=parseFloat(findColVal(headers,vals,['lat','latitude','x','easting']));
+      const y=parseFloat(findColVal(headers,vals,['lon','longitude','y','northing']));
+      const rd=parseFloat(findColVal(headers,vals,['rd','rotordiameter','rotor','diameter']))||100;
+      const hh=parseFloat(findColVal(headers,vals,['hh','hubheight','hub']))||90;
+      if(!isNaN(x)&&!isNaN(y))S.extWtgs.push({id,name:id,lat:x,lon:y,rd,hh});cnt++;
+    }
+    setUpload('extUploadZone','extUploadInfo','ok','Clipboard',`${cnt} external WTGs`);
+    document.getElementById('extClipPaste').classList.remove('show');
+  }catch(err){alert('Parse error: '+err.message);}
+}
+
 function handleMapUpload(e){
   const f=e.target.files[0];if(!f)return;
+  const ext=f.name.toLowerCase().split('.').pop();
+  if(ext==='kmz'){
+    const r=new FileReader();
+    r.onload=async ev=>{
+      try{
+        const pts=await parseKMZTerrain(ev.target.result);
+        if(!pts.length)throw new Error('No elevation coordinates found in KMZ');
+        S.terrainPoints=pts;S.hasMapData=pts.length>50;
+        setUpload('mapUploadZone','mapUploadInfo','ok',f.name,`${pts.length.toLocaleString()} terrain pts from KMZ`);
+      }catch(err){setUpload('mapUploadZone','mapUploadInfo','err',f.name,err.message);}
+    };r.readAsArrayBuffer(f);return;
+  }
+  if(ext==='kml'){
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const pts=parseKMLTerrain(ev.target.result);
+        if(!pts.length)throw new Error('No elevation coordinates found in KML');
+        S.terrainPoints=pts;S.hasMapData=pts.length>50;
+        setUpload('mapUploadZone','mapUploadInfo','ok',f.name,`${pts.length.toLocaleString()} terrain pts from KML`);
+      }catch(err){setUpload('mapUploadZone','mapUploadInfo','err',f.name,err.message);}
+    };r.readAsText(f);return;
+  }
   const r=new FileReader();
   r.onload=ev=>{
     try{
       const lines=ev.target.result.split(/\r?\n/);S.terrainPoints=[];
       for(const line of lines){
         const t=line.trim();
-        if(!t||/^[+"]/.test(t))continue;
+        if(!t||/^["+]/.test(t))continue;
+        if(/^[A-Za-z]/.test(t)&&!/\d/.test(t))continue;
         const pts=t.split(/[\s,;]+/);
         if(pts.length>=3){const x=parseFloat(pts[0]),y=parseFloat(pts[1]),z=parseFloat(pts[2]);if(!isNaN(x)&&!isNaN(y)&&!isNaN(z))S.terrainPoints.push({x,y,z});}
       }
@@ -837,17 +1100,14 @@ function handleMapUpload(e){
     }catch(err){setUpload('mapUploadZone','mapUploadInfo','err',f.name,err.message);}
   };r.readAsText(f);
 }
+
 function handleWindUpload(e){
   const f=e.target.files[0];if(!f)return;
   const r=new FileReader();
   r.onload=ev=>{
     try{
       const{headers,rows}=parseCSV(ev.target.result);
-      // Skip unit row if present (e.g. row 1 = 'm/s')
-      const dataRows=rows.filter(row=>{
-        const vals=Object.values(row);
-        return vals.some(v=>!isNaN(parseFloat(v)));
-      });
+      const dataRows=rows.filter(row=>{const vals=Object.values(row);return vals.some(v=>!isNaN(parseFloat(v)));});
       const speedIdx=findCol(headers,['speed','windspeed','ws','meanwindspeed','meanwindspeeduid']);
       const dirIdx=findCol(headers,['dir','direction','winddir','wd','directionuid']);
       if(speedIdx<0||dirIdx<0)throw new Error(`Cannot detect speed/direction columns. Found: ${headers.join(', ')}`);
@@ -860,10 +1120,86 @@ function handleWindUpload(e){
       }
       if(!S.windData.length)throw new Error('No valid wind records');
       setUpload('windUploadZone','windUploadInfo','ok',f.name,`${S.windData.length.toLocaleString()} records`);
-      computeWindRose();markDone(2);
-      document.getElementById('step2Next').disabled=false;
+      computeWindRose();markDone(2);document.getElementById('step2Next').disabled=false;
     }catch(err){setUpload('windUploadZone','windUploadInfo','err',f.name,err.message);}
   };r.readAsText(f);
+}
+
+function handleWindClipboardPaste(){
+  const text=document.getElementById('windClipText').value.trim();
+  if(!text){alert('Paste wind data first');return;}
+  try{
+    const{headers,rows}=parseCSV(text);
+    const dataRows=rows.filter(row=>{const vals=Object.values(row);return vals.some(v=>!isNaN(parseFloat(v)));});
+    const speedIdx=findCol(headers,['speed','windspeed','ws','meanwindspeed','meanwindspeeduid']);
+    const dirIdx=findCol(headers,['dir','direction','winddir','wd','directionuid']);
+    if(speedIdx<0||dirIdx<0)throw new Error('Cannot detect speed/direction columns');
+    S.windData=[];
+    for(const row of dataRows){
+      const vals=Object.values(row);
+      const sp=parseFloat(vals[speedIdx]),dr=parseFloat(vals[dirIdx]);
+      if(!isNaN(sp)&&!isNaN(dr)&&sp>=0&&sp<100&&dr>=0&&dr<360)
+        S.windData.push({speed:sp,direction:dr});
+    }
+    if(!S.windData.length)throw new Error('No valid wind records');
+    setUpload('windUploadZone','windUploadInfo','ok','Clipboard',`${S.windData.length.toLocaleString()} records`);
+    document.getElementById('windClipPaste').classList.remove('show');
+    computeWindRose();markDone(2);document.getElementById('step2Next').disabled=false;
+  }catch(err){alert('Parse error: '+err.message);}
+}
+
+// ============================================================================
+// SRTM1 TERRAIN DOWNLOAD (OpenTopoData API)
+// ============================================================================
+async function downloadSRTM(){
+  let lat,lon;
+  if(S.wtgs.length>0 && S.layoutCentroid){
+    const cx=S.layoutCentroid.lat, cy=S.layoutCentroid.lon;
+    if(Math.abs(cx)<=90&&Math.abs(cy)<=180){lat=cx;lon=cy;}
+    else{const conv=detectUTMAndConvert(cx,cy);if(conv.lat!==undefined){lat=conv.lat;lon=conv.lon;}}
+  }
+  const manualLat=parseFloat(document.getElementById('srtmLat').value);
+  const manualLon=parseFloat(document.getElementById('srtmLon').value);
+  if(!isNaN(manualLat))lat=manualLat;
+  if(!isNaN(manualLon))lon=manualLon;
+  if(isNaN(lat)||isNaN(lon)){alert('Enter lat/lon or load WTG layout first');return;}
+  const bufferKm=parseFloat(document.getElementById('srtmBuffer').value)||20;
+  const resM=parseFloat(document.getElementById('srtmRes').value)||90;
+  const st=document.getElementById('srtmStatus');
+  const btn=document.getElementById('srtmBtn');
+  btn.disabled=true;
+  const latDelta=bufferKm/111.32;
+  const lonDelta=bufferKm/(111.32*Math.cos(lat*Math.PI/180));
+  const minLat=Math.max(-90,lat-latDelta), maxLat=Math.min(90,lat+latDelta);
+  const minLon=Math.max(-180,lon-lonDelta), maxLon=Math.min(180,lon+lonDelta);
+  const latStep=resM/111320;
+  const lonStep=resM/(111320*Math.cos(lat*Math.PI/180));
+  const gridPts=[];
+  for(let la=minLat;la<=maxLat;la+=latStep)for(let lo=minLon;lo<=maxLon;lo+=lonStep)gridPts.push({lat:+la.toFixed(5),lon:+lo.toFixed(5)});
+  const total=gridPts.length;
+  if(total>50000){st.innerHTML='<div class="alert alert-warn" style="margin:0">Grid too large ('+total.toLocaleString()+' pts). Increase resolution or reduce buffer.</div>';btn.disabled=false;return;}
+  st.innerHTML='<div style="font-family:var(--mono);font-size:.68rem;color:var(--mint)">Generating '+total.toLocaleString()+' elevation points...</div>';
+  try{
+    const batchSize=100;S.terrainPoints=[];let done=0;
+    for(let i=0;i<total;i+=batchSize){
+      const batch=gridPts.slice(i,i+batchSize);
+      const locations=batch.map(p=>p.lat+','+p.lon).join('|');
+      const url='https://api.opentopodata.org/v1/srtm30m?locations='+locations;
+      const resp=await fetch(url);
+      if(!resp.ok){
+        if(resp.status===429){st.innerHTML='<div style="font-family:var(--mono);font-size:.68rem;color:var(--gold)">Rate limited, waiting 2s... ('+done+'/'+total+')</div>';await new Promise(r=>setTimeout(r,2000));i-=batchSize;continue;}
+        throw new Error('API error: HTTP '+resp.status);
+      }
+      const data=await resp.json();
+      if(data.results){for(let j=0;j<data.results.length;j++){const r=data.results[j];if(r.elevation!==undefined&&!isNaN(r.elevation))S.terrainPoints.push({x:r.location.lat,y:r.location.lng,z:r.elevation});}}
+      done+=batch.length;
+      if(done%500<batchSize||done>=total){const pct=Math.min(100,Math.round(done/total*100));st.innerHTML='<div style="font-family:var(--mono);font-size:.68rem;color:var(--mint)">Fetching SRTM... '+done.toLocaleString()+'/'+total.toLocaleString()+' ('+pct+'%)</div><div class="progress"><div class="progress-bar" style="width:'+pct+'%"></div></div>';}
+    }
+    S.hasMapData=S.terrainPoints.length>50;
+    st.innerHTML='<div class="alert alert-ok" style="margin:0">Downloaded '+S.terrainPoints.length.toLocaleString()+' SRTM terrain points</div>';
+    setUpload('mapUploadZone','mapUploadInfo','ok','SRTM1 '+resM+'m',S.terrainPoints.length.toLocaleString()+' pts');
+  }catch(err){st.innerHTML='<div class="alert alert-err" style="margin:0">SRTM download failed: '+err.message+'</div>';}
+  btn.disabled=false;
 }
 
 function addManualWTG(){
