@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
     QComboBox, QGroupBox, QFileDialog, QMessageBox, QScrollArea,
     QCheckBox, QTextEdit
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QUrl
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QObject, QUrl
 
 # Graceful import for QWebEngineView (may not be installed)
 _WEBENGINE_AVAILABLE = False
