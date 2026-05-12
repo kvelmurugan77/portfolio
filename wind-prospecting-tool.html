@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WindFarm Designer Pro — WindPRO-Style Desktop Application</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky1:#0b1f3a; --sky2:#0e3460; --sky3:#1a5f8a;
+  --sky4:#2d9cce; --sky5:#87ceeb;
+  --mint:#1db87e; --gold:#f0a500;
+  --white:#ffffff; --border:rgba(255,255,255,.12);
+  --display:'Playfair Display',Georgia,serif;
+  --body:'Open Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--body);color:var(--white);overflow-x:hidden;cursor:none;
+  background:linear-gradient(160deg,var(--sky1) 0%,var(--sky2) 40%,var(--sky3) 75%,#0a4a6e 100%);
+  min-height:100vh}
+#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.35}
+
+/* CURSOR */
+.cur-d{position:fixed;top:0;left:0;width:10px;height:10px;background:var(--mint);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)}
+.cur-r{position:fixed;top:0;left:0;width:38px;height:38px;border:1.5px solid var(--mint);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .3s,height .3s;opacity:.55}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:800;display:flex;align-items:center;justify-content:space-between;padding:1.2rem 3rem;transition:background .4s,border-color .4s;border-bottom:1px solid transparent}
+nav.scrolled{background:rgba(11,31,58,.88);backdrop-filter:blur(14px);border-color:var(--border)}
+.nav-logo{font-family:var(--display);font-size:1.3rem;font-style:italic;color:var(--mint);text-decoration:none}
+.nav-links{display:flex;gap:1.8rem;list-style:none;align-items:center;flex-shrink:1;min-width:0}
+.nav-links li{flex-shrink:0}
+.nav-links a{font-size:.75rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.8);text-decoration:none;position:relative;padding-bottom:3px;transition:color .25s;display:inline-flex;align-items:center;white-space:nowrap}
+.nav-links a::after{content:'';position:absolute;bottom:0;left:0;width:0;height:2px;background:var(--mint);transition:width .3s}
+.nav-links a:hover{color:#fff}.nav-links a:hover::after{width:100%}
+.nav-cta{font-size:.75rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--sky1);background:var(--mint);border:none;padding:.6rem 1.6rem;cursor:none;text-decoration:none;border-radius:4px;transition:background .25s,transform .2s,box-shadow .2s;display:inline-flex;align-items:center;white-space:nowrap}
+.nav-cta:hover{background:var(--gold);transform:translateY(-2px);box-shadow:0 6px 20px rgba(240,165,0,.35)}
+
+/* HERO */
+.tool-hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden}
+.tool-hero-bg{position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse at 50% 40%,rgba(45,156,206,.18) 0%,transparent 70%),radial-gradient(ellipse at 20% 80%,rgba(29,184,126,.1) 0%,transparent 60%)}
+.particles{position:absolute;inset:0;z-index:1;overflow:hidden}
+.p{position:absolute;border-radius:50%;background:rgba(255,255,255,.15);animation:floatP linear infinite}
+@keyframes floatP{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:1}90%{opacity:.3}100%{transform:translateY(-10vh) scale(1.2);opacity:0}}
+
+.tool-hero-content{position:relative;z-index:5;max-width:800px;padding:0 2rem}
+.tool-hero-eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--mint);display:inline-flex;align-items:center;gap:.7rem;margin-bottom:1.8rem;opacity:0;animation:fadeUp .8s ease .2s forwards}
+.tool-hero-eyebrow::before{content:'';display:inline-block;width:30px;height:2px;background:var(--mint)}
+.tool-hero-content h1{font-family:var(--display);font-weight:400;font-size:clamp(2.8rem,5vw,4.5rem);line-height:1.08;color:#fff;margin-bottom:1rem;opacity:0;animation:fadeUp .9s ease .35s forwards}
+.tool-hero-content h1 em{font-style:italic;color:var(--sky5)}
+.tool-hero-sub{font-size:.88rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:2rem;opacity:0;animation:fadeUp .9s ease .5s forwards}
+.tool-hero-desc{font-size:1.05rem;font-weight:300;line-height:1.85;color:rgba(255,255,255,.72);max-width:58ch;margin:0 auto 2.8rem;opacity:0;animation:fadeUp .9s ease .65s forwards}
+.tool-hero-ctas{display:flex;gap:1.2rem;justify-content:center;flex-wrap:wrap;opacity:0;animation:fadeUp .9s ease .8s forwards}
+
+/* Hero Turbine Animation */
+.hero-turbine-wrap{position:relative;z-index:3;margin-top:2rem;opacity:0;animation:fadeUp 1s ease .6s forwards}
+.hero-turbine-wrap svg{display:block;margin:0 auto}
+
+@keyframes rotateBlade{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes beamPulse{0%,100%{opacity:.55}50%{opacity:.85}}
+
+/* Buttons */
+.btn-green{font-size:.75rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--sky1);background:var(--mint);padding:.9rem 2.2rem;text-decoration:none;border-radius:4px;transition:background .25s,transform .2s,box-shadow .2s}
+.btn-green:hover{background:var(--gold);transform:translateY(-3px);box-shadow:0 8px 24px rgba(240,165,0,.35)}
+.btn-ghost{font-size:.75rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fff;border:1.5px solid rgba(255,255,255,.4);padding:.9rem 2.2rem;text-decoration:none;border-radius:4px;transition:all .25s}
+.btn-ghost:hover{border-color:var(--mint);color:var(--mint);background:rgba(29,184,126,.1)}
+
+/* STATS BAR */
+.tool-stats-bar{position:absolute;bottom:0;left:0;right:0;z-index:6;background:rgba(11,31,58,.7);backdrop-filter:blur(10px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;opacity:0;animation:fadeUp 1s ease 1s forwards}
+.hstat{flex:1;text-align:center;padding:1.3rem 1rem;border-right:1px solid var(--border)}
+.hstat:last-child{border-right:none}
+.hstat-n{display:block;font-family:var(--display);font-size:2.2rem;font-style:italic;color:var(--mint);line-height:1}
+.hstat-l{display:block;font-size:.62rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-top:.3rem}
+
+/* SECTION COMMONS */
+.section-wrap{position:relative;padding:8rem 0}
+.container{max-width:1200px;margin:0 auto;padding:0 3rem}
+.eyebrow{font-size:.7rem;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--mint);display:inline-flex;align-items:center;gap:.7rem;margin-bottom:.9rem}
+.eyebrow::before{content:'';display:block;width:24px;height:2px;background:var(--mint)}
+.eyebrow.gold{color:var(--gold)}.eyebrow.gold::before{background:var(--gold)}
+.stitle{font-family:var(--display);font-weight:400;font-size:clamp(2rem,4vw,3.2rem);line-height:1.15;color:#fff}
+.stitle em{font-style:italic;color:var(--sky5)}
+.rv{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.rv.in{opacity:1;transform:translateY(0)}
+.rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.2s}.rv.d3{transition-delay:.3s}.rv.d4{transition-delay:.4s}
+
+/* FEATURES SECTION */
+#features{background:linear-gradient(180deg,rgba(8,18,38,.9) 0%,rgba(10,25,50,.95) 100%);position:relative}
+#features::before{content:'';position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse at 80% 20%,rgba(240,165,0,.05) 0%,transparent 50%),radial-gradient(ellipse at 20% 80%,rgba(29,184,126,.06) 0%,transparent 50%)}
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:4rem;position:relative;z-index:1}
+.fcard{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:2.4rem;position:relative;overflow:hidden;transition:background .35s,border-color .35s,transform .3s}
+.fcard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--mint),var(--sky4));opacity:0;transition:opacity .3s}
+.fcard:hover{background:rgba(29,184,126,.07);border-color:rgba(29,184,126,.3);transform:translateY(-4px)}
+.fcard:hover::before{opacity:1}
+.fcard--w{grid-column:1/-1}
+.fcard-icon{width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:1.3rem;background:linear-gradient(135deg,rgba(45,156,206,.15),rgba(29,184,126,.1));border:1px solid rgba(45,156,206,.2);flex-shrink:0}
+.fcard h3{font-family:var(--display);font-size:1.2rem;font-weight:400;font-style:italic;color:#fff;margin-bottom:.6rem;line-height:1.25}
+.fcard p{font-size:.85rem;line-height:1.78;color:rgba(255,255,255,.55);font-weight:300;margin-bottom:1.2rem}
+.fcard-tags{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:1rem}
+.ftag{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:rgba(45,156,206,.1);color:rgba(255,255,255,.5);padding:.22rem .65rem;border:1px solid rgba(45,156,206,.2);border-radius:3px}
+
+/* 8-Tab Workflow Visual */
+.tab-visual{display:flex;gap:2px;margin-top:1rem;flex-wrap:wrap}
+.tab-item{font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:rgba(45,156,206,.1);color:var(--sky5);padding:.45rem .75rem;border:1px solid rgba(45,156,206,.2);border-radius:4px 4px 0 0;transition:all .25s;position:relative;cursor:none}
+.tab-item:hover{background:rgba(29,184,126,.15);border-color:rgba(29,184,126,.4);color:var(--mint)}
+.tab-item.active{background:rgba(29,184,126,.15);border-color:var(--mint);color:var(--mint);border-bottom-color:transparent}
+.tab-item.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--mint)}
+
+/* TECH STACK */
+#techstack{background:rgba(8,18,38,.92);position:relative}
+#techstack::before{content:'';position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse at 30% 30%,rgba(29,184,126,.05) 0%,transparent 60%)}
+.tech-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.2rem;margin-top:4rem;position:relative;z-index:1}
+.tech-item{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:1.6rem;text-align:center;transition:background .3s,border-color .3s,transform .3s}
+.tech-item:hover{background:rgba(29,184,126,.07);border-color:rgba(29,184,126,.25);transform:translateY(-3px)}
+.tech-item-icon{font-size:1.8rem;margin-bottom:.7rem;display:block}
+.tech-item h4{font-size:.78rem;font-weight:700;color:#fff;margin-bottom:.25rem;letter-spacing:.04em}
+.tech-item p{font-size:.68rem;font-weight:300;color:rgba(255,255,255,.4);line-height:1.5}
+
+/* BACK LINK */
+.back-section{background:rgba(8,18,38,.95);position:relative;text-align:center;padding:5rem 0}
+.back-section::before{content:'';position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse at 50% 50%,rgba(29,184,126,.06) 0%,transparent 60%)}
+.back-link{display:inline-flex;align-items:center;gap:.8rem;font-size:.78rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#fff;text-decoration:none;padding:1rem 2.4rem;border:1.5px solid rgba(255,255,255,.3);border-radius:6px;transition:all .3s;position:relative;z-index:1}
+.back-link:hover{border-color:var(--mint);color:var(--mint);background:rgba(29,184,126,.08);transform:translateY(-2px);box-shadow:0 6px 20px rgba(29,184,126,.15)}
+.back-link svg{transition:transform .3s}
+.back-link:hover svg{transform:translateX(-4px)}
+
+/* FOOTER */
+footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border)}
+.foot-logo{font-family:var(--display);font-size:1rem;font-style:italic;color:var(--mint)}
+.foot-copy{font-size:.65rem;font-weight:300;letter-spacing:.1em;color:rgba(255,255,255,.25)}
+.foot-top{font-size:.65rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.35);text-decoration:none;transition:color .25s}
+.foot-top:hover{color:var(--mint)}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  nav{padding:1.1rem 1.5rem}.nav-links{display:none}
+  .tool-hero-content h1{font-size:clamp(2rem,8vw,3rem)}
+  .feat-grid{grid-template-columns:1fr}
+  .fcard--w{grid-column:auto}
+  .tech-grid{grid-template-columns:1fr 1fr}
+  .container{padding:0 1.4rem}
+  footer{flex-direction:column;gap:1rem;text-align:center}
+  .tool-stats-bar{flex-wrap:wrap}
+  .hstat{min-width:50%;border-bottom:1px solid var(--border)}
+}
+@media(max-width:600px){
+  .tech-grid{grid-template-columns:1fr}
+  .tab-visual{gap:4px}
+  .tab-item{font-size:.52rem;padding:.35rem .5rem}
+}
+</style>
+</head>
+<body>
+<div class="cur-d" id="cd"></div>
+<div class="cur-r" id="cr"></div>
+<canvas id="bgCanvas"></canvas>
+
+<!-- NAV -->
+<nav id="nav">
+  <a class="nav-logo" href="index.html">VK</a>
+  <ul class="nav-links">
+    <li><a href="index.html#about">About</a></li>
+    <li><a href="index.html#experience">Experience</a></li>
+    <li><a href="index.html#projects">Innovations</a></li>
+    <li><a href="index.html#skills">Skills</a></li>
+    <li><a href="index.html#tools">Tools</a></li>
+    <li><a href="index.html#contact">Contact</a></li>
+  </ul>
+  <a class="nav-cta" href="index.html#contact">Contact</a>
+</nav>
+
+<!-- HERO -->
+<section class="tool-hero">
+  <div class="tool-hero-bg"></div>
+  <div class="particles" id="particles"></div>
+
+  <div class="tool-hero-content">
+    <div class="tool-hero-eyebrow">Desktop Application &middot; Wind Farm Design</div>
+    <h1>WindFarm<br><em>Designer Pro</em></h1>
+    <p class="tool-hero-sub">WindPRO-Style Wind Farm Design Desktop Application</p>
+    <p class="tool-hero-desc">A comprehensive, professional-grade wind farm design tool for Windows &mdash; featuring 8-tab workflow, WAsP-compatible modelling, wake analysis, layout optimisation, and seamless .map file export for industry-standard integration.</p>
+    <div class="tool-hero-ctas">
+      <a class="btn-green" href="#features">Explore Features</a>
+      <a class="btn-ghost" href="#techstack">Tech Stack</a>
+    </div>
+  </div>
+
+  <!-- Animated Turbine SVG -->
+  <div class="hero-turbine-wrap">
+    <svg width="200" height="160" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Tower -->
+      <line x1="100" y1="158" x2="100" y2="72" stroke="#2d9cce" stroke-width="3.5" stroke-linecap="round"/>
+      <!-- Base -->
+      <line x1="88" y1="158" x2="112" y2="158" stroke="#2d9cce" stroke-width="3" stroke-linecap="round"/>
+      <!-- Hub -->
+      <circle cx="100" cy="68" r="8" fill="#cceeff" opacity=".95"/>
+      <circle cx="100" cy="68" r="4.5" fill="#1db87e"/>
+      <circle cx="100" cy="68" r="2" fill="#4dffc0"/>
+      <!-- Blades (rotating) -->
+      <g style="transform-origin:100px 68px;animation:rotateBlade 6s linear infinite">
+        <line x1="100" y1="68" x2="100" y2="12" stroke="#e0f6ff" stroke-width="4" stroke-linecap="round"/>
+        <line x1="100" y1="68" x2="60" y2="98" stroke="#d4eef8" stroke-width="4" stroke-linecap="round"/>
+        <line x1="100" y1="68" x2="140" y2="98" stroke="#c8ecf8" stroke-width="4" stroke-linecap="round"/>
+      </g>
+      <!-- Ground line -->
+      <line x1="20" y1="158" x2="180" y2="158" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+      <!-- Wind arrows -->
+      <path d="M20 50 Q32 44 44 50" stroke="#87ceeb" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".6"/>
+      <path d="M15 60 Q28 54 41 60" stroke="#87ceeb" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".4"/>
+      <path d="M25 70 Q38 64 51 70" stroke="#87ceeb" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".3"/>
+    </svg>
+  </div>
+
+  <!-- Stats bar -->
+  <div class="tool-stats-bar">
+    <div class="hstat"><span class="hstat-n">8</span><span class="hstat-l">Workflow Tabs</span></div>
+    <div class="hstat"><span class="hstat-n">4</span><span class="hstat-l">Layout Algorithms</span></div>
+    <div class="hstat"><span class="hstat-n">3</span><span class="hstat-l">Wake Models</span></div>
+    <div class="hstat"><span class="hstat-n">12</span><span class="hstat-l">Sector Weibull AEP</span></div>
+    <div class="hstat"><span class="hstat-n">.map</span><span class="hstat-l">WAsP Export</span></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="section-wrap">
+  <div class="container">
+    <div class="rv" style="margin-bottom:2rem">
+      <div class="eyebrow">Capabilities</div>
+      <h2 class="stitle">Feature-<em>Rich</em> Design<br>Toolset</h2>
+      <p style="font-size:.95rem;font-weight:300;line-height:1.85;color:rgba(255,255,255,.55);margin-top:1rem;max-width:55ch">Built from the ground up to replicate the WindPRO design experience &mdash; with full wind farm workflow from terrain data import through to energy yield calculation.</p>
+    </div>
+
+    <!-- 1. 8-Tab GUI Workflow (Wide Card) -->
+    <div class="feat-grid">
+      <div class="fcard fcard--w rv">
+        <div style="display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap">
+          <div class="fcard-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <!-- Monitor / desktop -->
+              <rect x="4" y="4" width="24" height="17" rx="2.5" stroke="#2d9cce" stroke-width="1.8" fill="none"/>
+              <rect x="6" y="6" width="20" height="13" rx="1.5" fill="rgba(45,156,206,.12)"/>
+              <!-- Tab buttons inside -->
+              <rect x="7" y="6.5" width="4.5" height="2.5" rx="0.8" fill="#1db87e"/>
+              <rect x="12.2" y="6.5" width="4.5" height="2.5" rx="0.8" fill="rgba(255,255,255,.12)"/>
+              <rect x="17.4" y="6.5" width="4.5" height="2.5" rx="0.8" fill="rgba(255,255,255,.12)"/>
+              <!-- Content lines -->
+              <line x1="8" y1="12" x2="20" y2="12" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+              <line x1="8" y1="14.5" x2="16" y2="14.5" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+              <line x1="8" y1="17" x2="18" y2="17" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+              <!-- Stand -->
+              <line x1="16" y1="21" x2="16" y2="25" stroke="#2d9cce" stroke-width="1.8"/>
+              <line x1="11" y1="25" x2="21" y2="25" stroke="#2d9cce" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div style="flex:1;min-width:280px">
+            <h3>8-Tab GUI Workflow</h3>
+            <p>A professional WindPRO-inspired tabbed interface guiding the complete wind farm design workflow &mdash; from project setup through to final energy yield results. Each tab provides a focused workspace with context-sensitive tools and visualisations.</p>
+            <div class="tab-visual">
+              <span class="tab-item active">Project</span>
+              <span class="tab-item">Terrain</span>
+              <span class="tab-item">Roughness</span>
+              <span class="tab-item">Wind Resource</span>
+              <span class="tab-item">Wind Flow</span>
+              <span class="tab-item">Layout</span>
+              <span class="tab-item">Wake</span>
+              <span class="tab-item">Results</span>
+            </div>
+            <div class="fcard-tags" style="margin-top:1rem">
+              <span class="ftag">PyQt5</span>
+              <span class="ftag">QTabWidget</span>
+              <span class="ftag">MDI Interface</span>
+              <span class="ftag">Toolbar</span>
+              <span class="ftag">Status Bar</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. OpenStreetMap Terrain Visualization -->
+      <div class="fcard rv d1">
+        <div class="fcard-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <!-- Map frame -->
+            <rect x="3" y="5" width="26" height="22" rx="2" stroke="#2d9cce" stroke-width="1.5" fill="rgba(45,156,206,.08)"/>
+            <!-- Terrain contours -->
+            <path d="M6 20 Q10 14 14 18 Q18 22 22 16 Q26 10 28 14" stroke="#1db87e" stroke-width="1.2" fill="none" opacity=".7"/>
+            <path d="M5 23 Q9 18 13 21 Q17 24 21 19 Q25 14 28 17" stroke="#87ceeb" stroke-width="1" fill="none" opacity=".5"/>
+            <path d="M5 26 Q10 22 15 25 Q20 28 25 23 Q27 21 28 22" stroke="#1db87e" stroke-width=".8" fill="none" opacity=".35"/>
+            <!-- Pin marker -->
+            <circle cx="18" cy="12" r="3.5" fill="#f0a500" opacity=".9"/>
+            <circle cx="18" cy="12" r="1.5" fill="#0b1f3a"/>
+            <!-- Grid lines -->
+            <line x1="3" y1="14" x2="29" y2="14" stroke="rgba(255,255,255,.06)" stroke-width=".6"/>
+            <line x1="3" y1="22" x2="29" y2="22" stroke="rgba(255,255,255,.06)" stroke-width=".6"/>
+            <line x1="12" y1="5" x2="12" y2="27" stroke="rgba(255,255,255,.06)" stroke-width=".6"/>
+            <line x1="21" y1="5" x2="21" y2="27" stroke="rgba(255,255,255,.06)" stroke-width=".6"/>
+          </svg>
+        </div>
+        <h3>OpenStreetMap Terrain Visualization</h3>
+        <p>High-resolution terrain data rendered on interactive basemaps via contextily. Supports multiple tile providers including OpenStreetMap, Stamen Terrain, and ESRI World Imagery for detailed topographic context.</p>
+        <div class="fcard-tags">
+          <span class="ftag">contextily</span>
+          <span class="ftag">OpenStreetMap</span>
+          <span class="ftag">Rasterio</span>
+          <span class="ftag">Matplotlib</span>
+        </div>
+      </div>
+
+      <!-- 3. ESA CCI Land Cover Roughness -->
+      <div class="fcard rv d2">
+        <div class="fcard-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <!-- Satellite body -->
+            <rect x="10" y="10" width="12" height="8" rx="2" fill="#8ed4f0" opacity=".85" stroke="#2d9cce" stroke-width="1.2"/>
+            <!-- Solar panels -->
+            <rect x="2" y="11" width="7" height="6" rx="1" fill="rgba(45,156,206,.2)" stroke="#2d9cce" stroke-width="1"/>
+            <rect x="23" y="11" width="7" height="6" rx="1" fill="rgba(45,156,206,.2)" stroke="#2d9cce" stroke-width="1"/>
+            <!-- Panel lines -->
+            <line x1="4" y1="11" x2="4" y2="17" stroke="#2d9cce" stroke-width=".6" opacity=".5"/>
+            <line x1="7" y1="11" x2="7" y2="17" stroke="#2d9cce" stroke-width=".6" opacity=".5"/>
+            <line x1="25" y1="11" x2="25" y2="17" stroke="#2d9cce" stroke-width=".6" opacity=".5"/>
+            <line x1="28" y1="11" x2="28" y2="17" stroke="#2d9cce" stroke-width=".6" opacity=".5"/>
+            <!-- Downward beam -->
+            <path d="M13 18 L12 26 L16 28 L20 26 L19 18" fill="rgba(29,184,126,.2)" stroke="#1db87e" stroke-width="1" stroke-linejoin="round"/>
+            <!-- Earth surface -->
+            <ellipse cx="16" cy="28" rx="10" ry="2" fill="#1db87e" opacity=".25"/>
+            <!-- Antenna -->
+            <line x1="16" y1="10" x2="16" y2="7" stroke="#87ceeb" stroke-width="1.2"/>
+            <circle cx="16" cy="6" r="1.2" fill="#87ceeb"/>
+          </svg>
+        </div>
+        <h3>ESA CCI Land Cover 300m Roughness</h3>
+        <p>Global land cover data from the European Space Agency Climate Change Initiative at 300m resolution, automatically converted to surface roughness lengths using standard WAsP land-use classification tables. Includes full WAsP .map file export for seamless interoperability.</p>
+        <div class="fcard-tags">
+          <span class="ftag">ESA CCI</span>
+          <span class="ftag">300m Resolution</span>
+          <span class="ftag">Roughness Length</span>
+          <span class="ftag">.map Export</span>
+        </div>
+      </div>
+
+      <!-- 4. Global Wind Atlas API Integration -->
+      <div class="fcard rv d1">
+        <div class="fcard-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <!-- Globe -->
+            <circle cx="16" cy="16" r="12" stroke="#2d9cce" stroke-width="1.5"/>
+            <!-- Meridians -->
+            <ellipse cx="16" cy="16" rx="5" ry="12" stroke="#87ceeb" stroke-width=".8" opacity=".5"/>
+            <!-- Latitude lines -->
+            <path d="M4.5 11 Q16 8 27.5 11" stroke="#87ceeb" stroke-width=".7" fill="none" opacity=".4"/>
+            <line x1="4" y1="16" x2="28" y2="16" stroke="#87ceeb" stroke-width=".7" opacity=".4"/>
+            <path d="M4.5 21 Q16 24 27.5 21" stroke="#87ceeb" stroke-width=".7" fill="none" opacity=".4"/>
+            <!-- Wind rose in center -->
+            <circle cx="16" cy="16" r="4" stroke="#f0a500" stroke-width="1.2" fill="rgba(240,165,0,.08)"/>
+            <line x1="16" y1="12" x2="16" y2="16" stroke="#f0a500" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="19.5" y1="18" x2="16" y2="16" stroke="#f0a500" stroke-width="1.2" stroke-linecap="round" opacity=".7"/>
+            <line x1="12.5" y1="18" x2="16" y2="16" stroke="#f0a500" stroke-width="1.2" stroke-linecap="round" opacity=".7"/>
+            <!-- API label dots -->
+            <circle cx="22" cy="10" r="2" fill="#1db87e" opacity=".8"/>
+            <circle cx="22" cy="10" r=".9" fill="#4dffc0"/>
+            <circle cx="10" cy="22" r="2" fill="#1db87e" opacity=".8"/>
+            <circle cx="10" cy="22" r=".9" fill="#4dffc0"/>
+          </svg>
+        </div>
+        <h3>Global Wind Atlas API Integration</h3>
+        <p>Direct integration with the DTU Global Wind Atlas v2 API for wind climate data retrieval at any location worldwide. Implements robust POST request handling with intelligent fallback strategies for reliability across variable network conditions.</p>
+        <div class="fcard-tags">
+          <span class="ftag">DTU GWA v2</span>
+          <span class="ftag">REST API</span>
+          <span class="ftag">POST Method</span>
+          <span class="ftag">Fallback Logic</span>
+        </div>
+      </div>
+
+      <!-- 5. Interactive Map Area Selection -->
+      <div class="fcard rv d2">
+        <div class="fcard-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <!-- Map background -->
+            <rect x="3" y="4" width="26" height="24" rx="2" fill="rgba(45,156,206,.08)" stroke="#2d9cce" stroke-width="1.2"/>
+            <!-- Selection polygon -->
+            <polygon points="8,10 20,7 26,14 22,24 10,22" fill="rgba(29,184,126,.12)" stroke="#1db87e" stroke-width="1.5" stroke-linejoin="round"/>
+            <!-- Vertex handles -->
+            <circle cx="8" cy="10" r="2" fill="#1db87e"/>
+            <circle cx="20" cy="7" r="2" fill="#1db87e"/>
+            <circle cx="26" cy="14" r="2" fill="#1db87e"/>
+            <circle cx="22" cy="24" r="2" fill="#1db87e"/>
+            <circle cx="10" cy="22" r="2" fill="#1db87e"/>
+            <!-- Crosshair -->
+            <line x1="16" y1="12" x2="16" y2="20" stroke="#f0a500" stroke-width=".8" opacity=".6"/>
+            <line x1="12" y1="16" x2="20" y2="16" stroke="#f0a500" stroke-width=".8" opacity=".6"/>
+            <!-- Zoom icon -->
+            <circle cx="25" cy="6" r="3.5" fill="#0b1f3a" stroke="#f0a500" stroke-width="1"/>
+            <line x1="27.5" y1="8.5" x2="29" y2="10" stroke="#f0a500" stroke-width="1.2" stroke-linecap="round"/>
+            <text x="25" y="7.5" text-anchor="middle" fill="#f0a500" font-size="5" font-weight="700">+</text>
+          </svg>
+        </div>
+        <h3>Interactive Map Area Selection</h3>
+        <p>Draw custom polygons, rectangles, and circles directly on an interactive Leaflet map to define wind farm boundaries. Powered by Leaflet.Draw for intuitive area selection with coordinate export and GeoJSON support.</p>
+        <div class="fcard-tags">
+          <span class="ftag">Leaflet</span>
+          <span class="ftag">Leaflet.Draw</span>
+          <span class="ftag">GeoJSON</span>
+          <span class="ftag">QWebEngineView</span>
+        </div>
+      </div>
+
+      <!-- 6. WASP-like Wind Flow Model -->
+      <div class="fcard rv d1">
+        <div class="fcard-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <!-- Terrain hill -->
+            <path d="M2 25 Q8 14 16 18 Q24 22 30 12 L30 27 L2 27 Z" fill="rgba(45,156,206,.1)" stroke="#2d9cce" stroke-width="1"/>
+            <!-- Wind flow lines -->
+            <path d="M1 8 Q8 9 16 14 Q24 19 31 15" stroke="#87ceeb" stroke-width="1.3" fill="none" stroke-linecap="round" opacity=".8"/>
+            <path d="M1 12 Q9 11 17 16 Q25 20 31 17" stroke="#1db87e" stroke-width="1.1" fill="none" stroke-linecap="round" opacity=".7"/>
+            <path d="M1 16 Q10 14 18 18 Q26 21 31 19" stroke="#87ceeb" stroke-width=".9" fill="none" stroke-linecap="round" opacity=".5"/>
+            <!-- Speed-up indicator -->
+            <path d="M20 11 L24 9" stroke="#f0a500" stroke-width="1.5" stroke-linecap="round"/>
+            <text x="24" y="9" fill="#f0a500" font-size="4" font-weight="700">+12%</text>
+            <!-- Arrow heads -->
+            <polygon points="31,15 28,13 28,17" fill="#87ceeb" opacity=".8"/>
+            <polygon points="31,17 28,15.5 28,18.5" fill="#1db87e" opacity=".7"/>
+          </svg>
+        </div>
+        <h3>WAsP-like Wind Flow Model</h3>
+        <p>Industry-standard linearised wind flow modelling implementing Jackson-Hunt theory for speed-up over hills, Internal Boundary Layer growth for roughness transitions, and the Envelope of Wind Atlases (EWA) method for complex terrain. Matches WAsP modelling approach for verified results.</p>
+        <div class="fcard-tags">
+          <span class="ftag">Jackson-Hunt</span>
+          <span class="ftag">IBL Growth</span>
+          <span class="ftag">EWA Method</span>
+          <span class="ftag">NumPy/SciPy</span>
+        </div>
+      </div>
+
+      <!-- 7. Layout Optimization -->
+      <div class="fcard rv d2">
+        <div class="fcard-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <!-- Grid dots background -->
+            <circle cx="6" cy="8" r="1.2" fill="rgba(255,255,255,.12)"/>
+            <circle cx="16" cy="8" r="1.2" fill="rgba(255,255,255,.12)"/>
+            <circle cx="26" cy="8" r="1.2" fill="rgba(255,255,255,.12)"/>
+            <circle cx="6" cy="16" r="1.2" fill="rgba(255,255,255,.12)"/>
+            <circle cx="16" cy="16" r="1.2" fill="rgba(255,255,255,.12)"/>
+            <circle cx="26" cy="16" r="1.2" fill="rgba(255,255,255,.12)"/>
+            <circle cx="6" cy="24" r="1.2" fill="rgba(255,255,255,.12)"/>
+            <circle cx="16" cy="24" r="1.2" fill="rgba(255,255,255,.12)"/>
+            <circle cx="26" cy="24" r="1.2" fill="rgba(255,255,255,.12)"/>
+            <!-- Optimized turbine positions -->
+            <circle cx="8" cy="10" r="3" fill="#1db87e" opacity=".25"/>
+            <circle cx="8" cy="10" r="1.5" fill="#1db87e"/>
+            <circle cx="16" cy="7" r="3" fill="#1db87e" opacity=".25"/>
+            <circle cx="16" cy="7" r="1.5" fill="#1db87e"/>
+            <circle cx="24" cy="11" r="3" fill="#1db87e" opacity=".25"/>
+            <circle cx="24" cy="11" r="1.5" fill="#1db87e"/>
+            <circle cx="10" cy="18" r="3" fill="#1db87e" opacity=".25"/>
+            <circle cx="10" cy="18" r="1.5" fill="#1db87e"/>
+            <circle cx="20" cy="17" r="3" fill="#1db87e" opacity=".25"/>
+            <circle cx="20" cy="17" r="1.5" fill="#1db87e"/>
+            <circle cx="14" cy="24" r="3" fill="#1db87e" opacity=".25"/>
+            <circle cx="14" cy="24" r="1.5" fill="#1db87e"/>
+            <circle cx="25" cy="23" r="3" fill="#1db87e" opacity=".25"/>
+            <circle cx="25" cy="23" r="1.5" fill="#1db87e"/>
+            <!-- Connection lines (wake paths) -->
+            <line x1="8" y1="10" x2="16" y2="7" stroke="rgba(29,184,126,.2)" stroke-width=".6"/>
+            <line x1="16" y1="7" x2="24" y2="11" stroke="rgba(29,184,126,.2)" stroke-width=".6"/>
+            <line x1="10" y1="18" x2="20" y2="17" stroke="rgba(29,184,126,.2)" stroke-width=".6"/>
+          </svg>
+        </div>
+        <h3>Layout Optimization</h3>
+        <p>Four optimisation algorithms for turbine placement &mdash; from simple regular grid generation to advanced metaheuristic approaches. Grid layout for initial scoping, Greedy with KD-tree for rapid placement, Particle Swarm Optimisation for multi-objective AEP maximisation, and Genetic Algorithms for constrained global optimisation.</p>
+        <div class="fcard-tags">
+          <span class="ftag">Grid Layout</span>
+          <span class="ftag">Greedy / KD-tree</span>
+          <span class="ftag">PSO</span>
+          <span class="ftag">Genetic Algorithm</span>
+          <span class="ftag">SciPy Optimize</span>
+        </div>
+      </div>
+
+      <!-- 8. Wake Models + 12-Sector Weibull AEP -->
+      <div class="fcard rv d1">
+        <div class="fcard-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <!-- Upstream turbine -->
+            <line x1="10" y1="28" x2="10" y2="18" stroke="#2d9cce" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="10" cy="17" r="2.5" fill="#cceeff"/>
+            <circle cx="10" cy="17" r="1.2" fill="#1db87e"/>
+            <line x1="10" y1="17" x2="10" y2="10" stroke="#e0f6ff" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="10" y1="17" x2="5" y2="21" stroke="#d4eef8" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="10" y1="17" x2="15" y2="21" stroke="#c8ecf8" stroke-width="2.2" stroke-linecap="round"/>
+            <!-- Wake cone -->
+            <path d="M12 17 L24 12 L24 22 Z" fill="rgba(240,165,0,.08)" stroke="#f0a500" stroke-width="1" stroke-dasharray="2 1.5" opacity=".6"/>
+            <!-- Downstream turbines (in wake) -->
+            <line x1="22" y1="28" x2="22" y2="20" stroke="#2d9cce" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
+            <circle cx="22" cy="19" r="2" fill="#cceeff" opacity=".7"/>
+            <circle cx="22" cy="19" r="1" fill="#f0a500"/>
+            <line x1="22" y1="19" x2="22" y2="14" stroke="#e0f6ff" stroke-width="1.8" stroke-linecap="round" opacity=".7"/>
+            <line x1="22" y1="19" x2="18" y2="22" stroke="#d4eef8" stroke-width="1.8" stroke-linecap="round" opacity=".7"/>
+            <line x1="22" y1="19" x2="26" y2="22" stroke="#c8ecf8" stroke-width="1.8" stroke-linecap="round" opacity=".7"/>
+            <!-- Wind arrow -->
+            <path d="M2 12 L7 10" stroke="#87ceeb" stroke-width="1.5" stroke-linecap="round"/>
+            <polygon points="7,10 4.5,8.5 5,11.5" fill="#87ceeb"/>
+            <!-- Velocity deficit label -->
+            <text x="17" y="19" fill="#f0a500" font-size="4" font-weight="600" opacity=".8">&delta;v</text>
+          </svg>
+        </div>
+        <h3>Wake Models + 12-Sector Weibull AEP</h3>
+        <p>Three industry-standard wake models for deficit calculation &mdash; Jensen (top-hat), Frandsen (Gaussian-like), and Ainslie (eddy viscosity k-&epsilon;). Combined with 12-sector Weibull distribution fitting for direction-dependent Annual Energy Production calculation.</p>
+        <div class="fcard-tags">
+          <span class="ftag">Jensen</span>
+          <span class="ftag">Frandsen</span>
+          <span class="ftag">Ainslie</span>
+          <span class="ftag">12-Sector Weibull</span>
+          <span class="ftag">AEP Calculation</span>
+        </div>
+      </div>
+
+      <!-- 9. .map File Export -->
+      <div class="fcard rv d2">
+        <div class="fcard-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <!-- Document icon -->
+            <path d="M8 3 L22 3 L26 7 L26 29 L8 29 Z" fill="rgba(45,156,206,.08)" stroke="#2d9cce" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M22 3 L22 7 L26 7" fill="rgba(45,156,206,.15)" stroke="#2d9cce" stroke-width="1" stroke-linejoin="round"/>
+            <!-- WAsP label -->
+            <text x="17" y="14" text-anchor="middle" fill="#1db87e" font-size="5.5" font-weight="700">WAsP</text>
+            <!-- Data lines -->
+            <line x1="11" y1="18" x2="21" y2="18" stroke="rgba(255,255,255,.15)" stroke-width=".8"/>
+            <line x1="11" y1="21" x2="19" y2="21" stroke="rgba(255,255,255,.12)" stroke-width=".8"/>
+            <line x1="11" y1="24" x2="22" y2="24" stroke="rgba(255,255,255,.09)" stroke-width=".8"/>
+            <!-- Export arrow -->
+            <path d="M26 10 L30 14 L26 18" stroke="#f0a500" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="23" y1="14" x2="30" y2="14" stroke="#f0a500" stroke-width="1.5" stroke-linecap="round"/>
+            <!-- Binary dots -->
+            <text x="11" y="27" fill="rgba(255,255,255,.2)" font-size="3.5" font-weight="600">0x4D41 5020</text>
+          </svg>
+        </div>
+        <h3>.map File Export</h3>
+        <p>Full WAsP binary and text format .map file generation with proper roughness change records, elevation contours, and site calibration data. Includes automatic UTM reprojection from geographic coordinates to local projected coordinate systems for direct WAsP compatibility.</p>
+        <div class="fcard-tags">
+          <span class="ftag">WAsP Binary</span>
+          <span class="ftag">WAsP Text</span>
+          <span class="ftag">UTM Reprojection</span>
+          <span class="ftag">pyproj</span>
+        </div>
+      </div>
+
+      <!-- 10. PyInstaller .exe Packaging (Wide Card) -->
+      <div class="fcard fcard--w rv">
+        <div style="display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap">
+          <div class="fcard-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <!-- Application window -->
+              <rect x="4" y="5" width="24" height="20" rx="2.5" stroke="#2d9cce" stroke-width="1.5" fill="rgba(45,156,206,.06)"/>
+              <!-- Title bar -->
+              <rect x="4" y="5" width="24" height="5" rx="2.5" fill="rgba(45,156,206,.15)"/>
+              <circle cx="7.5" cy="7.5" r="1" fill="#ff5f57"/>
+              <circle cx="10.5" cy="7.5" r="1" fill="#febc2e"/>
+              <circle cx="13.5" cy="7.5" r="1" fill="#28c840"/>
+              <!-- .exe icon -->
+              <rect x="12" y="14" width="10" height="8" rx="1.5" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.2)" stroke-width="1"/>
+              <text x="17" y="20.5" text-anchor="middle" fill="#f0a500" font-size="5" font-weight="800">.exe</text>
+              <!-- Install arrow -->
+              <path d="M8 25 L8 28 L24 28 L24 25" stroke="#1db87e" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="16" y1="16" x2="16" y2="27" stroke="#1db87e" stroke-width="1" stroke-dasharray="2 1.5" opacity=".4"/>
+              <polygon points="16,27 14,25 18,25" fill="#1db87e" opacity=".6"/>
+            </svg>
+          </div>
+          <div style="flex:1;min-width:280px">
+            <h3>PyInstaller .exe Packaging</h3>
+            <p>Distributed as a standalone Windows .exe with all dependencies bundled &mdash; no Python installation required. Custom PyInstaller spec file with UPX compression, icon embedding, and single-file mode for professional deployment. Includes automatic version stamping and digital signing readiness for enterprise distribution.</p>
+            <div class="fcard-tags">
+              <span class="ftag">PyInstaller</span>
+              <span class="ftag">Single-File .exe</span>
+              <span class="ftag">UPX Compression</span>
+              <span class="ftag">Windows Native</span>
+              <span class="ftag">Zero Dependencies</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECHNOLOGY STACK -->
+<section id="techstack" class="section-wrap">
+  <div class="container">
+    <div class="rv" style="margin-bottom:1rem">
+      <div class="eyebrow gold">Technology</div>
+      <h2 class="stitle">Built With<br><em>Proven</em> Tools</h2>
+      <p style="font-size:.95rem;font-weight:300;line-height:1.85;color:rgba(255,255,255,.5);margin-top:1rem;max-width:50ch">A carefully selected technology stack balancing scientific computing power, geospatial capability, and desktop application performance.</p>
+    </div>
+
+    <div class="tech-grid rv d1">
+      <!-- Python -->
+      <div class="tech-item">
+        <span class="tech-item-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <path d="M18 3C10 3 10.5 7 10.5 7L10.5 11.5L18.2 11.5V12.8H7.5S3 12.2 3 18.5S7 24.5 7 24.5H10V20C10 20 9.8 16 13.8 16H21C21 16 25 16 25 12.2V7.8S25.5 3 18 3ZM13.5 5.8C14.3 5.8 15 6.5 15 7.3S14.3 8.8 13.5 8.8S12 8.1 12 7.3S12.7 5.8 13.5 5.8Z" fill="#3776AB"/>
+            <path d="M18 33C26 33 25.5 29 25.5 29L25.5 24.5H17.8V23.2H28.5S33 23.8 33 17.5S29 11.5 29 11.5H26V16C26 16 26.2 20 22.2 20H15C15 15 11 20 11 23.8V28.2S10.5 33 18 33ZM22.5 30.2C21.7 30.2 21 29.5 21 28.7S21.7 27.2 22.5 27.2S24 27.9 24 28.7S23.3 30.2 22.5 30.2Z" fill="#FFD43B"/>
+          </svg>
+        </span>
+        <h4>Python</h4>
+        <p>Core Language</p>
+      </div>
+      <!-- PyQt5 -->
+      <div class="tech-item">
+        <span class="tech-item-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="4" y="4" width="28" height="28" rx="4" stroke="#41CD52" stroke-width="1.5" fill="rgba(65,205,82,.08)"/>
+            <text x="18" y="16" text-anchor="middle" fill="#41CD52" font-size="8" font-weight="800">Qt</text>
+            <text x="18" y="27" text-anchor="middle" fill="rgba(255,255,255,.5)" font-size="7" font-weight="600">PyQt5</text>
+          </svg>
+        </span>
+        <h4>PyQt5</h4>
+        <p>GUI Framework</p>
+      </div>
+      <!-- NumPy -->
+      <div class="tech-item">
+        <span class="tech-item-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="5" y="5" width="26" height="26" rx="3" stroke="#4DABCF" stroke-width="1.5" fill="rgba(77,171,207,.08)"/>
+            <text x="18" y="16" text-anchor="middle" fill="#4DABCF" font-size="7" font-weight="800">Num</text>
+            <text x="18" y="27" text-anchor="middle" fill="#4DABCF" font-size="7" font-weight="800">Py</text>
+          </svg>
+        </span>
+        <h4>NumPy</h4>
+        <p>Numerical Computing</p>
+      </div>
+      <!-- SciPy -->
+      <div class="tech-item">
+        <span class="tech-item-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="5" y="5" width="26" height="26" rx="3" stroke="#8CAFC0" stroke-width="1.5" fill="rgba(140,175,192,.08)"/>
+            <text x="18" y="16" text-anchor="middle" fill="#8CAFC0" font-size="7" font-weight="800">Sci</text>
+            <text x="18" y="27" text-anchor="middle" fill="#8CAFC0" font-size="7" font-weight="800">Py</text>
+          </svg>
+        </span>
+        <h4>SciPy</h4>
+        <p>Scientific Computing</p>
+      </div>
+      <!-- Rasterio -->
+      <div class="tech-item">
+        <span class="tech-item-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="5" y="5" width="26" height="26" rx="3" stroke="#2d9cce" stroke-width="1.5" fill="rgba(45,156,206,.08)"/>
+            <!-- Grid cells -->
+            <rect x="8" y="8" width="7" height="7" rx="1" fill="rgba(45,156,206,.25)"/>
+            <rect x="16" y="8" width="7" height="7" rx="1" fill="rgba(29,184,126,.2)"/>
+            <rect x="8" y="16" width="7" height="7" rx="1" fill="rgba(29,184,126,.2)"/>
+            <rect x="16" y="16" width="7" height="7" rx="1" fill="rgba(45,156,206,.25)"/>
+            <rect x="24" y="8" width="4" height="7" rx="1" fill="rgba(240,165,0,.15)"/>
+            <rect x="24" y="16" width="4" height="7" rx="1" fill="rgba(240,165,0,.15)"/>
+            <text x="18" y="32" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="5.5" font-weight="700">RASTERIO</text>
+          </svg>
+        </span>
+        <h4>Rasterio</h4>
+        <p>Geospatial Raster I/O</p>
+      </div>
+      <!-- Matplotlib -->
+      <div class="tech-item">
+        <span class="tech-item-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="5" y="5" width="26" height="26" rx="3" stroke="#11557C" stroke-width="1.5" fill="rgba(17,85,124,.08)"/>
+            <!-- Plot lines -->
+            <line x1="8" y1="8" x2="8" y2="26" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+            <line x1="8" y1="26" x2="28" y2="26" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+            <path d="M10 22 Q14 12 18 16 Q22 20 26 10" stroke="#1db87e" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <path d="M10 24 Q15 18 20 20 Q25 22 28 16" stroke="#f0a500" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".6"/>
+            <!-- Dot -->
+            <circle cx="26" cy="10" r="2" fill="#1db87e"/>
+          </svg>
+        </span>
+        <h4>Matplotlib</h4>
+        <p>Data Visualisation</p>
+      </div>
+      <!-- pyproj -->
+      <div class="tech-item">
+        <span class="tech-item-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="5" y="5" width="26" height="26" rx="3" stroke="#f0a500" stroke-width="1.5" fill="rgba(240,165,0,.06)"/>
+            <!-- Globe -->
+            <circle cx="18" cy="17" r="8" stroke="#f0a500" stroke-width="1.2" opacity=".7"/>
+            <ellipse cx="18" cy="17" rx="3.5" ry="8" stroke="#f0a500" stroke-width=".8" opacity=".5"/>
+            <line x1="10" y1="17" x2="26" y2="17" stroke="#f0a500" stroke-width=".6" opacity=".4"/>
+            <!-- Reprojection arrows -->
+            <path d="M28 12 L32 14 L28 16" stroke="#1db87e" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="18" y="30" text-anchor="middle" fill="rgba(240,165,0,.6)" font-size="5.5" font-weight="700">pyproj</text>
+          </svg>
+        </span>
+        <h4>pyproj</h4>
+        <p>Coordinate Transform</p>
+      </div>
+      <!-- Leaflet -->
+      <div class="tech-item">
+        <span class="tech-item-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="5" y="5" width="26" height="26" rx="3" stroke="#199900" stroke-width="1.5" fill="rgba(25,153,0,.06)"/>
+            <!-- Map marker -->
+            <path d="M18 8C14.7 8 12 10.7 12 14C12 18.5 18 26 18 26S24 18.5 24 14C24 10.7 21.3 8 18 8Z" fill="#199900" opacity=".8"/>
+            <circle cx="18" cy="14" r="3" fill="rgba(5,5,5,.6)"/>
+            <circle cx="18" cy="14" r="1.5" fill="#199900"/>
+            <text x="18" y="32" text-anchor="middle" fill="rgba(25,153,0,.5)" font-size="5.5" font-weight="700">Leaflet</text>
+          </svg>
+        </span>
+        <h4>Leaflet</h4>
+        <p>Interactive Maps</p>
+      </div>
+      <!-- contextily -->
+      <div class="tech-item">
+        <span class="tech-item-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="5" y="5" width="26" height="26" rx="3" stroke="#87ceeb" stroke-width="1.5" fill="rgba(135,206,235,.06)"/>
+            <!-- Tile pattern -->
+            <rect x="8" y="8" width="8" height="8" rx="1" fill="rgba(135,206,235,.15)" stroke="rgba(135,206,235,.3)" stroke-width=".5"/>
+            <rect x="17" y="8" width="8" height="8" rx="1" fill="rgba(45,156,206,.15)" stroke="rgba(135,206,235,.3)" stroke-width=".5"/>
+            <rect x="8" y="17" width="8" height="8" rx="1" fill="rgba(29,184,126,.1)" stroke="rgba(135,206,235,.3)" stroke-width=".5"/>
+            <rect x="17" y="17" width="8" height="8" rx="1" fill="rgba(135,206,235,.15)" stroke="rgba(135,206,235,.3)" stroke-width=".5"/>
+            <text x="18" y="32" text-anchor="middle" fill="rgba(135,206,235,.5)" font-size="4.5" font-weight="700">contextily</text>
+          </svg>
+        </span>
+        <h4>contextily</h4>
+        <p>Basemap Tiles</p>
+      </div>
+      <!-- Requests -->
+      <div class="tech-item">
+        <span class="tech-item-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="5" y="5" width="26" height="26" rx="3" stroke="#2D8CFF" stroke-width="1.5" fill="rgba(45,140,255,.06)"/>
+            <!-- HTTP request icon -->
+            <circle cx="18" cy="16" r="6" stroke="#2D8CFF" stroke-width="1.2" fill="none"/>
+            <path d="M18 12 L18 16 L21 18" stroke="#2D8CFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Signal waves -->
+            <path d="M26 12 Q28 10 26 8" stroke="#2D8CFF" stroke-width="1" fill="none" opacity=".5"/>
+            <path d="M28 13 Q31 10 28 6" stroke="#2D8CFF" stroke-width=".8" fill="none" opacity=".3"/>
+            <text x="18" y="31" text-anchor="middle" fill="rgba(45,140,255,.5)" font-size="5.5" font-weight="700">Requests</text>
+          </svg>
+        </span>
+        <h4>Requests</h4>
+        <p>HTTP Client</p>
+      </div>
+      <!-- PyInstaller -->
+      <div class="tech-item">
+        <span class="tech-item-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="5" y="5" width="26" height="26" rx="3" stroke="#e74c3c" stroke-width="1.5" fill="rgba(231,76,60,.06)"/>
+            <!-- Package/box icon -->
+            <rect x="11" y="12" width="14" height="12" rx="2" stroke="#e74c3c" stroke-width="1.2" fill="rgba(231,76,60,.08)"/>
+            <path d="M11 16 L18 13 L25 16" stroke="#e74c3c" stroke-width="1" fill="none"/>
+            <line x1="18" y1="13" x2="18" y2="24" stroke="#e74c3c" stroke-width=".8" opacity=".5"/>
+            <text x="18" y="31" text-anchor="middle" fill="rgba(231,76,60,.5)" font-size="5" font-weight="700">Installer</text>
+          </svg>
+        </span>
+        <h4>PyInstaller</h4>
+        <p>.exe Packaging</p>
+      </div>
+      <!-- scikit-learn -->
+      <div class="tech-item">
+        <span class="tech-item-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="5" y="5" width="26" height="26" rx="3" stroke="#F7931E" stroke-width="1.5" fill="rgba(247,147,30,.06)"/>
+            <!-- Neural network nodes -->
+            <circle cx="12" cy="11" r="2.5" fill="#F7931E" opacity=".7"/>
+            <circle cx="12" cy="18" r="2.5" fill="#F7931E" opacity=".7"/>
+            <circle cx="12" cy="25" r="2.5" fill="#F7931E" opacity=".5"/>
+            <circle cx="24" cy="14" r="2.5" fill="#F7931E" opacity=".7"/>
+            <circle cx="24" cy="22" r="2.5" fill="#F7931E" opacity=".7"/>
+            <line x1="14.5" y1="11" x2="21.5" y2="14" stroke="#F7931E" stroke-width=".8" opacity=".4"/>
+            <line x1="14.5" y1="18" x2="21.5" y2="14" stroke="#F7931E" stroke-width=".8" opacity=".4"/>
+            <line x1="14.5" y1="18" x2="21.5" y2="22" stroke="#F7931E" stroke-width=".8" opacity=".4"/>
+            <line x1="14.5" y1="25" x2="21.5" y2="22" stroke="#F7931E" stroke-width=".8" opacity=".4"/>
+            <text x="18" y="33" text-anchor="middle" fill="rgba(247,147,30,.5)" font-size="4.5" font-weight="700">scikit</text>
+          </svg>
+        </span>
+        <h4>scikit-learn</h4>
+        <p>Weibull Fitting</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BACK TO PORTFOLIO -->
+<section class="back-section">
+  <a class="back-link" href="index.html">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M10 2L5 8L10 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Back to Portfolio
+  </a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-logo">VK</div>
+  <div class="foot-copy">&copy; 2024 Velmurugan Karuppiah &middot; All rights reserved</div>
+  <a class="foot-top" href="#">Back to Top</a>
+</footer>
+
+<script>
+/* ── CUSTOM CURSOR ────────────────────────────────────────── */
+const cd=document.getElementById('cd'),cr=document.getElementById('cr');
+document.addEventListener('mousemove',e=>{cd.style.left=e.clientX+'px';cd.style.top=e.clientY+'px';cr.style.left=e.clientX+'px';cr.style.top=e.clientY+'px'});
+
+/* ── NAV SCROLL ───────────────────────────────────────────── */
+const nav=document.getElementById('nav');
+window.addEventListener('scroll',()=>{nav.classList.toggle('scrolled',window.scrollY>50)},{passive:true});
+
+/* ── BACKGROUND PARTICLE CANVAS ───────────────────────────── */
+(function(){
+  const c=document.getElementById('bgCanvas'),x=c.getContext('2d');
+  let W,H;
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight}
+  resize();window.addEventListener('resize',resize);
+  const pts=Array.from({length:60},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.5+.5,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3}));
+  function draw(){x.clearRect(0,0,W,H);pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;x.beginPath();x.arc(p.x,p.y,p.r,0,Math.PI*2);x.fillStyle='rgba(135,206,235,.25)';x.fill()});requestAnimationFrame(draw)}
+  draw();
+})();
+
+/* ── HERO PARTICLES ───────────────────────────────────────── */
+(function(){
+  const box=document.getElementById('particles');
+  if(!box)return;
+  for(let i=0;i<25;i++){const d=document.createElement('div');d.className='p';const s=Math.random()*4+2;d.style.cssText=`width:${s}px;height:${s}px;left:${Math.random()*100}%;animation-duration:${Math.random()*12+8}s;animation-delay:${Math.random()*8}s`;box.appendChild(d)}
+})();
+
+/* ── REVEAL ON SCROLL ─────────────────────────────────────── */
+const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')})},{threshold:.15});
+document.querySelectorAll('.rv').forEach(el=>obs.observe(el));
+
+/* ── TAB INTERACTIVITY ────────────────────────────────────── */
+document.querySelectorAll('.tab-item').forEach(tab=>{
+  tab.addEventListener('click',function(){
+    this.closest('.tab-visual').querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
