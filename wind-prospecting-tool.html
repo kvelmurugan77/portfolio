@@ -355,33 +355,35 @@ const DS_INFO={
 };
 
 // ==================== INIT ====================
-window.addEventListener('DOMContentLoaded',()=>{initSiteMap();initWindManualTable();updateSpacingM();onTurbineSelect();document.getElementById('landCover').addEventListener('change',function(){const v=this.value;const z0={water:0.0002,sand:0.001,grass:0.03,farm:0.05,suburb:0.3,forest:0.5,urban:1.0,custom:null};if(z0[v]!==null)document.getElementById('z0Site').value=z0[v];});
+window.addEventListener('DOMContentLoaded',()=>{setTimeout(()=>{initSiteMap();},300);initWindManualTable();updateSpacingM();onTurbineSelect();document.getElementById('landCover').addEventListener('change',function(){const v=this.value;const z0={water:0.0002,sand:0.001,grass:0.03,farm:0.05,suburb:0.3,forest:0.5,urban:1.0,custom:null};if(z0[v]!==null)document.getElementById('z0Site').value=z0[v];});
 
 // ==================== GAMMA (Stirling approx) ====================
 function gammaFn(z){if(z<0.5)return Math.PI/(Math.sin(Math.PI*z)*gammaFn(1-z));z-=1;const g=7;const c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];let x=c[0];for(let i=1;i<g+2;i++)x+=c[i]/(z+i);const t=z+g+0.5;return Math.sqrt(2*Math.PI)*Math.pow(t,z+0.5)*Math.exp(-t)*x;}
 
 // ==================== NAVIGATION ====================
 function goToStep(n){
-  if(n===2&&!S.siteBoundary){alert('Define a site boundary first.');return;}
-  if(n===3&&!S.windData){alert('Load wind resource data first.');return;}
-  if(n===5&&!S.windData){alert('Load wind data first.');return;}
-  if(n===6&&!S.turbine){alert('Configure a turbine first.');return;}
-  if(n===7&&S.positions.length===0){alert('Place at least one turbine.');return;}
-  if(n===8&&!S.wakeResults){alert('Run wake calculation first.');return;}
-  if(n===9&&!S.wakeResults){alert('Run wake calculation first.');return;}
-  if(n===10&&!S.aepResults){alert('Calculate AEP first.');return;}
+  if(n > S.step){
+    if(n===2&&!S.siteBoundary){alert('Define a site boundary first.');return;}
+    if(n===3&&!S.windData){alert('Load wind resource data first.');return;}
+    if(n===5&&!S.windData){alert('Load wind data first.');return;}
+    if(n===6&&!S.turbine){alert('Configure a turbine first.');return;}
+    if(n===7&&S.positions.length===0){alert('Place at least one turbine.');return;}
+    if(n===8&&!S.wakeResults){alert('Run wake calculation first.');return;}
+    if(n===9&&!S.wakeResults){alert('Run wake calculation first.');return;}
+    if(n===10&&!S.aepResults){alert('Calculate AEP first.');return;}
+  }
   S.step=n;
   document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('step'+n).classList.add('active');
   document.querySelectorAll('.step-item').forEach(s=>{const sn=parseInt(s.dataset.step);s.classList.remove('active','done');if(sn===n)s.classList.add('active');else if(sn<n)s.classList.add('done');});
-  if(n===2)initMesoStep();if(n===3)drawWindRose();if(n===4){}if(n===5)drawFlowWheel();
+  if(n===2)initMesoStep();if(n===3)drawWindRose();if(n===4&&S.terrainElevations)document.getElementById('step4Next').disabled=false;if(n===5)drawFlowWheel();
   if(n===6)drawPowerCurve();if(n===7)setTimeout(initLayoutMap,100);if(n===8)drawWakeMap();
   if(n===9&&S.wakeResults)calculateAEP();if(n===10)renderSummary();
   window.scrollTo(0,0);
 }
 
 // ==================== STEP 1: SITE ====================
-function initSiteMap(){if(siteMap){siteMap.invalidateSize();return;}siteMap=L.map('siteMap',{zoomControl:true}).setView([11.0,77.0],10);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM',maxZoom:19}).addTo(siteMap);drawnItems=new L.FeatureGroup();siteMap.addLayer(drawnItems);const dc=new L.Control.Draw({draw:{polygon:{shapeOptions:{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12}},polyline:false,circle:false,rectangle:false,marker:false,circlemarker:false},edit:{featureGroup:drawnItems,remove:true}});siteMap.addControl(dc);siteMap.on(L.Draw.Event.CREATED,function(e){drawnItems.clearLayers();drawnItems.addLayer(e.layer);const lls=e.layer.getLatLngs()[0];S.siteBoundary=lls.map(ll=>[ll.lat,ll.lng]);S.siteArea=calcPolygonArea(S.siteBoundary);updateSiteInfo();});siteMap.on(L.Draw.Event.DELETED,function(){S.siteBoundary=null;S.siteArea=0;updateSiteInfo();});}
+function initSiteMap(){if(siteMap){siteMap.invalidateSize();return;}try{siteMap=L.map('siteMap',{zoomControl:true}).setView([11.0,77.0],10);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM',maxZoom:19}).addTo(siteMap);drawnItems=new L.FeatureGroup();siteMap.addLayer(drawnItems);try{const dc=new L.Control.Draw({draw:{polygon:{shapeOptions:{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12}},polyline:false,circle:false,rectangle:false,marker:false,circlemarker:false},edit:{featureGroup:drawnItems,remove:true}});siteMap.addControl(dc);}catch(drawErr){console.warn('Leaflet Draw plugin not available, skipping draw controls:',drawErr);}siteMap.on(L.Draw.Event.CREATED,function(e){drawnItems.clearLayers();drawnItems.addLayer(e.layer);const lls=e.layer.getLatLngs()[0];S.siteBoundary=lls.map(ll=>[ll.lat,ll.lng]);S.siteArea=calcPolygonArea(S.siteBoundary);updateSiteInfo();});siteMap.on(L.Draw.Event.DELETED,function(){S.siteBoundary=null;S.siteArea=0;updateSiteInfo();});setTimeout(()=>{if(siteMap)siteMap.invalidateSize();},500);}catch(e){console.error('Failed to initialize site map:',e);}}
 
 function calcPolygonArea(c){const R=6371;let a=0;const n=c.length;for(let i=0;i<n;i++){const j=(i+1)%n;const a1=c[i][0]*Math.PI/180,a2=c[j][0]*Math.PI/180;const dL=(c[j][1]-c[i][1])*Math.PI/180;a+=dL*(2+Math.sin(a1)+Math.sin(a2));}return Math.abs(a*R*R/2);}
 
@@ -719,7 +721,7 @@ function applyTurbine(){S.turbine={name:document.getElementById('turbineSelect')
 
 function powerCurve(v,t){if(!t)return 0;if(v<t.cutIn||v>t.cutOut)return 0;if(v>=t.ratedSpeed&&v<=t.cutOut)return t.power;return t.power*(v*v-t.cutIn*t.cutIn)/(t.ratedSpeed*t.ratedSpeed-t.cutIn*t.cutIn);}
 
-function thrustCoeff(v,t){if(!t)return 0;if(v<t.cutIn||v>t.ratedSpeed)return 0;if(v>t.ratedSpeed)return 8/(3*t.RD*t.RD)*t.power*1e6/(1.225*v*v*v);const p=powerCurve(v,t);return Math.min(0.99,8/(3*t.RD*t.RD)*p*1e6/(1.225*v*v*v));}
+function thrustCoeff(v,t){if(!t)return 0;if(v<t.cutIn||v>t.ratedSpeed)return 0;if(v>t.ratedSpeed)return 4/(Math.PI*t.RD*t.RD)*t.power*1e6/(1.225*v*v*v);const p=powerCurve(v,t);return Math.min(0.99,4/(Math.PI*t.RD*t.RD)*p*1e6/(1.225*v*v*v));}
 
 function drawPowerCurve(){const canvas=document.getElementById('powerCurveCanvas');if(!canvas)return;const ctx=canvas.getContext('2d');const W=canvas.width,H=canvas.height;ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);if(!S.turbine){ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='14px IBM Plex Sans';ctx.textAlign='center';ctx.fillText('Apply a turbine',W/2,H/2);return;}
   const t=S.turbine;const pad={l:60,r:60,t:30,b:50};const pW=W-pad.l-pad.r;const pH=H-pad.t-pad.b;
@@ -889,16 +891,58 @@ function exportSummaryImage(){const canvas=document.getElementById('summaryCanva
 function downloadFile(name,content,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);}
 
 // ==================== UTILITIES ====================
-function loadDemoAll(){
-  loadDemoSite();setTimeout(()=>{
+async function loadDemoAll(){
+  try{
+    // Step 1: Site
+    loadDemoSite();
+    document.getElementById('step1Next').disabled=false;
+    await new Promise(r=>setTimeout(r,300));
+
+    // Step 2: Mesoscale (skip for demo, just enable button)
+    document.getElementById('step2Next').disabled=false;
+    S.step=2;
+    await new Promise(r=>setTimeout(r,200));
+
+    // Step 3: Wind data — set data BEFORE navigating so guards pass
     generateSyntheticWind();
     applyTurbine();
-    setTimeout(()=>{
-      autoGridLayout();
-      setTimeout(()=>{
-        runFlowModel();setTimeout(()=>{goToStep(7);setTimeout(()=>{runWakeCalculation();setTimeout(()=>{calculateAEP();},200);},200);},200);
-    },200);
-  },200);
+    document.getElementById('step3Next').disabled=false;
+    document.getElementById('step6Next').disabled=false;
+    goToStep(3);
+    await new Promise(r=>setTimeout(r,300));
+
+    // Step 4: Terrain (async download)
+    S.step=3;
+    goToStep(4);
+    try{await downloadTerrain();}catch(e){console.warn('Terrain download failed, using simplified flow model:',e);}
+    await new Promise(r=>setTimeout(r,300));
+
+    // Step 5: Flow model
+    S.step=4;
+    runFlowModel();
+    document.getElementById('step5Next').disabled=false;
+    goToStep(5);
+    await new Promise(r=>setTimeout(r,300));
+
+    // Step 7: Layout — set S.step so goToStep(7) doesn't guard-block
+    autoGridLayout();
+    S.step=6;
+    goToStep(7);
+    await new Promise(r=>setTimeout(r,300));
+
+    // Step 8: Wake
+    runWakeCalculation();
+    document.getElementById('step8Next').disabled=false;
+    S.step=7;
+    goToStep(8);
+    await new Promise(r=>setTimeout(r,300));
+
+    // Step 9: AEP
+    calculateAEP();
+    document.getElementById('step9Next').disabled=false;
+    S.step=8;
+    goToStep(9);
+  }catch(e){console.error('Demo load error:',e);}
 }
 
 function clearAll(){

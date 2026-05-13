@@ -30,8 +30,8 @@ from scipy.integrate import trapezoid
 
 from .layout_optimizer import WTGPosition, TurbineModel
 from .wake_model import WakeCalculator, WakeModelConfig
-from src.utils.data_utils import generate_default_power_curve, weibull_pdf
-from src.utils.geo_utils import wind_speed_at_height, air_density_adjustment
+from src.utils.data_utils import generate_default_power_curve
+from src.utils.geo_utils import wind_speed_at_height, air_density_adjustment, weibull_pdf
 
 logger = logging.getLogger(__name__)
 
