@@ -32,7 +32,7 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
 .badge{display:inline-block;font-size:.5rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.15rem .45rem;border-radius:2px;font-family:var(--mono)}.badge-ok{background:var(--mint2);color:var(--mint);border:1px solid rgba(0,214,143,.2)}.badge-warn{background:var(--gold2);color:var(--gold);border:1px solid rgba(245,166,35,.2)}.badge-sky{background:var(--sky2);color:var(--sky);border:1px solid rgba(74,179,232,.2)}
 .kpi-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:1.2rem}.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:.7rem;text-align:center}.kpi-v{display:block;font-family:var(--mono);font-size:1.2rem;font-weight:600;color:var(--mint);line-height:1.1}.kpi-v.g{color:var(--mint)}.kpi-v.o{color:var(--gold)}.kpi-v.r{color:var(--red)}.kpi-v.b{color:var(--sky)}.kpi-l{display:block;font-size:.48rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-top:.25rem;font-family:var(--mono)}
 .legend-row{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:.8rem;align-items:center}.legend-pill{display:flex;align-items:center;gap:.35rem;font-size:.6rem;color:var(--text3);font-family:var(--mono)}.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
-#siteMap,#layoutMap{height:480px;border-radius:var(--radius);border:1px solid var(--border)}.leaflet-container{background:var(--bg)!important;font-family:var(--mono)!important}
+#siteMap,#layoutMap{height:480px;border-radius:var(--radius);border:1px solid var(--border)}.wind-overlay-img{image-rendering:auto}.leaflet-container{background:var(--bg)!important;font-family:var(--mono)!important}
 .ds-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}.ds-card{padding:1rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);transition:all .2s}.ds-card:hover{border-color:var(--mint)}.ds-card.active{border-color:var(--mint);background:var(--mint3)}.ds-name{font-size:.8rem;font-weight:600;color:var(--text);margin-bottom:.3rem}.ds-desc{font-size:.65rem;color:var(--text3);margin-bottom:.6rem;line-height:1.5}.ds-status{font-size:.55rem;font-family:var(--mono);margin-bottom:.6rem}.spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--mint);border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 @media(max-width:900px){.g2,.g3{grid-template-columns:1fr}.g4,.g5{grid-template-columns:1fr 1fr}.kpi-strip{grid-template-columns:repeat(3,1fr)}.form-row{flex-direction:column}.stepper{padding:.5rem}.main{padding:.8rem 1rem 2rem}.ds-grid{grid-template-columns:1fr}}
@@ -239,14 +239,25 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
 
 <!-- ===== STEP 7: LAYOUT DESIGN ===== -->
 <div class="step-panel" id="step7">
-  <div class="alert alert-info" style="margin-bottom:1rem">The site boundary from Step 1 is shown on the map. Turbines are auto-placed within the boundary when you enter this step. You can click the map to add turbines manually, use Auto Layout to regenerate, or import a CSV layout file.</div>
+  <div class="alert alert-info" style="margin-bottom:1rem">The site boundary from Step 1 is shown on the map. Turbines are <b>auto-placed within the boundary</b> using wind speed data when you enter this step. Click inside the green boundary to add turbines manually, or use the layout buttons below. The colored overlay shows predicted wind speed distribution.</div>
   <div class="g2">
-    <div class="card"><div class="card-title green">Layout Map</div><div id="layoutMap"></div></div>
+    <div class="card"><div class="card-title green">Layout Map</div><div id="layoutMap"></div>
+      <div class="legend-row" style="margin-top:.6rem;justify-content:center;flex-wrap:wrap" id="windSpeedLegend">
+        <div class="legend-pill"><div class="legend-dot" style="background:#1e50dc"></div>Low Wind</div>
+        <div class="legend-pill"><div class="legend-dot" style="background:#1eff8c"></div>Med-Low</div>
+        <div class="legend-pill"><div class="legend-dot" style="background:#5aff00"></div>Medium</div>
+        <div class="legend-pill"><div class="legend-dot" style="background:#ffff00"></div>Med-High</div>
+        <div class="legend-pill"><div class="legend-dot" style="background:#ff8c00"></div>High</div>
+        <div class="legend-pill"><div class="legend-dot" style="background:#fa203c"></div>Very High</div>
+        <div class="legend-pill" style="margin-left:.5rem"><div class="legend-dot" style="background:#f5a623;border:1px solid #fff"></div>WTG</div>
+        <div class="legend-pill"><div class="legend-dot" style="background:transparent;border:2px solid #00d68f"></div>Boundary</div>
+      </div>
+    </div>
     <div>
       <div class="card"><div class="card-title gold">Layout Controls</div>
         <div class="g3" style="gap:.6rem"><div class="fg"><label class="fl">Min Spacing (xRD)</label><input class="fi" type="number" id="spacingD" value="5" min="2" max="15" step="0.5"></div><div class="fg"><label class="fl">Grid Angle (deg)</label><input class="fi" type="number" id="gridAngle" value="0" min="0" max="90"></div><div class="fg"><label class="fl">Spacing (m)</label><input class="fi" type="number" id="spacingM" value="" readonly style="color:var(--mint)"></div></div>
         <div class="g2" style="gap:.6rem;margin-top:.5rem"><div class="fg"><label class="fl">Desired Capacity (MW)</label><input class="fi" type="number" id="desiredCapacity" value="50" min="1" max="5000" step="1"></div><div class="fg"><label class="fl">Wind-Aligned Grid</label><select class="fs" id="windAlignGrid"><option value="1" selected>Yes (perpendicular to prevailing wind)</option><option value="0">No (use manual angle)</option></select></div></div>
-        <div style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap"><button class="btn btn-gold" onclick="autoGridLayoutOptimized()">⊞ Auto Layout</button><button class="btn btn-sm btn-primary" onclick="autoGridLayout()">⊞ Simple Grid</button><button class="btn btn-sm btn-ghost" onclick="exportLayoutCSV()">📁 Export CSV</button><label class="btn btn-sm btn-sky" style="margin:0">📁 Import CSV<input type="file" accept=".csv" style="display:none" onchange="importLayoutCSV(event)"></label><button class="btn btn-sm btn-danger" onclick="clearLayout()">✕ Clear Layout</button></div>
+        <div style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap"><button class="btn btn-gold" onclick="autoGridLayoutWindAware()">⊞ Wind-Optimized Layout</button><button class="btn btn-sm btn-primary" onclick="autoGridLayoutOptimized()">⊞ Capacity Grid</button><button class="btn btn-sm btn-ghost" onclick="autoGridLayout()">⊞ Simple Grid</button><button class="btn btn-sm btn-sky" id="windOverlayBtn" onclick="toggleWindOverlay()">☁ Show Wind Map</button><button class="btn btn-sm btn-ghost" onclick="exportLayoutCSV()">📁 Export CSV</button><label class="btn btn-sm btn-sky" style="margin:0">📁 Import CSV<input type="file" accept=".csv" style="display:none" onchange="importLayoutCSV(event)"></label><button class="btn btn-sm btn-danger" onclick="clearLayout()">✕ Clear Layout</button></div>
       </div>
       <div class="card"><div class="card-title">Layout Summary</div>
         <div class="g3" style="gap:.6rem">
@@ -408,7 +419,7 @@ function goToStep(n){
   document.getElementById('step'+n).classList.add('active');
   document.querySelectorAll('.step-item').forEach(s=>{const sn=parseInt(s.dataset.step);s.classList.remove('active','done');if(sn===n)s.classList.add('active');else if(sn<n)s.classList.add('done');});
   if(n===2)initMesoStep();if(n===3)drawWindRose();if(n===4&&S.terrainElevations)document.getElementById('step4Next').disabled=false;if(n===5)drawFlowWheel();
-  if(n===6)drawPowerCurve();if(n===7)setTimeout(initLayoutMap,100);if(n===8)drawWakeMap();
+  if(n===6)drawPowerCurve();if(n===7)setTimeout(initLayoutMap,150);if(n===8)drawWakeMap();
   if(n===9&&S.wakeResults)calculateAEP();if(n===10)renderSummary();
   window.scrollTo(0,0);
 }
@@ -1220,18 +1231,50 @@ function drawPowerCurve(){const canvas=document.getElementById('powerCurveCanvas
 function updateSpacingM(){const rd=parseFloat(document.getElementById('tRD').value)||75;const d=parseFloat(document.getElementById('spacingD').value)||5;document.getElementById('spacingM').value=Math.round(rd*d);}
 
 // ==================== STEP 7: LAYOUT ====================
-function initLayoutMap(){if(layoutMap){layoutMap.invalidateSize();if(S.siteBoundary){if(boundaryLayer)layoutMap.removeLayer(boundaryLayer);boundaryLayer=L.polygon(S.siteBoundary,{color:'#00d68f',weight:3,fillColor:'#00d68f',fillOpacity:.1,dashArray:null}).addTo(layoutMap);layoutMap.fitBounds(boundaryLayer.getBounds(),{padding:[40,40]});}if(S.turbine&&S.positions.length===0&&S.siteBoundary){setTimeout(autoGridLayoutOptimized,200);}refreshTurbineMarkers();return;}
+function initLayoutMap(){
+  // Always destroy and recreate for reliable init after hidden-panel show
+  if(layoutMap){layoutMap.remove();layoutMap=null;boundaryLayer=null;turbineMarkers=null;spacingCircles=null;if(S._windOverlay){S._windOverlay=null;}}
   if(!S.siteBoundary){return;}
-  const c=getPolygonCentroid(S.siteBoundary);layoutMap=L.map('layoutMap',{zoomControl:true}).setView(c,13);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM',maxZoom:19}).addTo(layoutMap);
-  boundaryLayer=L.polygon(S.siteBoundary,{color:'#00d68f',weight:3,fillColor:'#00d68f',fillOpacity:.1}).addTo(layoutMap);layoutMap.fitBounds(boundaryLayer.getBounds(),{padding:[40,40]});
-  // Add area label at centroid
-  const areaLabel=L.divIcon({className:'',html:'<div style=\"background:rgba(0,214,143,.85);color:#07111e;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;font-family:IBM Plex Mono,monospace;white-space:nowrap\">'+S.siteArea.toFixed(2)+' km²</div>',iconSize:null,iconAnchor:[40,10]});
-  L.marker(c,{icon:areaLabel,interactive:false}).addTo(layoutMap);
-  turbineMarkers=L.layerGroup().addTo(layoutMap);spacingCircles=L.layerGroup().addTo(layoutMap);
-  layoutMap.on('click',function(e){if(!S.siteBoundary)return;const lat=e.latlng.lat;const lon=e.latlng.lng;if(!pointInPolygon(lat,lon,S.siteBoundary))return;const d=parseFloat(document.getElementById('spacingD').value)||5;const rd=S.turbine?S.turbine.RD:75;const md=rd*d;for(const pos of S.positions){const dx=(lon-pos.lon)*Math.cos(pos.lat*Math.PI/180)*111320;const dy=(lat-pos.lat)*111320;if(Math.sqrt(dx*dx+dy*dy)<md)return;}addTurbinePosition(lat,lon);});
-  // Auto-populate turbines if turbine is configured and no positions exist
-  if(S.turbine&&S.positions.length===0){setTimeout(autoGridLayoutOptimized,300);}
-  refreshTurbineMarkers();}
+  var c=getPolygonCentroid(S.siteBoundary);
+  // Delay to ensure panel is fully visible with proper dimensions
+  setTimeout(function(){
+    try{
+      layoutMap=L.map('layoutMap',{zoomControl:true}).setView(c,13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM',maxZoom:19}).addTo(layoutMap);
+      // Boundary polygon: interactive:false so map clicks pass through
+      boundaryLayer=L.polygon(S.siteBoundary,{color:'#00d68f',weight:3,fillColor:'#00d68f',fillOpacity:.1,interactive:false}).addTo(layoutMap);
+      layoutMap.fitBounds(boundaryLayer.getBounds(),{padding:[40,40]});
+      // Area label
+      var areaLabel=L.divIcon({className:'',html:'<div style="background:rgba(0,214,143,.85);color:#07111e;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;font-family:IBM Plex Mono,monospace;white-space:nowrap">'+S.siteArea.toFixed(2)+' km\u00B2</div>',iconSize:null,iconAnchor:[40,10]});
+      L.marker(c,{icon:areaLabel,interactive:false}).addTo(layoutMap);
+      turbineMarkers=L.layerGroup().addTo(layoutMap);spacingCircles=L.layerGroup().addTo(layoutMap);
+      // Click handler for manual turbine placement
+      layoutMap.on('click',function(e){
+        if(!S.siteBoundary)return;
+        var lat=e.latlng.lat,lon=e.latlng.lng;
+        if(!pointInPolygon(lat,lon,S.siteBoundary))return;
+        var dd=parseFloat(document.getElementById('spacingD').value)||5;
+        var rd=S.turbine?S.turbine.RD:75;var md=rd*dd;
+        for(var pi=0;pi<S.positions.length;pi++){var pos=S.positions[pi];var dx=(lon-pos.lon)*Math.cos(pos.lat*Math.PI/180)*111320;var dy=(lat-pos.lat)*111320;if(Math.sqrt(dx*dx+dy*dy)<md){return;}}
+        addTurbinePosition(lat,lon);
+      });
+      // Auto-layout: use wind-speed-aware placement if data available
+      if(S.turbine&&S.positions.length===0){
+        setTimeout(function(){
+          if(S.windData&&S.windData.length>=1){autoGridLayoutWindAware();}
+          else{autoGridLayoutOptimized();}
+        },350);
+      }else{refreshTurbineMarkers();}
+      // Show wind speed overlay if wind data available
+      if(S.windData){
+        setTimeout(function(){
+          var wg=computeWindSpeedGrid();
+          if(wg){showWindSpeedOverlay(wg);S._windGrid=wg;}
+        },500);
+      }
+    }catch(err){console.error('Layout map init error:',err);}
+  },250);
+}
 
 function addTurbinePosition(lat,lon){S.positions.push({id:S.positions.length+1,lat,lon});refreshTurbineMarkers();updateLayoutInfo();}
 function removeTurbinePosition(id){S.positions=S.positions.filter(p=>p.id!==id);S.positions.forEach((p,i)=>p.id=i+1);refreshTurbineMarkers();updateLayoutInfo();}
@@ -1320,7 +1363,182 @@ function autoGridLayoutOptimized(){
     alert('Only '+selected.length+' turbines fit in the site boundary ('+achieved+' MW of '+desiredCap+' MW desired). Try reducing spacing or desired capacity.');
   }
 }
-function clearLayout(){S.positions=[];refreshTurbineMarkers();updateLayoutInfo();}
+function clearLayout(){S.positions=[];if(S._windOverlay&&layoutMap){layoutMap.removeLayer(S._windOverlay);S._windOverlay=null;}refreshTurbineMarkers();updateLayoutInfo();}
+
+// ==================== WIND SPEED GRID & OVERLAY ====================
+function computeWindSpeedGrid(){
+  if(!S.siteBoundary||!S.windData) return null;
+  var res=50;
+  var minLat=Infinity,maxLat=-Infinity,minLon=Infinity,maxLon=-Infinity;
+  S.siteBoundary.forEach(function(c){if(c[0]<minLat)minLat=c[0];if(c[0]>maxLat)maxLat=c[0];if(c[1]<minLon)minLon=c[1];if(c[1]>maxLon)maxLon=c[1];});
+  var latR=maxLat-minLat,lonR=maxLon-minLon;
+  var meanWS=0,totalFreq=0;S.windData.forEach(function(w){meanWS+=w.meanSpeed*w.freq;totalFreq+=w.freq;});meanWS=totalFreq>0?meanWS/totalFreq:6;
+  // Terrain info
+  var hasTerrain=S.terrainElevations&&S.terrainElevations.length>0;
+  var terrainRes=hasTerrain?Math.round(Math.sqrt(S.terrainElevations.length)):0;
+  var tMin=0,tMax=1;
+  if(hasTerrain){tMin=Math.min.apply(null,S.terrainElevations);tMax=Math.max.apply(null,S.terrainElevations);if(tMax<=tMin)tMax=tMin+1;}
+  var tMinLat=Infinity,tMaxLat=-Infinity,tMinLon=Infinity,tMaxLon=-Infinity;
+  if(hasTerrain&&S.terrainGrid){S.terrainGrid.forEach(function(p){if(p[0]<tMinLat)tMinLat=p[0];if(p[0]>tMaxLat)tMaxLat=p[0];if(p[1]<tMinLon)tMinLon=p[1];if(p[1]>tMaxLon)tMaxLon=p[1];});}
+  // Flow corrections
+  var hasFlow=S.flowCorrections&&S.flowCorrections.length>=12;
+  var avgFlow=1;var totalF=0;
+  if(hasFlow){var sumFC=0;S.flowCorrections.forEach(function(c){sumFC+=c.combined*c.freq;totalF+=c.freq;});avgFlow=totalF>0?sumFC/totalF:1;}
+  // Roughness info
+  var hasRough=S.roughnessValues&&S.roughnessValues.length>0;
+  var roughRes=hasRough?Math.round(Math.sqrt(S.roughnessValues.length)):0;
+  var rMinLat=Infinity,rMaxLat=-Infinity,rMinLon=Infinity,rMaxLon=-Infinity;
+  if(hasRough&&S.roughnessGrid){S.roughnessGrid.forEach(function(p){if(p[0]<rMinLat)rMinLat=p[0];if(p[0]>rMaxLat)rMaxLat=p[0];if(p[1]<rMinLon)rMinLon=p[1];if(p[1]>rMaxLon)rMaxLon=p[1];});}
+  var pad=Math.max(latR,lonR)*0.05;
+  var grid=[];var validPts=[];
+  for(var i=0;i<res;i++){for(var j=0;j<res;j++){
+    var lat=minLat-pad+(latR+2*pad)*i/(res-1);
+    var lon=minLon-pad+(lonR+2*pad)*j/(res-1);
+    if(!pointInPolygon(lat,lon,S.siteBoundary)){grid.push({lat:lat,lon:lon,windSpeed:-1});continue;}
+    var ws=meanWS;
+    // Terrain elevation factor: higher elev -> more wind (wind shear)
+    if(hasTerrain&&tMinLat!==Infinity){
+      var ti2=Math.round((lat-tMinLat)/(tMaxLat-tMinLat)*(terrainRes-1));
+      var tj2=Math.round((lon-tMinLon)/(tMaxLon-tMinLon)*(terrainRes-1));
+      ti2=Math.max(0,Math.min(terrainRes-1,ti2));tj2=Math.max(0,Math.min(terrainRes-1,tj2));
+      var elev=S.terrainElevations[ti2*terrainRes+tj2];
+      if(elev!==undefined){
+        // Power-law wind shear: v(h) ~ v(href) * (h/href)^alpha
+        // Using 10m as ref and hub height as target: factor = (hub/10)^alpha
+        // Higher elevation -> higher effective height -> faster wind
+        var elevNorm=(elev-tMin)/(tMax-tMin);
+        ws*=(0.88+0.24*elevNorm); // 0.88 to 1.12 range
+      }
+    }
+    // Flow correction factor
+    if(hasFlow){ws*=avgFlow;}
+    // Roughness factor: lower z0 -> higher wind
+    if(hasRough&&rMinLat!==Infinity){
+      var ri=Math.round((lat-rMinLat)/(rMaxLat-rMinLat)*(roughRes-1));
+      var rj=Math.round((lon-rMinLon)/(rMaxLon-rMinLon)*(roughRes-1));
+      ri=Math.max(0,Math.min(roughRes-1,ri));rj=Math.max(0,Math.min(roughRes-1,rj));
+      var z0=S.roughnessValues[ri*roughRes+rj];
+      if(z0!==undefined&&z0>=0){
+        // WAsP-like: wind speed factor ~ 1/(ln(h/z0))
+        // Lower z0 -> higher wind speed
+        var z0Norm=Math.log10(z0+0.0002)/Math.log10(1.2); // normalize log scale
+        z0Norm=Math.max(0,Math.min(1,z0Norm));
+        ws*=(1.08-0.16*z0Norm); // smooth to rough: 1.08 to 0.92
+      }
+    }
+    grid.push({lat:lat,lon:lon,windSpeed:ws});
+    validPts.push({lat:lat,lon:lon,windSpeed:ws});
+  }}
+  if(validPts.length===0)return null;
+  S._windGridMeta={minLat:minLat-pad,maxLat:maxLat+pad,minLon:minLon-pad,maxLon:maxLon+pad,
+    minWS:Math.min.apply(null,validPts.map(function(p){return p.windSpeed;})),
+    maxWS:Math.max.apply(null,validPts.map(function(p){return p.windSpeed;}))};
+  return grid;
+}
+
+function showWindSpeedOverlay(windGrid){
+  if(!layoutMap||!windGrid||!S.siteBoundary)return;
+  var validPts=windGrid.filter(function(g){return g.windSpeed>=0;});
+  if(validPts.length===0)return;
+  var minWS=S._windGridMeta.minWS,maxWS=S._windGridMeta.maxWS;
+  var range=maxWS-minWS;if(range<0.01)range=0.01;
+  // Create canvas for overlay image
+  var canvas=document.createElement('canvas');var ctx=canvas.getContext('2d');
+  var W=500,H=500;canvas.width=W;canvas.height=H;
+  var bounds=S._windGridMeta;
+  ctx.clearRect(0,0,W,H);
+  validPts.forEach(function(g){
+    var x=Math.round((g.lon-bounds.minLon)/(bounds.maxLon-bounds.minLon)*(W-1));
+    var y=Math.round((bounds.maxLat-g.lat)/(bounds.maxLat-bounds.minLat)*(H-1));
+    if(x<0||x>=W||y<0||y>=H)return;
+    var norm=(g.windSpeed-minWS)/range;norm=Math.max(0,Math.min(1,norm));
+    var r,gg,b;
+    // Blue -> Cyan -> Green -> Yellow -> Orange -> Red
+    if(norm<0.2){var t=norm/0.2;r=30;gg=Math.round(80+175*t);b=Math.round(220-80*t);}
+    else if(norm<0.4){var t=(norm-0.2)/0.2;r=Math.round(30+60*t);gg=255;b=Math.round(140-140*t);}
+    else if(norm<0.6){var t=(norm-0.4)/0.2;r=Math.round(90+165*t);gg=255;b=0;}
+    else if(norm<0.8){var t=(norm-0.6)/0.2;r=255;gg=Math.round(255-130*t);b=0;}
+    else{var t=(norm-0.8)/0.2;r=Math.round(255-55*t);gg=Math.round(125-95*t);b=Math.round(60*t);}
+    // Draw a small filled rect for this point (creates grid effect)
+    var sz=Math.max(3,Math.round(W/55));
+    ctx.fillStyle='rgba('+r+','+gg+','+b+',0.45)';
+    ctx.fillRect(x-sz/2,y-sz/2,sz,sz);
+  });
+  var dataUrl=canvas.toDataURL();
+  if(S._windOverlay)try{layoutMap.removeLayer(S._windOverlay);}catch(e){}
+  S._windOverlay=L.imageOverlay(dataUrl,[[bounds.minLat,bounds.minLon],[bounds.maxLat,bounds.maxLon]],{opacity:0.7,interactive:false,className:'wind-overlay-img'}).addTo(layoutMap);
+}
+
+function toggleWindOverlay(){
+  if(!layoutMap)return;
+  if(S._windOverlay){
+    layoutMap.removeLayer(S._windOverlay);S._windOverlay=null;
+    document.getElementById('windOverlayBtn').textContent='\u2601 Show Wind Map';
+  }else{
+    var wg=S._windGrid||computeWindSpeedGrid();
+    if(wg){showWindSpeedOverlay(wg);S._windGrid=wg;}
+    document.getElementById('windOverlayBtn').textContent='\u2601 Hide Wind Map';
+  }
+}
+
+// ==================== WIND-SPEED-AWARE AUTO LAYOUT ====================
+function autoGridLayoutWindAware(){
+  if(!S.siteBoundary||!S.turbine){alert('Define site boundary and configure a turbine first.');return;}
+  var rd=S.turbine.RD;
+  var dd=parseFloat(document.getElementById('spacingD').value)||5;
+  var sm=rd*dd;
+  var desiredCap=parseFloat(document.getElementById('desiredCapacity').value)||50;
+  var turbinesNeeded=Math.max(1,Math.ceil(desiredCap/S.turbine.power));
+  // Compute wind speed grid for this area
+  var windGrid=computeWindSpeedGrid();
+  var candidates=[];
+  if(windGrid){
+    windGrid.forEach(function(g){if(g.windSpeed>=0)candidates.push({lat:g.lat,lon:g.lon,ws:g.windSpeed});});
+  }
+  // Fallback: generate grid candidates if wind grid failed
+  if(candidates.length===0){
+    var minLat=Infinity,maxLat=-Infinity,minLon=Infinity,maxLon=-Infinity;
+    S.siteBoundary.forEach(function(c){if(c[0]<minLat)minLat=c[0];if(c[0]>maxLat)maxLat=c[0];if(c[1]<minLon)minLon=c[1];if(c[1]>maxLon)maxLon=c[1];});
+    var sd=sm/111320;var pad2=sd*1.5;
+    var cols=Math.floor((maxLon-minLon+2*pad2)/sd)+1;
+    var rows=Math.floor((maxLat-minLat+2*pad2)/sd)+1;
+    for(var r=0;r<rows;r++){for(var c2=0;c2<cols;c2++){
+      var lat=minLat-pad2+r*sd;var lon=minLon-pad2+c2*sd;
+      if(pointInPolygon(lat,lon,S.siteBoundary))candidates.push({lat:lat,lon:lon,ws:6});
+    }}
+  }
+  if(candidates.length===0){alert('No candidate positions found within the site boundary.');return;}
+  // Sort by wind speed: highest first — this is the key optimization
+  candidates.sort(function(a,b){return b.ws-a.ws;});
+  // Determine grid angle from prevailing wind
+  var ang=parseFloat(document.getElementById('gridAngle').value)||0;
+  if(document.getElementById('windAlignGrid').value==='1'&&S.windData&&S.windData.length>=12){
+    var maxFreq=0,predDir=0;
+    S.windData.forEach(function(s){if(s.freq>maxFreq){maxFreq=s.freq;predDir=s.dir;}});
+    ang=predDir+90;document.getElementById('gridAngle').value=((ang%360)+360)%360;
+  }
+  // Greedy selection from highest-wind candidates with spacing constraint
+  var selected=[];
+  for(var ci=0;ci<candidates.length;ci++){
+    if(selected.length>=turbinesNeeded)break;
+    var p=candidates[ci];var ok=true;
+    for(var si=0;si<selected.length;si++){
+      var s=selected[si];
+      var dx2=(p.lon-s.lon)*Math.cos(s.lat*Math.PI/180)*111320;
+      var dy2=(p.lat-s.lat)*111320;
+      if(Math.sqrt(dx2*dx2+dy2*dy2)<sm*0.85){ok=false;break;}
+    }
+    if(ok)selected.push(p);
+  }
+  S.positions=[];selected.forEach(function(p,i){S.positions.push({id:i+1,lat:p.lat,lon:p.lon});});
+  refreshTurbineMarkers();updateLayoutInfo();
+  // Show overlay
+  if(windGrid){showWindSpeedOverlay(windGrid);S._windGrid=windGrid;}
+  if(selected.length<turbinesNeeded){
+    var achieved=(selected.length*S.turbine.power).toFixed(1);
+    alert('Wind-optimized: '+selected.length+' turbines placed ('+achieved+' MW of '+desiredCap+' MW desired).\nTurbines prioritized in highest wind speed areas.');
+  }
+}
 
 // ==================== STEP 8: WAKE MODEL ====================
 function runWakeCalculation(){
@@ -1483,7 +1701,6 @@ async function loadDemoAll(){
     await new Promise(r=>setTimeout(r,300));
 
     // Step 7: Layout — set S.step so goToStep(7) doesn't guard-block
-    autoGridLayout();
     S.step=6;
     goToStep(7);
     await new Promise(r=>setTimeout(r,300));
@@ -1505,7 +1722,7 @@ async function loadDemoAll(){
 
 function clearAll(){
   S.step=1;S.siteBoundary=null;S.siteArea=0;S.siteCountry=null;S.windData=null;S.turbine=null;S.positions=[];S.wakeResults=null;S.aepResults=null;S.terrainGrid=null;S.terrainElevations=null;S.flowResults=null;S.mesoData=[];S.flowCorrections=null;S.roughnessGrid=null;S.roughnessValues=null;
-  if(drawnItems)drawnItems.clearLayers();if(turbineMarkers)turbineMarkers.clearLayers();if(spacingCircles)spacingCircles.clearLayers();if(boundaryLayer&&layoutMap)layoutMap.removeLayer(boundaryLayer);
+  if(drawnItems)drawnItems.clearLayers();if(turbineMarkers)turbineMarkers.clearLayers();if(spacingCircles)spacingCircles.clearLayers();if(layoutMap){layoutMap.remove();layoutMap=null;}if(boundaryLayer)boundaryLayer=null;S._windOverlay=null;S._windGrid=null;S._windGridMeta=null;
   document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));document.getElementById('step1').classList.add('active');
   document.querySelectorAll('.step-item').forEach(s=>{s.classList.remove('active','done');if(parseInt(s.dataset.step)===1)s.classList.add('active');});
   for(let i=2;i<=10;i++)document.getElementById('step'+i+'Next').disabled=true;
