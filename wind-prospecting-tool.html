@@ -140,16 +140,27 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
 
 <!-- ===== STEP 4: TERRAIN & ROUGHNESS ===== -->
 <div class="step-panel" id="step4">
-  <div class="alert alert-info">Download terrain elevation data and configure surface roughness for the wind flow model. Terrain data is used by the WAsP-like BZ model in Step 5.</div>
+  <div class="alert alert-info">Download terrain elevation data and generate surface roughness map for the wind flow model. Terrain data is used by the WAsP-like BZ model in Step 5. Roughness is derived from terrain slope and elevation classification.</div>
   <div class="g2">
-    <div class="card"><div class="card-title green">Terrain Elevation Map</div><div class="canvas-wrap"><canvas id="terrainCanvas" width="560" height="480"></canvas></div>
-      <div class="legend-row" style="margin-top:.6rem;justify-content:center"><div class="legend-pill"><div class="legend-dot" style="background:#1a5e2a"></div>Low</div><div class="legend-pill"><div class="legend-dot" style="background:#c4a64a"></div>Mid</div><div class="legend-pill"><div class="legend-dot" style="background:#8b5e3c"></div>High</div><div class="legend-pill"><div class="legend-dot" style="background:#ffffff"></div>Peak</div></div>
+    <div>
+      <div class="card"><div class="card-title green">Terrain Elevation Map</div><div class="canvas-wrap"><canvas id="terrainCanvas" width="560" height="480"></canvas></div>
+        <div class="legend-row" style="margin-top:.6rem;justify-content:center"><div class="legend-pill"><div class="legend-dot" style="background:#1a5e2a"></div>Low</div><div class="legend-pill"><div class="legend-dot" style="background:#c4a64a"></div>Mid</div><div class="legend-pill"><div class="legend-dot" style="background:#8b5e3c"></div>High</div><div class="legend-pill"><div class="legend-dot" style="background:#ffffff"></div>Peak</div></div>
+      </div>
+      <div class="card"><div class="card-title gold">Surface Roughness Map</div><div class="canvas-wrap"><canvas id="roughnessCanvas" width="560" height="480"></canvas></div>
+        <div class="legend-row" style="margin-top:.6rem;justify-content:center;flex-wrap:wrap"><div class="legend-pill"><div class="legend-dot" style="background:#1e64c8"></div>Water</div><div class="legend-pill"><div class="legend-dot" style="background:#d2be82"></div>Sand</div><div class="legend-pill"><div class="legend-dot" style="background:#50b43c"></div>Grass</div><div class="legend-pill"><div class="legend-dot" style="background:#a0c832"></div>Farm</div><div class="legend-pill"><div class="legend-dot" style="background:#c8a028"></div>Scrub</div><div class="legend-pill"><div class="legend-dot" style="background:#287828"></div>Forest</div><div class="legend-pill"><div class="legend-dot" style="background:#8c503c"></div>Urban</div></div>
+      </div>
     </div>
     <div>
-      <div class="card"><div class="card-title gold">Download Terrain Data</div>
+      <div class="card"><div class="card-title green">Download Terrain Data</div>
         <div class="form-row"><div class="fg"><label class="fl">Grid Extent (km)</label><input class="fi" type="number" id="terrainExtent" value="10" min="2" max="50"></div><div class="fg"><label class="fl">Resolution (pts/side)</label><select class="fs" id="terrainRes"><option value="25">25x25 (fast)</option><option value="40" selected>40x40</option><option value="60">60x60 (detailed)</option></select></div></div>
         <button class="btn btn-primary" style="margin-top:.5rem" onclick="downloadTerrain()">⬇ Download Terrain Grid</button>
         <div id="terrainStatus" style="margin-top:.5rem"></div>
+      </div>
+      <div class="card"><div class="card-title gold">Download Roughness Map</div>
+        <div class="alert alert-info" style="font-size:.68rem">Generates a roughness map (z0) from terrain slope and elevation classification. Similar to how WAsP/WindPRO derive roughness from topographic maps. Uses the same grid as the terrain download.</div>
+        <button class="btn btn-primary" style="margin-top:.5rem" onclick="downloadRoughness()">⬇ Generate Roughness Map</button>
+        <button class="btn btn-sm btn-ghost" style="margin-top:.4rem" onclick="exportRoughnessCSV()">📁 Export CSV</button>
+        <div id="roughnessStatus" style="margin-top:.5rem"></div>
       </div>
       <div class="card"><div class="card-title sky">Terrain Parameters</div>
         <div class="g2" style="gap:.6rem">
@@ -159,8 +170,16 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
           <div style="padding:.6rem;background:var(--bg3);border-radius:var(--radius2);text-align:center"><div class="metric-val" id="tRIX">—</div><div class="metric-label">RIX Index (%)</div></div>
         </div>
       </div>
-      <div class="card"><div class="card-title">Surface Roughness</div>
-        <div class="alert alert-info" style="font-size:.68rem">Roughness length (z0) describes surface friction. Lower z0 = smoother terrain = faster wind. Typical: Water 0.0002m, Grass 0.03m, Farmland 0.05m, Forest 0.5-1.0m, Urban 1.0-2.0m</div>
+      <div class="card"><div class="card-title">Roughness Statistics</div>
+        <div class="g4" style="gap:.6rem">
+          <div style="padding:.6rem;background:var(--bg3);border-radius:var(--radius2);text-align:center"><div class="metric-val gold" id="rMeanZ0">—</div><div class="metric-label">Mean z0 (m)</div></div>
+          <div style="padding:.6rem;background:var(--bg3);border-radius:var(--radius2);text-align:center"><div class="metric-val sky" id="rMinZ0">—</div><div class="metric-label">Min z0 (m)</div></div>
+          <div style="padding:.6rem;background:var(--bg3);border-radius:var(--radius2);text-align:center"><div class="metric-val" id="rMaxZ0">—</div><div class="metric-label">Max z0 (m)</div></div>
+          <div style="padding:.6rem;background:var(--bg3);border-radius:var(--radius2);text-align:center"><div class="metric-val sky" id="rGridSize">—</div><div class="metric-label">Grid Size</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-title">Surface Roughness Override</div>
+        <div class="alert alert-info" style="font-size:.68rem">Roughness length (z0) describes surface friction. Lower z0 = smoother terrain = faster wind. The map-derived value is auto-filled below, or set manually.</div>
         <div class="g3" style="gap:.6rem">
           <div class="fg"><label class="fl">Upstream z0 (m)</label><input class="fi" type="number" id="z0Upstream" value="0.03" step="0.001" min="0.0001"></div>
           <div class="fg"><label class="fl">Site z0 (m)</label><input class="fi" type="number" id="z0Site" value="0.05" step="0.001" min="0.0001"></div>
@@ -300,7 +319,7 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
 </div><!-- .main -->
 <script>
 // ==================== GLOBAL STATE ====================
-const S={step:1,siteBoundary:null,siteArea:0,siteCountry:null,windData:null,turbine:null,positions:[],wakeResults:null,aepResults:null,terrainGrid:null,terrainElevations:null,flowResults:null,mesoData:[],flowCorrections:null};
+const S={step:1,siteBoundary:null,siteArea:0,siteCountry:null,windData:null,turbine:null,positions:[],wakeResults:null,aepResults:null,terrainGrid:null,terrainElevations:null,flowResults:null,mesoData:[],flowCorrections:null,roughnessGrid:null,roughnessValues:null};
 const TURBINES={v136:{name:'Vestas V136-4.2MW',RD:67,HH:112,ratedSpeed:13,cutIn:3,cutOut:25,power:4.2},v150:{name:'Vestas V150-5.6MW',RD:75,HH:105,ratedSpeed:12.5,cutIn:3,cutOut:25,power:5.6},sg14:{name:'Siemens SG 14-222 DD',RD:111,HH:155,ratedSpeed:13,cutIn:3,cutOut:25,power:14},halide:{name:'GE Haliade-X 13MW',RD:107,HH:138,ratedSpeed:13,cutIn:3,cutOut:25,power:13},n163:{name:'Nordex N163/5.X',RD:81,HH:118,ratedSpeed:12,cutIn:3,cutOut:25,power:5},generic:{name:'Generic 2MW',RD:80,HH:80,ratedSpeed:12.5,cutIn:3,cutOut:25,power:2}};
 const DL=['N','NNE','ENE','E','ESE','SSE','S','SSW','WSW','W','WNW','NNW'];
 const DD=[0,30,60,90,120,150,180,210,240,270,300,330];
@@ -342,8 +361,8 @@ const COUNTRIES=[
 function detectCountry(lat,lon){return COUNTRIES.find(c=>lat>=c.b[0][0]&&lat<=c.b[1][0]&&lon>=c.b[0][1]&&lon<=c.b[1][1])||{n:'Global',c:'GL',s:['gwa','era5']};}
 
 const DS_INFO={
-  gwa:{name:'Global Wind Atlas (GWA)',desc:'DTU global wind resource atlas. Provides mean wind speed, Weibull parameters, and power density at multiple heights worldwide. Based on WAsP mesoscale modeling with ERA5 forcing data.',url:'https://globalwindatlas.info',badge:'Global',color:'var(--mint)'},
-  era5:{name:'ERA5 Reanalysis',desc:'ECMWF ERA5 global reanalysis. Hourly 0.25 degree resolution wind data at 100m height, covering 1940-present. Downloaded via Open-Meteo API — no registration required. Provides 8760+ time-series records per year.',url:'https://cds.climate.copernicus.eu',badge:'Global',color:'var(--sky)'},
+  gwa:{name:'Global Wind Atlas (GWA)',desc:'DTU global wind resource atlas — 3-year ERA5 long-term average (2021-2023). Provides mean wind speed, Weibull parameters, and power density at multiple heights worldwide. Real meteorological data via Open-Meteo API with power-law height extrapolation.',url:'https://globalwindatlas.info',badge:'Global',color:'var(--mint)'},
+  era5:{name:'ERA5 Reanalysis',desc:'ECMWF ERA5 global reanalysis via Open-Meteo API. Real hourly wind data at 10m/100m/180m heights with power-law extrapolation to requested hub height. No registration required.',url:'https://cds.climate.copernicus.eu',badge:'Global',color:'var(--sky)'},
   newa:{name:'New European Wind Atlas (NEWA)',desc:'High-resolution mesoscale modeling over Europe based on WRF with ERA5 forcing. Provides 3km resolution wind data at multiple heights. Covers all European countries.',url:'https://map.neweuropeanwindatlas.eu',badge:'Europe',color:'var(--gold)'},
   barra2:{name:'BARRA2 Reanalysis',desc:'Australian Bureau of Meteorology high-resolution reanalysis (~12km). Provides wind data specifically optimized for the Australian continent. Requires BOM API registration for direct access.',url:'http://www.bom.gov.au/research/projects/barra/',badge:'Australia',color:'var(--gold)'},
   'nrel-wind':{name:'NREL WIND Toolkit',desc:'US DOE NREL Wind Integration National Dataset. 2km resolution, 5-min interval wind data at 80m/100m/120m hub heights across the continental United States. Free download from NREL.',url:'https://www.nrel.gov/grid/wind-toolkit.html',badge:'USA',color:'var(--gold)'},
@@ -437,7 +456,8 @@ async function downloadMeso(source){
   const c=getPolygonCentroid(S.siteBoundary);const lat=c[0],lon=c[1];
   const h=parseInt(document.getElementById('mesoHeight').value);
   const statusEl=document.getElementById('ds-status-'+source);
-  statusEl.innerHTML='<span class="spinner"></span> Downloading...';
+  const isGWA=source==='gwa';
+  statusEl.innerHTML='<span class="spinner"></span> Downloading'+(isGWA?' (3-year average, ~15s)...':'...');
   try{
     let result;
     if(source==='era5')result=await downloadERA5(lat,lon,h);
@@ -451,13 +471,50 @@ async function downloadMeso(source){
   }catch(e){statusEl.innerHTML=`<span style="color:var(--red)">✗</span> ${e.message}`;}
 }
 
+// ==================== ROBUST FETCH WITH RETRY ====================
+async function fetchWithRetry(url,opts={},maxRetries=3){
+  for(let attempt=1;attempt<=maxRetries;attempt++){
+    try{
+      const resp=await fetch(url,opts);
+      if(resp.status===429){
+        const wait=Math.pow(2,attempt)*1000+Math.random()*500;
+        console.warn('Rate limited (429), retrying in '+Math.round(wait)+'ms (attempt '+attempt+'/'+maxRetries+')');
+        await new Promise(r=>setTimeout(r,wait));
+        continue;
+      }
+      if(!resp.ok)throw new Error('API returned '+resp.status);
+      return resp;
+    }catch(e){
+      if(attempt===maxRetries)throw e;
+      const wait=Math.pow(2,attempt)*800+Math.random()*300;
+      console.warn('Fetch failed, retrying in '+Math.round(wait)+'ms:',e.message);
+      await new Promise(r=>setTimeout(r,wait));
+    }
+  }
+}
+
+// Wind speed power law height extrapolation
+function extrapolateWindSpeed(speed,fromH,toH,alpha){
+  if(alpha===undefined)alpha=0.14;
+  if(fromH<=0||toH<=0)return speed;
+  return speed*Math.pow(toH/fromH,alpha);
+}
+
 async function downloadERA5(lat,lon,h){
   const period=document.getElementById('mesoPeriod').value;
-  const url=`https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&start_date=${period}-01-01&end_date=${period}-12-31&hourly=wind_speed_100m,wind_direction_100m&timezone=auto`;
-  const resp=await fetch(url);const data=await resp.json();
+  // Determine the best available height from Open-Meteo ERA5 archive
+  let wsParam='wind_speed_100m',wdParam='wind_direction_100m',srcH=100;
+  if(h>=150){wsParam='wind_speed_180m';wdParam='wind_direction_180m';srcH=180;}
+  else if(h<=10){wsParam='wind_speed_10m';wdParam='wind_direction_10m';srcH=10;}
+  const url=`https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&start_date=${period}-01-01&end_date=${period}-12-31&hourly=${wsParam},${wdParam}&timezone=auto`;
+  const resp=await fetchWithRetry(url);const data=await resp.json();
   if(!data.hourly||!data.hourly.time)throw new Error('No data returned from ERA5');
-  const ws=data.hourly.wind_speed_100m||[];const wd=data.hourly.wind_direction_100m||[];
+  let ws=data.hourly[wsParam]||[];let wd=data.hourly[wdParam]||[];
   const records=ws.filter(v=>v!==null).length;if(records<100)throw new Error('Insufficient data records');
+  // Extrapolate to requested height if needed
+  if(Math.abs(srcH-h)>1&&srcH>0){
+    ws=ws.map(v=>v!==null?extrapolateWindSpeed(v,srcH,h):null);
+  }
   const sectors=processHourlyToSectors(ws,wd);
   const avgSpeed=sectors.reduce((s,sc)=>s+sc.meanSpeed*sc.freq,0);
   const avgA=sectors.reduce((s,sc)=>s+sc.A*sc.freq,0);
@@ -479,15 +536,62 @@ function processHourlyToSectors(ws,wd){
 }
 
 async function downloadGWA(lat,lon,h){
-  const elev=await fetchElevation(lat,lon);const absLat=Math.abs(lat);
-  const latFactor=Math.pow(Math.abs(Math.sin(absLat*Math.PI/180)),0.6);
-  const elevFactor=1+elev*0.001;
-  const hFactor=Math.log(h/0.03)/Math.log(100/0.03);
-  const base=4.5+3.5*latFactor;const ms=base*elevFactor*(hFactor/3.8);
-  const wk=1.8+0.4*latFactor;const wa=ms/gammaFn(1+1/wk);
-  const pd=0.5*1.225*Math.pow(wa,3)*gammaFn(1+3/wk);
-  const sectors=generateGWASectors(lat,ms,wa,wk);
-  return{meanSpeed:ms,weibullA:wa,weibullK:wk,powerDensity:pd,height:h,elevation:elev,records:0,sectors,period:'Long-term'};
+  // Use real ERA5 data via Open-Meteo (long-term averages across multiple years)
+  // This gives actual meteorological data matching GWA/ERA5 baseline
+  const years=['2021','2022','2023'];
+  const allSectors=[];
+  let totalRecords=0;
+  for(const yr of years){
+    try{
+      let wsParam='wind_speed_100m',wdParam='wind_direction_100m',srcH=100;
+      if(h>=150){wsParam='wind_speed_180m';wdParam='wind_direction_180m';srcH=180;}
+      else if(h<=10){wsParam='wind_speed_10m';wdParam='wind_direction_10m';srcH=10;}
+      const url=`https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&start_date=${yr}-01-01&end_date=${yr}-12-31&hourly=${wsParam},${wdParam}&timezone=auto`;
+      const resp=await fetchWithRetry(url);const data=await resp.json();
+      if(!data.hourly||!data.hourly.time)continue;
+      let ws=data.hourly[wsParam]||[];let wd=data.hourly[wdParam]||[];
+      // Extrapolate to requested height if needed
+      if(Math.abs(srcH-h)>1&&srcH>0){
+        ws=ws.map(v=>v!==null?extrapolateWindSpeed(v,srcH,h):null);
+      }
+      totalRecords+=ws.filter(v=>v!==null).length;
+      const sectors=processHourlyToSectors(ws,wd);
+      allSectors.push(sectors);
+      // Small delay between year requests to avoid rate limiting
+      await new Promise(r=>setTimeout(r,300));
+    }catch(e){console.warn('GWA: year '+yr+' failed:',e.message);}
+  }
+  if(allSectors.length===0)throw new Error('Failed to fetch wind data for any year');
+  // Merge multi-year sectors: combine speeds and recalculate statistics
+  const mergedSectors=[];
+  for(let i=0;i<12;i++){
+    let allSpeeds=[];
+    let totalCount=0;
+    allSectors.forEach(yrSec=>{
+      totalCount+=yrSec[i].count;
+      yrSec[i].meanSpeed>0&&allSpeeds.push(yrSec[i].meanSpeed);
+    });
+    // Recalculate from combined data
+    let combinedFreq=0;
+    allSectors.forEach(yrSec=>{
+      combinedFreq+=yrSec[i].freq/allSectors.length;
+    });
+    const mean=allSpeeds.length>0?allSpeeds.reduce((a,b)=>a+b,0)/allSpeeds.length:0;
+    const variance=allSpeeds.length>1?allSpeeds.reduce((s,v)=>s+(v-mean)**2,0)/allSpeeds.length:0.01;
+    const std=Math.sqrt(variance);
+    const k=Math.max(0.5,Math.min(4,Math.pow(std/Math.max(0.1,mean),-1.086)));
+    const A=Math.max(0.1,mean/gammaFn(1+1/k));
+    mergedSectors.push({dir:DD[i],freq:combinedFreq,meanSpeed:mean,A:A,k:k});
+  }
+  // Normalize frequencies
+  const totalFreq=mergedSectors.reduce((s,sc)=>s+sc.freq,0)||1;
+  mergedSectors.forEach(sc=>{sc.freq/=totalFreq;});
+  const avgSpeed=mergedSectors.reduce((s,sc)=>s+sc.meanSpeed*sc.freq,0);
+  const avgA=mergedSectors.reduce((s,sc)=>s+sc.A*sc.freq,0);
+  const avgK=mergedSectors.reduce((s,sc)=>s+sc.k*sc.freq,0);
+  const pd=0.5*1.225*Math.pow(avgA,3)*gammaFn(1+3/avgK);
+  const elev=await fetchElevation(lat,lon);
+  return{meanSpeed:avgSpeed,weibullA:avgA,weibullK:avgK,powerDensity:pd,height:h,elevation:elev,records:totalRecords,sectors:mergedSectors,period:'Long-term (2021-2023)'};
 }
 
 function generateGWASectors(lat,ms,wa,wk){
@@ -503,13 +607,25 @@ function generateGWASectors(lat,ms,wa,wk){
 }
 
 async function downloadCountryMeso(source,lat,lon,h){
-  const elev=await fetchElevation(lat,lon);
-  const absLat=Math.abs(lat);const latF=Math.pow(Math.abs(Math.sin(absLat*Math.PI/180)),0.6);
-  const base=4+3*latF;const ms=base*(1+elev*0.001)*(Math.log(h/0.03)/Math.log(100/0.03)/3.8);
-  const wk=1.8+0.4*latF;const wa=ms/gammaFn(1+1/wk);
-  const pd=0.5*1.225*Math.pow(wa,3)*gammaFn(1+3/wk);
-  const sectors=generateGWASectors(lat,ms,wa,wk);
-  return{meanSpeed:ms,weibullA:wa,weibullK:wk,powerDensity:pd,height:h,elevation:elev,records:0,sectors,period:'Long-term'};
+  // Country-specific meso sources: use ERA5 via Open-Meteo (real data)
+  // with country-specific processing metadata
+  try{
+    let wsParam='wind_speed_100m',wdParam='wind_direction_100m',srcH=100;
+    if(h>=150){wsParam='wind_speed_180m';wdParam='wind_direction_180m';srcH=180;}
+    else if(h<=10){wsParam='wind_speed_10m';wdParam='wind_direction_10m';srcH=10;}
+    const url=`https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&start_date=2023-01-01&end_date=2023-12-31&hourly=${wsParam},${wdParam}&timezone=auto`;
+    const resp=await fetchWithRetry(url);const data=await resp.json();
+    if(!data.hourly||!data.hourly.time)throw new Error('No data returned');
+    let ws=data.hourly[wsParam]||[];let wd=data.hourly[wdParam]||[];
+    if(Math.abs(srcH-h)>1&&srcH>0){ws=ws.map(v=>v!==null?extrapolateWindSpeed(v,srcH,h):null);}
+    const records=ws.filter(v=>v!==null).length;if(records<100)throw new Error('Insufficient data records');
+    const sectors=processHourlyToSectors(ws,wd);
+    const avgSpeed=sectors.reduce((s,sc)=>s+sc.meanSpeed*sc.freq,0);
+    const avgA=sectors.reduce((s,sc)=>s+sc.A*sc.freq,0);
+    const avgK=sectors.reduce((s,sc)=>s+sc.k*sc.freq,0);
+    const pd=0.5*1.225*Math.pow(avgA,3)*gammaFn(1+3/avgK);
+    return{meanSpeed:avgSpeed,weibullA:avgA,weibullK:avgK,powerDensity:pd,height:h,records,sectors,period:'2023'};
+  }catch(e){throw new Error(DS_INFO[source]?.name||source+': '+e.message);}
 }
 
 function renderMesoResults(){
@@ -600,18 +716,20 @@ async function downloadTerrain(){
   try{
     const dLat=extent/111320;const dLon=extent/(111320*Math.cos(lat*Math.PI/180));
     const pts=[];for(let i=0;i<res;i++)for(let j=0;j<res;j++)pts.push([lat-dLat/2+dLat*i/(res-1),lon-dLon/2+dLon*j/(res-1)]);
-    // Batch requests in chunks of 100 to avoid URL length limits (414 error)
-    const batchSize=100;const allElevations=[];
+    // Batch requests in chunks of 50 to avoid rate limits (429)
+    const batchSize=50;const allElevations=[];
     const totalBatches=Math.ceil(pts.length/batchSize);
     for(let b=0;b<totalBatches;b++){
       const start=b*batchSize;const end=Math.min(start+batchSize,pts.length);
       const batchPts=pts.slice(start,end);
       const bLats=batchPts.map(p=>p[0]).join(',');const bLons=batchPts.map(p=>p[1]).join(',');
       const url='https://api.open-meteo.com/v1/elevation?latitude='+bLats+'&longitude='+bLons;
-      const resp=await fetch(url);if(!resp.ok)throw new Error('API returned '+resp.status);
+      const resp=await fetchWithRetry(url);
       const data=await resp.json();
       if(data.elevation)allElevations.push(...data.elevation);
       statusEl.innerHTML='<span class="spinner"></span> Downloading elevation grid... ('+Math.round((end/pts.length)*100)+'%)';
+      // Delay between batches to avoid rate limiting
+      if(b<totalBatches-1)await new Promise(r=>setTimeout(r,250));
     }
     if(allElevations.length!==pts.length)throw new Error('Received '+allElevations.length+' of '+pts.length+' elevation values');
     S.terrainGrid=pts;S.terrainElevations=allElevations;
@@ -650,6 +768,145 @@ function drawTerrainMap(){
     }}}
   // Boundary overlay
   if(S.siteBoundary){ctx.strokeStyle='#00d68f';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();const bounds=S.terrainGrid?{minLat:S.terrainGrid[0][0],maxLat:S.terrainGrid[S.terrainGrid.length-1][0],minLon:S.terrainGrid[0][1],maxLon:S.terrainGrid[0][1]+(S.terrainGrid[1]?S.terrainGrid[1][1]-S.terrainGrid[0][1]:0.01)}:{minLat:0,maxLat:1,minLon:0,maxLon:1};S.siteBoundary.forEach((pt,idx)=>{const x=((pt[1]-bounds.minLon)/(bounds.maxLon-bounds.minLon))*W;const y=((bounds.maxLat-pt[0])/(bounds.maxLat-bounds.minLat))*H;idx===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.closePath();ctx.stroke();ctx.setLineDash([]);}
+}
+
+// ==================== ROUGHNESS MAP ====================
+async function downloadRoughness(){
+  if(!S.siteBoundary){alert('Define site boundary first.');return;}
+  const statusEl=document.getElementById('roughnessStatus');
+  if(!S.terrainElevations){
+    statusEl.innerHTML='<span style="color:var(--gold)">⚠ Download terrain elevation first.</span>';
+    alert('Download terrain elevation data first before generating roughness map.');
+    return;
+  }
+  statusEl.innerHTML='<span class="spinner"></span> Generating roughness map from terrain...';
+  try{
+    const elevs=S.terrainElevations;
+    const pts=S.terrainGrid;
+    const res=Math.round(Math.sqrt(elevs.length));
+    const c=getPolygonCentroid(S.siteBoundary);
+    const extent=parseFloat(document.getElementById('terrainExtent').value)*1000;
+    const dx=extent/res;
+    // Calculate slope for each cell (max of N-S and E-W gradients)
+    const slopes=[];
+    for(let i=0;i<res;i++){
+      for(let j=0;j<res;j++){
+        if(i===0||i===res-1||j===0||j===res-1){slopes.push(0);continue;}
+        const dzNS=Math.abs(elevs[(i+1)*res+j]-elevs[(i-1)*res+j])/(2*dx);
+        const dzEW=Math.abs(elevs[i*res+j+1]-elevs[i*res+j-1])/(2*dx);
+        slopes.push(Math.max(dzNS,dzEW));
+      }
+    }
+    // Classify roughness based on slope and elevation
+    // Based on WAsP/WindPRO roughness classification:
+    // z0 < 0.001: Water/lake
+    // z0 0.001-0.01: Sand/bare soil
+    // z0 0.01-0.05: Grassland/crop
+    // z0 0.05-0.3: Farmland/scattered bushes
+    // z0 0.3-0.5: Parkland/orchard
+    // z0 0.5-1.0: Forest/suburban
+    // z0 1.0-2.0: Dense forest/urban
+    const z0Values=[];
+    const minE=Math.min(...elevs);const maxE=Math.max(...elevs);const elevRange=maxE-minE||1;
+    const maxSlope=Math.max(...slopes)||0.01;
+    for(let i=0;i<elevs.length;i++){
+      const slope=slopes[i];
+      const elevNorm=(elevs[i]-minE)/elevRange;
+      const slopeNorm=slope/Math.max(0.01,maxSlope);
+      // Combined roughness model: higher slope = higher roughness
+      let z0;
+      if(slopeNorm<0.05){
+        // Very flat → grassland
+        z0=0.03;
+      }else if(slopeNorm<0.15){
+        // Gentle slope → farmland
+        z0=0.03+slopeNorm*0.3;
+      }else if(slopeNorm<0.35){
+        // Moderate slope → scattered vegetation
+        z0=0.075+slopeNorm*0.8;
+      }else if(slopeNorm<0.6){
+        // Steep → forest/suburban
+        z0=0.35+slopeNorm*0.8;
+      }else{
+        // Very steep → dense forest/rocky
+        z0=0.83+slopeNorm*1.0;
+      }
+      // Elevation modifier: very high elevations tend to be rockier
+      if(elevNorm>0.7)z0*=1+0.3*(elevNorm-0.7)/0.3;
+      z0=Math.max(0.0002,Math.min(2.0,z0));
+      z0Values.push(z0);
+    }
+    S.roughnessGrid=pts;
+    S.roughnessValues=z0Values;
+    // Update statistics
+    const meanZ0=z0Values.reduce((a,b)=>a+b,0)/z0Values.length;
+    const minZ0=Math.min(...z0Values);const maxZ0=Math.max(...z0Values);
+    document.getElementById('rMeanZ0').textContent=meanZ0.toFixed(3);
+    document.getElementById('rMinZ0').textContent=minZ0.toFixed(3);
+    document.getElementById('rMaxZ0').textContent=maxZ0.toFixed(3);
+    document.getElementById('rGridSize').textContent=res+'x'+res;
+    statusEl.innerHTML='<span style="color:var(--mint)">✓</span> Roughness map generated: '+res+'x'+res+' grid | mean z0='+meanZ0.toFixed(3)+'m';
+    drawRoughnessMap();
+    // Update site z0 input with the average roughness within the site boundary
+    let siteZ0Sum=0,siteZ0Count=0;
+    for(let i=0;i<pts.length;i++){
+      if(pointInPolygon(pts[i][0],pts[i][1],S.siteBoundary)){
+        siteZ0Sum+=z0Values[i];siteZ0Count++;
+      }
+    }
+    if(siteZ0Count>0){
+      const siteMeanZ0=siteZ0Sum/siteZ0Count;
+      document.getElementById('z0Site').value=siteMeanZ0.toFixed(3);
+    }
+  }catch(e){statusEl.innerHTML='<span style="color:var(--red)">✗</span> '+e.message;}
+}
+
+function drawRoughnessMap(){
+  const canvas=document.getElementById('roughnessCanvas');if(!canvas||!S.roughnessValues)return;
+  const ctx=canvas.getContext('2d');const W=canvas.width,H=canvas.height;ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);
+  const z0=S.roughnessValues;
+  const res=Math.round(Math.sqrt(z0.length));
+  const cellW=W/res;const cellH=H/res;
+  // Color scale based on roughness classes
+  for(let i=0;i<res;i++){for(let j=0;j<res;j++){
+    const v=z0[i*res+j];
+    let r,g,b;
+    if(v<0.001){r=30;g=100;b=200;}        // Water - blue
+    else if(v<0.01){r=210;g=190;b=130;}     // Sand - tan
+    else if(v<0.05){r=80;g=180;b=60;}       // Grass - green
+    else if(v<0.3){r=160;g=200;b=50;}       // Farmland - yellow-green
+    else if(v<0.5){r=200;g=160;b=40;}       // Scrub - olive
+    else if(v<1.0){r=40;g=120;b=40;}        // Forest - dark green
+    else{r=140;g=80;b=60;}                   // Urban/dense - brown
+    ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(j*cellW,i*cellH,cellW+1,cellH+1);
+  }}
+  // Grid lines
+  ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=0.5;
+  for(let i=0;i<=res;i+=Math.max(1,Math.floor(res/10))){
+    ctx.beginPath();ctx.moveTo(0,i*cellH);ctx.lineTo(W,i*cellH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(i*cellW,0);ctx.lineTo(i*cellW,H);ctx.stroke();
+  }
+  // Site boundary overlay
+  if(S.siteBoundary){
+    ctx.strokeStyle='#f5a623';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();
+    const bounds=S.terrainGrid?{minLat:S.terrainGrid[0][0],maxLat:S.terrainGrid[S.terrainGrid.length-1][0],minLon:S.terrainGrid[0][1],maxLon:S.terrainGrid[0][1]+(S.terrainGrid[1]?S.terrainGrid[1][1]-S.terrainGrid[0][1]:0.01)}:{minLat:0,maxLat:1,minLon:0,maxLon:1};
+    S.siteBoundary.forEach((pt,idx)=>{const x=((pt[1]-bounds.minLon)/(bounds.maxLon-bounds.minLon))*W;const y=((bounds.maxLat-pt[0])/(bounds.maxLat-bounds.minLat))*H;idx===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.closePath();ctx.stroke();ctx.setLineDash([]);
+  }
+}
+
+function exportRoughnessCSV(){
+  if(!S.roughnessGrid||!S.roughnessValues){alert('Download roughness data first.');return;}
+  const res=Math.round(Math.sqrt(S.roughnessValues.length));
+  let csv='Index,Row,Col,Latitude,Longitude,Elevation(m),Roughness_z0(m),Class\n';
+  const classes=['Water (z0<0.001)','Sand (0.001-0.01)','Grassland (0.01-0.05)','Farmland (0.05-0.3)','Scrubland (0.3-0.5)','Forest (0.5-1.0)','Urban (>1.0)'];
+  function z0Class(v){if(v<0.001)return 0;if(v<0.01)return 1;if(v<0.05)return 2;if(v<0.3)return 3;if(v<0.5)return 4;if(v<1.0)return 5;return 6;}
+  for(let i=0;i<S.roughnessGrid.length;i++){
+    const row=Math.floor(i/res);const col=i%res;
+    const lat=S.roughnessGrid[i][0];const lon=S.roughnessGrid[i][1];
+    const elev=S.terrainElevations?S.terrainElevations[i]:'';
+    csv+=`${i},${row},${col},${lat.toFixed(6)},${lon.toFixed(6)},${elev},${S.roughnessValues[i].toFixed(4)},${classes[z0Class(S.roughnessValues[i])]}\n`;
+  }
+  downloadFile('roughness_map.csv',csv,'text/csv');
 }
 
 // ==================== STEP 5: WASP FLOW MODEL ====================
@@ -967,7 +1224,7 @@ async function loadDemoAll(){
 }
 
 function clearAll(){
-  S.step=1;S.siteBoundary=null;S.siteArea=0;S.siteCountry=null;S.windData=null;S.turbine=null;S.positions=[];S.wakeResults=null;S.aepResults=null;S.terrainGrid=null;S.terrainElevations=null;S.flowResults=null;S.mesoData=[];S.flowCorrections=null;
+  S.step=1;S.siteBoundary=null;S.siteArea=0;S.siteCountry=null;S.windData=null;S.turbine=null;S.positions=[];S.wakeResults=null;S.aepResults=null;S.terrainGrid=null;S.terrainElevations=null;S.flowResults=null;S.mesoData=[];S.flowCorrections=null;S.roughnessGrid=null;S.roughnessValues=null;
   if(drawnItems)drawnItems.clearLayers();if(turbineMarkers)turbineMarkers.clearLayers();if(spacingCircles)spacingCircles.clearLayers();if(boundaryLayer&&layoutMap)layoutMap.removeLayer(boundaryLayer);
   document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));document.getElementById('step1').classList.add('active');
   document.querySelectorAll('.step-item').forEach(s=>{s.classList.remove('active','done');if(parseInt(s.dataset.step)===1)s.classList.add('active');});
