@@ -600,11 +600,22 @@ async function downloadTerrain(){
   try{
     const dLat=extent/111320;const dLon=extent/(111320*Math.cos(lat*Math.PI/180));
     const pts=[];for(let i=0;i<res;i++)for(let j=0;j<res;j++)pts.push([lat-dLat/2+dLat*i/(res-1),lon-dLon/2+dLon*j/(res-1)]);
-    const lats=pts.map(p=>p[0]).join(',');const lons=pts.map(p=>p[1]).join(',');
-    const url=`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lons}`;
-    const resp=await fetch(url);const data=await resp.json();
-    S.terrainGrid=pts;S.terrainElevations=data.elevation;
-    const elevs=data.elevation;const minE=Math.min(...elevs);const maxE=Math.max(...elevs);
+    // Batch requests in chunks of 100 to avoid URL length limits (414 error)
+    const batchSize=100;const allElevations=[];
+    const totalBatches=Math.ceil(pts.length/batchSize);
+    for(let b=0;b<totalBatches;b++){
+      const start=b*batchSize;const end=Math.min(start+batchSize,pts.length);
+      const batchPts=pts.slice(start,end);
+      const bLats=batchPts.map(p=>p[0]).join(',');const bLons=batchPts.map(p=>p[1]).join(',');
+      const url='https://api.open-meteo.com/v1/elevation?latitude='+bLats+'&longitude='+bLons;
+      const resp=await fetch(url);if(!resp.ok)throw new Error('API returned '+resp.status);
+      const data=await resp.json();
+      if(data.elevation)allElevations.push(...data.elevation);
+      statusEl.innerHTML='<span class="spinner"></span> Downloading elevation grid... ('+Math.round((end/pts.length)*100)+'%)';
+    }
+    if(allElevations.length!==pts.length)throw new Error('Received '+allElevations.length+' of '+pts.length+' elevation values');
+    S.terrainGrid=pts;S.terrainElevations=allElevations;
+    const elevs=allElevations;const minE=Math.min(...elevs);const maxE=Math.max(...elevs);
     document.getElementById('tElevMin').textContent=minE.toFixed(0);
     document.getElementById('tElevMax').textContent=maxE.toFixed(0);
     document.getElementById('tElevRange').textContent=(maxE-minE).toFixed(0);
@@ -613,9 +624,9 @@ async function downloadTerrain(){
     for(let i=1;i<res-1;i++)for(let j=1;j<res-1;j++){const dz1=Math.abs(elevs[i*res+j]-elevs[(i-1)*res+j]);const dz2=Math.abs(elevs[i*res+j]-elevs[(i+1)*res+j]);const slope=Math.max(dz1,dz2)/dx;const critSlope=parseFloat(document.getElementById('criticalSlope').value);if(slope>critSlope)rixSectors++;}
     const rix=(rixSectors/((res-2)*(res-2))*100);
     document.getElementById('tRIX').textContent=rix.toFixed(1);
-    statusEl.innerHTML=`<span style="color:var(--mint)">✓</span> ${res}x${res} grid | ${elevs.length} points | RIX=${rix.toFixed(1)}%`;
+    statusEl.innerHTML='<span style="color:var(--mint)">\u2713</span> '+res+'x'+res+' grid | '+elevs.length+' points | RIX='+rix.toFixed(1)+'%';
     drawTerrainMap();document.getElementById('step4Next').disabled=false;
-  }catch(e){statusEl.innerHTML=`<span style="color:var(--red)">✗</span> ${e.message}`;}
+  }catch(e){statusEl.innerHTML='<span style="color:var(--red)">\u2717</span> '+e.message;}
 }
 
 function drawTerrainMap(){
