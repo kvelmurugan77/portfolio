@@ -239,14 +239,14 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
 
 <!-- ===== STEP 7: LAYOUT DESIGN ===== -->
 <div class="step-panel" id="step7">
-  <div class="alert alert-info" style="margin-bottom:1rem">Click on the map to place turbines, or use Auto Layout to generate an optimized arrangement. Set desired capacity and the tool will calculate the number of turbines and optimal placement aligned to prevailing wind direction.</div>
+  <div class="alert alert-info" style="margin-bottom:1rem">The site boundary from Step 1 is shown on the map. Turbines are auto-placed within the boundary when you enter this step. You can click the map to add turbines manually, use Auto Layout to regenerate, or import a CSV layout file.</div>
   <div class="g2">
     <div class="card"><div class="card-title green">Layout Map</div><div id="layoutMap"></div></div>
     <div>
       <div class="card"><div class="card-title gold">Layout Controls</div>
         <div class="g3" style="gap:.6rem"><div class="fg"><label class="fl">Min Spacing (xRD)</label><input class="fi" type="number" id="spacingD" value="5" min="2" max="15" step="0.5"></div><div class="fg"><label class="fl">Grid Angle (deg)</label><input class="fi" type="number" id="gridAngle" value="0" min="0" max="90"></div><div class="fg"><label class="fl">Spacing (m)</label><input class="fi" type="number" id="spacingM" value="" readonly style="color:var(--mint)"></div></div>
         <div class="g2" style="gap:.6rem;margin-top:.5rem"><div class="fg"><label class="fl">Desired Capacity (MW)</label><input class="fi" type="number" id="desiredCapacity" value="50" min="1" max="5000" step="1"></div><div class="fg"><label class="fl">Wind-Aligned Grid</label><select class="fs" id="windAlignGrid"><option value="1" selected>Yes (perpendicular to prevailing wind)</option><option value="0">No (use manual angle)</option></select></div></div>
-        <div style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap"><button class="btn btn-gold" onclick="autoGridLayoutOptimized()">⊞ Auto Layout</button><button class="btn btn-sm btn-primary" onclick="autoGridLayout()">⊞ Simple Grid</button><button class="btn btn-sm btn-danger" onclick="clearLayout()">✕ Clear Layout</button></div>
+        <div style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap"><button class="btn btn-gold" onclick="autoGridLayoutOptimized()">⊞ Auto Layout</button><button class="btn btn-sm btn-primary" onclick="autoGridLayout()">⊞ Simple Grid</button><button class="btn btn-sm btn-ghost" onclick="exportLayoutCSV()">📁 Export CSV</button><label class="btn btn-sm btn-sky" style="margin:0">📁 Import CSV<input type="file" accept=".csv" style="display:none" onchange="importLayoutCSV(event)"></label><button class="btn btn-sm btn-danger" onclick="clearLayout()">✕ Clear Layout</button></div>
       </div>
       <div class="card"><div class="card-title">Layout Summary</div>
         <div class="g3" style="gap:.6rem">
@@ -1220,11 +1220,18 @@ function drawPowerCurve(){const canvas=document.getElementById('powerCurveCanvas
 function updateSpacingM(){const rd=parseFloat(document.getElementById('tRD').value)||75;const d=parseFloat(document.getElementById('spacingD').value)||5;document.getElementById('spacingM').value=Math.round(rd*d);}
 
 // ==================== STEP 7: LAYOUT ====================
-function initLayoutMap(){if(layoutMap){layoutMap.invalidateSize();if(S.siteBoundary){if(boundaryLayer)layoutMap.removeLayer(boundaryLayer);boundaryLayer=L.polygon(S.siteBoundary,{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.08}).addTo(layoutMap);layoutMap.fitBounds(boundaryLayer.getBounds(),{padding:[30,30]});}return;}
-  const c=S.siteBoundary?getPolygonCentroid(S.siteBoundary):[11.0,77.0];layoutMap=L.map('layoutMap',{zoomControl:true}).setView(c,13);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM',maxZoom:19}).addTo(layoutMap);
-  if(S.siteBoundary){boundaryLayer=L.polygon(S.siteBoundary,{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.08}).addTo(layoutMap);layoutMap.fitBounds(boundaryLayer.getBounds(),{padding:[30,30]});}
+function initLayoutMap(){if(layoutMap){layoutMap.invalidateSize();if(S.siteBoundary){if(boundaryLayer)layoutMap.removeLayer(boundaryLayer);boundaryLayer=L.polygon(S.siteBoundary,{color:'#00d68f',weight:3,fillColor:'#00d68f',fillOpacity:.1,dashArray:null}).addTo(layoutMap);layoutMap.fitBounds(boundaryLayer.getBounds(),{padding:[40,40]});}if(S.turbine&&S.positions.length===0&&S.siteBoundary){setTimeout(autoGridLayoutOptimized,200);}refreshTurbineMarkers();return;}
+  if(!S.siteBoundary){return;}
+  const c=getPolygonCentroid(S.siteBoundary);layoutMap=L.map('layoutMap',{zoomControl:true}).setView(c,13);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM',maxZoom:19}).addTo(layoutMap);
+  boundaryLayer=L.polygon(S.siteBoundary,{color:'#00d68f',weight:3,fillColor:'#00d68f',fillOpacity:.1}).addTo(layoutMap);layoutMap.fitBounds(boundaryLayer.getBounds(),{padding:[40,40]});
+  // Add area label at centroid
+  const areaLabel=L.divIcon({className:'',html:'<div style=\"background:rgba(0,214,143,.85);color:#07111e;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;font-family:IBM Plex Mono,monospace;white-space:nowrap\">'+S.siteArea.toFixed(2)+' km²</div>',iconSize:null,iconAnchor:[40,10]});
+  L.marker(c,{icon:areaLabel,interactive:false}).addTo(layoutMap);
   turbineMarkers=L.layerGroup().addTo(layoutMap);spacingCircles=L.layerGroup().addTo(layoutMap);
-  layoutMap.on('click',function(e){if(!S.siteBoundary)return;const lat=e.latlng.lat;const lon=e.latlng.lng;if(!pointInPolygon(lat,lon,S.siteBoundary))return;const d=parseFloat(document.getElementById('spacingD').value)||5;const rd=S.turbine?S.turbine.RD:75;const md=rd*d;const mdd=md/111320;for(const pos of S.positions){const dx=(lon-pos.lon)*Math.cos(pos.lat*Math.PI/180)*111320;const dy=(lat-pos.lat)*111320;if(Math.sqrt(dx*dx+dy*dy)<md)return;}addTurbinePosition(lat,lon);});refreshTurbineMarkers();}
+  layoutMap.on('click',function(e){if(!S.siteBoundary)return;const lat=e.latlng.lat;const lon=e.latlng.lng;if(!pointInPolygon(lat,lon,S.siteBoundary))return;const d=parseFloat(document.getElementById('spacingD').value)||5;const rd=S.turbine?S.turbine.RD:75;const md=rd*d;for(const pos of S.positions){const dx=(lon-pos.lon)*Math.cos(pos.lat*Math.PI/180)*111320;const dy=(lat-pos.lat)*111320;if(Math.sqrt(dx*dx+dy*dy)<md)return;}addTurbinePosition(lat,lon);});
+  // Auto-populate turbines if turbine is configured and no positions exist
+  if(S.turbine&&S.positions.length===0){setTimeout(autoGridLayoutOptimized,300);}
+  refreshTurbineMarkers();}
 
 function addTurbinePosition(lat,lon){S.positions.push({id:S.positions.length+1,lat,lon});refreshTurbineMarkers();updateLayoutInfo();}
 function removeTurbinePosition(id){S.positions=S.positions.filter(p=>p.id!==id);S.positions.forEach((p,i)=>p.id=i+1);refreshTurbineMarkers();updateLayoutInfo();}
@@ -1232,9 +1239,26 @@ function refreshTurbineMarkers(){if(!turbineMarkers)return;turbineMarkers.clearL
 function updateLayoutInfo(){const n=S.positions.length;const cap=S.turbine?n*S.turbine.power:0;const den=S.siteArea>0?cap/S.siteArea:0;document.getElementById('layoutCount').textContent=n;document.getElementById('layoutCapacity').textContent=cap.toFixed(1);document.getElementById('layoutDensity').textContent=den.toFixed(1);document.getElementById('step7Next').disabled=n===0;const body=document.getElementById('positionBody');body.innerHTML='';S.positions.forEach(p=>{body.innerHTML+=`<tr><td class="num">T${p.id}</td><td class="num">${p.lat.toFixed(5)}</td><td class="num">${p.lon.toFixed(5)}</td><td><button class="btn btn-sm btn-danger" onclick="removeTurbinePosition(${p.id})">✕</button></td></tr>`;});}
 
 function autoGridLayout(){if(!S.siteBoundary||!S.turbine){alert('Define site and turbine first.');return;}const rd=S.turbine.RD;const d=parseFloat(document.getElementById('spacingD').value)||5;const sm=rd*d;const sd=sm/111320;const ang=parseFloat(document.getElementById('gridAngle').value)||0;const ar=ang*Math.PI/180;
+  // Get bounding box expanded by spacing to account for rotation
   let minLat=Infinity,maxLat=-Infinity,minLon=Infinity,maxLon=-Infinity;S.siteBoundary.forEach(c=>{if(c[0]<minLat)minLat=c[0];if(c[0]>maxLat)maxLat=c[0];if(c[1]<minLon)minLon=c[1];if(c[1]>maxLon)maxLon=c[1];});
-  const cLat=(minLat+maxLat)/2;const cLon=(minLon+maxLon)/2;const np=[];const cols=Math.floor((maxLon-minLon)/sd)+1;const rows=Math.floor((maxLat-minLat)/sd)+1;
-  for(let r=0;r<rows;r++){for(let c2=0;c2<cols;c2++){const lat=minLat+r*sd;const lon=minLon+c2*sd;const rx=(lon-cLon)*Math.cos(ar)-(lat-cLat)*Math.sin(ar);const ry=(lon-cLon)*Math.sin(ar)+(lat-cLat)*Math.cos(ar);const plat=cLat+ry;const plon=cLon+rx;if(pointInPolygon(plat,plon,S.siteBoundary)){let ok=true;for(const p of np){const dx2=(plon-p.lon)*Math.cos(p.lat*Math.PI/180)*111320;const dy2=(plat-p.lat)*111320;if(Math.sqrt(dx2*dx2+dy2*dy2)<sm)break;}if(ok)np.push({plat,plon});}}}
+  const cLat=(minLat+maxLat)/2;const cLon=(minLon+maxLon)/2;
+  // Expand bbox by 1 spacing in all directions to account for rotation
+  const pad=sd*1.5;minLat-=pad;maxLat+=pad;minLon-=pad;maxLon+=pad;
+  const np=[];const cols=Math.floor((maxLon-minLon)/sd)+1;const rows=Math.floor((maxLat-minLat)/sd)+1;
+  // Generate a regular grid, then rotate each point around centroid and check if inside polygon
+  for(let r=0;r<rows;r++){for(let c2=0;c2<cols;c2++){
+    const lat=minLat+r*sd;const lon=minLon+c2*sd;
+    // Rotate point around centroid
+    const dx=lon-cLon;const dy=lat-cLat;
+    const rx=dx*Math.cos(ar)-dy*Math.sin(ar);
+    const ry=dx*Math.sin(ar)+dy*Math.cos(ar);
+    const plat=cLat+ry;const plon=cLon+rx;
+    if(pointInPolygon(plat,plon,S.siteBoundary)){
+      // Check minimum spacing against already selected
+      let ok=true;for(const p of np){const dx2=(plon-p.lon)*Math.cos(p.lat*Math.PI/180)*111320;const dy2=(plat-p.lat)*111320;if(Math.sqrt(dx2*dx2+dy2*dy2)<sm){ok=false;break;}}
+      if(ok)np.push({plat,plon});
+    }
+  }}
   S.positions=[];np.forEach((p,i)=>{S.positions.push({id:i+1,lat:p.plat,lon:p.plon});});refreshTurbineMarkers();updateLayoutInfo();}
 
 function autoGridLayoutOptimized(){
@@ -1247,32 +1271,35 @@ function autoGridLayoutOptimized(){
   // Determine grid angle from prevailing wind direction
   let ang=parseFloat(document.getElementById('gridAngle').value)||0;
   if(document.getElementById('windAlignGrid').value==='1'&&S.windData&&S.windData.length>=12){
-    // Find prevailing wind direction (TO direction)
+    // Find prevailing wind direction (wind comes FROM this direction)
     let maxFreq=0,predDir=0;
     S.windData.forEach(s=>{if(s.freq>maxFreq){maxFreq=s.freq;predDir=s.dir;}});
-    // Align rows perpendicular to prevailing wind (TO direction)
-    // Row direction = perpendicular to wind = wind_dir + 90
+    // Align rows perpendicular to prevailing wind (FROM direction)
+    // Row direction = perpendicular to wind FROM = wind_dir + 90
     ang=predDir+90;
-    document.getElementById('gridAngle').value=ang.toFixed(0);
+    document.getElementById('gridAngle').value=((ang%360)+360)%360;
   }
   const ar=ang*Math.PI/180;
   let minLat=Infinity,maxLat=-Infinity,minLon=Infinity,maxLon=-Infinity;
   S.siteBoundary.forEach(c=>{if(c[0]<minLat)minLat=c[0];if(c[0]>maxLat)maxLat=c[0];if(c[1]<minLon)minLon=c[1];if(c[1]>maxLon)maxLon=c[1];});
   const cLat=(minLat+maxLat)/2;const cLon=(minLon+maxLon)/2;
   const sd=sm/111320; // spacing in degrees
+  // Expand bounding box to account for rotation
+  const pad=sd*2;minLat-=pad;maxLat+=pad;minLon-=pad;maxLon+=pad;
   const np=[];
-  // Generate candidate positions on a dense grid, keep only those inside boundary
+  // Generate candidate positions on a rotated grid, keep only those inside boundary
   const cols=Math.floor((maxLon-minLon)/sd)+1;const rows=Math.floor((maxLat-minLat)/sd)+1;
   for(let r=0;r<rows;r++){for(let c2=0;c2<cols;c2++){
     const lat=minLat+r*sd;const lon=minLon+c2*sd;
-    const rx=(lon-cLon)*Math.cos(ar)-(lat-cLat)*Math.sin(ar);
-    const ry=(lon-cLon)*Math.sin(ar)+(lat-cLat)*Math.cos(ar);
+    // Rotate point around centroid to create angled grid
+    const dx=lon-cLon;const dy=lat-cLat;
+    const rx=dx*Math.cos(ar)-dy*Math.sin(ar);
+    const ry=dx*Math.sin(ar)+dy*Math.cos(ar);
     const plat=cLat+ry;const plon=cLon+rx;
     if(pointInPolygon(plat,plon,S.siteBoundary)){np.push({plat,plon});}
   }}
-  // Enforce minimum spacing between turbines (greedy selection)
+  // Enforce minimum spacing between turbines (greedy selection from center outward)
   const selected=[];
-  // Sort candidates: prefer positions near center (for better wake distribution)
   np.forEach(p=>{p.dist=Math.sqrt(Math.pow(p.plat-cLat,2)+Math.pow(p.plon-cLon,2));});
   np.sort((a,b)=>a.dist-b.dist);
   for(const p of np){
@@ -1290,7 +1317,7 @@ function autoGridLayoutOptimized(){
   refreshTurbineMarkers();updateLayoutInfo();
   if(selected.length<turbinesNeeded){
     const achieved=(selected.length*S.turbine.power).toFixed(1);
-    alert(`Only ${selected.length} turbines fit in the site boundary (${achieved} MW of ${desiredCap} MW desired). Try reducing spacing or desired capacity.`);
+    alert('Only '+selected.length+' turbines fit in the site boundary ('+achieved+' MW of '+desiredCap+' MW desired). Try reducing spacing or desired capacity.');
   }
 }
 function clearLayout(){S.positions=[];refreshTurbineMarkers();updateLayoutInfo();}
@@ -1412,6 +1439,8 @@ function drawSummaryCanvas(){const canvas=document.getElementById('summaryCanvas
 }
 
 function exportLayoutCSV(){if(S.positions.length===0)return;let csv='id,lat,lon\n';S.positions.forEach(p=>{csv+=`T${p.id},${p.lat.toFixed(6)},${p.lon.toFixed(6)}\n`;});downloadFile('wind_farm_layout.csv',csv,'text/csv');}
+
+function importLayoutCSV(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(e){try{const lines=e.target.result.trim().split('\n');const positions=[];for(let i=1;i<lines.length;i++){const parts=lines[i].split(',').map(s=>s.trim());if(parts.length>=3){const lat=parseFloat(parts[1]);const lon=parseFloat(parts[2]);if(!isNaN(lat)&&!isNaN(lon)){positions.push({id:positions.length+1,lat,lon});}}}if(positions.length>0){S.positions=positions;refreshTurbineMarkers();updateLayoutInfo();}else{alert('No valid positions found in CSV. Expected columns: id, lat, lon');}}catch(err){alert('Error reading CSV: '+err.message);}};reader.readAsText(file);event.target.value='';}
 
 function exportAEPReport(){if(!S.aepResults)return;let csv='Turbine,Latitude,Longitude,Gross_AEP_GWh,Net_AEP_GWh,Wake_Loss_pct\n';S.aepResults.turbineData.forEach(t=>{csv+=`T${t.id},${t.lat.toFixed(6)},${t.lon.toFixed(6)},${t.gross.toFixed(4)},${t.net.toFixed(4)},${t.wakeLoss.toFixed(1)}\n`;});downloadFile('aep_report.csv',csv,'text/csv');}
 
