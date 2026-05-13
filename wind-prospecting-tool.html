@@ -459,7 +459,7 @@ async function downloadMeso(source){
   const h=parseInt(document.getElementById('mesoHeight').value);
   const statusEl=document.getElementById('ds-status-'+source);
   const isGWA=source==='gwa';
-  statusEl.innerHTML='<span class="spinner"></span> Downloading'+(isGWA?' from NASA POWER (3-year, ~15s)...':' from NASA POWER...');
+  statusEl.innerHTML='<span class="spinner"></span> Downloading'+(isGWA?' from NASA POWER (3-year daily, ~10s)...':' from NASA POWER daily...');
   try{
     let result;
     if(source==='era5')result=await downloadERA5(lat,lon,h);
@@ -474,14 +474,19 @@ async function downloadMeso(source){
 }
 
 // ==================== ROBUST FETCH WITH RETRY ====================
-async function fetchWithRetry(url,opts={},maxRetries=3){
+async function fetchWithRetry(url,opts={},maxRetries=5){
   let lastError;
+  const timeoutMs=(opts&&opts._timeout)||60000;
+  const fetchOpts=Object.assign({},opts);delete fetchOpts._timeout;
   for(let attempt=1;attempt<=maxRetries;attempt++){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),timeoutMs);
     try{
-      const resp=await fetch(url,opts);
+      const resp=await fetch(url,Object.assign({},fetchOpts,{signal:controller.signal}));
+      clearTimeout(timer);
       if(resp.status===429){
         if(attempt===maxRetries){throw new Error('API rate limited (429) after '+maxRetries+' retries. Please try again in a few minutes.');}
-        const wait=Math.pow(2,attempt)*1000+Math.random()*500;
+        const wait=Math.pow(2,attempt)*1500+Math.random()*1000;
         console.warn('Rate limited (429), retrying in '+Math.round(wait)+'ms (attempt '+attempt+'/'+maxRetries+')');
         await new Promise(r=>setTimeout(r,wait));
         continue;
@@ -490,9 +495,10 @@ async function fetchWithRetry(url,opts={},maxRetries=3){
       return resp;
     }catch(e){
       lastError=e;
-      if(attempt===maxRetries)throw e;
-      const wait=Math.pow(2,attempt)*800+Math.random()*300;
-      console.warn('Fetch failed, retrying in '+Math.round(wait)+'ms:',e.message);
+      const isAbort=e.name==='AbortError';
+      if(attempt===maxRetries)throw new Error(isAbort?'Request timed out after '+Math.round(timeoutMs/1000)+'s: '+e.message:e.message);
+      const wait=Math.pow(2,attempt)*1500+Math.random()*1000;
+      console.warn('Fetch failed (attempt '+attempt+'/'+maxRetries+'), retrying in '+Math.round(wait)+'ms:',e.message);
       await new Promise(r=>setTimeout(r,wait));
     }
   }
@@ -508,11 +514,12 @@ function extrapolateWindSpeed(speed,fromH,toH,alpha){
 
 async function fetchNASAPower(lat,lon,startYYYY,endYYYY){
   // NASA POWER API — MERRA-2 based, reliable for tropical/complex terrain
-  // Returns arrays of [ws10m, wd10m, ws50m] (wd50m not always available)
+  // Uses DAILY endpoint (fast: ~1s) instead of HOURLY (slow: 30-60s per year)
+  // Daily resolution is sufficient for wind resource sector statistics
   const startD=startYYYY+'0101';
   const endD=endYYYY+'1231';
-  const url=`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${startD}&end=${endD}&latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&community=RE&parameters=WS10M,WS50M,WD10M&format=json&time-standard=lst`;
-  const resp=await fetchWithRetry(url);
+  const url=`https://power.larc.nasa.gov/api/temporal/daily/point?start=${startD}&end=${endD}&latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&community=RE&parameters=WS10M,WS50M,WD10M&format=json&time-standard=lst`;
+  const resp=await fetchWithRetry(url,{},{_timeout:90000});
   const data=await resp.json();
   if(data.header&&data.messages&&data.messages.length>0&&data.properties===undefined){
     throw new Error('NASA POWER: '+data.messages.join('; '));
@@ -530,7 +537,7 @@ async function fetchNASAPower(lat,lon,startYYYY,endYYYY){
     if(v10!==null&&v10>-990&&d10!==null&&d10>-990){validPairs10++;sum10+=v10;}
     if(v10!==null&&v10>-990&&v50!==null&&v50>-990){sum50+=v50;}
   }
-  if(validPairs10<100)throw new Error('Insufficient data records from NASA POWER ('+validPairs10+')');
+  if(validPairs10<30)throw new Error('Insufficient data records from NASA POWER ('+validPairs10+')');
   const mean10=sum10/validPairs10;
   // Derive power-law alpha from 10m/50m measured ratio
   let alpha=0.14; // default neutral stability
@@ -541,12 +548,11 @@ async function fetchNASAPower(lat,lon,startYYYY,endYYYY){
       alpha=Math.max(0.10,Math.min(0.40,alpha)); // clamp to physical range
     }
   }
-  // Build hourly arrays
+  // Build daily arrays (each day is one data point)
   const ws=[];const wd=[];
   for(const t of times){
     const v10=ws10[t];const d10=wd10[t];
     if(v10!==null&&v10>-990&&d10!==null&&d10>-990){
-      // Extrapolate from 10m to requested height using measured alpha
       ws.push(v10);wd.push(d10);
     }else{ws.push(null);wd.push(null);}
   }
@@ -586,24 +592,36 @@ function processHourlyToSectors(ws,wd){
 }
 
 async function downloadGWA(lat,lon,h){
-  // Use NASA POWER (MERRA-2) for reliable wind resource data
-  // Fetch 3 years and merge for long-term average
+  // Use NASA POWER (MERRA-2) daily endpoint for reliable wind resource data
+  // Fetch 3 years and merge for long-term average (daily data, ~3s total)
   const years=['2021','2022','2023'];
   const allSectors=[];
   let totalRecords=0;
   let measuredAlpha=0.14;
-  for(const yr of years){
+  for(let yi=0;yi<years.length;yi++){
+    const yr=years[yi];
     try{
       const data=await fetchNASAPower(lat,lon,yr,yr);
-      // Extrapolate from 10m to requested height
       const ws=extrapolateArray(data.ws,10,h,data.alpha);
       totalRecords+=data.records;
       measuredAlpha=data.alpha;
       const sectors=processHourlyToSectors(ws,data.wd);
       allSectors.push(sectors);
-      // Small delay between year requests to respect NASA POWER rate limits
-      if(yr!=='2023')await new Promise(r=>setTimeout(r,500));
-    }catch(e){console.warn('GWA: year '+yr+' failed:',e.message);}
+      // Delay between year requests to respect rate limits (1s)
+      if(yi<years.length-1)await new Promise(r=>setTimeout(r,1000));
+    }catch(e){
+      console.warn('GWA: year '+yr+' failed:',e.message);
+      // If first year fails, try with delay and retry
+      if(yi===0&&allSectors.length===0){
+        await new Promise(r=>setTimeout(r,3000));
+        try{
+          const data=await fetchNASAPower(lat,lon,yr,yr);
+          const ws=extrapolateArray(data.ws,10,h,data.alpha);
+          totalRecords+=data.records;measuredAlpha=data.alpha;
+          allSectors.push(processHourlyToSectors(ws,data.wd));
+        }catch(e2){console.warn('GWA: retry for year '+yr+' also failed:',e2.message);}
+      }
+    }
   }
   if(allSectors.length===0)throw new Error('Failed to fetch wind data for any year');
   // Merge multi-year sectors: use frequency-weighted approach
@@ -757,13 +775,13 @@ async function downloadTerrain(){
   const extent=parseFloat(document.getElementById('terrainExtent').value)*1000;
   const res=parseInt(document.getElementById('terrainRes').value);
   const statusEl=document.getElementById('terrainStatus');
-  statusEl.innerHTML='<span class="spinner"></span> Downloading elevation grid...';
+  statusEl.innerHTML='<span class="spinner"></span> Downloading elevation grid ('+res+'x'+res+')...';
   try{
     const dLat=extent/111320;const dLon=extent/(111320*Math.cos(lat*Math.PI/180));
     const pts=[];for(let i=0;i<res;i++)for(let j=0;j<res;j++)pts.push([lat-dLat/2+dLat*i/(res-1),lon-dLon/2+dLon*j/(res-1)]);
-    // Batch requests: max 100 points per request (Open-Meteo URL length limit ~1800 chars)
-    // Use 1.5s delay between batches to stay under Open-Meteo rate limits
-    const batchSize=100;const allElevations=[];
+    // Batch requests: 50 points per batch to keep URLs safe for all grid sizes
+    // Use fetchWithRetry with longer timeout for elevation API
+    const batchSize=50;const allElevations=[];
     const totalBatches=Math.ceil(pts.length/batchSize);
     for(let b=0;b<totalBatches;b++){
       const start=b*batchSize;const end=Math.min(start+batchSize,pts.length);
@@ -771,31 +789,17 @@ async function downloadTerrain(){
       const bLats=batchPts.map(p=>p[0].toFixed(4)).join(',');
       const bLons=batchPts.map(p=>p[1].toFixed(4)).join(',');
       const url='https://api.open-meteo.com/v1/elevation?latitude='+bLats+'&longitude='+bLons;
-      let resp=null;
-      // Custom retry loop: 6 attempts with long waits for 429 rate limits
-      for(let attempt=1;attempt<=6;attempt++){
-        try{
-          const r=await fetch(url);
-          if(r.status===429){
-            const wait=attempt<3?3000:8000+Math.random()*4000;
-            statusEl.innerHTML='<span class="spinner"></span> Rate limited, waiting '+(wait/1000).toFixed(0)+'s (batch '+Math.round((end/pts.length)*100)+'%)...';
-            await new Promise(rw=>setTimeout(rw,wait));
-            continue;
-          }
-          if(!r.ok)throw new Error('HTTP '+r.status);
-          resp=r;break;
-        }catch(e){
-          if(attempt===6)throw new Error('Elevation API failed at batch '+(b+1)+'/'+totalBatches+': '+e.message);
-          await new Promise(rw=>setTimeout(rw,2000*attempt+Math.random()*1000));
-        }
-      }
-      if(!resp)throw new Error('No response from elevation API at batch '+(b+1));
+      const pct=Math.round(((b+1)/totalBatches)*100);
+      statusEl.innerHTML='<span class="spinner"></span> Downloading elevation grid... batch '+(b+1)+'/'+totalBatches+' ('+pct+'%)';
+      const resp=await fetchWithRetry(url,{_timeout:30000},6);
       let data;
       try{data=await resp.json();}catch(e){throw new Error('Failed to parse elevation data at batch '+(b+1));}
-      if(data.elevation)allElevations.push(...data.elevation);
-      statusEl.innerHTML='<span class="spinner"></span> Downloading elevation grid... ('+Math.round((end/pts.length)*100)+'%)';
-      // 1.5s delay between batches to avoid rate limits
-      if(b<totalBatches-1)await new Promise(r=>setTimeout(r,1500));
+      if(!data.elevation||!Array.isArray(data.elevation)){throw new Error('Invalid elevation data at batch '+(b+1));}
+      if(data.elevation.length!==batchPts.length){throw new Error('Expected '+batchPts.length+' elevations, got '+data.elevation.length+' at batch '+(b+1));}
+      allElevations.push(...data.elevation);
+      // Adaptive delay between batches: longer for more batches
+      const delay=totalBatches>20?2000:totalBatches>10?1500:1000;
+      if(b<totalBatches-1)await new Promise(r=>setTimeout(r,delay));
     }
     if(allElevations.length!==pts.length)throw new Error('Received '+allElevations.length+' of '+pts.length+' elevation values');
     S.terrainGrid=pts;S.terrainElevations=allElevations;
@@ -808,7 +812,7 @@ async function downloadTerrain(){
     for(let i=1;i<res-1;i++)for(let j=1;j<res-1;j++){const dz1=Math.abs(elevs[i*res+j]-elevs[(i-1)*res+j]);const dz2=Math.abs(elevs[i*res+j]-elevs[(i+1)*res+j]);const slope=Math.max(dz1,dz2)/dx;const critSlope=parseFloat(document.getElementById('criticalSlope').value);if(slope>critSlope)rixSectors++;}
     const rix=(rixSectors/((res-2)*(res-2))*100);
     document.getElementById('tRIX').textContent=rix.toFixed(1);
-    statusEl.innerHTML='<span style="color:var(--mint)">\u2713</span> '+res+'x'+res+' grid | '+elevs.length+' points | RIX='+rix.toFixed(1)+'%';
+    statusEl.innerHTML='<span style="color:var(--mint)">\u2713</span> Terrain: '+res+'x'+res+' grid ('+elevs.length+' points) | Range: '+(maxE-minE).toFixed(0)+'m | RIX='+rix.toFixed(1)+'%';
     drawTerrainMap();document.getElementById('step4Next').disabled=false;
   }catch(e){statusEl.innerHTML='<span style="color:var(--red)">\u2717</span> '+e.message;}
 }
