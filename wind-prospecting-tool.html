@@ -239,13 +239,14 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
 
 <!-- ===== STEP 7: LAYOUT DESIGN ===== -->
 <div class="step-panel" id="step7">
-  <div class="alert alert-info" style="margin-bottom:1rem">Click on the map to place turbines inside the project boundary. Use Auto Grid for a regular arrangement.</div>
+  <div class="alert alert-info" style="margin-bottom:1rem">Click on the map to place turbines, or use Auto Layout to generate an optimized arrangement. Set desired capacity and the tool will calculate the number of turbines and optimal placement aligned to prevailing wind direction.</div>
   <div class="g2">
     <div class="card"><div class="card-title green">Layout Map</div><div id="layoutMap"></div></div>
     <div>
       <div class="card"><div class="card-title gold">Layout Controls</div>
         <div class="g3" style="gap:.6rem"><div class="fg"><label class="fl">Min Spacing (xRD)</label><input class="fi" type="number" id="spacingD" value="5" min="2" max="15" step="0.5"></div><div class="fg"><label class="fl">Grid Angle (deg)</label><input class="fi" type="number" id="gridAngle" value="0" min="0" max="90"></div><div class="fg"><label class="fl">Spacing (m)</label><input class="fi" type="number" id="spacingM" value="" readonly style="color:var(--mint)"></div></div>
-        <div style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap"><button class="btn btn-gold" onclick="autoGridLayout()">⊞ Auto Grid</button><button class="btn btn-sm btn-danger" onclick="clearLayout()">✕ Clear Layout</button></div>
+        <div class="g2" style="gap:.6rem;margin-top:.5rem"><div class="fg"><label class="fl">Desired Capacity (MW)</label><input class="fi" type="number" id="desiredCapacity" value="50" min="1" max="5000" step="1"></div><div class="fg"><label class="fl">Wind-Aligned Grid</label><select class="fs" id="windAlignGrid"><option value="1" selected>Yes (perpendicular to prevailing wind)</option><option value="0">No (use manual angle)</option></select></div></div>
+        <div style="display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap"><button class="btn btn-gold" onclick="autoGridLayoutOptimized()">⊞ Auto Layout</button><button class="btn btn-sm btn-primary" onclick="autoGridLayout()">⊞ Simple Grid</button><button class="btn btn-sm btn-danger" onclick="clearLayout()">✕ Clear Layout</button></div>
       </div>
       <div class="card"><div class="card-title">Layout Summary</div>
         <div class="g3" style="gap:.6rem">
@@ -397,7 +398,7 @@ function goToStep(n){
     if(n===5&&!S.windData){alert('Load wind data first.');return;}
     // Step 6 (Turbine) is where you configure the turbine — no pre-check needed
     // Only steps after turbine config need the check
-    if(n===7&&(!S.turbine||S.positions.length===0)){alert('Configure a turbine and place at least one turbine first.');return;}
+    if(n===7&&!S.turbine){alert('Configure a turbine in Step 6 first (select and click Apply Turbine).');return;}
     if(n===8&&!S.wakeResults){alert('Run wake calculation first.');return;}
     if(n===9&&!S.wakeResults){alert('Run wake calculation first.');return;}
     if(n===10&&!S.aepResults){alert('Calculate AEP first.');return;}
@@ -814,9 +815,12 @@ async function downloadTerrain(){
 
 function drawTerrainMap(){
   const canvas=document.getElementById('terrainCanvas');if(!canvas||!S.terrainElevations)return;
-  const ctx=canvas.getContext('2d');const W=canvas.width,H=canvas.height;ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);
+  const ctx=canvas.getContext('2d');const W=canvas.width,H=canvas.height;
+  // Reserve space for colorbar on the right (50px) and axis labels
+  const mapW=W-60,mapH=H-30;
+  ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);
   const elevs=S.terrainElevations;const minE=Math.min(...elevs);const maxE=Math.max(...elevs);const range=maxE-minE||1;
-  const res=Math.round(Math.sqrt(elevs.length));const cellW=W/res;const cellH=H/res;
+  const res=Math.round(Math.sqrt(elevs.length));const cellW=mapW/res;const cellH=mapH/res;
   for(let i=0;i<res;i++){for(let j=0;j<res;j++){const e=elevs[i*res+j];const t=(e-minE)/range;let r,g,b;
     if(t<0.25){const s=t/0.25;r=Math.round(20+s*30);g=Math.round(80+s*100);b=Math.round(20+s*30);}
     else if(t<0.5){const s=(t-.25)/0.25;r=Math.round(50+s*140);g=Math.round(180+s*60);b=Math.round(50-s*20);}
@@ -824,15 +828,46 @@ function drawTerrainMap(){
     else{const s=(t-.75)/0.25;r=Math.round(240-s*30);g=Math.round(160-s*80);b=Math.round(60+s*150);}
     ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(j*cellW,i*cellH,cellW+1,cellH+1);
   }}
-  // Contour lines
-  const numContours=10;ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=0.5;
+  // Contour lines with value labels
+  const numContours=10;ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=0.5;
+  ctx.font='9px IBM Plex Mono';ctx.fillStyle='rgba(255,255,255,0.5)';
   for(let ci=1;ci<numContours;ci++){const threshold=minE+range*ci/numContours;
+    let labelPlaced=false;
     for(let i=0;i<res-1;i++){for(let j=0;j<res-1;j++){const e=elevs[i*res+j];const er=elevs[i*res+j+1];const eb=elevs[(i+1)*res+j];
-      if((e<=threshold&&er>threshold)||(e>threshold&&er<=threshold)){const t=(threshold-e)/(er-e);const x=(j+t)*cellW;const y=i*cellH;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+cellH);ctx.stroke();}
-      if((e<=threshold&&eb>threshold)||(e>threshold&&eb<=threshold)){const t=(threshold-e)/(eb-e);const x=j*cellW;const y=(i+t)*cellH;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+cellW,y);ctx.stroke();}
+      if((e<=threshold&&er>threshold)||(e>threshold&&er<=threshold)){const t2=(threshold-e)/(er-e);const x=(j+t2)*cellW;const y=i*cellH;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+cellH);ctx.stroke();if(!labelPlaced&&j>res/3&&i>res/4){ctx.fillText(threshold.toFixed(0)+'m',x+3,y+cellH/2);labelPlaced=true;}}
+      if((e<=threshold&&eb>threshold)||(e>threshold&&eb<=threshold)){const t2=(threshold-e)/(eb-e);const x=j*cellW;const y=(i+t2)*cellH;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+cellW,y);ctx.stroke();}
     }}}
+  // Colorbar (vertical gradient bar on the right)
+  const cbX=W-40,cbY=20,cbW=14,cbH=mapH-20;
+  for(let y=0;y<cbH;y++){
+    const t=1-y/cbH;let r,g,b;
+    if(t<0.25){const s=t/0.25;r=Math.round(20+s*30);g=Math.round(80+s*100);b=Math.round(20+s*30);}
+    else if(t<0.5){const s=(t-.25)/0.25;r=Math.round(50+s*140);g=Math.round(180+s*60);b=Math.round(50-s*20);}
+    else if(t<0.75){const s=(t-.5)/0.25;r=Math.round(190+s*50);g=Math.round(240-s*80);b=Math.round(30+s*30);}
+    else{const s=(t-.75)/0.25;r=Math.round(240-s*30);g=Math.round(160-s*80);b=Math.round(60+s*150);}
+    ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(cbX,cbY+y,cbW,2);
+  }
+  ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.strokeRect(cbX,cbY,cbW,cbH);
+  // Colorbar labels
+  ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font='9px IBM Plex Mono';ctx.textAlign='left';
+  const steps=5;for(let i=0;i<=steps;i++){const val=maxE-(maxE-minE)*i/steps;const y=cbY+cbH*i/steps;ctx.fillText(val.toFixed(0)+'m',cbX+cbW+4,y+3);}
+  ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='8px IBM Plex Mono';ctx.textAlign='center';ctx.fillText('Elevation',cbX+cbW/2,cbY-5);
+  // Axis tick labels
+  if(S.terrainGrid&&S.terrainGrid.length>1){
+    ctx.fillStyle='rgba(255,255,255,0.35)';ctx.font='8px IBM Plex Mono';ctx.textAlign='center';
+    const gridRes=Math.round(Math.sqrt(S.terrainGrid.length));
+    for(let j=0;j<gridRes;j+=Math.max(1,Math.floor(gridRes/5))){
+      const lon=S.terrainGrid[j][1];
+      ctx.fillText(lon.toFixed(3)+'E',j*cellW,mapH+12);
+    }
+    ctx.textAlign='right';
+    for(let i=0;i<gridRes;i+=Math.max(1,Math.floor(gridRes/5))){
+      const lat=S.terrainGrid[i*gridRes][0];
+      ctx.fillText(lat.toFixed(3)+'N',mapW-3,i*cellH+cellH/2+3);
+    }
+  }
   // Boundary overlay
-  if(S.siteBoundary){ctx.strokeStyle='#00d68f';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();const bounds=S.terrainGrid?{minLat:S.terrainGrid[0][0],maxLat:S.terrainGrid[S.terrainGrid.length-1][0],minLon:S.terrainGrid[0][1],maxLon:S.terrainGrid[0][1]+(S.terrainGrid[1]?S.terrainGrid[1][1]-S.terrainGrid[0][1]:0.01)}:{minLat:0,maxLat:1,minLon:0,maxLon:1};S.siteBoundary.forEach((pt,idx)=>{const x=((pt[1]-bounds.minLon)/(bounds.maxLon-bounds.minLon))*W;const y=((bounds.maxLat-pt[0])/(bounds.maxLat-bounds.minLat))*H;idx===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.closePath();ctx.stroke();ctx.setLineDash([]);}
+  if(S.siteBoundary){ctx.strokeStyle='#00d68f';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();const bounds=S.terrainGrid?{minLat:S.terrainGrid[0][0],maxLat:S.terrainGrid[S.terrainGrid.length-1][0],minLon:S.terrainGrid[0][1],maxLon:S.terrainGrid[0][1]+(S.terrainGrid[1]?S.terrainGrid[1][1]-S.terrainGrid[0][1]:0.01)}:{minLat:0,maxLat:1,minLon:0,maxLon:1};S.siteBoundary.forEach((pt,idx)=>{const x=((pt[1]-bounds.minLon)/(bounds.maxLon-bounds.minLon))*mapW;const y=((bounds.maxLat-pt[0])/(bounds.maxLat-bounds.minLat))*mapH;idx===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.closePath();ctx.stroke();ctx.setLineDash([]);}
 }
 
 // ==================== ROUGHNESS MAP ====================
@@ -926,36 +961,105 @@ async function downloadRoughness(){
   }catch(e){statusEl.innerHTML='<span style="color:var(--red)">✗</span> '+e.message;}
 }
 
+function z0Color(v){let r,g,b;
+  if(v<0.001){r=30;g=100;b=200;}
+  else if(v<0.01){r=210;g=190;b=130;}
+  else if(v<0.05){r=80;g=180;b=60;}
+  else if(v<0.3){r=160;g=200;b=50;}
+  else if(v<0.5){r=200;g=160;b=40;}
+  else if(v<1.0){r=40;g=120;b=40;}
+  else{r=140;g=80;b=60;}
+  return`rgb(${r},${g},${b})`;
+}
+function z0ColorRGB(v){let r,g,b;
+  if(v<0.001){r=30;g=100;b=200;}
+  else if(v<0.01){r=210;g=190;b=130;}
+  else if(v<0.05){r=80;g=180;b=60;}
+  else if(v<0.3){r=160;g=200;b=50;}
+  else if(v<0.5){r=200;g=160;b=40;}
+  else if(v<1.0){r=40;g=120;b=40;}
+  else{r=140;g=80;b=60;}
+  return{r,g,b};
+}
+
 function drawRoughnessMap(){
   const canvas=document.getElementById('roughnessCanvas');if(!canvas||!S.roughnessValues)return;
-  const ctx=canvas.getContext('2d');const W=canvas.width,H=canvas.height;ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);
+  const ctx=canvas.getContext('2d');const W=canvas.width,H=canvas.height;
+  const mapW=W-60,mapH=H-30;
+  ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);
   const z0=S.roughnessValues;
   const res=Math.round(Math.sqrt(z0.length));
-  const cellW=W/res;const cellH=H/res;
+  const cellW=mapW/res;const cellH=mapH/res;
   // Color scale based on roughness classes
   for(let i=0;i<res;i++){for(let j=0;j<res;j++){
     const v=z0[i*res+j];
-    let r,g,b;
-    if(v<0.001){r=30;g=100;b=200;}        // Water - blue
-    else if(v<0.01){r=210;g=190;b=130;}     // Sand - tan
-    else if(v<0.05){r=80;g=180;b=60;}       // Grass - green
-    else if(v<0.3){r=160;g=200;b=50;}       // Farmland - yellow-green
-    else if(v<0.5){r=200;g=160;b=40;}       // Scrub - olive
-    else if(v<1.0){r=40;g=120;b=40;}        // Forest - dark green
-    else{r=140;g=80;b=60;}                   // Urban/dense - brown
-    ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(j*cellW,i*cellH,cellW+1,cellH+1);
+    ctx.fillStyle=z0Color(v);ctx.fillRect(j*cellW,i*cellH,cellW+1,cellH+1);
   }}
   // Grid lines
   ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=0.5;
   for(let i=0;i<=res;i+=Math.max(1,Math.floor(res/10))){
-    ctx.beginPath();ctx.moveTo(0,i*cellH);ctx.lineTo(W,i*cellH);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(i*cellW,0);ctx.lineTo(i*cellW,H);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,i*cellH);ctx.lineTo(mapW,i*cellH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(i*cellW,0);ctx.lineTo(i*cellW,mapH);ctx.stroke();
+  }
+  // Colorbar with roughness class labels
+  const cbX=W-40,cbY=20,cbW=14,cbH=mapH-20;
+  // Draw discrete colorbar with class boundaries
+  const z0Classes=[{max:0.001,label:'0.0002'},{max:0.01,label:'0.005'},{max:0.05,label:'0.03'},{max:0.3,label:'0.1'},{max:0.5,label:'0.4'},{max:1.0,label:'0.7'},{max:99,label:'1.5'}];
+  const minZ0=Math.min(...z0);const maxZ0=Math.max(...z0)||1;
+  for(let y=0;y<cbH;y++){
+    const t=1-y/cbH; // 1 at top (high z0), 0 at bottom (low z0)
+    const v=minZ0+t*(maxZ0-minZ0);
+    ctx.fillStyle=z0Color(v);ctx.fillRect(cbX,cbY+y,cbW,2);
+  }
+  ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.strokeRect(cbX,cbY,cbW,cbH);
+  // Colorbar labels (show class boundaries)
+  ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font='8px IBM Plex Mono';ctx.textAlign='left';
+  // Show specific z0 threshold values on colorbar
+  const thresholds=[0.0002,0.001,0.01,0.05,0.3,0.5,1.0];
+  thresholds.forEach(tv=>{
+    if(tv>=minZ0&&tv<=maxZ0){
+      const frac=(tv-minZ0)/(maxZ0-minZ0);
+      const y=cbY+cbH*(1-frac);
+      ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=0.5;
+      ctx.beginPath();ctx.moveTo(cbX,y);ctx.lineTo(cbX+cbW,y);ctx.stroke();
+      ctx.fillText(tv.toString(),cbX+cbW+3,y+3);
+    }
+  });
+  // Top/bottom labels
+  ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='9px IBM Plex Mono';
+  ctx.fillText(maxZ0.toFixed(2)+'m',cbX+cbW+3,cbY+8);
+  ctx.fillText(minZ0.toFixed(4)+'m',cbX+cbW+3,cbY+cbH-2);
+  ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='8px IBM Plex Mono';ctx.textAlign='center';ctx.fillText('z0 (m)',cbX+cbW/2,cbY-5);
+  // Class legend at bottom of colorbar
+  const classNames=[['Water',0.001],['Sand',0.01],['Grass',0.05],['Farm',0.3],['Scrub',0.5],['Forest',1.0],['Urban',99]];
+  ctx.font='7px IBM Plex Mono';ctx.textAlign='left';
+  let ly=cbY+cbH+14;
+  classNames.forEach(([name,threshold])=>{
+    const c=z0ColorRGB(Math.min(threshold-0.0001,maxZ0));
+    ctx.fillStyle=`rgb(${c.r},${c.g},${c.b})`;ctx.fillRect(cbX-8,ly-5,8,8);
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.fillText(name,cbX+2,ly+2);
+    ly+=11;
+  });
+  // Axis tick labels
+  if(S.terrainGrid&&S.terrainGrid.length>1){
+    ctx.fillStyle='rgba(255,255,255,0.35)';ctx.font='8px IBM Plex Mono';ctx.textAlign='center';
+    const gridRes=Math.round(Math.sqrt(S.terrainGrid.length));
+    for(let j=0;j<gridRes;j+=Math.max(1,Math.floor(gridRes/5))){
+      const lon=S.terrainGrid[j][1];
+      ctx.fillText(lon.toFixed(3)+'E',j*cellW,mapH+12);
+    }
+    ctx.textAlign='right';
+    for(let i=0;i<gridRes;i+=Math.max(1,Math.floor(gridRes/5))){
+      const lat=S.terrainGrid[i*gridRes][0];
+      ctx.fillText(lat.toFixed(3)+'N',mapW-3,i*cellH+cellH/2+3);
+    }
   }
   // Site boundary overlay
   if(S.siteBoundary){
     ctx.strokeStyle='#f5a623';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();
     const bounds=S.terrainGrid?{minLat:S.terrainGrid[0][0],maxLat:S.terrainGrid[S.terrainGrid.length-1][0],minLon:S.terrainGrid[0][1],maxLon:S.terrainGrid[0][1]+(S.terrainGrid[1]?S.terrainGrid[1][1]-S.terrainGrid[0][1]:0.01)}:{minLat:0,maxLat:1,minLon:0,maxLon:1};
-    S.siteBoundary.forEach((pt,idx)=>{const x=((pt[1]-bounds.minLon)/(bounds.maxLon-bounds.minLon))*W;const y=((bounds.maxLat-pt[0])/(bounds.maxLat-bounds.minLat))*H;idx===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.closePath();ctx.stroke();ctx.setLineDash([]);
+    S.siteBoundary.forEach((pt,idx)=>{const x=((pt[1]-bounds.minLon)/(bounds.maxLon-bounds.minLon))*mapW;const y=((bounds.maxLat-pt[0])/(bounds.maxLat-bounds.minLat))*mapH;idx===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.closePath();ctx.stroke();ctx.setLineDash([]);
   }
 }
 
@@ -1125,6 +1229,63 @@ function autoGridLayout(){if(!S.siteBoundary||!S.turbine){alert('Define site and
   const cLat=(minLat+maxLat)/2;const cLon=(minLon+maxLon)/2;const np=[];const cols=Math.floor((maxLon-minLon)/sd)+1;const rows=Math.floor((maxLat-minLat)/sd)+1;
   for(let r=0;r<rows;r++){for(let c2=0;c2<cols;c2++){const lat=minLat+r*sd;const lon=minLon+c2*sd;const rx=(lon-cLon)*Math.cos(ar)-(lat-cLat)*Math.sin(ar);const ry=(lon-cLon)*Math.sin(ar)+(lat-cLat)*Math.cos(ar);const plat=cLat+ry;const plon=cLon+rx;if(pointInPolygon(plat,plon,S.siteBoundary)){let ok=true;for(const p of np){const dx2=(plon-p.lon)*Math.cos(p.lat*Math.PI/180)*111320;const dy2=(plat-p.lat)*111320;if(Math.sqrt(dx2*dx2+dy2*dy2)<sm)break;}if(ok)np.push({plat,plon});}}}
   S.positions=[];np.forEach((p,i)=>{S.positions.push({id:i+1,lat:p.plat,lon:p.plon});});refreshTurbineMarkers();updateLayoutInfo();}
+
+function autoGridLayoutOptimized(){
+  if(!S.siteBoundary||!S.turbine){alert('Define site boundary and configure a turbine first.');return;}
+  const rd=S.turbine.RD;
+  const d=parseFloat(document.getElementById('spacingD').value)||5;
+  const sm=rd*d; // spacing in meters
+  const desiredCap=parseFloat(document.getElementById('desiredCapacity').value)||50;
+  const turbinesNeeded=Math.max(1,Math.ceil(desiredCap/S.turbine.power));
+  // Determine grid angle from prevailing wind direction
+  let ang=parseFloat(document.getElementById('gridAngle').value)||0;
+  if(document.getElementById('windAlignGrid').value==='1'&&S.windData&&S.windData.length>=12){
+    // Find prevailing wind direction (TO direction)
+    let maxFreq=0,predDir=0;
+    S.windData.forEach(s=>{if(s.freq>maxFreq){maxFreq=s.freq;predDir=s.dir;}});
+    // Align rows perpendicular to prevailing wind (TO direction)
+    // Row direction = perpendicular to wind = wind_dir + 90
+    ang=predDir+90;
+    document.getElementById('gridAngle').value=ang.toFixed(0);
+  }
+  const ar=ang*Math.PI/180;
+  let minLat=Infinity,maxLat=-Infinity,minLon=Infinity,maxLon=-Infinity;
+  S.siteBoundary.forEach(c=>{if(c[0]<minLat)minLat=c[0];if(c[0]>maxLat)maxLat=c[0];if(c[1]<minLon)minLon=c[1];if(c[1]>maxLon)maxLon=c[1];});
+  const cLat=(minLat+maxLat)/2;const cLon=(minLon+maxLon)/2;
+  const sd=sm/111320; // spacing in degrees
+  const np=[];
+  // Generate candidate positions on a dense grid, keep only those inside boundary
+  const cols=Math.floor((maxLon-minLon)/sd)+1;const rows=Math.floor((maxLat-minLat)/sd)+1;
+  for(let r=0;r<rows;r++){for(let c2=0;c2<cols;c2++){
+    const lat=minLat+r*sd;const lon=minLon+c2*sd;
+    const rx=(lon-cLon)*Math.cos(ar)-(lat-cLat)*Math.sin(ar);
+    const ry=(lon-cLon)*Math.sin(ar)+(lat-cLat)*Math.cos(ar);
+    const plat=cLat+ry;const plon=cLon+rx;
+    if(pointInPolygon(plat,plon,S.siteBoundary)){np.push({plat,plon});}
+  }}
+  // Enforce minimum spacing between turbines (greedy selection)
+  const selected=[];
+  // Sort candidates: prefer positions near center (for better wake distribution)
+  np.forEach(p=>{p.dist=Math.sqrt(Math.pow(p.plat-cLat,2)+Math.pow(p.plon-cLon,2));});
+  np.sort((a,b)=>a.dist-b.dist);
+  for(const p of np){
+    if(selected.length>=turbinesNeeded)break;
+    let ok=true;
+    for(const s of selected){
+      const dx2=(p.plon-s.plon)*Math.cos(s.plat*Math.PI/180)*111320;
+      const dy2=(p.plat-s.plat)*111320;
+      if(Math.sqrt(dx2*dx2+dy2*dy2)<sm*0.9){ok=false;break;}
+    }
+    if(ok)selected.push(p);
+  }
+  S.positions=[];
+  selected.forEach((p,i)=>{S.positions.push({id:i+1,lat:p.plat,lon:p.plon});});
+  refreshTurbineMarkers();updateLayoutInfo();
+  if(selected.length<turbinesNeeded){
+    const achieved=(selected.length*S.turbine.power).toFixed(1);
+    alert(`Only ${selected.length} turbines fit in the site boundary (${achieved} MW of ${desiredCap} MW desired). Try reducing spacing or desired capacity.`);
+  }
+}
 function clearLayout(){S.positions=[];refreshTurbineMarkers();updateLayoutInfo();}
 
 // ==================== STEP 8: WAKE MODEL ====================
