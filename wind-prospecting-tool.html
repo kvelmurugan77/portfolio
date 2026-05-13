@@ -474,9 +474,12 @@ async function downloadMeso(source){
 }
 
 // ==================== ROBUST FETCH WITH RETRY ====================
-async function fetchWithRetry(url,opts={},maxRetries=5){
+async function fetchWithRetry(url,opts,maxRetries){
+  if(typeof opts==='number'){maxRetries=opts;opts={};}
+  if(!opts)opts={};
+  if(typeof maxRetries!=='number'||maxRetries<1)maxRetries=5;
   let lastError;
-  const timeoutMs=(opts&&opts._timeout)||60000;
+  const timeoutMs=opts._timeout||60000;
   const fetchOpts=Object.assign({},opts);delete fetchOpts._timeout;
   for(let attempt=1;attempt<=maxRetries;attempt++){
     const controller=new AbortController();
@@ -519,7 +522,7 @@ async function fetchNASAPower(lat,lon,startYYYY,endYYYY){
   const startD=startYYYY+'0101';
   const endD=endYYYY+'1231';
   const url=`https://power.larc.nasa.gov/api/temporal/daily/point?start=${startD}&end=${endD}&latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&community=RE&parameters=WS10M,WS50M,WD10M&format=json&time-standard=lst`;
-  const resp=await fetchWithRetry(url,{},{_timeout:90000});
+  const resp=await fetchWithRetry(url,{_timeout:90000});
   const data=await resp.json();
   if(data.header&&data.messages&&data.messages.length>0&&data.properties===undefined){
     throw new Error('NASA POWER: '+data.messages.join('; '));
