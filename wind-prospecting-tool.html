@@ -355,7 +355,17 @@ const DS_INFO={
 };
 
 // ==================== INIT ====================
-window.addEventListener('DOMContentLoaded',()=>{setTimeout(()=>{initSiteMap();},300);initWindManualTable();updateSpacingM();onTurbineSelect();document.getElementById('landCover').addEventListener('change',function(){const v=this.value;const z0={water:0.0002,sand:0.001,grass:0.03,farm:0.05,suburb:0.3,forest:0.5,urban:1.0,custom:null};if(z0[v]!==null)document.getElementById('z0Site').value=z0[v];});
+window.addEventListener('DOMContentLoaded',function(){
+  setTimeout(function(){initSiteMap();},300);
+  initWindManualTable();
+  updateSpacingM();
+  onTurbineSelect();
+  document.getElementById('landCover').addEventListener('change',function(){
+    var v=this.value;
+    var z0={water:0.0002,sand:0.001,grass:0.03,farm:0.05,suburb:0.3,forest:0.5,urban:1.0,custom:null};
+    if(z0[v]!==null)document.getElementById('z0Site').value=z0[v];
+  });
+});
 
 // ==================== GAMMA (Stirling approx) ====================
 function gammaFn(z){if(z<0.5)return Math.PI/(Math.sin(Math.PI*z)*gammaFn(1-z));z-=1;const g=7;const c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];let x=c[0];for(let i=1;i<g+2;i++)x+=c[i]/(z+i);const t=z+g+0.5;return Math.sqrt(2*Math.PI)*Math.pow(t,z+0.5)*Math.exp(-t)*x;}
@@ -476,11 +486,11 @@ async function downloadGWA(lat,lon,h){
   const base=4.5+3.5*latFactor;const ms=base*elevFactor*(hFactor/3.8);
   const wk=1.8+0.4*latFactor;const wa=ms/gammaFn(1+1/wk);
   const pd=0.5*1.225*Math.pow(wa,3)*gammaFn(1+3/wk);
-  const sectors=generateGWASeectors(lat,ms,wa,wk);
+  const sectors=generateGWASectors(lat,ms,wa,wk);
   return{meanSpeed:ms,weibullA:wa,weibullK:wk,powerDensity:pd,height:h,elevation:elev,records:0,sectors,period:'Long-term'};
 }
 
-function generateGWASeectors(lat,ms,wa,wk){
+function generateGWASectors(lat,ms,wa,wk){
   let predDir=225;if(Math.abs(lat)>15)predDir=270;if(Math.abs(lat)>35)predDir=250;
   if(Math.abs(lat)<15)predDir=225;if(Math.abs(lat)<10)predDir=180;
   const conc=1.5+Math.pow(Math.abs(Math.sin(lat*Math.PI/180)),0.6)*2;
@@ -498,7 +508,7 @@ async function downloadCountryMeso(source,lat,lon,h){
   const base=4+3*latF;const ms=base*(1+elev*0.001)*(Math.log(h/0.03)/Math.log(100/0.03)/3.8);
   const wk=1.8+0.4*latF;const wa=ms/gammaFn(1+1/wk);
   const pd=0.5*1.225*Math.pow(wa,3)*gammaFn(1+3/wk);
-  const sectors=generateGWASeectors(lat,ms,wa,wk);
+  const sectors=generateGWASectors(lat,ms,wa,wk);
   return{meanSpeed:ms,weibullA:wa,weibullK:wk,powerDensity:pd,height:h,elevation:elev,records:0,sectors,period:'Long-term'};
 }
 
@@ -635,7 +645,7 @@ function drawTerrainMap(){
 function runFlowModel(){
   if(!S.windData){alert('Load wind data first.');return;}
   const height=parseFloat(document.getElementById('flowHeight').value)||100;
-  const fetch=parseFloat(document.getElementById('upstreamFetch').value)||5;
+  const fetchDist=parseFloat(document.getElementById('upstreamFetch').value)||5;
   const modelType=document.getElementById('flowModelType').value;
   const z0up=parseFloat(document.getElementById('z0Upstream').value)||0.03;
   const z0site=parseFloat(document.getElementById('z0Site').value)||0.05;
@@ -658,7 +668,7 @@ function runFlowModel(){
           if(dist>0)maxSlope=Math.max(maxSlope,dz/dist);
         }
         // BZ speed-up factor (Troen & Petersen, 1989)
-        const hillLength=fetch*1000;const heff=hillLength*maxSlope;
+        const hillLength=fetchDist*1000;const heff=hillLength*maxSlope;
         bzFactor=1+0.5*Math.max(-0.3,Math.min(0.5,heff/hillLength));
       }else{
         // Simplified without terrain
@@ -668,7 +678,7 @@ function runFlowModel(){
     }
     // IBL roughness change model
     if(modelType==='combined'||modelType==='ibl'){
-      const dist=fetch*1000;const dIBL=0.28*Math.pow(z0site,0.2)*Math.pow(dist,0.8);
+      const dist=fetchDist*1000;const dIBL=0.28*Math.pow(z0site,0.2)*Math.pow(dist,0.8);
       if(height>=dIBL){iblFactor=Math.log(height/z0up)/Math.log(height/z0site);}
       else{const uAbove=Math.log(dIBL/z0up);const uBelow=Math.log(height/z0site)/Math.log(dIBL/z0site);iblFactor=uBelow/Math.max(0.01,uAbove);}
     }
@@ -783,7 +793,7 @@ function runWakeCalculation(){
         const crosswind=Math.abs(-rx*Math.sin(wDirRad)+ry*Math.cos(wDirRad));
         let def=0;const v=ws.meanSpeed*(S.flowCorrections?S.flowCorrections[si].combined:1);const ct=thrustCoeff(v,S.turbine);
         if(model==='jensen'){const rw=S.turbine.RD/2+k*downwind;const overlap=Math.max(0,1-crosswind/(2*rw));def=ct*Math.pow(S.turbine.RD/(2*rw),2)*overlap;}
-        else if(model==='frandsen'){const A=sx*rw*sx;const def=Math.min(0.98,1-Math.sqrt(1-Math.max(0,ct/(1+0.84*Math.pow(downwind/(Math.max(1,S.turbine.RD)),2)))));}
+        else if(model==='frandsen'){const rwF=S.turbine.RD/2+k*downwind;const overlapF=Math.max(0,1-crosswind/(2*rwF));def=Math.min(0.98,ct*(S.turbine.RD/(2*rwF))*(S.turbine.RD/(2*rwF))*overlapF);}
         else if(model==='bastankhah'){const beta=0.5/Math.sqrt(Math.log(1/(1-Math.max(0.001,ct))));const eps=0.2*Math.sqrt(beta);const sigma=eps*downwind+S.turbine.RD/2;const gaussDef=(1-Math.sqrt(1-Math.max(0,ct)/Math.pow(1+2*sigma*sigma/(downwind*eps+S.turbine.RD),2)))*Math.exp(-crosswind*crosswind/(2*sigma*sigma));def=Math.max(0,gaussDef);}
         rss+=def*def;sectorDefs.push(def);
       });
@@ -947,7 +957,7 @@ async function loadDemoAll(){
 
 function clearAll(){
   S.step=1;S.siteBoundary=null;S.siteArea=0;S.siteCountry=null;S.windData=null;S.turbine=null;S.positions=[];S.wakeResults=null;S.aepResults=null;S.terrainGrid=null;S.terrainElevations=null;S.flowResults=null;S.mesoData=[];S.flowCorrections=null;
-  if(drawnItems)drawnItems.clearLayers();if(turbineMarkers)turbineMarkers.clearLayers();if(boundaryLayer)layoutMap&&layoutMap.removeLayer(boundaryLayer);
+  if(drawnItems)drawnItems.clearLayers();if(turbineMarkers)turbineMarkers.clearLayers();if(spacingCircles)spacingCircles.clearLayers();if(boundaryLayer&&layoutMap)layoutMap.removeLayer(boundaryLayer);
   document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));document.getElementById('step1').classList.add('active');
   document.querySelectorAll('.step-item').forEach(s=>{s.classList.remove('active','done');if(parseInt(s.dataset.step)===1)s.classList.add('active');});
   for(let i=2;i<=10;i++)document.getElementById('step'+i+'Next').disabled=true;
