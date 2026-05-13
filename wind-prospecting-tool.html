@@ -760,31 +760,41 @@ async function downloadTerrain(){
   try{
     const dLat=extent/111320;const dLon=extent/(111320*Math.cos(lat*Math.PI/180));
     const pts=[];for(let i=0;i<res;i++)for(let j=0;j<res;j++)pts.push([lat-dLat/2+dLat*i/(res-1),lon-dLon/2+dLon*j/(res-1)]);
-    // Batch requests in chunks of 50 to avoid rate limits (429)
-    const batchSize=50;const allElevations=[];
+    // Batch requests: max 100 points per request (Open-Meteo URL length limit ~1800 chars)
+    // Use 1.5s delay between batches to stay under Open-Meteo rate limits
+    const batchSize=100;const allElevations=[];
     const totalBatches=Math.ceil(pts.length/batchSize);
     for(let b=0;b<totalBatches;b++){
       const start=b*batchSize;const end=Math.min(start+batchSize,pts.length);
       const batchPts=pts.slice(start,end);
-      const bLats=batchPts.map(p=>p[0]).join(',');const bLons=batchPts.map(p=>p[1]).join(',');
+      const bLats=batchPts.map(p=>p[0].toFixed(4)).join(',');
+      const bLons=batchPts.map(p=>p[1].toFixed(4)).join(',');
       const url='https://api.open-meteo.com/v1/elevation?latitude='+bLats+'&longitude='+bLons;
-      let resp;
-      try{
-        resp=await fetchWithRetry(url);
-      }catch(fetchErr){
-        throw new Error('Elevation API error at batch '+(b+1)+'/'+totalBatches+': '+fetchErr.message);
+      let resp=null;
+      // Custom retry loop: 6 attempts with long waits for 429 rate limits
+      for(let attempt=1;attempt<=6;attempt++){
+        try{
+          const r=await fetch(url);
+          if(r.status===429){
+            const wait=attempt<3?3000:8000+Math.random()*4000;
+            statusEl.innerHTML='<span class="spinner"></span> Rate limited, waiting '+(wait/1000).toFixed(0)+'s (batch '+Math.round((end/pts.length)*100)+'%)...';
+            await new Promise(rw=>setTimeout(rw,wait));
+            continue;
+          }
+          if(!r.ok)throw new Error('HTTP '+r.status);
+          resp=r;break;
+        }catch(e){
+          if(attempt===6)throw new Error('Elevation API failed at batch '+(b+1)+'/'+totalBatches+': '+e.message);
+          await new Promise(rw=>setTimeout(rw,2000*attempt+Math.random()*1000));
+        }
       }
-      if(!resp)throw new Error('Elevation API returned no response at batch '+(b+1));
+      if(!resp)throw new Error('No response from elevation API at batch '+(b+1));
       let data;
-      try{
-        data=await resp.json();
-      }catch(jsonErr){
-        throw new Error('Failed to parse elevation data at batch '+(b+1));
-      }
+      try{data=await resp.json();}catch(e){throw new Error('Failed to parse elevation data at batch '+(b+1));}
       if(data.elevation)allElevations.push(...data.elevation);
       statusEl.innerHTML='<span class="spinner"></span> Downloading elevation grid... ('+Math.round((end/pts.length)*100)+'%)';
-      // Delay between batches to avoid rate limiting (300ms is safe for Open-Meteo)
-      if(b<totalBatches-1)await new Promise(r=>setTimeout(r,300));
+      // 1.5s delay between batches to avoid rate limits
+      if(b<totalBatches-1)await new Promise(r=>setTimeout(r,1500));
     }
     if(allElevations.length!==pts.length)throw new Error('Received '+allElevations.length+' of '+pts.length+' elevation values');
     S.terrainGrid=pts;S.terrainElevations=allElevations;
