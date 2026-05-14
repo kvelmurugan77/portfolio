@@ -431,7 +431,7 @@ function calcPolygonArea(c){const R=6371;let a=0;const n=c.length;for(let i=0;i<
 
 function getPolygonCentroid(c){let x=0,y=0;const n=c.length;for(let i=0;i<n;i++){x+=c[i][0];y+=c[i][1];}return[x/n,y/n];}
 
-function pointInPolygon(lat,lon,poly){let inside=false;const n=poly.length;for(let i=0,j=n-1;i<n;j=i++){const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];if(((yi>lat)!==(yj>lat))&&(lon<(xj-xi)*(lat-yi)/(yj-yi)+xi))inside=!inside;}return inside;}
+function pointInPolygon(lat,lon,poly){let inside=false;const n=poly.length;for(let i=0,j=n-1;i<n;j=i++){const lati=poly[i][0],loni=poly[i][1],latj=poly[j][0],lonj=poly[j][1];if(((lati>lat)!==(latj>lat))&&(lon<(lonj-loni)*(lat-lati)/(latj-lati)+loni))inside=!inside;}return inside;}
 
 function updateSiteInfo(){
   document.getElementById('siteAreaVal').textContent=S.siteArea>0?S.siteArea.toFixed(2):'—';
