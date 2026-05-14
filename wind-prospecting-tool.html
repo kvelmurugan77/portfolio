@@ -403,16 +403,13 @@ function gammaFn(z){if(z<0.5)return Math.PI/(Math.sin(Math.PI*z)*gammaFn(1-z));z
 
 // ==================== NAVIGATION ====================
 function goToStep(n){
+  // Only guard prerequisite DATA steps (site, wind, turbine).
+  // Wake/AEP/Export steps are freely navigable — validation is on the Run button.
   if(n > S.step){
     if(n===2&&!S.siteBoundary){alert('Define a site boundary first.');return;}
     if(n===3&&!S.windData){alert('Load wind resource data first.');return;}
     if(n===5&&!S.windData){alert('Load wind data first.');return;}
-    // Step 6 (Turbine) is where you configure the turbine — no pre-check needed
-    // Only steps after turbine config need the check
     if(n===7&&!S.turbine){alert('Configure a turbine in Step 6 first (select and click Apply Turbine).');return;}
-    if(n===8&&!S.wakeResults){alert('Run wake calculation first.');return;}
-    if(n===9&&!S.wakeResults){alert('Run wake calculation first.');return;}
-    if(n===10&&!S.aepResults){alert('Calculate AEP first.');return;}
   }
   S.step=n;
   document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));
@@ -1235,19 +1232,25 @@ function initLayoutMap(){
   // Always destroy and recreate for reliable init after hidden-panel show
   if(layoutMap){layoutMap.remove();layoutMap=null;boundaryLayer=null;turbineMarkers=null;spacingCircles=null;if(S._windOverlay){S._windOverlay=null;}}
   if(!S.siteBoundary){return;}
-  var c=getPolygonCentroid(S.siteBoundary);
-  // Delay to ensure panel is fully visible with proper dimensions
+  var boundary=S.siteBoundary; // capture reference
+  var c=getPolygonCentroid(boundary);
+  var area=S.siteArea;
+  // Step panel fadeIn animation is 350ms — wait longer so container has full dimensions
   setTimeout(function(){
     try{
-      layoutMap=L.map('layoutMap',{zoomControl:true}).setView(c,13);
+      // Create map WITHOUT setView — we'll use fitBounds after invalidateSize
+      layoutMap=L.map('layoutMap',{zoomControl:true,center:c,zoom:13});
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM',maxZoom:19}).addTo(layoutMap);
       // Boundary polygon: interactive:false so map clicks pass through
-      boundaryLayer=L.polygon(S.siteBoundary,{color:'#00d68f',weight:3,fillColor:'#00d68f',fillOpacity:.1,interactive:false}).addTo(layoutMap);
-      layoutMap.fitBounds(boundaryLayer.getBounds(),{padding:[40,40]});
-      // Area label
-      var areaLabel=L.divIcon({className:'',html:'<div style="background:rgba(0,214,143,.85);color:#07111e;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;font-family:IBM Plex Mono,monospace;white-space:nowrap">'+S.siteArea.toFixed(2)+' km\u00B2</div>',iconSize:null,iconAnchor:[40,10]});
+      boundaryLayer=L.polygon(boundary,{color:'#00d68f',weight:3,fillColor:'#00d68f',fillOpacity:.1,interactive:false}).addTo(layoutMap);
+      // Area label at centroid
+      var areaLabel=L.divIcon({className:'',html:'<div style="background:rgba(0,214,143,.85);color:#07111e;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;font-family:IBM Plex Mono,monospace;white-space:nowrap">'+area.toFixed(2)+' km\u00B2</div>',iconSize:null,iconAnchor:[40,10]});
       L.marker(c,{icon:areaLabel,interactive:false}).addTo(layoutMap);
       turbineMarkers=L.layerGroup().addTo(layoutMap);spacingCircles=L.layerGroup().addTo(layoutMap);
+      // Critical: invalidateSize forces Leaflet to read actual container dimensions,
+      // then fitBounds correctly centers on the boundary polygon
+      layoutMap.invalidateSize();
+      layoutMap.fitBounds(boundaryLayer.getBounds(),{padding:[40,40],maxZoom:16,animate:false});
       // Click handler for manual turbine placement
       layoutMap.on('click',function(e){
         if(!S.siteBoundary)return;
@@ -1263,17 +1266,17 @@ function initLayoutMap(){
         setTimeout(function(){
           if(S.windData&&S.windData.length>=1){autoGridLayoutWindAware();}
           else{autoGridLayoutOptimized();}
-        },350);
+        },200);
       }else{refreshTurbineMarkers();}
       // Show wind speed overlay if wind data available
       if(S.windData){
         setTimeout(function(){
           var wg=computeWindSpeedGrid();
           if(wg){showWindSpeedOverlay(wg);S._windGrid=wg;}
-        },500);
+        },400);
       }
     }catch(err){console.error('Layout map init error:',err);}
-  },250);
+  },400);
 }
 
 function addTurbinePosition(lat,lon){S.positions.push({id:S.positions.length+1,lat,lon});refreshTurbineMarkers();updateLayoutInfo();}
