@@ -37,13 +37,14 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 @media(max-width:900px){.g2,.g3{grid-template-columns:1fr}.g4,.g5{grid-template-columns:1fr 1fr}.kpi-strip{grid-template-columns:repeat(3,1fr)}.form-row{flex-direction:column}.stepper{padding:.5rem}.main{padding:.8rem 1rem 2rem}.ds-grid{grid-template-columns:1fr}}
 @media(max-width:600px){.g4,.g5{grid-template-columns:1fr}.step-label{display:none}}
-@media print{.topbar,.stepper,.nav-row,.btn{display:none!important}.main{padding:0;max-width:none}.card{page-break-inside:avoid}}
+.tab-bar{display:flex;gap:2px;margin-bottom:1rem;border-bottom:1px solid var(--border);padding-bottom:0}.tab-btn{font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.45rem .9rem;cursor:pointer;border:none;background:none;color:var(--text3);border-bottom:2px solid transparent;transition:all .2s}.tab-btn:hover{color:var(--text2)}.tab-btn.active{color:var(--mint);border-bottom-color:var(--mint)}.tab-panel{display:none}.tab-panel.active{display:block}.gauge-wrap{position:relative;display:inline-block}.gauge-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:.5rem;color:var(--text3);font-family:var(--mono);white-space:nowrap}.uncertainty-bar{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}.uncertainty-bar label{font-size:.62rem;color:var(--text2);font-family:var(--mono);width:140px;flex-shrink:0}.uncertainty-bar input{width:60px}.uncertainty-bar .val{font-size:.62rem;color:var(--text3);font-family:var(--mono);width:30px}.constraint-legend{display:flex;gap:.5rem;margin-top:.5rem;align-items:center;flex-wrap:wrap}.constraint-legend .pill{display:flex;align-items:center;gap:.3rem;font-size:.6rem;color:var(--text3);font-family:var(--mono)}.constraint-legend .dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+@media print{.topbar,.stepper,.nav-row,.btn{display:none!important}.main{padding:0;max-width:none}.card{page-break-inside:avoid}.step-panel{display:block!important;page-break-before:always}.step-panel:first-child{page-break-before:auto}}
 </style>
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.6rem"><span class="brand-badge">WINDPRO-STYLE</span><span class="brand-title">Wind Farm Designer Pro</span></div><div class="brand-sub">Mesoscale Data · WAsP Flow Model · Wake · AEP</div></div></div>
-  <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemoAll()">⚡ Demo</button><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.6rem"><span class="brand-badge">WINDPRO-STYLE</span><span class="brand-title" id="topbarTitle">Wind Farm Designer Pro</span></div><div class="brand-sub">Mesoscale Data · WAsP Flow · Wake · AEP · Uncertainty · Financial</div></div></div>
+  <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemoAll()">⚡ Demo</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
   <div class="step-item active" data-step="1" onclick="goToStep(1)"><div class="step-num">1</div><span class="step-label">Site</span></div><div class="step-connector"></div>
@@ -61,6 +62,10 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
 
 <!-- ===== STEP 1: SITE SELECTION ===== -->
 <div class="step-panel active" id="step1">
+  <div class="card" style="margin-bottom:1rem"><div class="card-title green">Project Information</div>
+    <div class="g3" style="gap:.6rem"><div class="fg"><label class="fl">Project Name</label><input class="fi" id="projName" placeholder="e.g. Black Sea Wind Farm" oninput="S.projectName=this.value;updateTopbar()"></div><div class="fg"><label class="fl">Developer</label><input class="fi" id="projDev" placeholder="e.g. Wind Energy Corp" oninput="S.projectDeveloper=this.value"></div><div class="fg"><label class="fl">Project Number</label><input class="fi" id="projNum" placeholder="e.g. PRJ-2026-001" oninput="S.projectNumber=this.value"></div></div>
+    <div class="fg" style="margin-top:.4rem"><label class="fl">Description</label><input class="fi" id="projDesc" placeholder="Brief project description..." oninput="S.projectDescription=this.value"></div>
+  </div>
   <div class="alert alert-info">Draw a polygon on the map to define the wind farm project boundary. The country and coordinate info will be auto-detected for mesoscale data sourcing.</div>
   <div class="g2">
     <div class="card"><div class="card-title green">Site Boundary Map</div><div id="siteMap"></div></div>
@@ -133,7 +138,18 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div style="padding:.6rem;background:var(--bg3);border-radius:var(--radius2);text-align:center"><div class="metric-val" id="wsPredDir">—</div><div class="metric-label">Prevailing (°)</div></div>
         <div style="padding:.6rem;background:var(--bg3);border-radius:var(--radius2);text-align:center"><div class="metric-val gold" id="wsPredFreq">—</div><div class="metric-label">Max Freq (%)</div></div>
       </div>
+      <div class="g3" style="gap:.6rem;margin-top:.6rem">
+        <div style="padding:.6rem;background:var(--bg3);border-radius:var(--radius2);text-align:center"><div class="metric-val" id="wsTI">—</div><div class="metric-label">Turbulence Intensity</div></div>
+        <div style="padding:.6rem;background:var(--bg3);border-radius:var(--radius2);text-align:center"><div class="metric-val sky" id="wsIECClass">—</div><div class="metric-label">IEC Class</div></div>
+        <div style="padding:.6rem;background:var(--bg3);border-radius:var(--radius2);text-align:center"><div class="metric-val gold" id="wsExtreme50">—</div><div class="metric-label">50yr Wind (m/s)</div></div>
+      </div>
     </div>
+  </div>
+  <div style="margin-top:1rem">
+    <div class="tab-bar"><button class="tab-btn active" onclick="showWindTab(0,this)">Shear Profile</button><button class="tab-btn" onclick="showWindTab(1,this)">Frequency Distribution</button><button class="tab-btn" onclick="showWindTab(2,this)">TI by Sector</button></div>
+    <div class="tab-panel active" id="windTab0"><div class="canvas-wrap"><canvas id="shearProfileCanvas" width="700" height="350"></canvas></div></div>
+    <div class="tab-panel" id="windTab1"><div class="canvas-wrap"><canvas id="freqDistCanvas" width="700" height="350"></canvas></div></div>
+    <div class="tab-panel" id="windTab2"><div class="canvas-wrap"><canvas id="tiSectorCanvas" width="700" height="350"></canvas></div></div>
   </div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(2)">← Meso Data</button><button class="btn btn-primary" id="step3Next" onclick="goToStep(4)" disabled>Next: Terrain →</button></div>
 </div>
@@ -204,6 +220,12 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div class="fg"><label class="fl">Upstream Fetch (km)</label><input class="fi" type="number" id="upstreamFetch" value="5" min="0.5" max="50" step="0.5"></div>
         <div class="fg"><label class="fl">Critical Slope (RIX)</label><input class="fi" type="number" id="criticalSlope" value="0.3" min="0.1" max="1.0" step="0.05"></div>
       </div>
+      <div class="card-title" style="margin-top:.8rem;margin-bottom:.5rem">Air Density Correction</div>
+      <div class="g3" style="gap:.6rem">
+        <div class="fg"><label class="fl">Temperature (°C)</label><input class="fi" type="number" id="airTemp" value="15" min="-40" max="50" step="1"></div>
+        <div class="fg"><label class="fl">Site Elevation (m ASL)</label><input class="fi" type="number" id="siteElevManual" value="0" readonly style="color:var(--sky)"></div>
+        <div class="fg"><label class="fl">Air Density (kg/m³)</label><input class="fi" type="number" id="airDensityVal" value="1.225" readonly style="color:var(--mint)"></div>
+      </div>
       <button class="btn btn-primary" style="margin-top:.7rem" onclick="runFlowModel()">▶ Run Flow Model</button>
     </div>
     <div class="card"><div class="card-title gold">Sector Flow Corrections</div><div class="canvas-wrap"><canvas id="flowWheelCanvas" width="500" height="500"></canvas></div>
@@ -219,7 +241,7 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
 <div class="step-panel" id="step6">
   <div class="g2">
     <div class="card"><div class="card-title green">Turbine Selection</div>
-      <div class="fg"><label class="fl">Preset Turbine</label><select class="fs" id="turbineSelect" onchange="onTurbineSelect()"><option value="">-- Select Turbine --</option><option value="v136">Vestas V136-4.2MW (RD=67m, HH=112m)</option><option value="v150" selected>Vestas V150-5.6MW (RD=75m, HH=105m)</option><option value="sg14">Siemens SG 14-222 DD (RD=111m, HH=155m)</option><option value="halide">GE Haliade-X 13MW (RD=107m, HH=138m)</option><option value="n163">Nordex N163/5.X (RD=81m, HH=118m)</option><option value="n163_7">Nordex N163-7.0MW (RD=163m, HH=138m)</option><option value="generic">Generic 2MW (RD=80m, HH=80m)</option><option value="custom">Custom Turbine</option></select></div>
+      <div class="fg"><label class="fl">Preset Turbine</label><select class="fs" id="turbineSelect" onchange="onTurbineSelect()"><option value="">-- Select Turbine --</option><optgroup label="Vestas"><option value="v90">V90-2.0MW (RD=90m, HH=80m)</option><option value="v100">V100-1.8MW (RD=100m, HH=80m)</option><option value="v110">V110-2.0MW (RD=110m, HH=95m)</option><option value="v117">V117-3.45MW (RD=117m, HH=93.5m)</option><option value="v136">V136-4.2MW (RD=136m, HH=112m)</option><option value="v150" selected>V150-5.6MW (RD=150m, HH=105m)</option><option value="v162">V162-6.0MW (RD=162m, HH=119m)</option><option value="v164">V164-7.2MW (RD=164m, HH=128m)</option></optgroup><optgroup label="Siemens/SGRE"><option value="sg120">SWT-2.3-93 (RD=93m, HH=80m)</option><option value="sg120w">SWT-3.6-120 (RD=120m, HH=90m)</option><option value="sg14">SG 14-222 DD (RD=222m, HH=155m)</option></optgroup><optgroup label="Nordex"><option value="n90">N90-2.5MW (RD=90m, HH=80m)</option><option value="n117">N117-2.4MW (RD=117m, HH=91m)</option><option value="n131">N131-3.0MW (RD=131m, HH=114m)</option><option value="n149">N149-4.0MW (RD=149m, HH=124m)</option><option value="n163">N163/5.X (RD=163m, HH=118m)</option><option value="n163_7">N163-7.0MW (RD=163m, HH=138m)</option></optgroup><optgroup label="GE"><option value="ge100">1.6-100 (RD=100m, HH=80m)</option><option value="ge120">2.75-120 (RD=120m, HH=96m)</option><option value="halide">Haliade-X 13MW (RD=220m, HH=138m)</option></optgroup><optgroup label="Enercon"><option value="e115">E-115 E3 (RD=115m, HH=92m)</option><option value="e141">E-141 EP4 (RD=141m, HH=129m)</option><option value="e160">E-160 EP5 (RD=160m, HH=166m)</option></optgroup><optgroup label="Goldwind"><option value="gw121">GW 121-2.5MW (RD=121m, HH=90m)</option><option value="gw154">GW 154-6.7MW (RD=154m, HH=110m)</option></optgroup><optgroup label="MingYang"><option value="my135">MySE 3.0-135 (RD=135m, HH=100m)</option><option value="my242">MySE 6.0-242 (RD=242m, HH=146m)</option></optgroup><optgroup label="Generic"><option value="generic">Generic 2MW (RD=80m, HH=80m)</option><option value="generic3">Generic 3MW (RD=100m, HH=90m)</option><option value="generic5">Generic 5MW (RD=126m, HH=90m)</option></optgroup><option value="custom">Custom Turbine</option></select></div>
       <div id="turbineParams">
         <div class="g3" style="gap:.6rem"><div class="fg"><label class="fl">Rotor Diameter (m)</label><input class="fi" type="number" id="tRD" value="150"></div><div class="fg"><label class="fl">Hub Height (m)</label><input class="fi" type="number" id="tHH" value="105"></div><div class="fg"><label class="fl">Rated Power (MW)</label><input class="fi" type="number" id="tPower" value="5.6"></div></div>
         <div class="g3" style="gap:.6rem;margin-top:.5rem"><div class="fg"><label class="fl">Rated Speed (m/s)</label><input class="fi" type="number" id="tRated" value="12.5"></div><div class="fg"><label class="fl">Cut-In Speed (m/s)</label><input class="fi" type="number" id="tCutIn" value="3.0"></div><div class="fg"><label class="fl">Cut-Out Speed (m/s)</label><input class="fi" type="number" id="tCutOut" value="25.0"></div></div>
@@ -306,33 +328,101 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
   </div>
   <div id="aepResultsSection" style="display:none">
     <div class="kpi-strip" id="aepKPIStrip"></div>
-    <div class="g2">
+    <div class="g2" style="margin-top:1rem">
       <div class="card"><div class="card-title green">Per-Sector AEP</div><div class="tbl-wrap" style="max-height:320px"><table class="dt" id="sectorAEPTable"><thead><tr><th>Sector</th><th>Dir (°)</th><th>Freq (%)</th><th>Mean Spd (m/s)</th><th>Gross (GWh)</th><th>Net (GWh)</th></tr></thead><tbody id="sectorAEPBody"></tbody></table></div></div>
       <div class="card"><div class="card-title gold">Per-Turbine AEP</div><div class="tbl-wrap" style="max-height:320px"><table class="dt" id="turbineAEPTable"><thead><tr><th>ID</th><th>Lat</th><th>Lon</th><th>Gross (GWh)</th><th>Net (GWh)</th><th>Wake Loss (%)</th></tr></thead><tbody id="turbineAEPBody"></tbody></table></div></div>
     </div>
-    <div class="card"><div class="card-title">Per-Sector AEP Chart</div><div class="canvas-wrap"><canvas id="aepChartCanvas" width="1100" height="400"></canvas></div></div>
+    <div class="card" style="margin-top:0"><div class="card-title">Per-Sector AEP Chart</div><div class="canvas-wrap"><canvas id="aepChartCanvas" width="1100" height="400"></canvas></div></div>
+    <!-- Uncertainty Analysis -->
+    <div class="card" style="margin-top:0"><div class="card-title gold">Uncertainty Analysis & Probability Yield</div>
+      <div class="g2" style="gap:1rem">
+        <div>
+          <div class="alert alert-info" style="font-size:.68rem">Configure uncertainty sources as percentage of AEP. Combined uncertainty follows RSS (root-sum-square) methodology per IEC 61400-12-1.</div>
+          <div class="uncertainty-bar"><label>Wind Speed (meas.)</label><input type="number" id="uncWind" value="3.0" min="0" max="10" step="0.5" class="fi" onchange="updateUncertainty()"><span class="val">%</span></div>
+          <div class="uncertainty-bar"><label>Wind Shear</label><input type="number" id="uncShear" value="2.0" min="0" max="10" step="0.5" class="fi" onchange="updateUncertainty()"><span class="val">%</span></div>
+          <div class="uncertainty-bar"><label>Flow Model</label><input type="number" id="uncFlow" value="4.0" min="0" max="10" step="0.5" class="fi" onchange="updateUncertainty()"><span class="val">%</span></div>
+          <div class="uncertainty-bar"><label>Wake Model</label><input type="number" id="uncWake" value="3.0" min="0" max="10" step="0.5" class="fi" onchange="updateUncertainty()"><span class="val">%</span></div>
+          <div class="uncertainty-bar"><label>Power Curve</label><input type="number" id="uncPower" value="2.5" min="0" max="10" step="0.5" class="fi" onchange="updateUncertainty()"><span class="val">%</span></div>
+          <div class="uncertainty-bar"><label>Data Source</label><input type="number" id="uncData" value="4.0" min="0" max="10" step="0.5" class="fi" onchange="updateUncertainty()"><span class="val">%</span></div>
+          <div class="uncertainty-bar"><label>Other (inter-annual)</label><input type="number" id="uncOther" value="5.0" min="0" max="10" step="0.5" class="fi" onchange="updateUncertainty()"><span class="val">%</span></div>
+          <button class="btn btn-sm btn-gold" style="margin-top:.5rem" onclick="updateUncertainty()">↻ Recalculate P-values</button>
+        </div>
+        <div>
+          <div class="canvas-wrap"><canvas id="uncertaintyCanvas" width="500" height="350"></canvas></div>
+          <div class="tbl-wrap" style="margin-top:.6rem"><table class="dt"><thead><tr><th>Percentile</th><th>AEP (GWh)</th><th>Capacity Factor</th><th>Full Load Hours</th></tr></thead><tbody id="uncertaintyBody"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+    <!-- Monthly AEP Breakdown -->
+    <div class="card" style="margin-top:0"><div class="card-title sky">Monthly & Seasonal AEP Breakdown</div><div class="canvas-wrap"><canvas id="monthlyAEPCanvas" width="1100" height="350"></canvas></div></div>
+    <!-- Financial Summary -->
+    <div class="card" style="margin-top:0"><div class="card-title green">Financial Analysis</div>
+      <div class="g3" style="gap:.6rem"><div class="fg"><label class="fl">Turbine Cost ($/kW)</label><input class="fi" type="number" id="finTurbCost" value="900" min="0" step="50"></div><div class="fg"><label class="fl">BOP Cost ($/kW)</label><input class="fi" type="number" id="finBOP" value="400" min="0" step="50"></div><div class="fg"><label class="fl">Grid Connection ($)</label><input class="fi" type="number" id="finGrid" value="5000000" min="0" step="100000"></div></div>
+      <div class="g3" style="gap:.6rem;margin-top:.5rem"><div class="fg"><label class="fl">Annual O&M ($/kW/yr)</label><input class="fi" type="number" id="finOM" value="30" min="0" step="5"></div><div class="fg"><label class="fl">PPA Price ($/MWh)</label><input class="fi" type="number" id="finPPA" value="45" min="0" step="1"></div><div class="fg"><label class="fl">Project Life (years)</label><input class="fi" type="number" id="finLife" value="25" min="10" max="40" step="1"></div></div>
+      <div class="g3" style="gap:.6rem;margin-top:.5rem"><div class="fg"><label class="fl">Debt Ratio (%)</label><input class="fi" type="number" id="finDebt" value="70" min="0" max="100" step="5"></div><div class="fg"><label class="fl">Interest Rate (%)</label><input class="fi" type="number" id="finRate" value="6.0" min="0" max="15" step="0.25"></div><div class="fg"><label class="fl">Discount Rate (%)</label><input class="fi" type="number" id="finDiscount" value="8.0" min="0" max="20" step="0.25"></div></div>
+      <button class="btn btn-gold" style="margin-top:.7rem" onclick="calculateFinancial()">💰 Calculate Financials</button>
+      <div id="financialResults" style="margin-top:.7rem"></div>
+    </div>
+    <!-- Noise Assessment -->
+    <div class="card" style="margin-top:0"><div class="card-title">Noise Impact Assessment (ISO 9613-2 Simplified)</div>
+      <div class="g3" style="gap:.6rem"><div class="fg"><label class="fl">Source Power Level (dBA)</label><input class="fi" type="number" id="noiseLw" value="105" min="80" max="120" step="1"></div><div class="fg"><label class="fl">Nearest Dwelling (m)</label><input class="fi" type="number" id="noiseDist" value="500" min="100" max="5000" step="50"></div><div class="fg"><label class="fl">Night Limit (dBA)</label><input class="fi" type="number" id="noiseLimit" value="40" min="30" max="55" step="1"></div></div>
+      <button class="btn btn-sm btn-primary" style="margin-top:.5rem" onclick="calculateNoise()">🔊 Calculate Noise Level</button>
+      <div id="noiseResults" style="margin-top:.5rem"></div>
+    </div>
   </div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(8)">← Wake</button><button class="btn btn-primary" id="step9Next" onclick="goToStep(10)" disabled>Next: Export →</button></div>
 </div>
 
 <!-- ===== STEP 10: EXPORT & REPORT ===== -->
 <div class="step-panel" id="step10">
-  <div class="alert alert-info">Export your wind farm design data and results.</div>
-  <div class="g3" style="margin-bottom:1rem">
-    <div class="card" style="text-align:center;cursor:pointer" onclick="exportLayoutCSV()"><div style="font-size:2rem;margin-bottom:.5rem">📊</div><div style="font-size:.8rem;font-weight:600;margin-bottom:.2rem">Export Layout CSV</div><div style="font-size:.62rem;color:var(--text3)">Turbine positions</div></div>
-    <div class="card" style="text-align:center;cursor:pointer" onclick="exportAEPReport()"><div style="font-size:2rem;margin-bottom:.5rem">📄</div><div style="font-size:.8rem;font-weight:600;margin-bottom:.2rem">Export AEP Report</div><div style="font-size:.62rem;color:var(--text3)">Full results CSV</div></div>
-    <div class="card" style="text-align:center;cursor:pointer" onclick="exportSummaryImage()"><div style="font-size:2rem;margin-bottom:.5rem">🖼</div><div style="font-size:.8rem;font-weight:600;margin-bottom:.2rem">Export Summary Image</div><div style="font-size:.62rem;color:var(--text3)">PNG summary</div></div>
+  <div class="alert alert-info">Export your wind farm design data, financial results, and project report.</div>
+  <div class="g4" style="margin-bottom:1rem">
+    <div class="card" style="text-align:center;cursor:pointer" onclick="exportLayoutCSV()"><div style="font-size:2rem;margin-bottom:.5rem">📊</div><div style="font-size:.8rem;font-weight:600;margin-bottom:.2rem">Layout CSV</div><div style="font-size:.62rem;color:var(--text3)">Turbine positions</div></div>
+    <div class="card" style="text-align:center;cursor:pointer" onclick="exportAEPReport()"><div style="font-size:2rem;margin-bottom:.5rem">📄</div><div style="font-size:.8rem;font-weight:600;margin-bottom:.2rem">AEP Report</div><div style="font-size:.62rem;color:var(--text3)">Full results CSV</div></div>
+    <div class="card" style="text-align:center;cursor:pointer" onclick="exportFullReport()"><div style="font-size:2rem;margin-bottom:.5rem">📋</div><div style="font-size:.8rem;font-weight:600;margin-bottom:.2rem">Full Report CSV</div><div style="font-size:.62rem;color:var(--text3)">All data + financials</div></div>
+    <div class="card" style="text-align:center;cursor:pointer" onclick="exportProjectJSON()"><div style="font-size:2rem;margin-bottom:.5rem">💾</div><div style="font-size:.8rem;font-weight:600;margin-bottom:.2rem">Project JSON</div><div style="font-size:.62rem;color:var(--text3)">Save/load project</div></div>
   </div>
   <div class="card"><div class="card-title green">Project Summary</div><div id="summaryContent" style="background:var(--bg3);border-radius:var(--radius2);padding:1.5rem;font-size:.8rem;line-height:1.75;font-family:var(--mono)"><div class="alert alert-info">Run calculations through Steps 1-9 first.</div></div></div>
-  <div class="card"><div class="card-title gold">Summary Canvas</div><div class="canvas-wrap"><canvas id="summaryCanvas" width="1200" height="800"></canvas></div></div>
-  <div style="display:flex;gap:.5rem;margin-bottom:1rem"><button class="btn btn-ghost" onclick="window.print()">🖨 Print / PDF</button></div>
+  <div class="card"><div class="card-title gold">Summary Report</div><div class="canvas-wrap"><canvas id="summaryCanvas" width="1200" height="900"></canvas></div></div>
+  <div style="display:flex;gap:.5rem;margin-bottom:1rem"><button class="btn btn-ghost" onclick="window.print()">🖨 Print / PDF Report</button></div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(9)">← AEP Results</button></div>
 </div>
 </div><!-- .main -->
 <script>
 // ==================== GLOBAL STATE ====================
-const S={step:1,siteBoundary:null,siteArea:0,siteCountry:null,windData:null,turbine:null,positions:[],wakeResults:null,aepResults:null,terrainGrid:null,terrainElevations:null,flowResults:null,mesoData:[],flowCorrections:null,roughnessGrid:null,roughnessValues:null};
-const TURBINES={v136:{name:'Vestas V136-4.2MW',RD:67,HH:112,ratedSpeed:13,cutIn:3,cutOut:25,power:4.2},v150:{name:'Vestas V150-5.6MW',RD:75,HH:105,ratedSpeed:12.5,cutIn:3,cutOut:25,power:5.6},sg14:{name:'Siemens SG 14-222 DD',RD:111,HH:155,ratedSpeed:13,cutIn:3,cutOut:25,power:14},halide:{name:'GE Haliade-X 13MW',RD:107,HH:138,ratedSpeed:13,cutIn:3,cutOut:25,power:13},n163:{name:'Nordex N163/5.X',RD:81,HH:118,ratedSpeed:12,cutIn:3,cutOut:25,power:5},n163_7:{name:'Nordex N163-7.0MW',RD:163,HH:138,ratedSpeed:12,cutIn:3,cutOut:25,power:7},generic:{name:'Generic 2MW',RD:80,HH:80,ratedSpeed:12.5,cutIn:3,cutOut:25,power:2}};
+const S={step:1,siteBoundary:null,siteArea:0,siteCountry:null,windData:null,turbine:null,positions:[],wakeResults:null,aepResults:null,terrainGrid:null,terrainElevations:null,flowResults:null,mesoData:[],flowCorrections:null,roughnessGrid:null,roughnessValues:null,projectName:'',projectDeveloper:'',projectDescription:'',projectNumber:'',airDensity:1.225,siteElevation:0,financialResults:null,uncertaintyResults:null};
+const TURBINES={
+  v90:{name:'Vestas V90-2.0MW',RD:90,HH:80,ratedSpeed:13,cutIn:3.5,cutOut:25,power:2.0},
+  v100:{name:'Vestas V100-1.8MW',RD:100,HH:80,ratedSpeed:12,cutIn:3,cutOut:20,power:1.8},
+  v110:{name:'Vestas V110-2.0MW',RD:110,HH:95,ratedSpeed:12.5,cutIn:3,cutOut:22,power:2.0},
+  v117:{name:'Vestas V117-3.45MW',RD:117,HH:93.5,ratedSpeed:12.5,cutIn:3,cutOut:22.5,power:3.45},
+  v136:{name:'Vestas V136-4.2MW',RD:136,HH:112,ratedSpeed:13,cutIn:3,cutOut:25,power:4.2},
+  v150:{name:'Vestas V150-5.6MW',RD:150,HH:105,ratedSpeed:12.5,cutIn:3,cutOut:25,power:5.6},
+  v162:{name:'Vestas V162-6.0MW',RD:162,HH:119,ratedSpeed:13,cutIn:3,cutOut:25,power:6.0},
+  v164:{name:'Vestas V164-7.2MW',RD:164,HH:128,ratedSpeed:13,cutIn:3,cutOut:25,power:7.2},
+  sg120:{name:'Siemens SWT-2.3-93',RD:93,HH:80,ratedSpeed:12,cutIn:3,cutOut:25,power:2.3},
+  sg120w:{name:'Siemens SWT-3.6-120',RD:120,HH:90,ratedSpeed:13,cutIn:3,cutOut:25,power:3.6},
+  sg14:{name:'Siemens SG 14-222 DD',RD:222,HH:155,ratedSpeed:13,cutIn:3,cutOut:25,power:14},
+  n90:{name:'Nordex N90-2.5MW',RD:90,HH:80,ratedSpeed:12.5,cutIn:3,cutOut:25,power:2.5},
+  n117:{name:'Nordex N117-2.4MW',RD:117,HH:91,ratedSpeed:12,cutIn:3,cutOut:25,power:2.4},
+  n131:{name:'Nordex N131-3.0MW',RD:131,HH:114,ratedSpeed:11.5,cutIn:3,cutOut:25,power:3.0},
+  n149:{name:'Nordex N149-4.0MW',RD:149,HH:124,ratedSpeed:12.5,cutIn:3,cutOut:25,power:4.0},
+  n163:{name:'Nordex N163/5.X',RD:163,HH:118,ratedSpeed:12,cutIn:3,cutOut:25,power:5},
+  n163_7:{name:'Nordex N163-7.0MW',RD:163,HH:138,ratedSpeed:12,cutIn:3,cutOut:25,power:7},
+  ge100:{name:'GE 1.6-100',RD:100,HH:80,ratedSpeed:11,cutIn:3.5,cutOut:20,power:1.6},
+  ge120:{name:'GE 2.75-120',RD:120,HH:96,ratedSpeed:11.5,cutIn:3,cutOut:22,power:2.75},
+  halide:{name:'GE Haliade-X 13MW',RD:220,HH:138,ratedSpeed:12.5,cutIn:3,cutOut:30,power:13},
+  e115:{name:'Enercon E-115 E3',RD:115,HH:92,ratedSpeed:12,cutIn:2.5,cutOut:28,power:3.0},
+  e141:{name:'Enercon E-141 EP4',RD:141,HD:129,ratedSpeed:12.5,cutIn:2.5,cutOut:28,power:4.2},
+  e160:{name:'Enercon E-160 EP5',RD:160,HH:166,ratedSpeed:12.5,cutIn:2.5,cutOut:28,power:5.56},
+  gw121:{name:'Goldwind GW 121-2.5MW',RD:121,HH:90,ratedSpeed:10.5,cutIn:3,cutOut:22,power:2.5},
+  gw154:{name:'Goldwind GW 154-6.7MW',RD:154,HH:110,ratedSpeed:11.5,cutIn:3,cutOut:25,power:6.7},
+  my135:{name:'MingYang MySE 3.0-135',RD:135,HH:100,ratedSpeed:11,cutIn:3,cutOut:25,power:3.0},
+  my242:{name:'MingYang MySE 6.0-242',RD:242,HH:146,ratedSpeed:12,cutIn:3,cutOut:25,power:6.0},
+  generic3:{name:'Generic 3MW',RD:100,HH:90,ratedSpeed:12,cutIn:3,cutOut:25,power:3},
+  generic5:{name:'Generic 5MW',RD:126,HH:90,ratedSpeed:12,cutIn:3,cutOut:25,power:5},
+  generic:{name:'Generic 2MW',RD:80,HH:80,ratedSpeed:12.5,cutIn:3,cutOut:25,power:2}
+};
 const DL=['N','NNE','ENE','E','ESE','SSE','S','SSW','WSW','W','WNW','NNW'];
 const DD=[0,30,60,90,120,150,180,210,240,270,300,330];
 let siteMap,layoutMap,drawnItems,boundaryLayer,turbineMarkers,spacingCircles;
@@ -807,13 +897,22 @@ function fillManualWindTable(){if(!S.windData)return;S.windData.forEach((s,i)=>{
 
 function applyManualWind(){const sectors=[];for(let i=0;i<12;i++){sectors.push({dir:DD[i],freq:parseFloat(document.getElementById('wmf'+i).value)/100,meanSpeed:parseFloat(document.getElementById('wms'+i).value),A:parseFloat(document.getElementById('wma'+i).value),k:parseFloat(document.getElementById('wmk'+i).value)});}S.windData=sectors;updateWindStats();drawWindRose();document.getElementById('step3Next').disabled=false;}
 
-function updateWindStats(){if(!S.windData)return;let tf=0,ws=0,wa=0,wk=0,mf=0,pd=0;S.windData.forEach(s=>{tf+=s.freq;ws+=s.meanSpeed*s.freq;wa+=s.A*s.freq;wk+=s.k*s.freq;if(s.freq>mf){mf=s.freq;pd=s.dir;}});const ms=ws/tf;const aA=wa/tf;const aK=wk/tf;const pd2=0.5*1.225*Math.pow(aA,3)*gammaFn(1+3/aK);
+function updateWindStats(){if(!S.windData)return;let tf=0,ws=0,wa=0,wk=0,mf=0,pd=0;S.windData.forEach(s=>{tf+=s.freq;ws+=s.meanSpeed*s.freq;wa+=s.A*s.freq;wk+=s.k*s.freq;if(s.freq>mf){mf=s.freq;pd=s.dir;}});const ms=ws/tf;const aA=wa/tf;const aK=wk/tf;const pd2=0.5*S.airDensity*Math.pow(aA,3)*gammaFn(1+3/aK);
   document.getElementById('wsMeanVal').textContent=ms.toFixed(1);document.getElementById('wsWeibullA').textContent=aA.toFixed(1);
   document.getElementById('wsWeibullK').textContent=aK.toFixed(2);document.getElementById('wsPowerDensity').textContent=pd2.toFixed(0);
   document.getElementById('wsPredDir').textContent=pd+'°';document.getElementById('wsPredFreq').textContent=(mf*100).toFixed(1);
   const refH=S.turbine?S.turbine.HH:(S.mesoData.length>0?S.mesoData[0].height:100);
   const msLabel=document.querySelector('#wsMeanVal').parentElement.querySelector('.metric-label');
   if(msLabel)msLabel.textContent='Mean Speed ('+refH+'m)';
+  // Turbulence Intensity
+  const ti=estimateTI(S.windData);
+  document.getElementById('wsTI').textContent=ti.overall.toFixed(3);
+  document.getElementById('wsIECClass').textContent=ti.iecClass;
+  // Extreme wind
+  const v50=extremeWindAnalysis(S.windData);
+  document.getElementById('wsExtreme50').textContent=v50.toFixed(1);
+  // Draw additional charts
+  drawShearProfile();drawFreqDist();drawTISectors();
 }
 
 // ==================== WIND ROSE ====================
@@ -1140,13 +1239,21 @@ function exportRoughnessCSV(){
 }
 
 // ==================== STEP 5: WASP FLOW MODEL ====================
-function runFlowModel(){
+async function runFlowModel(){
   if(!S.windData){alert('Load wind data first.');return;}
   const height=parseFloat(document.getElementById('flowHeight').value)||100;
   const fetchDist=parseFloat(document.getElementById('upstreamFetch').value)||5;
   const modelType=document.getElementById('flowModelType').value;
   const z0up=parseFloat(document.getElementById('z0Upstream').value)||0.03;
   const z0site=parseFloat(document.getElementById('z0Site').value)||0.05;
+  // Air density calculation
+  const temp=parseFloat(document.getElementById('airTemp').value)||15;
+  let elev=S.siteElevation||0;
+  if(S.siteBoundary){const c=getPolygonCentroid(S.siteBoundary);elev=await fetchElevation(c[0],c[1]).catch(()=>0);}
+  S.siteElevation=elev;
+  S.airDensity=calcAirDensity(temp,elev);
+  document.getElementById('siteElevManual').value=Math.round(elev);
+  document.getElementById('airDensityVal').value=S.airDensity.toFixed(3);
   S.flowCorrections=[];
   S.windData.forEach((s,i)=>{
     let bzFactor=1.0;let iblFactor=1.0;
@@ -1707,6 +1814,8 @@ function calculateAEP(){if(!S.wakeResults||!S.turbine||!S.windData){alert('Need 
   // Turbine table
   const tb=document.getElementById('turbineAEPBody');tb.innerHTML='';turbineData.forEach(t=>{tb.innerHTML+=`<tr><td class="num">T${t.id}</td><td class="num">${t.lat.toFixed(5)}</td><td class="num">${t.lon.toFixed(5)}</td><td class="num">${t.gross.toFixed(4)}</td><td class="num" style="font-weight:700">${t.net.toFixed(4)}</td><td class="num" style="color:${t.wakeLoss>10?'var(--red)':'var(--gold)'}">${t.wakeLoss.toFixed(1)}%</td></tr>`;});
   drawAEPChart();document.getElementById('step9Next').disabled=false;
+  // Auto-trigger new features
+  setTimeout(function(){updateUncertainty();drawMonthlyAEP();},200);
 }
 
 function drawAEPChart(){const canvas=document.getElementById('aepChartCanvas');if(!canvas||!S.aepResults)return;const ctx=canvas.getContext('2d');const W=canvas.width,H=canvas.height;ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);const sd=S.aepResults.sectorData;if(!sd||sd.length===0)return;
@@ -1721,26 +1830,589 @@ function drawAEPChart(){const canvas=document.getElementById('aepChartCanvas');i
 // ==================== STEP 10: EXPORT ====================
 function renderSummary(){if(!S.aepResults){document.getElementById('summaryContent').innerHTML='<div class="alert alert-info">Run calculations first.</div>';return;}
   const a=S.aepResults;const t=S.turbine;
+  var finText=S.financialResults?'<div style="margin-top:.5rem"><strong>Financial:</strong> CAPEX: $'+(S.financialResults.totalCapex/1e6).toFixed(1)+'M | NPV: $'+(S.financialResults.npv/1e6).toFixed(1)+'M | IRR: '+(S.financialResults.irr*100).toFixed(1)+'% | LCOE: $'+S.financialResults.lcoe.toFixed(0)+'/MWh | Payback: '+S.financialResults.payback+' yr</div>':'';
+  var uncText=S.uncertaintyResults?'<div style="margin-top:.5rem"><strong>Uncertainty:</strong> P50: '+S.uncertaintyResults.p50.toFixed(1)+' GWh | P90: '+S.uncertaintyResults.p90.toFixed(1)+' GWh (σ='+(S.uncertaintyResults.sigma*100).toFixed(1)+'%)</div>':'';
   document.getElementById('summaryContent').innerHTML=`<div style="margin-bottom:1rem"><span style="color:var(--mint);font-weight:700">Wind Farm Designer Pro — Project Summary</span></div>
-<div class="g2" style="gap:1rem;margin-bottom:1rem"><div><strong>Site:</strong> ${S.siteArea.toFixed(2)} km² | ${S.siteCountry?S.siteCountry.n:'N/A'} | ${S.siteBoundary.length} vertices</div><div><strong>Centroid:</strong> ${getPolygonCentroid(S.siteBoundary)[0].toFixed(4)}, ${getPolygonCentroid(S.siteBoundary)[1].toFixed(4)}</div></div>
+<div class="g2" style="gap:1rem;margin-bottom:1rem"><div><strong>Project:</strong> ${S.projectName||'Untitled'}${S.projectDeveloper?' | '+S.projectDeveloper:''}</div><div><strong>Site:</strong> ${S.siteArea.toFixed(2)} km² | ${S.siteCountry?S.siteCountry.n:'N/A'} | ${S.siteBoundary.length} vertices</div></div>
+<div class="g2" style="gap:1rem;margin-bottom:1rem"><div><strong>Centroid:</strong> ${getPolygonCentroid(S.siteBoundary)[0].toFixed(4)}, ${getPolygonCentroid(S.siteBoundary)[1].toFixed(4)}</div><div><strong>Air Density:</strong> ${S.airDensity.toFixed(3)} kg/m³</div></div>
 <div class="g2" style="gap:1rem;margin-bottom:1rem"><div><strong>Turbine:</strong> ${t.name} | ${t.RD}m RD | ${t.HH}m HH</div><div><strong>Layout:</strong> ${S.positions.length} turbines | ${a.capacity.toFixed(1)} MW</div></div>
 <div class="g2" style="gap:1rem;margin-bottom:1rem"><div><strong>Gross AEP:</strong> <span style="color:var(--mint)">${a.grossAEP.toFixed(2)} GWh</span></div><div><strong>Net AEP:</strong> <span style="color:var(--gold)">${a.netAEP.toFixed(2)} GWh</span></div></div>
-<div><strong>Capacity Factor:</strong> ${a.cf.toFixed(1)}% | <strong>Wake Loss:</strong> ${a.wakeLoss.toFixed(1)}% | <strong>Total Losses:</strong> ${a.totalLoss.toFixed(1)}%</div>`;
+<div><strong>Capacity Factor:</strong> ${a.cf.toFixed(1)}% | <strong>Wake Loss:</strong> ${a.wakeLoss.toFixed(1)}% | <strong>Total Losses:</strong> ${a.totalLoss.toFixed(1)}%</div>${finText}${uncText}`;
   drawSummaryCanvas();
 }
 
-function drawSummaryCanvas(){const canvas=document.getElementById('summaryCanvas');if(!canvas||!S.aepResults)return;const ctx=canvas.getContext('2d');const W=canvas.width,H=canvas.height;ctx.fillStyle='#07111e';ctx.fillRect(0,0,W,H);ctx.fillStyle='#00d68f';ctx.font='bold 20px IBM Plex Sans';ctx.textAlign='left';ctx.fillText('Wind Farm Designer Pro — Summary Report',30,35);ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='12px IBM Plex Mono';ctx.fillText(new Date().toISOString().split('T')[0],30,55);
+function drawSummaryCanvasOld(){return;} // replaced by enhanced version above
 }
 
 function exportLayoutCSV(){if(S.positions.length===0)return;let csv='id,lat,lon,model,rd,hh\n';S.positions.forEach(p=>{csv+=p.id+','+p.lat.toFixed(6)+','+p.lon.toFixed(6)+','+(p.model||'')+','+(p.rd||'')+','+(p.hh||'')+'\n';});downloadFile('wind_farm_layout.csv',csv,'text/csv');}
 
-function importLayoutCSV(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(e){try{const lines=e.target.result.trim().split('\n');const headers=lines[0].toLowerCase().split(',').map(s=>s.trim());const positions=[];let isUTM=false;let utmZone=null;const xIdx=headers.indexOf('x');const yIdx=headers.indexOf('y');const latIdx=headers.indexOf('lat');const lonIdx=headers.indexOf('lon');const lonLongIdx=headers.indexOf('longitude');const idIdx=headers.indexOf('id');const modelIdx=headers.indexOf('model');const rdIdx=headers.indexOf('rd');const hhIdx=headers.indexOf('hh');if(xIdx>=0&&yIdx>=0){const testX=parseFloat(lines[1].split(',')[xIdx]);const testY=parseFloat(lines[1].split(',')[yIdx]);if(testX>10000)isUTM=true;}for(let i=1;i<lines.length;i++){const parts=lines[i].split(',').map(s=>s.trim());if(parts.length<3)continue;let lat,lon,model,rd,hh;if(isUTM){const x=parseFloat(parts[xIdx>=0?xIdx:1]);const y=parseFloat(parts[yIdx>=0?yIdx:2]);if(isNaN(x)||isNaN(y))continue;if(!utmZone){const easting=x-500000;const approxLatDeg=Math.abs(y/111320);const mPerDeg=111320*Math.cos(approxLatDeg*Math.PI/180);const approxLonOffset=easting/mPerDeg;utmZone=Math.floor(((approxLonOffset>=0?15:-15)+180)/6)+1;utmZone=Math.max(1,Math.min(60,utmZone));const r=utmToLatLon(x,y,utmZone,false);if(r.lat>=-90&&r.lat<=90&&r.lon>=-180&&r.lon<=180){lat=r.lat;lon=r.lon;}else{for(let z=31;z<=37;z++){try{const r2=utmToLatLon(x,y,z,false);if(r2.lat>=-90&&r2.lat<=90&&r2.lon>=-180&&r2.lon<=180){utmZone=z;lat=r2.lat;lon=r2.lon;break;}}catch(er){}}}}else{const r=utmToLatLon(x,y,utmZone,false);lat=r.lat;lon=r.lon;}if(isNaN(lat)||isNaN(lon))continue;}else{const latI=latIdx>=0?latIdx:1;const lonI=lonIdx>=0?lonIdx:(lonLongIdx>=0?lonLongIdx:2);lat=parseFloat(parts[latI]);lon=parseFloat(parts[lonI]);if(isNaN(lat)||isNaN(lon))continue;}model=modelIdx>=0?parts[modelIdx]:'';rd=rdIdx>=0?parseFloat(parts[rdIdx]):NaN;hh=hhIdx>=0?parseFloat(parts[hhIdx]):NaN;positions.push({id:idIdx>=0?parts[idIdx]:'T'+(positions.length+1),lat,lon,model,rd,hh});}if(positions.length>0){S.positions=positions;S._importedMeta=(model||rd||hh)?positions.map(p=>({model:p.model,rd:p.rd,hh:p.hh})):null;refreshTurbineMarkers();updateLayoutInfo();if(isUTM)alert('UTM coordinates auto-detected (Zone '+utmZone+'N) and converted to lat/lon. '+positions.length+' turbines imported.');else alert(positions.length+' turbines imported from CSV.');}else{alert('No valid positions found in CSV. Expected columns: id, lat, lon (or id, x, y for UTM).');}}catch(err){alert('Error reading CSV: '+err.message);}};reader.readAsText(file);event.target.value='';}
+function importLayoutCSV(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(e){try{const lines=e.target.result.trim().split('\n');const headers=lines[0].toLowerCase().split(',').map(s=>s.trim());const positions=[];let isUTM=false;let utmZone=null;const xIdx=headers.indexOf('x');const yIdx=headers.indexOf('y');const latIdx=headers.indexOf('lat');const lonIdx=headers.indexOf('lon');const lonLongIdx=headers.indexOf('longitude');const idIdx=headers.indexOf('id');const modelIdx=headers.indexOf('model');const rdIdx=headers.indexOf('rd');const hhIdx=headers.indexOf('hh');if(xIdx>=0&&yIdx>=0){const testX=parseFloat(lines[1].split(',')[xIdx]);const testY=parseFloat(lines[1].split(',')[yIdx]);if(testX>10000)isUTM=true;}for(let i=1;i<lines.length;i++){const parts=lines[i].split(',').map(s=>s.trim());if(parts.length<3)continue;let lat,lon,model,rd,hh;if(isUTM){const x=parseFloat(parts[xIdx>=0?xIdx:1]);const y=parseFloat(parts[yIdx>=0?yIdx:2]);if(isNaN(x)||isNaN(y))continue;if(!utmZone){let bestZone=null,bestResidual=Infinity;for(let z=31;z<=37;z++){try{const r=utmToLatLon(x,y,z,false);if(r.lat>=-90&&r.lat<=90&&r.lon>=-180&&r.lon<=180){const cm=(z-1)*6-180+3;const residual=Math.abs(r.lon-cm);if(residual<3&&residual<bestResidual){bestResidual=residual;bestZone=z;lat=r.lat;lon=r.lon;}}}catch(er){}}utmZone=bestZone;if(!utmZone){for(let z=31;z<=37;z++){try{const r=utmToLatLon(x,y,z,false);if(r.lat>=-90&&r.lat<=90&&r.lon>=-180&&r.lon<=180){utmZone=z;lat=r.lat;lon=r.lon;break;}}catch(er){}}}else{const r=utmToLatLon(x,y,utmZone,false);lat=r.lat;lon=r.lon;}if(isNaN(lat)||isNaN(lon))continue;}else{const latI=latIdx>=0?latIdx:1;const lonI=lonIdx>=0?lonIdx:(lonLongIdx>=0?lonLongIdx:2);lat=parseFloat(parts[latI]);lon=parseFloat(parts[lonI]);if(isNaN(lat)||isNaN(lon))continue;}model=modelIdx>=0?parts[modelIdx]:'';rd=rdIdx>=0?parseFloat(parts[rdIdx]):NaN;hh=hhIdx>=0?parseFloat(parts[hhIdx]):NaN;positions.push({id:idIdx>=0?parts[idIdx]:'T'+(positions.length+1),lat,lon,model,rd,hh});}if(positions.length>0){S.positions=positions;S._importedMeta=(model||rd||hh)?positions.map(p=>({model:p.model,rd:p.rd,hh:p.hh})):null;refreshTurbineMarkers();updateLayoutInfo();if(isUTM)alert('UTM coordinates auto-detected (Zone '+utmZone+'N) and converted to lat/lon. '+positions.length+' turbines imported.');else alert(positions.length+' turbines imported from CSV.');}else{alert('No valid positions found in CSV. Expected columns: id, lat, lon (or id, x, y for UTM).');}}catch(err){alert('Error reading CSV: '+err.message);}};reader.readAsText(file);event.target.value='';}
 
 function exportAEPReport(){if(!S.aepResults)return;let csv='Turbine,Latitude,Longitude,Gross_AEP_GWh,Net_AEP_GWh,Wake_Loss_pct\n';S.aepResults.turbineData.forEach(t=>{csv+=`T${t.id},${t.lat.toFixed(6)},${t.lon.toFixed(6)},${t.gross.toFixed(4)},${t.net.toFixed(4)},${t.wakeLoss.toFixed(1)}\n`;});downloadFile('aep_report.csv',csv,'text/csv');}
 
 function exportSummaryImage(){const canvas=document.getElementById('summaryCanvas');if(!canvas)return;const link=document.createElement('a');link.download='wind_farm_summary.png';link.href=canvas.toDataURL('image/png');link.click();}
 
 function downloadFile(name,content,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);}
+
+// ==================== UTILITY: Topbar Update ====================
+function updateTopbar(){var t=document.getElementById('topbarTitle');if(t)t.textContent=S.projectName?'Wind Farm Designer Pro — '+S.projectName:'Wind Farm Designer Pro';}
+
+// ==================== UTILITY: Wind Tab Switching ====================
+function showWindTab(idx,btn){document.querySelectorAll('#step9 .tab-panel, #step3 .tab-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('#step9 .tab-btn, #step3 .tab-btn').forEach(b=>b.classList.remove('active'));var panel=document.getElementById('windTab'+idx);if(panel)panel.classList.add('active');if(btn)btn.classList.add('active');}
+
+// ==================== AIR DENSITY CALCULATION ====================
+function calcAirDensity(tempC,elevationM){
+  // Barometric formula: P = P0 * exp(-M*g*h/(R*T))
+  // ρ = P*M/(R*T)
+  var T=tempC+273.15; // Kelvin
+  var P0=101325; // sea level pressure Pa
+  var M=0.0289644; // molar mass of dry air kg/mol
+  var g=9.80665; // m/s²
+  var R=8.31447; // J/(mol·K)
+  var P=P0*Math.exp(-M*g*elevationM/(R*T));
+  var rho=P*M/(R*T);
+  return rho;
+}
+
+// ==================== TURBULENCE INTENSITY ====================
+function estimateTI(windData){
+  if(!windData||windData.length===0)return{overall:0.08,sectors:[],iecClass:'C'};
+  // Representative TI estimation from Weibull k parameter
+  // IEC 61400-1: TI = σ/μ, relationship with k: TI ≈ 1/k for well-fitted Weibull
+  var weights=[];
+  var sectors=[];
+  for(var i=0;i<windData.length;i++){
+    var s=windData[i];
+    var ti=1.0/Math.max(0.5,s.k); // Approximate TI from Weibull k
+    // Adjust: higher k = lower TI (narrower distribution)
+    ti=Math.max(0.05,Math.min(0.40,ti*0.85)); // Scale factor for typical wind
+    sectors.push({dir:s.dir,ti:ti,freq:s.freq});
+    weights.push(ti*s.freq);
+  }
+  var overall=weights.reduce(function(a,b){return a+b;},0);
+  // IEC classification
+  var iecClass='C'; // Low (TI < 0.12)
+  if(overall>0.16)iecClass='A'; // High
+  else if(overall>0.12)iecClass='B'; // Medium
+  return{overall:overall,sectors:sectors,iecClass:iecClass};
+}
+
+// ==================== EXTREME WIND ANALYSIS (Gumbel) ====================
+function extremeWindAnalysis(windData){
+  if(!windData||windData.length===0)return 0;
+  // 50-year return period using Gumbel (Type I) distribution
+  // V_50 = u - β * ln(-ln(1 - 1/T)) where T=50 years
+  // Simplified: estimate from mean + k*std (empirical factor)
+  var meanSpeed=0;
+  for(var i=0;i<windData.length;i++)meanSpeed+=windData[i].meanSpeed*windData[i].freq;
+  var k=2.5; // Empirical gust factor
+  // More accurate: use Weibull A and k to estimate extreme
+  var wA=0,wK=0;
+  for(var i=0;i<windData.length;i++){wA+=windData[i].A*windData[i].freq;wK+=windData[i].k*windData[i].freq;}
+  // Gumbel method: V_50 ≈ V_mean * (1 + 0.78/sqrt(k)) * factor
+  var extremeFactor=1+2.5/Math.sqrt(Math.max(1,wK));
+  var v50=meanSpeed*extremeFactor;
+  // Apply IEC 61400-1 simplified: V_e50 ≈ V_ref (typically 1.4 * V_avg for Class III)
+  v50=Math.max(v50,meanSpeed*3.5); // Minimum safety factor
+  return v50;
+}
+
+// ==================== SHEAR PROFILE DRAWING ====================
+function drawShearProfile(){
+  var canvas=document.getElementById('shearProfileCanvas');if(!canvas||!S.windData)return;
+  var ctx=canvas.getContext('2d');var W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);
+  var refH=S.turbine?S.turbine.HH:100;
+  var refSpeed=S.windData.reduce(function(s,w){return s+w.meanSpeed*w.freq;},0);
+  var alpha=0.14;
+  if(S.mesoData&&S.mesoData.length>0&&S.mesoData[0].shearAlpha)alpha=S.mesoData[0].shearAlpha;
+  var pad={l:60,r:20,t:30,b:40};var pW=W-pad.l-pad.r;var pH=H-pad.t-pad.b;
+  var maxH=200;var maxSpd=15;
+  // Axes
+  ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=1;
+  for(var i=0;i<=4;i++){
+    var y=pad.t+pH-i*(pH/4);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pW,y);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='10px IBM Plex Mono';ctx.textAlign='right';
+    ctx.fillText((maxSpd*i/4).toFixed(1)+' m/s',pad.l-5,y+3);
+    var h=maxH*i/4;
+    ctx.textAlign='center';ctx.fillText(h+'m',pad.l+pW+5,y+3);
+  }
+  // Draw shear curve
+  ctx.strokeStyle='#00d68f';ctx.lineWidth=2;ctx.beginPath();
+  for(var i=0;i<=100;i++){
+    var h=(i/100)*maxH;
+    var spd=refSpeed*Math.pow(h/refH,alpha);
+    if(h<10)continue;
+    var x=pad.l+(spd/maxSpd)*pW;
+    var y=pad.t+pH-(h/maxH)*pH;
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  // Hub height marker
+  var hubSpd=refSpeed; // at hub height, speed = refSpeed
+  var hubX=pad.l+(hubSpd/maxSpd)*pW;
+  var hubY=pad.t+pH-(refH/maxH)*pH;
+  ctx.fillStyle='#f5a623';ctx.beginPath();ctx.arc(hubX,hubY,5,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(245,166,35,.4)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(pad.l,hubY);ctx.lineTo(hubX,hubY);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(hubX,hubY);ctx.lineTo(hubX,pad.t+pH);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(245,166,35,.8)';ctx.font='10px IBM Plex Mono';ctx.textAlign='left';
+  ctx.fillText('HH='+refH+'m, v='+hubSpd.toFixed(1)+' m/s',hubX+8,hubY-8);
+  // Labels
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='10px IBM Plex Mono';ctx.textAlign='center';
+  ctx.fillText('Wind Speed',pad.l+pW/2,H-5);
+  ctx.save();ctx.translate(12,pad.t+pH/2);ctx.rotate(-Math.PI/2);ctx.fillText('Height (m)',0,0);ctx.restore();
+  // Alpha display
+  ctx.fillStyle='rgba(0,214,143,.7)';ctx.font='10px IBM Plex Mono';ctx.textAlign='left';
+  ctx.fillText('Shear α = '+alpha.toFixed(3),pad.l+10,pad.t+15);
+}
+
+// ==================== FREQUENCY DISTRIBUTION HISTOGRAM ====================
+function drawFreqDist(){
+  var canvas=document.getElementById('freqDistCanvas');if(!canvas||!S.windData)return;
+  var ctx=canvas.getContext('2d');var W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);
+  var wA=0,wK=0;
+  for(var i=0;i<S.windData.length;i++){wA+=S.windData[i].A*S.windData[i].freq;wK+=S.windData[i].k*S.windData[i].freq;}
+  var pad={l:50,r:20,t:25,b:35};var pW=W-pad.l-pad.r;var pH=H-pad.t-pad.b;
+  var bins=30;var maxV=30;
+  var totalFreq=[];
+  for(var b=0;b<bins;b++)totalFreq.push(0);
+  // Weibull PDF: f(v) = (k/A)*(v/A)^(k-1)*exp(-(v/A)^k)
+  var weibullFreq=[];var maxF=0;
+  for(var b=0;b<bins;b++){
+    var vMid=(b+0.5)*(maxV/bins);
+    var fW=(wK/wA)*Math.pow(vMid/wA,wK-1)*Math.exp(-Math.pow(vMid/wA,wK));
+    weibullFreq.push(fW);if(fW>maxF)maxF=fW;
+    // Sector-weighted frequency in this bin
+    for(var s=0;s<S.windData.length;s++){
+      var sec=S.windData[s];
+      var fS=(sec.k/sec.A)*Math.pow(vMid/sec.A,sec.k-1)*Math.exp(-Math.pow(vMid/sec.A,sec.k));
+      totalFreq[b]+=fS*sec.freq;
+    }
+    if(totalFreq[b]>maxF)maxF=totalFreq[b];
+  }
+  maxF*=1.15;
+  var barW=pW/bins;
+  // Draw bars
+  for(var b=0;b<bins;b++){
+    var x=pad.l+b*barW;
+    var h1=(totalFreq[b]/maxF)*pH;
+    var h2=(weibullFreq[b]/maxF)*pH;
+    ctx.fillStyle='rgba(0,214,143,.5)';ctx.fillRect(x,pad.t+pH-h1,barW-1,h1);
+    ctx.strokeStyle='#f5a623';ctx.lineWidth=1.5;ctx.beginPath();
+    ctx.moveTo(x+barW/2,pad.t+pH-h2);ctx.lineTo(x+barW/2,pad.t+pH);ctx.stroke();
+  }
+  // Axes
+  ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=1;
+  for(var i=0;i<=5;i++){var y=pad.t+pH-i*(pH/5);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pW,y);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='9px IBM Plex Mono';ctx.textAlign='right';
+    ctx.fillText((maxF*i/5).toFixed(3),pad.l-4,y+3);
+  }
+  for(var i=0;i<=6;i++){var x=pad.l+i*(pW/6);ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='9px IBM Plex Mono';ctx.textAlign='center';
+    ctx.fillText(Math.round(i*maxV/6)+' m/s',x,H-8);}
+  // Legend
+  ctx.fillStyle='rgba(0,214,143,.7)';ctx.fillRect(pad.l+pW-120,pad.t+5,12,12);
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='9px IBM Plex Mono';ctx.textAlign='left';ctx.fillText('Sector-weighted',pad.l+pW-104,pad.t+14);
+  ctx.strokeStyle='#f5a623';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(pad.l+pW-120,pad.t+26);ctx.lineTo(pad.l+pW-108,pad.t+26);ctx.stroke();
+  ctx.fillText('Weibull PDF (A='+wA.toFixed(1)+', k='+wK.toFixed(2)+')',pad.l+pW-104,pad.t+29);
+  // Energy highlight
+  var vRated=S.turbine?S.turbine.ratedSpeed:12.5;
+  var vCutIn=S.turbine?S.turbine.cutIn:3;
+  var cutInX=pad.l+(vCutIn/maxV)*pW;
+  var ratedX=pad.l+(vRated/maxV)*pW;
+  ctx.fillStyle='rgba(245,166,35,.08)';ctx.fillRect(cutInX,pad.t,ratedX-cutInX,pH);
+  ctx.fillStyle='rgba(245,166,35,.4)';ctx.font='9px IBM Plex Mono';ctx.textAlign='center';
+  ctx.fillText('Energy Range',(cutInX+ratedX)/2,pad.t+pH-10);
+}
+
+// ==================== TI BY SECTOR CHART ====================
+function drawTISectors(){
+  var canvas=document.getElementById('tiSectorCanvas');if(!canvas||!S.windData)return;
+  var ctx=canvas.getContext('2d');var W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);
+  var ti=estimateTI(S.windData);
+  var pad={l:50,r:20,t:30,b:40};var pW=W-pad.l-pad.r;var pH=H-pad.t-pad.b;
+  var maxTI=0.25;var barW=pW/S.windData.length;
+  // Threshold lines
+  var thresholds=[{v:0.12,label:'IEC B (12%)',color:'rgba(245,166,35,.4)'},{v:0.16,label:'IEC A (16%)',color:'rgba(224,80,80,.4)'}];
+  thresholds.forEach(function(th){var y=pad.t+pH-(th.v/maxTI)*pH;ctx.strokeStyle=th.color;ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pW,y);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=th.color.replace('.4','.7');ctx.font='9px IBM Plex Mono';ctx.textAlign='left';ctx.fillText(th.label,pad.l+pW+2,y+3);});
+  // Bars
+  ti.sectors.forEach(function(s,i){
+    var x=pad.l+i*barW;var h=(s.ti/maxTI)*pH;
+    var color=s.ti>0.16?'rgba(224,80,80,.7)':s.ti>0.12?'rgba(245,166,35,.7)':'rgba(0,214,143,.7)';
+    ctx.fillStyle=color;ctx.fillRect(x+2,pad.t+pH-h,barW-4,h);
+    ctx.fillStyle='rgba(255,255,255,.8)';ctx.font='9px IBM Plex Mono';ctx.textAlign='center';
+    ctx.fillText(DL[i],x+barW/2,H-8);
+    ctx.fillText(s.ti.toFixed(2),x+barW/2,pad.t+pH-h-5);
+  });
+  // Axis
+  ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,pad.t+pH);ctx.lineTo(pad.l+pW,pad.t+pH);ctx.stroke();ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+pH);ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='10px IBM Plex Mono';ctx.textAlign='center';ctx.fillText('Sector',pad.l+pW/2,H-0);
+  ctx.fillStyle='rgba(0,214,143,.8)';ctx.font='10px IBM Plex Mono';ctx.textAlign='left';
+  ctx.fillText('Overall TI = '+ti.overall.toFixed(3)+' | IEC Class '+ti.iecClass,pad.l,pad.t+15);
+}
+
+// ==================== UNCERTAINTY ANALYSIS ====================
+function updateUncertainty(){
+  if(!S.aepResults)return;
+  var uWind=parseFloat(document.getElementById('uncWind').value)||3;
+  var uShear=parseFloat(document.getElementById('uncShear').value)||2;
+  var uFlow=parseFloat(document.getElementById('uncFlow').value)||4;
+  var uWake=parseFloat(document.getElementById('uncWake').value)||3;
+  var uPower=parseFloat(document.getElementById('uncPower').value)||2.5;
+  var uData=parseFloat(document.getElementById('uncData').value)||4;
+  var uOther=parseFloat(document.getElementById('uncOther').value)||5;
+  // RSS combination (energy uncertainty ≈ 2× wind speed uncertainty for small values)
+  var sigma=Math.sqrt(uWind*uWind*2*2+uShear*uShear+uFlow*uFlow+uWake*uWake+uPower*uPower+uData*uData+uOther*uOther)/100;
+  var netAEP=S.aepResults.netAEP;
+  var cap=S.aepResults.capacity;
+  var p50=netAEP;
+  var p75=p50*Math.exp(-0.6745*sigma);
+  var p90=p50*Math.exp(-1.282*sigma);
+  var p95=p50*Math.exp(-1.645*sigma);
+  var hours=8760;
+  S.uncertaintyResults={sigma:sigma,p50:p50,p75:p75,p90:p90,p95:p95};
+  // Table
+  var body=document.getElementById('uncertaintyBody');
+  body.innerHTML='';
+  var pcts=[{label:'P50 (Best)',val:p50,color:'var(--mint)'},{label:'P75',val:p75,color:'var(--sky)'},{label:'P90 (Bankable)',val:p90,color:'var(--gold)'},{label:'P95 (Conservative)',val:p95,color:'var(--red)'}];
+  pcts.forEach(function(p){var cf=p.val*1e3/(cap*hours)*100;var eflh=p.val*1e3/cap;
+    body.innerHTML+='<tr><td style="color:'+p.color+';font-weight:700">'+p.label+'</td><td class="num" style="font-weight:700">'+p.val.toFixed(1)+'</td><td class="num">'+cf.toFixed(1)+'%</td><td class="num">'+eflh.toFixed(0)+'</td></tr>';});
+  // Canvas
+  drawUncertaintyChart(sigma,p50,p75,p90,p95,cap);
+}
+
+function drawUncertaintyChart(sigma,p50,p75,p90,p95,cap){
+  var canvas=document.getElementById('uncertaintyCanvas');if(!canvas)return;
+  var ctx=canvas.getContext('2d');var W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(0,214,143,.7)';ctx.font='11px IBM Plex Mono';ctx.textAlign='center';
+  ctx.fillText('AEP Probability Distribution',W/2,18);
+  ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='9px IBM Plex Mono';
+  ctx.fillText('Combined σ = '+(sigma*100).toFixed(1)+'%',W/2,32);
+  // Draw bell curve
+  var pad={l:40,r:20,t:45,b:40};var pW=W-pad.l-pad.r;var pH=H-pad.t-pad.b;
+  var mean=p50;var std=p50*sigma;
+  var xMin=mean-4*std;var xMax=mean+4*std;
+  // Fill P90 area
+  ctx.fillStyle='rgba(245,166,35,.15)';ctx.beginPath();ctx.moveTo(pad.l,pad.t+pH);
+  for(var i=0;i<=pW;i++){var aep=xMin+(xMax-xMin)*(i/pW);if(aep<p90)continue;
+    var z=(aep-mean)/std;var pdf=Math.exp(-z*z/2)/(std*Math.sqrt(2*Math.PI));
+    var x=pad.l+i;var y=pad.t+pH-pdf*(pW/(xMax-xMin))*pH*std*Math.sqrt(2*Math.PI);
+    ctx.lineTo(x,y);}
+  ctx.lineTo(pad.l+pW,pad.t+pH);ctx.closePath();ctx.fill();
+  // Draw curve
+  ctx.strokeStyle='#00d68f';ctx.lineWidth=2;ctx.beginPath();
+  var maxPdf=1/(std*Math.sqrt(2*Math.PI));
+  for(var i=0;i<=pW;i++){var aep=xMin+(xMax-xMin)*(i/pW);
+    var z=(aep-mean)/std;var pdf=Math.exp(-z*z/2)/(std*Math.sqrt(2*Math.PI));
+    var x=pad.l+i;var y=pad.t+pH-pdf/maxPdf*pH*0.85;
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+  ctx.stroke();
+  // P-value lines
+  var pvals=[{v:p90,label:'P90',color:'#f5a623'},{v:p50,label:'P50',color:'#00d68f'}];
+  pvals.forEach(function(p){var xp=pad.l+((p.v-xMin)/(xMax-xMin))*pW;
+    ctx.strokeStyle=p.color;ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(xp,pad.t);ctx.lineTo(xp,pad.t+pH);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=p.color;ctx.font='10px IBM Plex Mono';ctx.textAlign='center';
+    ctx.fillText(p.label+' = '+p.v.toFixed(1)+' GWh',xp,pad.t-5);});
+}
+
+// ==================== MONTHLY AEP BREAKDOWN ====================
+function drawMonthlyAEP(){
+  var canvas=document.getElementById('monthlyAEPCanvas');if(!canvas||!S.aepResults)return;
+  var ctx=canvas.getContext('2d');var W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);
+  var netAEP=S.aepResults.netAEP;
+  var hours=8760;
+  // Monthly distribution based on prevailing wind direction and seasonal variation
+  var predDir=0,maxF=0;
+  for(var i=0;i<S.windData.length;i++){if(S.windData[i].freq>maxF){maxF=S.windData[i].freq;predDir=S.windData[i].dir;}}
+  // Seasonal amplitude (stronger in winter for mid-latitudes)
+  var lat=Math.abs(S.siteBoundary?getPolygonCentroid(S.siteBoundary)[0]:20);
+  var amplitude=Math.min(0.35,0.1+lat/180); // Stronger variation at higher latitudes
+  var peakMonth=1; // January (winter peak for northern hemisphere westerlies)
+  if(predDir>45&&predDir<225)peakMonth=7; // Monsoon regions: summer peak
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var days=[31,28,31,30,31,30,31,31,30,31,30,31];
+  var monthlyAEP=[];var totalFactors=0;
+  for(var m=0;m<12;m++){
+    var factor=1+amplitude*Math.cos(2*Math.PI*(m+1-peakMonth)/12);
+    monthlyAEP.push(netAEP*factor*days[m]/365);
+    totalFactors+=factor*days[m];
+  }
+  // Normalize to match annual total
+  var normFactor=netAEP/(totalFactors/365);
+  for(var m=0;m<12;m++)monthlyAEP[m]*=normFactor;
+  // Seasonal totals
+  var seasons=[{name:'Winter',months:[0,1,11],color:'#4ab3e8'},{name:'Spring',months:[2,3,4],color:'#00d68f'},{name:'Summer',months:[5,6,7],color:'#f5a623'},{name:'Autumn',months:[8,9,10],color:'#e05050'}];
+  var pad={l:60,r:20,t:30,b:40};var pW=W-pad.l-pad.r;var pH=H-pad.t-pad.b;
+  var maxM=Math.max.apply(null,monthlyAEP)*1.15;
+  var barW=pW/12;
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;
+  for(var i=0;i<=5;i++){var y=pad.t+pH-i*(pH/5);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pW,y);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='9px IBM Plex Mono';ctx.textAlign='right';
+    ctx.fillText((maxM*i/5).toFixed(1)+' GWh',pad.l-5,y+3);}
+  // Bars
+  months.forEach(function(m,i){
+    var season=seasons.filter(function(s){return s.months.indexOf(i)>=0;})[0];
+    var x=pad.l+i*barW;var h=(monthlyAEP[i]/maxM)*pH;
+    ctx.fillStyle=season.color+'99';ctx.fillRect(x+2,pad.t+pH-h,barW-4,h);
+    ctx.strokeStyle=season.color;ctx.lineWidth=1;ctx.strokeRect(x+2,pad.t+pH-h,barW-4,h);
+    ctx.fillStyle='rgba(255,255,255,.8)';ctx.font='10px IBM Plex Mono';ctx.textAlign='center';
+    ctx.fillText(m,x+barW/2,H-8);
+    ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='9px IBM Plex Mono';
+    ctx.fillText(monthlyAEP[i].toFixed(1),x+barW/2,pad.t+pH-h-5);
+  });
+  // Season legend
+  var lx=pad.l+10;
+  seasons.forEach(function(s){var sAEP=0;s.months.forEach(function(m){sAEP+=monthlyAEP[m];});
+    ctx.fillStyle=s.color;ctx.fillRect(lx,pad.t+5,12,12);
+    ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='10px IBM Plex Mono';ctx.textAlign='left';
+    ctx.fillText(s.name+': '+sAEP.toFixed(1)+' GWh ('+(sAEP/netAEP*100).toFixed(0)+'%)',lx+16,pad.t+15);
+    lx+=180;});
+}
+
+// ==================== FINANCIAL ANALYSIS ====================
+function calculateFinancial(){
+  if(!S.aepResults){alert('Calculate AEP first.');return;}
+  var netAEP=S.aepResults.netAEP; // GWh
+  var cap=S.aepResults.capacity; // MW
+  var capKW=cap*1000; // kW
+  var turbCost=parseFloat(document.getElementById('finTurbCost').value)||900;
+  var bopCost=parseFloat(document.getElementById('finBOP').value)||400;
+  var gridCost=parseFloat(document.getElementById('finGrid').value)||5000000;
+  var omCost=parseFloat(document.getElementById('finOM').value)||30;
+  var ppaPrice=parseFloat(document.getElementById('finPPA').value)||45;
+  var life=parseInt(document.getElementById('finLife').value)||25;
+  var debtRatio=parseFloat(document.getElementById('finDebt').value)/100;
+  var intRate=parseFloat(document.getElementById('finRate').value)/100;
+  var discRate=parseFloat(document.getElementById('finDiscount').value)/100;
+  // CAPEX
+  var totalCapex=capKW*(turbCost+bopCost)+gridCost;
+  var equity=totalCapex*(1-debtRatio);
+  var debt=totalCapex*debtRatio;
+  // Annual OPEX
+  var annualOM=capKW*omCost;
+  // Annual Revenue
+  var annualRevenue=netAEP*1000*ppaPrice; // GWh->MWh * $/MWh
+  // Annual Net Cash Flow
+  var annualNet=annualRevenue-annualOM;
+  // Debt service (annuity)
+  var debtService=0;
+  if(debt>0&&intRate>0){debtService=debt*intRate*Math.pow(1+intRate,life)/(Math.pow(1+intRate,life)-1);}
+  // NPV calculation
+  var npv=0;var cashFlows=[];
+  for(var y=0;y<=life;y++){
+    var cf=-totalCapex; // year 0 investment
+    if(y>0){
+      var debtPayment=(y<=life)?debtService:0;
+      cf=annualNet-debtPayment;
+      if(y===1)cf-=totalCapex; // Already subtracted
+      if(y>=1)cf=annualNet-debtPayment;
+      if(y===1)cf+=totalCapex; // Fix: year 0 investment
+    }
+    if(y===0)cf=-totalCapex;
+    else cf=annualNet-debtService;
+    npv+=cf/Math.pow(1+discRate,y);
+    cashFlows.push(cf);
+  }
+  // IRR (Newton-Raphson)
+  var irr=discRate;
+  for(var iter=0;iter<50;iter++){
+    var npvCalc=0,dNpv=0;
+    for(var y=0;y<=life;y++){var cf=y===0?-totalCapex:annualNet-debtService;var disc=Math.pow(1+irr,y);npvCalc+=cf/disc;dNpv-=y*cf/(disc*(1+irr));}
+    if(Math.abs(dNpv)<1e-12)break;
+    var newIrr=irr-npvCalc/dNpv;
+    if(newIrr<-0.5)newIrr=-0.5;if(newIrr>2)newIrr=2;
+    if(Math.abs(newIrr-irr)<1e-6){irr=newIrr;break;}
+    irr=newIrr;
+  }
+  // LCOE
+  var totalEnergy=netAEP*life;
+  var totalCost=totalCapex+annualOM*life;
+  var lcoe=totalEnergy>0?totalCost/(totalEnergy*1000)*1e6:0; // $/MWh
+  // Payback period
+  var cumulative=-totalCapex;var payback=life;
+  for(var y=1;y<=life;y++){cumulative+=annualNet-debtService;if(cumulative>=0){payback=y;break;}}
+  // PI (Profitability Index)
+  var pi=npv>0?(npv+totalCapex)/totalCapex:0;
+  S.financialResults={totalCapex:totalCapex,equity:equity,debt:debt,annualOM:annualOM,annualRevenue:annualRevenue,annualNet:annualNet,npv:npv,irr:irr,lcoe:lcoe,payback:payback,pi:pi,debtService:debtService};
+  // Render
+  var el=document.getElementById('financialResults');
+  el.innerHTML='<div class="kpi-strip"><div class="kpi"><span class="kpi-v g">$'+(totalCapex/1e6).toFixed(1)+'M</span><span class="kpi-l">Total CAPEX</span></div><div class="kpi"><span class="kpi-v b">$'+(annualRevenue/1e6).toFixed(1)+'M</span><span class="kpi-l">Annual Revenue</span></div><div class="kpi"><span class="kpi-v '+(npv>=0?'g':'r')+'">$'+(npv/1e6).toFixed(1)+'M</span><span class="kpi-l">NPV</span></div><div class="kpi"><span class="kpi-v o">'+(irr*100).toFixed(1)+'%</span><span class="kpi-l">IRR</span></div><div class="kpi"><span class="kpi-v b">$'+lcoe.toFixed(0)+'</span><span class="kpi-l">LCOE ($/MWh)</span></div><div class="kpi"><span class="kpi-v">'+payback+' yr</span><span class="kpi-l">Payback</span></div></div>';
+}
+
+// ==================== NOISE ASSESSMENT ====================
+function calculateNoise(){
+  var Lw=parseFloat(document.getElementById('noiseLw').value)||105;
+  var dist=parseFloat(document.getElementById('noiseDist').value)||500;
+  var limit=parseFloat(document.getElementById('noiseLimit').value)||40;
+  if(!S.positions||S.positions.length===0){alert('Place turbines first.');return;}
+  // ISO 9613-2 simplified: Lp = Lw - Adiv - Aatm - Agr
+  // Adiv = 20*log10(d) + 11 (geometric spreading, point source)
+  // Aatm = atmospheric absorption (~0.005 dB/m at 500Hz)
+  // Agr = ground effect (typically 0-3 dB for nearby source)
+  var nTurbines=S.positions.length;
+  // Find nearest turbine to receptor (simplified: assume receptor at centroid distance)
+  var c=getPolygonCentroid(S.siteBoundary);
+  var minDist=Infinity;
+  S.positions.forEach(function(p){var dx=(p.lon-c[1])*111320*Math.cos(c[0]*Math.PI/180);var dy=(p.lat-c[0])*111320;var d=Math.sqrt(dx*dx+dy*dy);if(d<minDist)minDist=d;});
+  var d=Math.max(dist,minDist);
+  var Adiv=20*Math.log10(d)+11;
+  var Aatm=0.005*d;
+  var Agr=1.5; // moderate ground absorption
+  var Lsingle=Lw-Adiv-Aatm-Agr;
+  // Multiple turbines: RSS of sound pressure
+  var Ltotal=Lsingle+10*Math.log10(Math.max(1,nTurbines));
+  var pass=Ltotal<=limit;
+  var el=document.getElementById('noiseResults');
+  el.innerHTML='<div class="kpi-strip"><div class="kpi"><span class="kpi-v b">'+Lsingle.toFixed(1)+'</span><span class="kpi-l">Single Turbine (dBA)</span></div><div class="kpi"><span class="kpi-v '+(pass?'g':'r')+'">'+Ltotal.toFixed(1)+'</span><span class="kpi-l">Total ('+nTurbines+' WTG) dBA</span></div><div class="kpi"><span class="kpi-v">'+limit+'</span><span class="kpi-l">Night Limit (dBA)</span></div><div class="kpi"><span class="kpi-v b">'+Math.round(d)+'m</span><span class="kpi-l">Distance</span></div></div><div class="alert '+(pass?'alert-ok':'alert-err')+'" style="margin-top:.6rem">'+(pass?'Noise level WITHIN regulatory limits.':'Noise level EXCEEDS regulatory limits by '+(Ltotal-limit).toFixed(1)+' dBA. Consider increasing setback distance or reducing turbine count.')+'</div>';
+}
+
+// ==================== PROJECT SAVE/LOAD ====================
+function saveProject(){
+  try{
+    var proj={version:'2.0',date:new Date().toISOString(),
+      project:S.projectName||'',developer:S.projectDeveloper||'',description:S.projectDescription||'',number:S.projectNumber||'',
+      siteBoundary:S.siteBoundary,siteArea:S.siteArea,country:S.siteCountry?S.siteCountry.n:'',
+      windData:S.windData,turbine:S.turbine,positions:S.positions,
+      wakeResults:S.wakeResults,aepResults:S.aepResults,flowCorrections:S.flowCorrections,
+      mesoData:S.mesoData,terrainGrid:S.terrainGrid,terrainElevations:S.terrainElevations,
+      financialResults:S.financialResults,uncertaintyResults:S.uncertaintyResults
+    };
+    localStorage.setItem('windProject_'+(S.projectName||'default'),JSON.stringify(proj));
+    alert('Project saved to browser storage.');
+  }catch(e){alert('Save failed: '+e.message);}
+}
+function loadProject(event){
+  var file=event.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var proj=JSON.parse(e.target.result);
+      if(proj.siteBoundary)S.siteBoundary=proj.siteBoundary;
+      if(proj.siteArea)S.siteArea=proj.siteArea;
+      if(proj.windData)S.windData=proj.windData;
+      if(proj.turbine)S.turbine=proj.turbine;
+      if(proj.positions)S.positions=proj.positions;
+      if(proj.wakeResults)S.wakeResults=proj.wakeResults;
+      if(proj.aepResults)S.aepResults=proj.aepResults;
+      if(proj.flowCorrections)S.flowCorrections=proj.flowCorrections;
+      if(proj.mesoData)S.mesoData=proj.mesoData;
+      if(proj.financialResults)S.financialResults=proj.financialResults;
+      S.projectName=proj.project||'';S.projectDeveloper=proj.developer||'';
+      S.projectDescription=proj.description||'';S.projectNumber=proj.number||'';
+      document.getElementById('projName').value=S.projectName;
+      document.getElementById('projDev').value=S.projectDeveloper;
+      document.getElementById('projDesc').value=S.projectDescription;
+      document.getElementById('projNum').value=S.projectNumber;
+      updateTopbar();updateSiteInfo();
+      if(S.windData){updateWindStats();drawWindRose();}
+      if(S.turbine){drawPowerCurve();}
+      alert('Project loaded successfully. Navigate through steps to verify data.');
+    }catch(err){alert('Error loading project: '+err.message);}
+  };
+  reader.readAsText(file);event.target.value='';
+}
+function exportProjectJSON(){
+  try{
+    var proj={version:'2.0',date:new Date().toISOString(),
+      project:S.projectName||'Wind Farm Project',developer:S.projectDeveloper||'',
+      siteBoundary:S.siteBoundary,siteArea:S.siteArea,
+      windData:S.windData,turbine:S.turbine,positions:S.positions,
+      wakeResults:S.wakeResults,aepResults:S.aepResults,
+      financialResults:S.financialResults,uncertaintyResults:S.uncertaintyResults
+    };
+    downloadFile('wind_project.json',JSON.stringify(proj,null,2),'application/json');
+  }catch(e){alert('Export failed: '+e.message);}
+}
+function exportFullReport(){
+  if(!S.aepResults){alert('Calculate AEP first.');return;}
+  var lines=[];
+  lines.push('Wind Farm Designer Pro — Full Report');
+  lines.push('Date,'+new Date().toISOString().split('T')[0]);
+  lines.push('Project,'+(S.projectName||'Untitled'));
+  lines.push('Developer,'+(S.projectDeveloper||'N/A'));
+  lines.push('');
+  lines.push('=== SITE ===');
+  lines.push('Area (km²),'+S.siteArea.toFixed(2));
+  lines.push('Country,'+(S.siteCountry?S.siteCountry.n:'N/A'));
+  if(S.siteBoundary){var c=getPolygonCentroid(S.siteBoundary);lines.push('Centroid,'+c[0].toFixed(4)+','+c[1].toFixed(4));}
+  lines.push('');
+  lines.push('=== TURBINE ===');
+  if(S.turbine){lines.push('Model,'+S.turbine.name);lines.push('RD (m),'+S.turbine.RD);lines.push('HH (m),'+S.turbine.HH);lines.push('Rated Power (MW),'+S.turbine.power);}
+  lines.push('');
+  lines.push('=== WIND RESOURCE ===');
+  if(S.windData){S.windData.forEach(function(s,i){lines.push('Sector,'+DL[i]+','+s.dir+'°,'+(s.freq*100).toFixed(1)+'%,'+s.meanSpeed.toFixed(2)+' m/s,A='+s.A.toFixed(1)+',k='+s.k.toFixed(2));});}
+  lines.push('');
+  lines.push('=== AEP RESULTS ===');
+  if(S.aepResults){
+    lines.push('Gross AEP (GWh),'+S.aepResults.grossAEP.toFixed(2));
+    lines.push('Net AEP (GWh),'+S.aepResults.netAEP.toFixed(2));
+    lines.push('Capacity Factor (%),'+S.aepResults.cf.toFixed(1));
+    lines.push('Capacity (MW),'+S.aepResults.capacity.toFixed(1));
+    lines.push('Wake Loss (%),'+S.aepResults.wakeLoss.toFixed(1));
+    lines.push('Total Losses (%),'+S.aepResults.totalLoss.toFixed(1));
+  }
+  if(S.uncertaintyResults){lines.push('');lines.push('=== UNCERTAINTY ===');lines.push('P50 (GWh),'+S.uncertaintyResults.p50.toFixed(1));lines.push('P90 (GWh),'+S.uncertaintyResults.p90.toFixed(1));}
+  if(S.financialResults){lines.push('');lines.push('=== FINANCIAL ===');lines.push('CAPEX ($M),'+(S.financialResults.totalCapex/1e6).toFixed(1));lines.push('NPV ($M),'+(S.financialResults.npv/1e6).toFixed(1));lines.push('IRR (%),'+(S.financialResults.irr*100).toFixed(1));lines.push('LCOE ($/MWh),'+S.financialResults.lcoe.toFixed(0));lines.push('Payback (yr),'+S.financialResults.payback);}
+  downloadFile('wind_farm_full_report.csv',lines.join('\n'),'text/csv');
+}
+
+// ==================== ENHANCED SUMMARY CANVAS ====================
+function drawSummaryCanvas(){
+  var canvas=document.getElementById('summaryCanvas');if(!canvas||!S.aepResults)return;
+  var ctx=canvas.getContext('2d');var W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#07111e';ctx.fillRect(0,0,W,H);
+  var x=30,y=35;
+  // Title
+  ctx.fillStyle='#00d68f';ctx.font='bold 22px IBM Plex Sans';ctx.textAlign='left';
+  ctx.fillText('Wind Farm Designer Pro — Project Report',x,y);y+=22;
+  ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='12px IBM Plex Mono';
+  ctx.fillText((S.projectName||'Wind Farm Project')+' | '+new Date().toISOString().split('T')[0]+(S.projectDeveloper?' | '+S.projectDeveloper:''),x,y);y+=30;
+  // Site info
+  ctx.fillStyle='#00d68f';ctx.font='bold 13px IBM Plex Sans';ctx.fillText('SITE INFORMATION',x,y);y+=20;
+  ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='12px IBM Plex Mono';
+  if(S.siteBoundary){var c=getPolygonCentroid(S.siteBoundary);ctx.fillText('Location: '+c[0].toFixed(4)+'°N, '+c[1].toFixed(4)+'°E | Area: '+S.siteArea.toFixed(2)+' km² | Country: '+(S.siteCountry?S.siteCountry.n:'N/A'),x,y);}
+  y+=28;
+  // Wind Resource
+  ctx.fillStyle='#4ab3e8';ctx.font='bold 13px IBM Plex Sans';ctx.fillText('WIND RESOURCE',x,y);y+=20;
+  ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='12px IBM Plex Mono';
+  var ws=S.windData.reduce(function(s,w){return s+w.meanSpeed*w.freq;},0);
+  var wA=S.windData.reduce(function(s,w){return s+w.A*w.freq;},0);
+  var wK=S.windData.reduce(function(s,w){return s+w.k*w.freq;},0);
+  var pd=0.5*1.225*Math.pow(wA,3)*gammaFn(1+3/wK);
+  ctx.fillText('Mean Speed: '+ws.toFixed(1)+' m/s | Weibull A='+wA.toFixed(1)+', k='+wK.toFixed(2)+' | Power Density: '+pd.toFixed(0)+' W/m²',x,y);y+=28;
+  // Turbine
+  ctx.fillStyle='#f5a623';ctx.font='bold 13px IBM Plex Sans';ctx.fillText('TURBINE CONFIGURATION',x,y);y+=20;
+  ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='12px IBM Plex Mono';
+  if(S.turbine)ctx.fillText(S.turbine.name+' | RD='+S.turbine.RD+'m | HH='+S.turbine.HH+'m | '+S.turbine.power+' MW | '+S.positions.length+' turbines | '+S.aepResults.capacity.toFixed(1)+' MW',x,y);y+=28;
+  // AEP Results - Big numbers
+  ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(x-10,y,W-60,80);ctx.fillStyle='#07111e';ctx.fillRect(x-9,y+1,W-62,78);
+  var a=S.aepResults;
+  // Gross
+  ctx.fillStyle='rgba(0,214,143,.8)';ctx.font='bold 11px IBM Plex Mono';ctx.fillText('GROSS AEP',x+10,y+25);ctx.font='bold 28px IBM Plex Sans';ctx.fillText(a.grossAEP.toFixed(1)+' GWh',x+10,y+60);
+  // Net
+  ctx.fillStyle='rgba(245,166,35,.8)';ctx.font='bold 11px IBM Plex Mono';ctx.fillText('NET AEP',x+280,y+25);ctx.font='bold 28px IBM Plex Sans';ctx.fillText(a.netAEP.toFixed(1)+' GWh',x+280,y+60);
+  // CF
+  ctx.fillStyle='rgba(74,179,232,.8)';ctx.font='bold 11px IBM Plex Mono';ctx.fillText('CAPACITY FACTOR',x+560,y+25);ctx.font='bold 28px IBM Plex Sans';ctx.fillText(a.cf.toFixed(1)+'%',x+560,y+60);
+  // Wake
+  ctx.fillStyle='rgba(224,80,80,.8)';ctx.font='bold 11px IBM Plex Mono';ctx.fillText('WAKE LOSS',x+830,y+25);ctx.font='bold 28px IBM Plex Sans';ctx.fillText(a.wakeLoss.toFixed(1)+'%',x+830,y+60);
+  y+=100;
+  // Uncertainty
+  if(S.uncertaintyResults){ctx.fillStyle='#f5a623';ctx.font='bold 13px IBM Plex Sans';ctx.fillText('UNCERTAINTY & PROBABILITY YIELD',x,y);y+=20;ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='12px IBM Plex Mono';
+    ctx.fillText('P50: '+S.uncertaintyResults.p50.toFixed(1)+' GWh | P75: '+S.uncertaintyResults.p75.toFixed(1)+' GWh | P90: '+S.uncertaintyResults.p90.toFixed(1)+' GWh | P95: '+S.uncertaintyResults.p95.toFixed(1)+' GWh | σ='+(S.uncertaintyResults.sigma*100).toFixed(1)+'%',x,y);y+=28;}
+  // Financial
+  if(S.financialResults){ctx.fillStyle='#00d68f';ctx.font='bold 13px IBM Plex Sans';ctx.fillText('FINANCIAL SUMMARY',x,y);y+=20;ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='12px IBM Plex Mono';
+    ctx.fillText('CAPEX: $'+(S.financialResults.totalCapex/1e6).toFixed(1)+'M | NPV: $'+(S.financialResults.npv/1e6).toFixed(1)+'M | IRR: '+(S.financialResults.irr*100).toFixed(1)+'% | LCOE: $'+S.financialResults.lcoe.toFixed(0)+'/MWh | Payback: '+S.financialResults.payback+' yr',x,y);y+=28;}
+  // Footer
+  ctx.fillStyle='rgba(255,255,255,.2)';ctx.font='10px IBM Plex Mono';
+  ctx.fillText('Generated by Wind Farm Designer Pro | WAsP-like BZ+IBL flow model | Jensen/Park/Frandsen/Bastankhah wake models',x,H-15);
+}
 
 // ==================== UTILITIES ====================
 async function loadDemoAll(){
@@ -1797,12 +2469,13 @@ async function loadDemoAll(){
 }
 
 function clearAll(){
-  S.step=1;S.siteBoundary=null;S.siteArea=0;S.siteCountry=null;S.windData=null;S.turbine=null;S.positions=[];S.wakeResults=null;S.aepResults=null;S.terrainGrid=null;S.terrainElevations=null;S.flowResults=null;S.mesoData=[];S.flowCorrections=null;S.roughnessGrid=null;S.roughnessValues=null;S._importedMeta=null;
+  S.step=1;S.siteBoundary=null;S.siteArea=0;S.siteCountry=null;S.windData=null;S.turbine=null;S.positions=[];S.wakeResults=null;S.aepResults=null;S.terrainGrid=null;S.terrainElevations=null;S.flowResults=null;S.mesoData=[];S.flowCorrections=null;S.roughnessGrid=null;S.roughnessValues=null;S._importedMeta=null;S.projectName='';S.projectDeveloper='';S.projectDescription='';S.projectNumber='';S.financialResults=null;S.uncertaintyResults=null;S.airDensity=1.225;S.siteElevation=0;
   if(drawnItems)drawnItems.clearLayers();if(turbineMarkers)turbineMarkers.clearLayers();if(spacingCircles)spacingCircles.clearLayers();if(layoutMap){layoutMap.remove();layoutMap=null;}if(boundaryLayer)boundaryLayer=null;S._windOverlay=null;S._windGrid=null;S._windGridMeta=null;
   document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));document.getElementById('step1').classList.add('active');
   document.querySelectorAll('.step-item').forEach(s=>{s.classList.remove('active','done');if(parseInt(s.dataset.step)===1)s.classList.add('active');});
   for(let i=2;i<=10;i++){const el=document.getElementById('step'+i+'Next');if(el)el.disabled=true;}
   const el1=document.getElementById('step1Next');if(el1)el1.disabled=true;updateSiteInfo();
+  document.getElementById('projName').value='';document.getElementById('projDev').value='';document.getElementById('projDesc').value='';document.getElementById('projNum').value='';updateTopbar();
 }
 </script>
 </body></html>
