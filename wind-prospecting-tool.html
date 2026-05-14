@@ -1201,7 +1201,7 @@ function applyTurbine(){S.turbine={name:document.getElementById('turbineSelect')
 
 function powerCurve(v,t){if(!t)return 0;if(v<t.cutIn||v>t.cutOut)return 0;if(v>=t.ratedSpeed&&v<=t.cutOut)return t.power;return t.power*(v*v-t.cutIn*t.cutIn)/(t.ratedSpeed*t.ratedSpeed-t.cutIn*t.cutIn);}
 
-function thrustCoeff(v,t){if(!t)return 0;if(v<t.cutIn||v>t.ratedSpeed)return 0;if(v>t.ratedSpeed)return 4/(Math.PI*t.RD*t.RD)*t.power*1e6/(1.225*v*v*v);const p=powerCurve(v,t);return Math.min(0.99,4/(Math.PI*t.RD*t.RD)*p*1e6/(1.225*v*v*v));}
+function thrustCoeff(v,t){if(!t)return 0;if(v<t.cutIn||v>t.cutOut)return 0;var P=(v>=t.ratedSpeed?t.power:powerCurve(v,t))*1e6;var A=Math.PI*t.RD*t.RD/4;var rho=1.225;var Cp=2*P/(rho*A*v*v*v);if(Cp<=0)return 0;if(Cp>16/27)Cp=16/27*0.999;var a=Cp/2;for(var iter=0;iter<10;iter++){var f=4*a*(1-a)*(1-a)-Cp;var fp=4*(1-a)*(1-a)-8*a*(1-a);if(Math.abs(fp)<1e-12)break;a=a-f/fp;if(a<0.001)a=0.001;if(a>0.499)a=0.499;}return Math.min(0.99,4*a*(1-a));}
 
 function drawPowerCurve(){const canvas=document.getElementById('powerCurveCanvas');if(!canvas)return;const ctx=canvas.getContext('2d');const W=canvas.width,H=canvas.height;ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);if(!S.turbine){ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='14px IBM Plex Sans';ctx.textAlign='center';ctx.fillText('Apply a turbine',W/2,H/2);return;}
   const t=S.turbine;const pad={l:60,r:60,t:30,b:50};const pW=W-pad.l-pad.r;const pH=H-pad.t-pad.b;
@@ -1559,9 +1559,9 @@ function runWakeCalculation(){
         if(downwind<=0)return;
         const crosswind=Math.abs(-rx*Math.sin(wDirRad)+ry*Math.cos(wDirRad));
         let def=0;const v=ws.meanSpeed*(S.flowCorrections?S.flowCorrections[si].combined:1);const ct=thrustCoeff(v,S.turbine);
-        if(model==='jensen'){const rw=S.turbine.RD/2+k*downwind;const overlap=Math.max(0,1-crosswind/(2*rw));def=ct*Math.pow(S.turbine.RD/(2*rw),2)*overlap;}
-        else if(model==='frandsen'){const rwF=S.turbine.RD/2+k*downwind;const overlapF=Math.max(0,1-crosswind/(2*rwF));def=Math.min(0.98,ct*(S.turbine.RD/(2*rwF))*(S.turbine.RD/(2*rwF))*overlapF);}
-        else if(model==='bastankhah'){const beta=0.5/Math.sqrt(Math.log(1/(1-Math.max(0.001,ct))));const eps=0.2*Math.sqrt(beta);const sigma=eps*downwind+S.turbine.RD/2;const gaussDef=(1-Math.sqrt(1-Math.max(0,ct)/Math.pow(1+2*sigma*sigma/(downwind*eps+S.turbine.RD),2)))*Math.exp(-crosswind*crosswind/(2*sigma*sigma));def=Math.max(0,gaussDef);}
+        if(model==='jensen'){const rw=S.turbine.RD/2+k*downwind;const overlap=Math.max(0,1-crosswind/(2*rw));def=(1-Math.sqrt(Math.max(0,1-ct)))*Math.pow(S.turbine.RD/(2*rw),2)*overlap;}
+        else if(model==='frandsen'){const rwF=S.turbine.RD/2+k*downwind;const overlapF=Math.max(0,1-crosswind/(2*rwF));const ctF=Math.min(0.999,ct);def=Math.min(0.98,(1-Math.sqrt(Math.max(0,1-ctF)))*Math.pow(S.turbine.RD/(2*rwF),2)*overlapF);}
+        else if(model==='bastankhah'){const ctB=Math.max(0.001,Math.min(0.999,ct));const beta=0.5*(1+Math.sqrt(1-ctB))/Math.sqrt(Math.max(0.001,1-ctB));const eps=0.2*Math.sqrt(beta);const sigma=eps*downwind+S.turbine.RD/2;const gaussDef=(1-Math.sqrt(Math.max(0,1-ctB*Math.pow(S.turbine.RD/(2*sigma),2)*Math.exp(-crosswind*crosswind/(2*sigma*sigma)))))*Math.exp(-crosswind*crosswind/(2*sigma*sigma));def=Math.max(0,gaussDef);}
         rss+=def*def;sectorDefs.push(def);
       });
       const combDef=comb==='rss'?Math.sqrt(rss):Math.min(0.98,rss);
@@ -1604,28 +1604,55 @@ function runWakeCalcSilent(){/* Same as runWakeCalculation but without UI update
   const results=[];S.positions.forEach((tgt,ti)=>{let totalDefSq=0;let maxDef=0;
     S.windData.forEach(ws=>{const wDirRad=ws.dir*Math.PI/180;const dx=tgt.lon*Math.cos(tgt.lat*Math.PI/180)*111320;const dy=tgt.lat*111320;let rss=0;
       S.positions.forEach((src,sj)=>{if(sj===ti)return;const sx=src.lon*Math.cos(src.lat*Math.PI/180)*111320;const sy=src.lat*111320;const rx=dx-sx;const ry=dy-sy;const downwind=rx*Math.cos(wDirRad)+ry*Math.sin(wDirRad);if(downwind<=0)return;const crosswind=Math.abs(-rx*Math.sin(wDirRad)+ry*Math.cos(wDirRad));let def=0;const v=ws.meanSpeed;const ct=thrustCoeff(v,S.turbine);
-        if(model==='jensen'){const rw=S.turbine.RD/2+k*downwind;def=ct*Math.pow(S.turbine.RD/(2*rw),2)*Math.max(0,1-crosswind/(2*rw));}
-        else if(model==='bastankhah'){const beta=.5/Math.sqrt(Math.log(1/(1-Math.max(.001,ct))));const eps=.2*Math.sqrt(beta);const sigma=eps*downwind+S.turbine.RD/2;def=Math.max(0,(1-Math.sqrt(1-ct/Math.pow(1+2*sigma*sigma/(downwind*eps+S.turbine.RD),2)))*Math.exp(-crosswind*crosswind/(2*sigma*sigma)));}
-        else{const rw=S.turbine.RD/2+k*downwind;def=ct*Math.pow(S.turbine.RD/(2*rw),2)*Math.max(0,1-crosswind/(2*rw));}
+        if(model==='jensen'){const rw=S.turbine.RD/2+k*downwind;const overlap=Math.max(0,1-crosswind/(2*rw));def=(1-Math.sqrt(Math.max(0,1-ct)))*Math.pow(S.turbine.RD/(2*rw),2)*overlap;}
+        else if(model==='bastankhah'){const ctB=Math.max(0.001,Math.min(0.999,ct));const beta=0.5*(1+Math.sqrt(1-ctB))/Math.sqrt(Math.max(0.001,1-ctB));const eps=0.2*Math.sqrt(beta);const sigma=eps*downwind+S.turbine.RD/2;def=Math.max(0,(1-Math.sqrt(Math.max(0,1-ctB*Math.pow(S.turbine.RD/(2*sigma),2)*Math.exp(-crosswind*crosswind/(2*sigma*sigma)))))*Math.exp(-crosswind*crosswind/(2*sigma*sigma)));}
+        else{const rw=S.turbine.RD/2+k*downwind;const overlap=Math.max(0,1-crosswind/(2*rw));def=(1-Math.sqrt(Math.max(0,1-ct)))*Math.pow(S.turbine.RD/(2*rw),2)*overlap;}
         rss+=def*def;});const cd=comb==='rss'?Math.sqrt(rss):Math.min(.98,rss);totalDefSq+=cd*cd*ws.freq;if(cd>maxDef)maxDef=cd;});
     const meanDef=Math.sqrt(totalDefSq);const wd=S.windData.reduce((s,w)=>s+w.meanSpeed*w.freq,0);const eff=wd*(1-meanDef);results.push({id:tgt.id,lat:tgt.lat,lon:tgt.lon,maxDef:maxDef*100,meanDef:meanDef*100,effectiveSpeed:eff});});S.wakeResults=results;}
 
 // ==================== STEP 9: AEP ====================
 function calculateAEP(){if(!S.wakeResults||!S.turbine||!S.windData){alert('Need wake results, turbine, and wind data.');return;}
   const la=parseFloat(document.getElementById('lossAvail').value)||2;const le=parseFloat(document.getElementById('lossElec').value)||2;const lenv=parseFloat(document.getElementById('lossEnv').value)||1;const lc=parseFloat(document.getElementById('lossCurt').value)||1;
-  const wakeLoss=S.wakeResults.reduce((s,r)=>s+r.meanDef,0)/S.wakeResults.length*100;
+  const hours=8760;const t=S.turbine;
+  const overallMeanSpeed=S.windData.reduce((s,w)=>s+w.meanSpeed*w.freq,0);
+  // Bug #4 fix: meanDef is ALREADY stored as percentage (×100 in runWakeCalculation)
+  // Do NOT multiply by 100 again here
+  const wakeLoss=S.wakeResults.reduce((s,r)=>s+r.meanDef,0)/S.wakeResults.length;
   document.getElementById('lossWake').value=wakeLoss.toFixed(1);
-  const totalLoss=wakeLoss+la+le+lenv+lc;document.getElementById('lossTotal').value=totalLoss.toFixed(1);
-  const netFactor=1-totalLoss/100;const hours=8760;const t=S.turbine;
+  // Non-wake losses (availability, electrical, environmental, curtailment)
+  const nonWakeLoss=la+le+lenv+lc;
+  const totalLoss=wakeLoss+nonWakeLoss;document.getElementById('lossTotal').value=totalLoss.toFixed(1);
+  // Bug #6 fix: netFactor applies ONLY non-wake losses to wake-reduced energy
+  // Gross AEP = free-stream (no wake), Net AEP = wake-reduced × (1 - non-wake losses)
+  const nonWakeFactor=1-nonWakeLoss/100;
   let grossAEP=0,netAEP=0;const sectorData=[];const turbineData=[];
-  S.wakeResults.forEach(tr=>{let tGross=0,tNet=0;
-    S.windData.forEach(ws=>{const eff=tr.effectiveSpeed*(ws.meanSpeed/(S.windData.reduce((s2,w)=>s2+w.meanSpeed*w.freq,0)));
-      const p=powerCurve(eff,t)*1e6;const e=p*ws.freq*hours/1e9;tGross+=e;tNet+=e*netFactor;});
+  // Per-turbine AEP: compute true gross (free-stream) and net (wake + other losses)
+  S.wakeResults.forEach((tr,ti)=>{let tGross=0,tNet=0;
+    S.windData.forEach((ws,si)=>{
+      // Bug #6 fix: GROSS uses free-stream speed (with flow correction but NO wake)
+      const freeStreamSpeed=ws.meanSpeed*(S.flowCorrections?S.flowCorrections[si].combined:1);
+      const pGross=powerCurve(freeStreamSpeed,t)*1e6;
+      const eGross=pGross*ws.freq*hours/1e9;
+      tGross+=eGross;
+      // NET uses wake-affected effective speed scaled per sector, then non-wake losses
+      const eff=tr.effectiveSpeed*(ws.meanSpeed/overallMeanSpeed);
+      const pNet=powerCurve(eff,t)*1e6;
+      const eNet=pNet*ws.freq*hours/1e9*nonWakeFactor;
+      tNet+=eNet;
+    });
     turbineData.push({id:tr.id,lat:tr.lat,lon:tr.lon,gross:tGross,net:tNet,wakeLoss:tr.meanDef});
     grossAEP+=tGross;netAEP+=tNet;
   });
-  S.windData.forEach((ws,i)=>{let sGross=0,sNet=0;S.wakeResults.forEach(tr=>{const eff=tr.effectiveSpeed*(ws.meanSpeed/(S.windData.reduce((s2,w)=>s2+w.meanSpeed*w.freq,0)));const p=powerCurve(eff,t)*1e6;const e=p*ws.freq*hours/1e9;sGross+=e;sNet+=e*netFactor;});sectorData.push({sector:DL[i],dir:ws.dir,freq:ws.freq*100,meanSpeed:ws.meanSpeed,gross:sGross,net:sNet});});
-  const cf=netAEP*1e9/(t.power*S.positions.length*hours)*100;
+  // Per-sector AEP
+  S.windData.forEach((ws,i)=>{let sGross=0,sNet=0;S.wakeResults.forEach(tr=>{
+    const freeStreamSpeed=ws.meanSpeed*(S.flowCorrections&&S.flowCorrections[i]?S.flowCorrections[i].combined:1);
+    const pGross=powerCurve(freeStreamSpeed,t)*1e6;const eGross=pGross*ws.freq*hours/1e9;sGross+=eGross;
+    const eff=tr.effectiveSpeed*(ws.meanSpeed/overallMeanSpeed);const pNet=powerCurve(eff,t)*1e6;const eNet=pNet*ws.freq*hours/1e9*nonWakeFactor;sNet+=eNet;
+  });sectorData.push({sector:DL[i],dir:ws.dir,freq:ws.freq*100,meanSpeed:ws.meanSpeed,gross:sGross,net:sNet});});
+  // Bug #5 fix: capacity factor: netAEP is in GWh, capacity is in MW, hours in h
+  // CF(%) = (Net AEP in MWh) / (Capacity in MW × 8760 h) × 100
+  //       = (Net AEP in GWh × 1000) / (Capacity in MW × 8760) × 100
+  const cf=netAEP*1e3/(t.power*S.positions.length*hours)*100;
   S.aepResults={grossAEP,netAEP,capacity:t.power*S.positions.length,cf,wakeLoss,totalLoss,sectorData,turbineData};
   document.getElementById('aepResultsSection').style.display='block';
   document.getElementById('aepKPIStrip').innerHTML=`<div class="kpi"><span class="kpi-v g">${grossAEP.toFixed(1)}</span><span class="kpi-l">Gross AEP (GWh)</span></div><div class="kpi"><span class="kpi-v o">${netAEP.toFixed(1)}</span><span class="kpi-l">Net AEP (GWh)</span></div><div class="kpi"><span class="kpi-v b">${cf.toFixed(1)}%</span><span class="kpi-l">Capacity Factor</span></div><div class="kpi"><span class="kpi-v">${S.aepResults.capacity.toFixed(1)}</span><span class="kpi-l">Capacity (MW)</span></div><div class="kpi"><span class="kpi-v r">${wakeLoss.toFixed(1)}%</span><span class="kpi-l">Wake Loss</span></div><div class="kpi"><span class="kpi-v r">${totalLoss.toFixed(1)}%</span><span class="kpi-l">Total Losses</span></div>`;
