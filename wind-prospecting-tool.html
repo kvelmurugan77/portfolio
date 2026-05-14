@@ -219,7 +219,7 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
 <div class="step-panel" id="step6">
   <div class="g2">
     <div class="card"><div class="card-title green">Turbine Selection</div>
-      <div class="fg"><label class="fl">Preset Turbine</label><select class="fs" id="turbineSelect" onchange="onTurbineSelect()"><option value="">-- Select Turbine --</option><option value="v136">Vestas V136-4.2MW (RD=67m, HH=112m)</option><option value="v150" selected>Vestas V150-5.6MW (RD=75m, HH=105m)</option><option value="sg14">Siemens SG 14-222 DD (RD=111m, HH=155m)</option><option value="halide">GE Haliade-X 13MW (RD=107m, HH=138m)</option><option value="n163">Nordex N163/5.X (RD=81m, HH=118m)</option><option value="generic">Generic 2MW (RD=80m, HH=80m)</option><option value="custom">Custom Turbine</option></select></div>
+      <div class="fg"><label class="fl">Preset Turbine</label><select class="fs" id="turbineSelect" onchange="onTurbineSelect()"><option value="">-- Select Turbine --</option><option value="v136">Vestas V136-4.2MW (RD=67m, HH=112m)</option><option value="v150" selected>Vestas V150-5.6MW (RD=75m, HH=105m)</option><option value="sg14">Siemens SG 14-222 DD (RD=111m, HH=155m)</option><option value="halide">GE Haliade-X 13MW (RD=107m, HH=138m)</option><option value="n163">Nordex N163/5.X (RD=81m, HH=118m)</option><option value="n163_7">Nordex N163-7.0MW (RD=163m, HH=138m)</option><option value="generic">Generic 2MW (RD=80m, HH=80m)</option><option value="custom">Custom Turbine</option></select></div>
       <div id="turbineParams">
         <div class="g3" style="gap:.6rem"><div class="fg"><label class="fl">Rotor Diameter (m)</label><input class="fi" type="number" id="tRD" value="150"></div><div class="fg"><label class="fl">Hub Height (m)</label><input class="fi" type="number" id="tHH" value="105"></div><div class="fg"><label class="fl">Rated Power (MW)</label><input class="fi" type="number" id="tPower" value="5.6"></div></div>
         <div class="g3" style="gap:.6rem;margin-top:.5rem"><div class="fg"><label class="fl">Rated Speed (m/s)</label><input class="fi" type="number" id="tRated" value="12.5"></div><div class="fg"><label class="fl">Cut-In Speed (m/s)</label><input class="fi" type="number" id="tCutIn" value="3.0"></div><div class="fg"><label class="fl">Cut-Out Speed (m/s)</label><input class="fi" type="number" id="tCutOut" value="25.0"></div></div>
@@ -332,7 +332,7 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
 <script>
 // ==================== GLOBAL STATE ====================
 const S={step:1,siteBoundary:null,siteArea:0,siteCountry:null,windData:null,turbine:null,positions:[],wakeResults:null,aepResults:null,terrainGrid:null,terrainElevations:null,flowResults:null,mesoData:[],flowCorrections:null,roughnessGrid:null,roughnessValues:null};
-const TURBINES={v136:{name:'Vestas V136-4.2MW',RD:67,HH:112,ratedSpeed:13,cutIn:3,cutOut:25,power:4.2},v150:{name:'Vestas V150-5.6MW',RD:75,HH:105,ratedSpeed:12.5,cutIn:3,cutOut:25,power:5.6},sg14:{name:'Siemens SG 14-222 DD',RD:111,HH:155,ratedSpeed:13,cutIn:3,cutOut:25,power:14},halide:{name:'GE Haliade-X 13MW',RD:107,HH:138,ratedSpeed:13,cutIn:3,cutOut:25,power:13},n163:{name:'Nordex N163/5.X',RD:81,HH:118,ratedSpeed:12,cutIn:3,cutOut:25,power:5},generic:{name:'Generic 2MW',RD:80,HH:80,ratedSpeed:12.5,cutIn:3,cutOut:25,power:2}};
+const TURBINES={v136:{name:'Vestas V136-4.2MW',RD:67,HH:112,ratedSpeed:13,cutIn:3,cutOut:25,power:4.2},v150:{name:'Vestas V150-5.6MW',RD:75,HH:105,ratedSpeed:12.5,cutIn:3,cutOut:25,power:5.6},sg14:{name:'Siemens SG 14-222 DD',RD:111,HH:155,ratedSpeed:13,cutIn:3,cutOut:25,power:14},halide:{name:'GE Haliade-X 13MW',RD:107,HH:138,ratedSpeed:13,cutIn:3,cutOut:25,power:13},n163:{name:'Nordex N163/5.X',RD:81,HH:118,ratedSpeed:12,cutIn:3,cutOut:25,power:5},n163_7:{name:'Nordex N163-7.0MW',RD:163,HH:138,ratedSpeed:12,cutIn:3,cutOut:25,power:7},generic:{name:'Generic 2MW',RD:80,HH:80,ratedSpeed:12.5,cutIn:3,cutOut:25,power:2}};
 const DL=['N','NNE','ENE','E','ESE','SSE','S','SSW','WSW','W','WNW','NNW'];
 const DD=[0,30,60,90,120,150,180,210,240,270,300,330];
 let siteMap,layoutMap,drawnItems,boundaryLayer,turbineMarkers,spacingCircles;
@@ -368,13 +368,14 @@ const COUNTRIES=[
 {n:'Vietnam',c:'VN',b:[[8,102],[24,110]],s:['gwa','era5']},
 {n:'Philippines',c:'PH',b:[[5,117],[21,127]],s:['gwa','era5']},
 {n:'Thailand',c:'TH',b:[[5,97],[21,106]],s:['gwa','era5']},
+{n:'Romania',c:'RO',b:[[43,20],[48,31]],s:['gwa','era5','newa']},
 ];
 
 function detectCountry(lat,lon){return COUNTRIES.find(c=>lat>=c.b[0][0]&&lat<=c.b[1][0]&&lon>=c.b[0][1]&&lon<=c.b[1][1])||{n:'Global',c:'GL',s:['gwa','era5']};}
 
 const DS_INFO={
-  gwa:{name:'Global Wind Atlas (GWA)',desc:'NASA POWER (MERRA-2) global wind resource — 3-year long-term average (2021-2023). Provides hourly 10m/50m wind speed and direction with measured power-law shear extrapolation to hub height. Reliable surface-level meteorological data via NASA POWER API.',url:'https://power.larc.nasa.gov',badge:'Global',color:'var(--mint)'},
-  era5:{name:'NASA POWER / MERRA-2',desc:'NASA POWER (MERRA-2 reanalysis) via NASA Langley API. Real hourly wind data at 10m and 50m heights with measured power-law shear to hub height. More accurate than raw ERA5 in tropical and complex terrain regions.',url:'https://power.larc.nasa.gov',badge:'Global',color:'var(--sky)'},
+  gwa:{name:'Global Wind Atlas (GWA)',desc:'NASA POWER (MERRA-2) global wind resource — 3-year long-term average (2021-2023). Provides daily 10m/50m wind speed and direction with measured power-law shear extrapolation to hub height. Reliable surface-level meteorological data via NASA POWER API.',url:'https://power.larc.nasa.gov',badge:'Global',color:'var(--mint)'},
+  era5:{name:'NASA POWER / MERRA-2',desc:'NASA POWER (MERRA-2 reanalysis) via NASA Langley API. Daily wind data at 10m and 50m (MERRA-2 reanalysis) heights with measured power-law shear to hub height. More accurate than raw ERA5 in tropical and complex terrain regions.',url:'https://power.larc.nasa.gov',badge:'Global',color:'var(--sky)'},
   newa:{name:'New European Wind Atlas (NEWA)',desc:'High-resolution mesoscale modeling over Europe based on WRF with ERA5 forcing. Provides 3km resolution wind data at multiple heights. Covers all European countries.',url:'https://map.neweuropeanwindatlas.eu',badge:'Europe',color:'var(--gold)'},
   barra2:{name:'BARRA2 Reanalysis',desc:'Australian Bureau of Meteorology high-resolution reanalysis (~12km). Provides wind data specifically optimized for the Australian continent. Requires BOM API registration for direct access.',url:'http://www.bom.gov.au/research/projects/barra/',badge:'Australia',color:'var(--gold)'},
   'nrel-wind':{name:'NREL WIND Toolkit',desc:'US DOE NREL Wind Integration National Dataset. 2km resolution, 5-min interval wind data at 80m/100m/120m hub heights across the continental United States. Free download from NREL.',url:'https://www.nrel.gov/grid/wind-toolkit.html',badge:'USA',color:'var(--gold)'},
@@ -410,14 +411,17 @@ function goToStep(n){
     if(n===3&&!S.windData){alert('Load wind resource data first.');return;}
     if(n===5&&!S.windData){alert('Load wind data first.');return;}
     if(n===7&&!S.turbine){alert('Configure a turbine in Step 6 first (select and click Apply Turbine).');return;}
+  }else if(n < S.step && n < 4){
+    // Allow backward navigation freely, but validate if jumping to step 7
+    if(n===7&&!S.turbine){alert('Configure a turbine in Step 6 first.');return;}
   }
-  S.step=n;
   document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('step'+n).classList.add('active');
   document.querySelectorAll('.step-item').forEach(s=>{const sn=parseInt(s.dataset.step);s.classList.remove('active','done');if(sn===n)s.classList.add('active');else if(sn<n)s.classList.add('done');});
   if(n===2)initMesoStep();if(n===3)drawWindRose();if(n===4&&S.terrainElevations)document.getElementById('step4Next').disabled=false;if(n===5)drawFlowWheel();
   if(n===6)drawPowerCurve();if(n===7)setTimeout(initLayoutMap,150);if(n===8)drawWakeMap();
   if(n===9&&S.wakeResults)calculateAEP();if(n===10)renderSummary();
+  S.step=n;
   window.scrollTo(0,0);
 }
 
@@ -449,7 +453,7 @@ function addManualCoord(){const c=document.getElementById('manualCoords');const 
 function removeManualCoord(btn){btn.parentElement.remove();}
 function applyManualCoords(){const rows=document.getElementById('manualCoords').children;const coords=[];for(let r of rows){const lat=parseFloat(r.querySelector('input:nth-child(1)').value);const lon=parseFloat(r.querySelector('input:nth-child(2)').value);if(!isNaN(lat)&&!isNaN(lon))coords.push([lat,lon]);}if(coords.length<3){alert('Need at least 3 coordinates.');return;}S.siteBoundary=coords;S.siteArea=calcPolygonArea(coords);updateSiteInfo();drawnItems.clearLayers();const p=L.polygon(coords.map(c=>[c[0],c[1]]),{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12});drawnItems.addLayer(p);siteMap.fitBounds(p.getBounds(),{padding:[20,20]});}
 function loadDemoSite(){const lat=11.02,lon=76.97;const pc=[[lat,lon],[lat,lon+.07],[lat-.05,lon+.07],[lat-.05,lon+.03],[lat-.06,lon+.03],[lat-.06,lon]];S.siteBoundary=pc;S.siteArea=calcPolygonArea(pc);updateSiteInfo();drawnItems.clearLayers();const p=L.polygon(pc,{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12});drawnItems.addLayer(p);siteMap.fitBounds(p.getBounds(),{padding:[20,20]});}
-function clearSite(){S.siteBoundary=null;S.siteArea=0;updateSiteInfo();drawnItems.clearLayers();}
+function clearSite(){S.siteBoundary=null;S.siteArea=0;updateSiteInfo();drawnItems.clearLayers();document.querySelectorAll('#manualCoords .manual-row').forEach((row,i)=>{const lat=row.querySelector('input:nth-child(1)');const lon=row.querySelector('input:nth-child(2)');if(lat)lat.value='';if(lon)lon.value='';});}
 
 // ==================== STEP 2: MESOSCALE DATA ====================
 function initMesoStep(){
@@ -466,8 +470,9 @@ async function downloadMeso(source){
   const c=getPolygonCentroid(S.siteBoundary);const lat=c[0],lon=c[1];
   const h=parseInt(document.getElementById('mesoHeight').value);
   const statusEl=document.getElementById('ds-status-'+source);
+  if(statusEl)statusEl.innerHTML='<span class="spinner"></span> Downloading...';
   const isGWA=source==='gwa';
-  statusEl.innerHTML='<span class="spinner"></span> Downloading'+(isGWA?' from NASA POWER (3-year daily, ~10s)...':' from NASA POWER daily...');
+  if(statusEl)statusEl.innerHTML='<span class="spinner"></span> Downloading'+(isGWA?' from NASA POWER (3-year daily, ~10s)...':' from NASA POWER daily...');
   try{
     let result;
     if(source==='era5')result=await downloadERA5(lat,lon,h);
@@ -740,7 +745,14 @@ function renderMesoCompare(){
 function applyMesoData(){
   if(S.mesoData.length===0){alert('Download mesoscale data first.');return;}
   const best=S.mesoData.reduce((a,b)=>a.powerDensity>b.powerDensity?a:b);
-  if(best.sectors&&best.sectors.length>=12){S.windData=best.sectors;updateWindStats();drawWindRose();document.getElementById('step3Next').disabled=false;
+  if(best.sectors&&best.sectors.length>=12){S.windData=best.sectors;
+    if(S.turbine){
+      const srcH=best.height||100;
+      const tgtH=S.turbine.HH;
+      const alpha=best.shearAlpha||0.14;
+      S.windData.forEach(s=>{s.meanSpeed=extrapolateWindSpeed(s.meanSpeed,srcH,tgtH,alpha);s.A=extrapolateWindSpeed(s.A,srcH,tgtH,alpha);});
+    }
+    updateWindStats();drawWindRose();document.getElementById('step3Next').disabled=false;
     document.getElementById('windUploadZone').classList.add('loaded');}
   goToStep(3);
 }
@@ -770,10 +782,16 @@ function applyManualWind(){const sectors=[];for(let i=0;i<12;i++){sectors.push({
 function updateWindStats(){if(!S.windData)return;let tf=0,ws=0,wa=0,wk=0,mf=0,pd=0;S.windData.forEach(s=>{tf+=s.freq;ws+=s.meanSpeed*s.freq;wa+=s.A*s.freq;wk+=s.k*s.freq;if(s.freq>mf){mf=s.freq;pd=s.dir;}});const ms=ws/tf;const aA=wa/tf;const aK=wk/tf;const pd2=0.5*1.225*Math.pow(aA,3)*gammaFn(1+3/aK);
   document.getElementById('wsMeanVal').textContent=ms.toFixed(1);document.getElementById('wsWeibullA').textContent=aA.toFixed(1);
   document.getElementById('wsWeibullK').textContent=aK.toFixed(2);document.getElementById('wsPowerDensity').textContent=pd2.toFixed(0);
-  document.getElementById('wsPredDir').textContent=pd+'°';document.getElementById('wsPredFreq').textContent=(mf*100).toFixed(1);}
+  document.getElementById('wsPredDir').textContent=pd+'°';document.getElementById('wsPredFreq').textContent=(mf*100).toFixed(1);
+  const refH=S.turbine?S.turbine.HH:(S.mesoData.length>0?S.mesoData[0].height:100);
+  const msLabel=document.querySelector('#wsMeanVal').parentElement.querySelector('.metric-label');
+  if(msLabel)msLabel.textContent='Mean Speed ('+refH+'m)';
+}
 
 // ==================== WIND ROSE ====================
 function drawWindRose(){const canvas=document.getElementById('windRoseCanvas');if(!canvas)return;const ctx=canvas.getContext('2d');const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,R=Math.min(cx,cy)-50;ctx.fillStyle='#0a0f1a';ctx.fillRect(0,0,W,H);if(!S.windData){ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='14px IBM Plex Sans';ctx.textAlign='center';ctx.fillText('Load wind data',cx,cy);return;}
+  const refH=S.turbine?S.turbine.HH:(S.mesoData.length>0?S.mesoData[0].height:100);
+  ctx.fillStyle='rgba(0,214,143,.6)';ctx.font='11px IBM Plex Mono';ctx.textAlign='center';ctx.fillText('Wind Rose @ '+refH+'m',cx,18);
   const wd=S.windData;const mf=Math.max(...wd.map(s=>s.freq));const fs=mf>0?R/mf:R/0.2;for(let i=1;i<=5;i++){const r=(i/5)*fs;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.07)';ctx.lineWidth=1;ctx.stroke();}
   const sa=Math.PI/6;wd.forEach((s,i)=>{const start=-Math.PI/2+i*sa-sa/2;const end=start+sa;const bl=s.freq*fs;const sn=Math.min(1,s.meanSpeed/12);let r,g,b;if(sn<.5){r=Math.round(sn*2*245);g=Math.round(200+sn*55);b=Math.round(100-sn*200);}else{r=Math.round(245-(sn-.5)*2*25);g=Math.round(255-(sn-.5)*2*175);b=0;}ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,bl,start,end);ctx.closePath();ctx.fillStyle=`rgba(${r},${g},${b},0.7)`;ctx.fill();ctx.strokeStyle=`rgba(${r},${g},${b},0.9)`;ctx.lineWidth=1;ctx.stroke();const ma=start+sa/2;const lr=R+25;if(bl>25){const sx=cx+bl*.65*Math.cos(ma);const sy=cy+bl*.65*Math.sin(ma);ctx.fillStyle='rgba(255,255,255,.9)';ctx.font='10px IBM Plex Mono';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s.meanSpeed.toFixed(1),sx,sy);}ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='11px IBM Plex Mono';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(DL[i],cx+lr*Math.cos(ma),cy+lr*Math.sin(ma));});
   ctx.fillStyle='rgba(0,214,143,.8)';ctx.beginPath();ctx.moveTo(cx,cy-8);ctx.lineTo(cx-4,cy+4);ctx.lineTo(cx+4,cy+4);ctx.closePath();ctx.fill();
@@ -1197,7 +1215,7 @@ function renderFlowTable(){
 // ==================== STEP 6: TURBINE ====================
 function onTurbineSelect(){const val=document.getElementById('turbineSelect').value;if(val&&val!=='custom'&&TURBINES[val]){const t=TURBINES[val];document.getElementById('tRD').value=t.RD;document.getElementById('tHH').value=t.HH;document.getElementById('tPower').value=t.power;document.getElementById('tRated').value=t.ratedSpeed;document.getElementById('tCutIn').value=t.cutIn;document.getElementById('tCutOut').value=t.cutOut;}updateSpacingM();}
 
-function applyTurbine(){S.turbine={name:document.getElementById('turbineSelect').selectedOptions[0].text,RD:parseFloat(document.getElementById('tRD').value),HH:parseFloat(document.getElementById('tHH').value),ratedSpeed:parseFloat(document.getElementById('tRated').value),cutIn:parseFloat(document.getElementById('tCutIn').value),cutOut:parseFloat(document.getElementById('tCutOut').value),power:parseFloat(document.getElementById('tPower').value)};const sw=Math.PI*Math.pow(S.turbine.RD/2,2);const sp=(S.turbine.power*1e6)/sw;document.getElementById('tcName').textContent=S.turbine.name.split('(')[0].trim();document.getElementById('tcSwept').textContent=sw.toFixed(0);document.getElementById('tcSpecific').textContent=sp.toFixed(1);drawPowerCurve();updateSpacingM();document.getElementById('step6Next').disabled=false;}
+function applyTurbine(){S.turbine={name:document.getElementById('turbineSelect').selectedOptions[0].text,RD:parseFloat(document.getElementById('tRD').value),HH:parseFloat(document.getElementById('tHH').value),ratedSpeed:parseFloat(document.getElementById('tRated').value),cutIn:parseFloat(document.getElementById('tCutIn').value),cutOut:parseFloat(document.getElementById('tCutOut').value),power:parseFloat(document.getElementById('tPower').value)};const sw=Math.PI*Math.pow(S.turbine.RD/2,2);const sp=(S.turbine.power*1e6)/sw;document.getElementById('tcName').textContent=S.turbine.name.split('(')[0].trim();document.getElementById('tcSwept').textContent=sw.toFixed(0);document.getElementById('tcSpecific').textContent=sp.toFixed(1);drawPowerCurve();updateSpacingM();document.getElementById('step6Next').disabled=false;if(S.positions.length>0){S.positions.forEach(p=>{if(!p.rd)p.rd=S.turbine.RD;if(!p.hh)p.hh=S.turbine.HH;if(!p.model)p.model=S.turbine.name;});refreshTurbineMarkers();updateLayoutInfo();}}
 
 function powerCurve(v,t){if(!t)return 0;if(v<t.cutIn||v>t.cutOut)return 0;if(v>=t.ratedSpeed&&v<=t.cutOut)return t.power;return t.power*(v*v-t.cutIn*t.cutIn)/(t.ratedSpeed*t.ratedSpeed-t.cutIn*t.cutIn);}
 
@@ -1686,9 +1704,9 @@ function renderSummary(){if(!S.aepResults){document.getElementById('summaryConte
 function drawSummaryCanvas(){const canvas=document.getElementById('summaryCanvas');if(!canvas||!S.aepResults)return;const ctx=canvas.getContext('2d');const W=canvas.width,H=canvas.height;ctx.fillStyle='#07111e';ctx.fillRect(0,0,W,H);ctx.fillStyle='#00d68f';ctx.font='bold 20px IBM Plex Sans';ctx.textAlign='left';ctx.fillText('Wind Farm Designer Pro — Summary Report',30,35);ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='12px IBM Plex Mono';ctx.fillText(new Date().toISOString().split('T')[0],30,55);
 }
 
-function exportLayoutCSV(){if(S.positions.length===0)return;let csv='id,lat,lon\n';S.positions.forEach(p=>{csv+=`T${p.id},${p.lat.toFixed(6)},${p.lon.toFixed(6)}\n`;});downloadFile('wind_farm_layout.csv',csv,'text/csv');}
+function exportLayoutCSV(){if(S.positions.length===0)return;let csv='id,lat,lon,model,rd,hh\n';S.positions.forEach(p=>{csv+=`${p.id},${p.lat.toFixed(6)},${p.lon.toFixed(6)},${p.model||'','${p.rd||''}','${p.hh||''}'\n`;});downloadFile('wind_farm_layout.csv',csv,'text/csv');}
 
-function importLayoutCSV(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(e){try{const lines=e.target.result.trim().split('\n');const positions=[];for(let i=1;i<lines.length;i++){const parts=lines[i].split(',').map(s=>s.trim());if(parts.length>=3){const lat=parseFloat(parts[1]);const lon=parseFloat(parts[2]);if(!isNaN(lat)&&!isNaN(lon)){positions.push({id:positions.length+1,lat,lon});}}}if(positions.length>0){S.positions=positions;refreshTurbineMarkers();updateLayoutInfo();}else{alert('No valid positions found in CSV. Expected columns: id, lat, lon');}}catch(err){alert('Error reading CSV: '+err.message);}};reader.readAsText(file);event.target.value='';}
+function importLayoutCSV(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(e){try{const lines=e.target.result.trim().split('\n');const headers=lines[0].toLowerCase().split(',').map(s=>s.trim());const positions=[];let isUTM=false;let utmZone=null;const xIdx=headers.indexOf('x');const yIdx=headers.indexOf('y');const latIdx=headers.indexOf('lat');const lonIdx=headers.indexOf('lon');const lonLongIdx=headers.indexOf('longitude');const idIdx=headers.indexOf('id');const modelIdx=headers.indexOf('model');const rdIdx=headers.indexOf('rd');const hhIdx=headers.indexOf('hh');if(xIdx>=0&&yIdx>=0){const testX=parseFloat(lines[1].split(',')[xIdx]);const testY=parseFloat(lines[1].split(',')[yIdx]);if(testX>10000)isUTM=true;}for(let i=1;i<lines.length;i++){const parts=lines[i].split(',').map(s=>s.trim());if(parts.length<3)continue;let lat,lon,model,rd,hh;if(isUTM){const x=parseFloat(parts[xIdx>=0?xIdx:1]);const y=parseFloat(parts[yIdx>=0?yIdx:2]);if(isNaN(x)||isNaN(y))continue;let detectedZone=null;for(let z=31;z<=37;z++){try{const crs='EPSG:326'+z;if(typeof proj4!=='undefined'){const conv=proj4(crs,'EPSG:4326',[x,y]);if(conv[1]>=-90&&conv[1]<=90){lat=conv[1];lon=conv[0];detectedZone=z;break;}}else{const a=6378137;const f=1/298.257223563;const e0=500000;const k0=0.9996;const lon0=(z-1)*6-180+3;const esq=2*f-f*f;const e=Math.sqrt(esq);const e1=(1-Math.sqrt(1-esq))/(1+Math.sqrt(1-esq));const n=y/e0;const latRad=n/(k0*a)*(1+e1*e1/4*(1-n)*(1-n)+3*e1*e1/8*(1-n)*(1-n)*(1-n)*(1-n)-e1*e1/256*(1-n)*(1-n)*(1-n)*(1-n)*(1-n));const N=a/Math.sqrt(1-esq*Math.sin(latRad)*Math.sin(latRad));const T=Math.tan(latRad)*Math.tan(latRad);const C=esq*Math.cos(latRad)*Math.cos(latRad)/(1-esq);const A=(x-e0)/(N*k0);const latDeg=latRad*180/Math.PI+1/(k0*Math.PI/180)*(N*Math.tan(latRad)/2*A*A+5*Math.tan(latRad)/24*N*N*N*k0*k0*(T+3*T*T*T+C+9*T*T*T)*A*A*A*A+61*Math.tan(latRad)/720*N*N*N*N*N*k0*k0*k0*k0*(T*T+58*T*T*T*T-330*T*T*T*T*T*T)*A*A*A*A*A*A-((1-e*e/4-3*e*e*e*e/64-5*e*e*e*e*e*e/256)*latDeg*180/Math.PI*Math.PI/180-(3*e*e/8+3*e*e*e*e/32+45*e*e*e*e*e*e/1024)*Math.sin(2*latDeg*180/Math.PI*Math.PI/180)+(15*e*e*e*e/256+45*e*e*e*e*e*e/1024)*Math.sin(4*latDeg*180/Math.PI*Math.PI/180)-(35*e*e*e*e*e*e/3072)*Math.sin(6*latDeg*180/Math.PI*Math.PI/180))/2*(1-e*e/4-3*e*e*e*e/64-5*e*e*e*e*e*e/256)*Math.PI);const lonRad=(A-(1+2*T+C)*A*A*A/6+(5-2*C+28*T-3*C*C+8*e1+24*T*T)*A*A*A*A*A/120)/Math.cos(latRad);lon=lon0+lonRad*180/Math.PI;lat=latDeg;if(lat>=-90&&lat<=90&&lon>=-180&&lon<=180){detectedZone=z;break;}}}catch(err){}}if(detectedZone)utmZone=detectedZone;else{const lonGuess=Math.round(((x-500000)/20037508.34)*180);lon=lonGuess;lat=y/111320;if(lat>0&&lat<84){utmZone=Math.floor((lon+180)/6)+1;}}if(isNaN(lat)||isNaN(lon))continue;}else{const latI=latIdx>=0?latIdx:1;const lonI=lonIdx>=0?lonIdx:(lonLongIdx>=0?lonLongIdx:2);lat=parseFloat(parts[latI]);lon=parseFloat(parts[lonI]);if(isNaN(lat)||isNaN(lon))continue;}model=modelIdx>=0?parts[modelIdx]:'';rd=rdIdx>=0?parseFloat(parts[rdIdx]):NaN;hh=hhIdx>=0?parseFloat(parts[hhIdx]):NaN;positions.push({id:idIdx>=0?parts[idIdx]:'T'+(positions.length+1),lat,lon,model,rd,hh});}if(positions.length>0){S.positions=positions;S._importedMeta=(model||rd||hh)?positions.map(p=>({model:p.model,rd:p.rd,hh:p.hh})):null;refreshTurbineMarkers();updateLayoutInfo();if(isUTM)alert('UTM coordinates auto-detected (Zone '+utmZone+'N) and converted to lat/lon. '+positions.length+' turbines imported.');else alert(positions.length+' turbines imported from CSV.');}else{alert('No valid positions found in CSV. Expected columns: id, lat, lon (or id, x, y for UTM).');}}catch(err){alert('Error reading CSV: '+err.message);}};reader.readAsText(file);event.target.value='';}
 
 function exportAEPReport(){if(!S.aepResults)return;let csv='Turbine,Latitude,Longitude,Gross_AEP_GWh,Net_AEP_GWh,Wake_Loss_pct\n';S.aepResults.turbineData.forEach(t=>{csv+=`T${t.id},${t.lat.toFixed(6)},${t.lon.toFixed(6)},${t.gross.toFixed(4)},${t.net.toFixed(4)},${t.wakeLoss.toFixed(1)}\n`;});downloadFile('aep_report.csv',csv,'text/csv');}
 
@@ -1720,7 +1738,7 @@ async function loadDemoAll(){
     // Step 4: Terrain (async download)
     S.step=3;
     goToStep(4);
-    try{await downloadTerrain();}catch(e){console.warn('Terrain download failed, using simplified flow model:',e);}
+    try{const terrainPromise=new Promise((res,rej)=>{const tId=setTimeout(()=>rej(new Error('Terrain download timed out (30s)')),30000);const origDownload=downloadTerrain;window._terrainResolve=()=>{clearTimeout(tId);res();};});await downloadTerrain();if(window._terrainResolve)window._terrainResolve();}catch(e){console.warn('Terrain download failed, using simplified flow model:',e);document.getElementById('terrainStatus').innerHTML='<div class="alert alert-warn" style="font-size:.68rem">Terrain download skipped (timeout or error). Using simplified flow model.</div>';}
     await new Promise(r=>setTimeout(r,300));
 
     // Step 5: Flow model
@@ -1751,12 +1769,12 @@ async function loadDemoAll(){
 }
 
 function clearAll(){
-  S.step=1;S.siteBoundary=null;S.siteArea=0;S.siteCountry=null;S.windData=null;S.turbine=null;S.positions=[];S.wakeResults=null;S.aepResults=null;S.terrainGrid=null;S.terrainElevations=null;S.flowResults=null;S.mesoData=[];S.flowCorrections=null;S.roughnessGrid=null;S.roughnessValues=null;
+  S.step=1;S.siteBoundary=null;S.siteArea=0;S.siteCountry=null;S.windData=null;S.turbine=null;S.positions=[];S.wakeResults=null;S.aepResults=null;S.terrainGrid=null;S.terrainElevations=null;S.flowResults=null;S.mesoData=[];S.flowCorrections=null;S.roughnessGrid=null;S.roughnessValues=null;S._importedMeta=null;
   if(drawnItems)drawnItems.clearLayers();if(turbineMarkers)turbineMarkers.clearLayers();if(spacingCircles)spacingCircles.clearLayers();if(layoutMap){layoutMap.remove();layoutMap=null;}if(boundaryLayer)boundaryLayer=null;S._windOverlay=null;S._windGrid=null;S._windGridMeta=null;
   document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));document.getElementById('step1').classList.add('active');
   document.querySelectorAll('.step-item').forEach(s=>{s.classList.remove('active','done');if(parseInt(s.dataset.step)===1)s.classList.add('active');});
-  for(let i=2;i<=10;i++)document.getElementById('step'+i+'Next').disabled=true;
-  document.getElementById('step1Next').disabled=true;updateSiteInfo();
+  for(let i=2;i<=10;i++){const el=document.getElementById('step'+i+'Next');if(el)el.disabled=true;}
+  const el1=document.getElementById('step1Next');if(el1)el1.disabled=true;updateSiteInfo();
 }
 </script>
 </body></html>
