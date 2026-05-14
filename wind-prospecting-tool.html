@@ -2234,7 +2234,7 @@ function calculateFinancial(){
   // LCOE
   var totalEnergy=netAEP*life;
   var totalCost=totalCapex+annualOM*life;
-  var lcoe=totalEnergy>0?totalCost/(totalEnergy*1000)*1e6:0; // $/MWh
+  var lcoe=totalEnergy>0?totalCost/(totalEnergy*1000):0; // $/MWh (totalCost in $, energy in MWh)
   // Payback period
   var cumulative=-totalCapex;var payback=life;
   for(var y=1;y<=life;y++){cumulative+=annualNet-debtService;if(cumulative>=0){payback=y;break;}}
