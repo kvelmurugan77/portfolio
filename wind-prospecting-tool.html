@@ -337,34 +337,32 @@ const DL=['N','NNE','ENE','E','ESE','SSE','S','SSW','WSW','W','WNW','NNW'];
 const DD=[0,30,60,90,120,150,180,210,240,270,300,330];
 let siteMap,layoutMap,drawnItems,boundaryLayer,turbineMarkers,spacingCircles;
 
-// ==================== UTM CONVERSION (Karney 2010 accurate inverse) ====================
-function utmToLatLon(x,y,zone,south){
-  const a=6378137,f=1/298.257223563,e2=2*f-f*f,ep2=e2/(1-e2);
-  const k0=0.9996,e0=500000,y0=south?10000000:0;
-  const dy=y-y0,dx=x-e0;
-  const C1=ep2*Math.cos(0);
-  const M0=a*((1-e2/4-3*e2*e2/16-5*e2*e2*e2/64)*0);
-  const mu=dy/k0+a*(1-e2/4-3*e2*e2/16-5*e2*e2*e2/64);
-  const e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
-  let phi1=mu/(a*(1-e2/4-3*e2*e2/16-5*e2*e2*e2/64));
-  for(let i=0;i<10;i++){const sinPhi=Math.sin(phi1),cosPhi=Math.cos(phi1);phi1+=((dy/k0+M0-mu)/(a*(1-e2/4-3*e2*e2/16-5*e2*e2*e2/64)))*(1-e2/4-3*e2*e2/16-5*e2*e2*e2/64)/(-sinPhi*(1-e2*sinPhi*sinPhi));}
-  const phi1r=mu/(a*(1-e2/4-3*e2*e2/16-5*e2*e2*e2/64));
-  let e2t=e1;let ft=phi1r;for(let j=0;j<5;j++){ft+=(-1-e2t*Math.cos(2*ft)-e2t*e2t*Math.cos(4*ft)/2-e2t*e2t*e2t*Math.cos(6*ft)/3);e2t=0;}
-  let mu2=phi1r+(3*e1/2-27*e1*e1*e1/32)*Math.sin(2*phi1r)+(21*e1*e1/16-55*e1*e1*e1*e1/32)*Math.sin(4*phi1r)+(151*e1*e1*e1/96)*Math.sin(6*phi1r);
-  let phi1f=mu2/(a*(1-e2/4-3*e2*e2/16-5*e2*e2*e2/64));
-  for(let i=0;i<10;i++){
-    const M1=a*((1-e2/4-3*e2*e2/16-5*e2*e2*e2/64)*phi1f-(3*e2/8+3*e2*e2/16+45*e2*e2*e2/256)*Math.sin(2*phi1f)+(15*e2*e2/256+45*e2*e2*e2/1024)*Math.sin(4*phi1f)-(35*e2*e2*e2/3072)*Math.sin(6*phi1f));
-    phi1f+=(dy/k0+M1-mu)/a;
+// ==================== UTM TO LAT/LON (Simplified Karney) ====================
+function utmToLatLon(utmX,utmY,zone,isSouth){
+  // Constants (WGS84)
+  var a=6378137.0,b=6356752.314245,e=eccSquared=1-(b*b)/(a*a);
+  e=eccSquared;var e2=e/(1-e),ep2=e2,ec1=Math.sqrt(1-e);
+  var k0=0.9996,x=utmX-500000,y=isSouth?utmY-10000000:utmY;
+  var lon0=(zone-1)*6-180+3;
+  // Footpoint latitude
+  var M=y/k0,mu=M/(a*(1-e/4-3*e*e/16-5*e*e*e/64));
+  var e1=(1-ec1)/(1+ec1);
+  var phi1=mu+(3*e1/2-27*e1*e1*e1/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1*e1*e1*e1/32)*Math.sin(4*mu)+(151*e1*e1*e1/96)*Math.sin(6*mu)+(1097*e1*e1*e1*e1/512)*Math.sin(8*mu);
+  for(var i=0;i<6;i++){
+    var s1=Math.sin(phi1),c1=Math.cos(phi1),N1=a/Math.sqrt(1-e*s1*s1),R1=a*(1-e)/Math.pow(1-e*s1*s1,1.5),D2=M+N1*phi1;
+    phi1=(y/k0-D2)/R1; // Newton-Raphson iteration
   }
-  const N1=a/Math.sqrt(1-e2*Math.sin(phi1f)*Math.sin(phi1f));
-  const T1=Math.tan(phi1f)*Math.tan(phi1f);
-  const C1f=ep2*Math.cos(phi1f)*Math.cos(phi1f);
-  const R1=a*(1-e2)/Math.pow(1-e2*Math.sin(phi1f)*Math.sin(phi1f),1.5);
-  const D=dx/(N1*k0);
-  const lat=phi1f-(N1*Math.tan(phi1f)/R1)*(D*D/2-(5+3*T1+10*C1f-4*C1f*C1f-9*ep2)*Math.pow(D,4)/24+(61+90*T1+298*C1f+45*T1*T1-252*ep2-3*C1f*C1f)*Math.pow(D,6)/720);
-  const lon0=(zone-1)*6-180+3;
-  const lon=lon0+(D-(1+2*T1+C1f)*Math.pow(D,3)/6+(5-2*C1f+28*T1-3*C1f*C1f+8*ep2+24*T1*T1)*Math.pow(D,5)/120)/Math.cos(phi1f);
-  return{lat:lat*180/Math.PI,lon:lon*180/Math.PI};
+  // The Newton-Raphson above may overshoot; use series instead
+  phi1=mu+(3*e1/2-27*e1*e1*e1/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1*e1*e1*e1/32)*Math.sin(4*mu)+(151*e1*e1*e1/96)*Math.sin(6*mu);
+  var sP=Math.sin(phi1),cP=Math.cos(phi1);
+  var N=a/Math.sqrt(1-e*sP*sP);
+  var T=Math.tan(phi1)*Math.tan(phi1);
+  var C=ep2*cP*cP;
+  var R=a*(1-e)/Math.pow(1-e*sP*sP,1.5);
+  var D=x/(N*k0);
+  var lat=phi1-(N*Math.tan(phi1)/R)*(D*D/2-(5+3*T+10*C-4*C*C-9*ep2)*D*D*D*D/24+(61+90*T+298*C+45*T*T-252*ep2-3*C*C)*D*D*D*D*D*D/720);
+  var lonRad=(D-(1+2*T+C)*D*D*D/6+(5-2*C+28*T-3*C*C+8*ep2+24*T*T)*D*D*D*D*D/120)/cP;
+  return{lat:lat*180/Math.PI,lon:lon0+lonRad*180/Math.PI};
 }
 
 // ==================== COUNTRY DETECTION ====================
