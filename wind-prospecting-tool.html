@@ -337,6 +337,36 @@ const DL=['N','NNE','ENE','E','ESE','SSE','S','SSW','WSW','W','WNW','NNW'];
 const DD=[0,30,60,90,120,150,180,210,240,270,300,330];
 let siteMap,layoutMap,drawnItems,boundaryLayer,turbineMarkers,spacingCircles;
 
+// ==================== UTM CONVERSION (Karney 2010 accurate inverse) ====================
+function utmToLatLon(x,y,zone,south){
+  const a=6378137,f=1/298.257223563,e2=2*f-f*f,ep2=e2/(1-e2);
+  const k0=0.9996,e0=500000,y0=south?10000000:0;
+  const dy=y-y0,dx=x-e0;
+  const C1=ep2*Math.cos(0);
+  const M0=a*((1-e2/4-3*e2*e2/16-5*e2*e2*e2/64)*0);
+  const mu=dy/k0+a*(1-e2/4-3*e2*e2/16-5*e2*e2*e2/64);
+  const e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+  let phi1=mu/(a*(1-e2/4-3*e2*e2/16-5*e2*e2*e2/64));
+  for(let i=0;i<10;i++){const sinPhi=Math.sin(phi1),cosPhi=Math.cos(phi1);phi1+=((dy/k0+M0-mu)/(a*(1-e2/4-3*e2*e2/16-5*e2*e2*e2/64)))*(1-e2/4-3*e2*e2/16-5*e2*e2*e2/64)/(-sinPhi*(1-e2*sinPhi*sinPhi));}
+  const phi1r=mu/(a*(1-e2/4-3*e2*e2/16-5*e2*e2*e2/64));
+  let e2t=e1;let ft=phi1r;for(let j=0;j<5;j++){ft+=(-1-e2t*Math.cos(2*ft)-e2t*e2t*Math.cos(4*ft)/2-e2t*e2t*e2t*Math.cos(6*ft)/3);e2t=0;}
+  let mu2=phi1r+(3*e1/2-27*e1*e1*e1/32)*Math.sin(2*phi1r)+(21*e1*e1/16-55*e1*e1*e1*e1/32)*Math.sin(4*phi1r)+(151*e1*e1*e1/96)*Math.sin(6*phi1r);
+  let phi1f=mu2/(a*(1-e2/4-3*e2*e2/16-5*e2*e2*e2/64));
+  for(let i=0;i<10;i++){
+    const M1=a*((1-e2/4-3*e2*e2/16-5*e2*e2*e2/64)*phi1f-(3*e2/8+3*e2*e2/16+45*e2*e2*e2/256)*Math.sin(2*phi1f)+(15*e2*e2/256+45*e2*e2*e2/1024)*Math.sin(4*phi1f)-(35*e2*e2*e2/3072)*Math.sin(6*phi1f));
+    phi1f+=(dy/k0+M1-mu)/a;
+  }
+  const N1=a/Math.sqrt(1-e2*Math.sin(phi1f)*Math.sin(phi1f));
+  const T1=Math.tan(phi1f)*Math.tan(phi1f);
+  const C1f=ep2*Math.cos(phi1f)*Math.cos(phi1f);
+  const R1=a*(1-e2)/Math.pow(1-e2*Math.sin(phi1f)*Math.sin(phi1f),1.5);
+  const D=dx/(N1*k0);
+  const lat=phi1f-(N1*Math.tan(phi1f)/R1)*(D*D/2-(5+3*T1+10*C1f-4*C1f*C1f-9*ep2)*Math.pow(D,4)/24+(61+90*T1+298*C1f+45*T1*T1-252*ep2-3*C1f*C1f)*Math.pow(D,6)/720);
+  const lon0=(zone-1)*6-180+3;
+  const lon=lon0+(D-(1+2*T1+C1f)*Math.pow(D,3)/6+(5-2*C1f+28*T1-3*C1f*C1f+8*ep2+24*T1*T1)*Math.pow(D,5)/120)/Math.cos(phi1f);
+  return{lat:lat*180/Math.PI,lon:lon*180/Math.PI};
+}
+
 // ==================== COUNTRY DETECTION ====================
 const COUNTRIES=[
 {n:'India',c:'IN',b:[[8,68],[37,97]],s:['gwa','era5','ncep']},
@@ -1706,7 +1736,7 @@ function drawSummaryCanvas(){const canvas=document.getElementById('summaryCanvas
 
 function exportLayoutCSV(){if(S.positions.length===0)return;let csv='id,lat,lon,model,rd,hh\n';S.positions.forEach(p=>{csv+=p.id+','+p.lat.toFixed(6)+','+p.lon.toFixed(6)+','+(p.model||'')+','+(p.rd||'')+','+(p.hh||'')+'\n';});downloadFile('wind_farm_layout.csv',csv,'text/csv');}
 
-function importLayoutCSV(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(e){try{const lines=e.target.result.trim().split('\n');const headers=lines[0].toLowerCase().split(',').map(s=>s.trim());const positions=[];let isUTM=false;let utmZone=null;const xIdx=headers.indexOf('x');const yIdx=headers.indexOf('y');const latIdx=headers.indexOf('lat');const lonIdx=headers.indexOf('lon');const lonLongIdx=headers.indexOf('longitude');const idIdx=headers.indexOf('id');const modelIdx=headers.indexOf('model');const rdIdx=headers.indexOf('rd');const hhIdx=headers.indexOf('hh');if(xIdx>=0&&yIdx>=0){const testX=parseFloat(lines[1].split(',')[xIdx]);const testY=parseFloat(lines[1].split(',')[yIdx]);if(testX>10000)isUTM=true;}for(let i=1;i<lines.length;i++){const parts=lines[i].split(',').map(s=>s.trim());if(parts.length<3)continue;let lat,lon,model,rd,hh;if(isUTM){const x=parseFloat(parts[xIdx>=0?xIdx:1]);const y=parseFloat(parts[yIdx>=0?yIdx:2]);if(isNaN(x)||isNaN(y))continue;let detectedZone=null;for(let z=31;z<=37;z++){try{const crs='EPSG:326'+z;if(typeof proj4!=='undefined'){const conv=proj4(crs,'EPSG:4326',[x,y]);if(conv[1]>=-90&&conv[1]<=90){lat=conv[1];lon=conv[0];detectedZone=z;break;}}else{const a=6378137;const f=1/298.257223563;const e0=500000;const k0=0.9996;const lon0=(z-1)*6-180+3;const esq=2*f-f*f;const e=Math.sqrt(esq);const e1=(1-Math.sqrt(1-esq))/(1+Math.sqrt(1-esq));const n=y/e0;const latRad=n/(k0*a)*(1+e1*e1/4*(1-n)*(1-n)+3*e1*e1/8*(1-n)*(1-n)*(1-n)*(1-n)-e1*e1/256*(1-n)*(1-n)*(1-n)*(1-n)*(1-n));const N=a/Math.sqrt(1-esq*Math.sin(latRad)*Math.sin(latRad));const T=Math.tan(latRad)*Math.tan(latRad);const C=esq*Math.cos(latRad)*Math.cos(latRad)/(1-esq);const A=(x-e0)/(N*k0);const latDeg=latRad*180/Math.PI+1/(k0*Math.PI/180)*(N*Math.tan(latRad)/2*A*A+5*Math.tan(latRad)/24*N*N*N*k0*k0*(T+3*T*T*T+C+9*T*T*T)*A*A*A*A+61*Math.tan(latRad)/720*N*N*N*N*N*k0*k0*k0*k0*(T*T+58*T*T*T*T-330*T*T*T*T*T*T)*A*A*A*A*A*A-((1-e*e/4-3*e*e*e*e/64-5*e*e*e*e*e*e/256)*latDeg*180/Math.PI*Math.PI/180-(3*e*e/8+3*e*e*e*e/32+45*e*e*e*e*e*e/1024)*Math.sin(2*latDeg*180/Math.PI*Math.PI/180)+(15*e*e*e*e/256+45*e*e*e*e*e*e/1024)*Math.sin(4*latDeg*180/Math.PI*Math.PI/180)-(35*e*e*e*e*e*e/3072)*Math.sin(6*latDeg*180/Math.PI*Math.PI/180))/2*(1-e*e/4-3*e*e*e*e/64-5*e*e*e*e*e*e/256)*Math.PI);const lonRad=(A-(1+2*T+C)*A*A*A/6+(5-2*C+28*T-3*C*C+8*e1+24*T*T)*A*A*A*A*A/120)/Math.cos(latRad);lon=lon0+lonRad*180/Math.PI;lat=latDeg;if(lat>=-90&&lat<=90&&lon>=-180&&lon<=180){detectedZone=z;break;}}}catch(err){}}if(detectedZone)utmZone=detectedZone;else{const lonGuess=Math.round(((x-500000)/20037508.34)*180);lon=lonGuess;lat=y/111320;if(lat>0&&lat<84){utmZone=Math.floor((lon+180)/6)+1;}}if(isNaN(lat)||isNaN(lon))continue;}else{const latI=latIdx>=0?latIdx:1;const lonI=lonIdx>=0?lonIdx:(lonLongIdx>=0?lonLongIdx:2);lat=parseFloat(parts[latI]);lon=parseFloat(parts[lonI]);if(isNaN(lat)||isNaN(lon))continue;}model=modelIdx>=0?parts[modelIdx]:'';rd=rdIdx>=0?parseFloat(parts[rdIdx]):NaN;hh=hhIdx>=0?parseFloat(parts[hhIdx]):NaN;positions.push({id:idIdx>=0?parts[idIdx]:'T'+(positions.length+1),lat,lon,model,rd,hh});}if(positions.length>0){S.positions=positions;S._importedMeta=(model||rd||hh)?positions.map(p=>({model:p.model,rd:p.rd,hh:p.hh})):null;refreshTurbineMarkers();updateLayoutInfo();if(isUTM)alert('UTM coordinates auto-detected (Zone '+utmZone+'N) and converted to lat/lon. '+positions.length+' turbines imported.');else alert(positions.length+' turbines imported from CSV.');}else{alert('No valid positions found in CSV. Expected columns: id, lat, lon (or id, x, y for UTM).');}}catch(err){alert('Error reading CSV: '+err.message);}};reader.readAsText(file);event.target.value='';}
+function importLayoutCSV(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(e){try{const lines=e.target.result.trim().split('\n');const headers=lines[0].toLowerCase().split(',').map(s=>s.trim());const positions=[];let isUTM=false;let utmZone=null;const xIdx=headers.indexOf('x');const yIdx=headers.indexOf('y');const latIdx=headers.indexOf('lat');const lonIdx=headers.indexOf('lon');const lonLongIdx=headers.indexOf('longitude');const idIdx=headers.indexOf('id');const modelIdx=headers.indexOf('model');const rdIdx=headers.indexOf('rd');const hhIdx=headers.indexOf('hh');if(xIdx>=0&&yIdx>=0){const testX=parseFloat(lines[1].split(',')[xIdx]);const testY=parseFloat(lines[1].split(',')[yIdx]);if(testX>10000)isUTM=true;}for(let i=1;i<lines.length;i++){const parts=lines[i].split(',').map(s=>s.trim());if(parts.length<3)continue;let lat,lon,model,rd,hh;if(isUTM){const x=parseFloat(parts[xIdx>=0?xIdx:1]);const y=parseFloat(parts[yIdx>=0?yIdx:2]);if(isNaN(x)||isNaN(y))continue;if(!utmZone){for(let z=31;z<=37;z++){try{const r=utmToLatLon(x,y,z,false);if(r.lat>=-90&&r.lat<=90&&r.lon>=-180&&r.lon<=180){utmZone=z;lat=r.lat;lon=r.lon;break;}}catch(er){}}}else{const r=utmToLatLon(x,y,utmZone,false);lat=r.lat;lon=r.lon;}if(isNaN(lat)||isNaN(lon))continue;}else{const latI=latIdx>=0?latIdx:1;const lonI=lonIdx>=0?lonIdx:(lonLongIdx>=0?lonLongIdx:2);lat=parseFloat(parts[latI]);lon=parseFloat(parts[lonI]);if(isNaN(lat)||isNaN(lon))continue;}model=modelIdx>=0?parts[modelIdx]:'';rd=rdIdx>=0?parseFloat(parts[rdIdx]):NaN;hh=hhIdx>=0?parseFloat(parts[hhIdx]):NaN;positions.push({id:idIdx>=0?parts[idIdx]:'T'+(positions.length+1),lat,lon,model,rd,hh});}if(positions.length>0){S.positions=positions;S._importedMeta=(model||rd||hh)?positions.map(p=>({model:p.model,rd:p.rd,hh:p.hh})):null;refreshTurbineMarkers();updateLayoutInfo();if(isUTM)alert('UTM coordinates auto-detected (Zone '+utmZone+'N) and converted to lat/lon. '+positions.length+' turbines imported.');else alert(positions.length+' turbines imported from CSV.');}else{alert('No valid positions found in CSV. Expected columns: id, lat, lon (or id, x, y for UTM).');}}catch(err){alert('Error reading CSV: '+err.message);}};reader.readAsText(file);event.target.value='';}
 
 function exportAEPReport(){if(!S.aepResults)return;let csv='Turbine,Latitude,Longitude,Gross_AEP_GWh,Net_AEP_GWh,Wake_Loss_pct\n';S.aepResults.turbineData.forEach(t=>{csv+=`T${t.id},${t.lat.toFixed(6)},${t.lon.toFixed(6)},${t.gross.toFixed(4)},${t.net.toFixed(4)},${t.wakeLoss.toFixed(1)}\n`;});downloadFile('aep_report.csv',csv,'text/csv');}
 
