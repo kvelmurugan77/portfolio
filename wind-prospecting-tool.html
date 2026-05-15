@@ -657,17 +657,86 @@ async function fetchWithRetry(url,opts,maxRetries){
   throw lastError||new Error('Fetch failed after retries');
 }
 
-// WAsP-compliant vertical wind speed extrapolation
-// Power law: v(h) = v(h_ref) * (h/h_ref)^alpha (standard WAsP)
-function extrapolateWindSpeed(speed,fromH,toH,alpha){
+// ============================================================
+// WASP-COMPLIANT VERTICAL EXTRAPOLATION
+// Three methods available: power-law, log-law, combined log-linear
+// ============================================================
+
+// Method 1: Power law extrapolation (simplified but widely used)
+// v(h) = v(h_ref) * (h/h_ref)^alpha
+function extrapolatePowerLaw(speed,fromH,toH,alpha){
   if(alpha===undefined)alpha=0.14;
   if(fromH<=0||toH<=0)return speed;
   if(speed<=0)return 0;
   return speed*Math.pow(toH/fromH,alpha);
 }
 
-// Per-direction extrapolation using sector-specific shear (WAsP-like)
-function extrapolateArray(ws,fromH,toH,alpha,sectorAlphas,wdArray){
+// Method 2: Log law extrapolation (WASP primary — neutral stability)
+// v(h) = v(h_ref) * ln(h/z0) / ln(h_ref/z0)
+// z0 = roughness length derived from power-law alpha:
+//   z0 ≈ h_ref * exp(-ln(h_ref) + alpha * ln(h_ref))  →  z0 = fromH / exp(1/alpha)
+function extrapolateLogLaw(speed,fromH,toH,z0){
+  if(z0===undefined)z0=0.03;
+  z0=Math.max(0.0001,z0);
+  if(fromH<=z0||toH<=z0)return speed;
+  if(speed<=0)return 0;
+  return speed*Math.log(toH/z0)/Math.log(fromH/z0);
+}
+
+// Method 3: Log-linear profile (WASP standard for internal boundary layer)
+// Below IBL height: log law with upstream z0
+// Above IBL height: log law with local z0
+// This is the most WASP-like approach
+function extrapolateLogLinear(speed,fromH,toH,z0local,z0upstream,iblHeight){
+  if(speed<=0)return 0;
+  if(!z0local)z0local=0.03;
+  if(!z0upstream)z0upstream=0.03;
+  z0local=Math.max(0.0001,z0local);
+  z0upstream=Math.max(0.0001,z0upstream);
+  if(!iblHeight||iblHeight<=fromH){
+    // Above IBL: standard log law with local roughness
+    return extrapolateLogLaw(speed,fromH,toH,z0local);
+  }
+  // Below IBL: transition profile (simplified)
+  // Linear blend between upstream and local log profiles
+  var vUp=extrapolateLogLaw(speed,fromH,toH,z0upstream);
+  var vLocal=extrapolateLogLaw(speed,fromH,toH,z0local);
+  var blend=Math.min(1,toH/iblHeight);
+  return vUp*(1-blend)+vLocal*blend;
+}
+
+// Derive roughness length z0 from power-law alpha and reference height
+// Inverse of: alpha ≈ 1/ln(h/z0) → z0 = h * exp(-1/alpha)
+function alphaToZ0(alpha,h){
+  if(alpha<=0)return 0.03;
+  if(!h)h=50;
+  return h*Math.exp(-1/alpha);
+}
+
+// Derive power-law alpha from roughness length z0 and reference height
+// alpha ≈ 1/ln(h/z0)
+function z0ToAlpha(z0,h){
+  if(z0<=0)z0=0.0001;
+  if(!h)h=50;
+  return 1/Math.log(h/z0);
+}
+
+// Master extrapolation function — uses log-law by default (WASP standard)
+// Falls back to power-law if z0 not available
+function extrapolateWindSpeed(speed,fromH,toH,alpha,z0){
+  if(fromH<=0||toH<=0)return speed;
+  if(speed<=0)return 0;
+  if(z0!==undefined&&z0>0.0001){
+    // Use log-law (WASP primary method)
+    return extrapolateLogLaw(speed,fromH,toH,z0);
+  }
+  // Fallback to power-law
+  return extrapolatePowerLaw(speed,fromH,toH,alpha);
+}
+
+// Per-direction extrapolation using sector-specific shear (WASP-like)
+// Each direction sector has its own alpha/z0 derived from measured 10m/50m data
+function extrapolateArray(ws,fromH,toH,alpha,sectorAlphas,wdArray,sectorZ0s){
   if(!sectorAlphas||!wdArray){
     return ws.map(function(v){return v!==null?extrapolateWindSpeed(v,fromH,toH,alpha):null;});
   }
@@ -676,7 +745,9 @@ function extrapolateArray(ws,fromH,toH,alpha,sectorAlphas,wdArray){
     var wd=wdArray[i];
     if(wd===null)return extrapolateWindSpeed(v,fromH,toH,alpha);
     var si=Math.round(((wd+180)%360)/30)%12;
-    return extrapolateWindSpeed(v,fromH,toH,sectorAlphas[si]);
+    var sAlpha=sectorAlphas[si];
+    var sZ0=sectorZ0s?sectorZ0s[si]:undefined;
+    return extrapolateWindSpeed(v,fromH,toH,sAlpha,sZ0);
   });
 }
 
@@ -729,6 +800,7 @@ async function fetchNASAPower(lat,lon,startYYYY,endYYYY){
   }
   // Per-sector alpha for directional shear correction (WAsP uses directional speed-up)
   var sectorAlphas=[];
+  var sectorZ0s=[]; // WASP: per-sector roughness length z0
   for(var si=0;si<12;si++){
     var sa=sectorAlphaSums[si];
     if(sa.count>=5&&sa.sum10/sa.count>0){
@@ -736,9 +808,14 @@ async function fetchNASAPower(lat,lon,startYYYY,endYYYY){
       var m50=sa.sum50/sa.count;
       if(m50>m10){
         var sAlpha=Math.log(m50/m10)/Math.log(5);
-        sectorAlphas.push(Math.max(0.08,Math.min(0.45,sAlpha)));
-      }else{sectorAlphas.push(alpha);}
-    }else{sectorAlphas.push(alpha);}
+        sAlpha=Math.max(0.08,Math.min(0.45,sAlpha));
+        sectorAlphas.push(sAlpha);
+        // Derive z0 from alpha using log-law relationship (WASP method)
+        // alpha = 1/ln(h_ref/z0) → z0 = h_ref * exp(-1/alpha)  using h_ref=30m (geometric mean of 10m and 50m)
+        var sZ0=30*Math.exp(-1/sAlpha);
+        sectorZ0s.push(Math.max(0.0001,Math.min(5,sZ0)));
+      }else{sectorAlphas.push(alpha);sectorZ0s.push(alphaToZ0(alpha,30));}
+    }else{sectorAlphas.push(alpha);sectorZ0s.push(alphaToZ0(alpha,30));}
   }
   // Build daily arrays at 10m
   var ws=[];var wd=[];
@@ -749,10 +826,10 @@ async function fetchNASAPower(lat,lon,startYYYY,endYYYY){
       ws.push(v10);wd.push(d10);
     }else{ws.push(null);wd.push(null);}
   }
-  return{ws:ws,wd:wd,alpha:alpha,sectorAlphas:sectorAlphas,records:validPairs,sourceHeight:10};
+  return{ws:ws,wd:wd,alpha:alpha,sectorAlphas:sectorAlphas,sectorZ0s:sectorZ0s,records:validPairs,sourceHeight:10};
 }
 
-function extrapolateArray(ws,fromH,toH,alpha){
+function extrapolateArrayOld(ws,fromH,toH,alpha){
   return ws.map(v=>v!==null?extrapolateWindSpeed(v,fromH,toH,alpha):null);
 }
 
@@ -768,7 +845,7 @@ async function downloadERA5(lat,lon,h){
     for(let yi=0;yi<years.length;yi++){
       try{
         const data=await fetchNASAPower(lat,lon,years[yi],years[yi]);
-        const ws=extrapolateArray(data.ws,10,h,data.alpha,data.sectorAlphas,data.wd);
+        const ws=extrapolateArray(data.ws,10,h,data.alpha,data.sectorAlphas,data.wd,data.sectorZ0s);
         totalRecords+=data.records;measuredAlpha=data.alpha;
         allSectors.push(processHourlyToSectors(ws,data.wd));
         if(yi<years.length-1)await new Promise(r=>setTimeout(r,1000));
@@ -801,7 +878,7 @@ async function downloadERA5(lat,lon,h){
     const yr=period;
     const data=await fetchNASAPower(lat,lon,yr,yr);
     totalRecords=data.records;measuredAlpha=data.alpha;
-    const ws=extrapolateArray(data.ws,10,h,data.alpha,data.sectorAlphas,data.wd);
+    const ws=extrapolateArray(data.ws,10,h,data.alpha,data.sectorAlphas,data.wd,data.sectorZ0s);
     sectors=processHourlyToSectors(ws,data.wd);
     periodLabel=yr;
   }
@@ -836,7 +913,7 @@ async function downloadGWA(lat,lon,h){
     const yr=years[yi];
     try{
       const data=await fetchNASAPower(lat,lon,yr,yr);
-      const ws=extrapolateArray(data.ws,10,h,data.alpha,data.sectorAlphas,data.wd);
+      const ws=extrapolateArray(data.ws,10,h,data.alpha,data.sectorAlphas,data.wd,data.sectorZ0s);
       totalRecords+=data.records;
       measuredAlpha=data.alpha;
       const sectors=processHourlyToSectors(ws,data.wd);
@@ -850,7 +927,7 @@ async function downloadGWA(lat,lon,h){
         await new Promise(r=>setTimeout(r,3000));
         try{
           const data=await fetchNASAPower(lat,lon,yr,yr);
-          const ws=extrapolateArray(data.ws,10,h,data.alpha,data.sectorAlphas,data.wd);
+          const ws=extrapolateArray(data.ws,10,h,data.alpha,data.sectorAlphas,data.wd,data.sectorZ0s);
           totalRecords+=data.records;measuredAlpha=data.alpha;
           allSectors.push(processHourlyToSectors(ws,data.wd));
         }catch(e2){console.warn('GWA: retry for year '+yr+' also failed:',e2.message);}
@@ -914,7 +991,7 @@ async function downloadCountryMeso(source,lat,lon,h){
   try{
     const data=await fetchNASAPower(lat,lon,'2023','2023');
     // Extrapolate from 10m to requested hub height
-    const ws=extrapolateArray(data.ws,10,h,data.alpha);
+    const ws=extrapolateArray(data.ws,10,h,data.alpha,data.sectorAlphas,data.wd,data.sectorZ0s);
     const records=ws.filter(v=>v!==null).length;if(records<100)throw new Error('Insufficient data records');
     const sectors=processHourlyToSectors(ws,data.wd);
     const avgSpeed=sectors.reduce((s,sc)=>s+sc.meanSpeed*sc.freq,0);
