@@ -837,7 +837,7 @@ async function downloadGWA(lat,lon,h){
       const ym=yearMeans.reduce((a,b)=>a+b,0)/yearMeans.length;
       const ystd=Math.sqrt(yearMeans.reduce((s,v)=>s+(v-ym)**2,0)/yearMeans.length);
       // Inter-annual variability gives a hint about k
-      const cv=yst/Math.max(0.1,ym);
+      const cv=ystd/Math.max(0.1,ym);
       k=Math.max(1.5,Math.min(3.5,1.0/cv));
     }
     // Per-sector k refinement based on typical patterns
