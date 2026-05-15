@@ -237,7 +237,7 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
       <div class="legend-row" style="margin-top:.6rem;justify-content:center"><div class="legend-pill"><div class="legend-dot" style="background:#00d68f"></div>Speed-up (>1.0)</div><div class="legend-pill"><div class="legend-dot" style="background:#e05050"></div>Slow-down (<1.0)</div><div class="legend-pill"><div class="legend-dot" style="background:#4ab3e8"></div>Neutral (≈1.0)</div></div>
     </div>
   </div>
-  <div class="card" style="margin-top:0"><div class="card-title">Sector-wise Correction Table</div><div class="tbl-wrap" style="max-height:320px"><table class="dt" id="flowTable"><thead><tr><th>Sector</th><th>Dir (°)</th><th>Freq (%)</th><th>Free (m/s)</th><th>BZ Factor</th><th>IBL Factor</th><th>Combined</th><th>Corrected (m/s)</th></tr></thead><tbody id="flowTableBody"></tbody></table></div></div>
+  <div class="card" style="margin-top:0"><div class="card-title">Sector-wise Correction Table</div><div class="tbl-wrap" style="max-height:320px"><table class="dt" id="flowTable"><thead><tr><th>Sector</th><th>Dir (°)</th><th>Freq (%)</th><th>Free (m/s)</th><th>BZ (Oro)</th><th>IBL (Rough)</th><th>Geo</th><th>Combined</th><th>Corrected</th></tr></thead><tbody id="flowTableBody"></tbody></table></div></div>
   <div id="flowResultsSection" style="display:none"><div class="kpi-strip" id="flowKPIStrip"></div></div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(4)">← Terrain</button><button class="btn btn-primary" id="step5Next" onclick="goToStep(6)" disabled>Next: Turbine →</button></div>
 </div>
@@ -1599,87 +1599,196 @@ function exportRoughnessCSV(){
 }
 
 // ==================== STEP 5: WASP FLOW MODEL ====================
+
+// WASP displacement height model (from roughness length)
+// d = 0.7 * h_canopy, where h_canopy estimated from z0
+function displacementHeight(z0){
+  if(z0<0.10)return 0; // No displacement for low roughness
+  var hCan=Math.min(30,Math.max(1,z0/0.10)); // Canopy height estimate
+  return Math.min(25,0.7*hCan);
+}
+
+// Log-law with displacement height (WASP standard)
+function logLawWithD(z,z0,d){
+  var zEff=Math.max(z-d,z0*1.05,0.1);
+  return Math.log(zEff/z0);
+}
+
+// Geostrophic drag law (WASP — Troen & Petersen 1989)
+// Forward: G/u* = (1/κ) * sqrt[(ln(u*/(f*z0)) - A)^2 + B^2]
+// A=1.8, B=4.5 (Rossby similarity constants for neutral stability)
+function geostrophicDragForward(uStar,z0,lat){
+  if(!lat)lat=45;lat=Math.abs(lat);
+  var kappa=0.40;var A=1.8;var B=4.5;
+  var omega=7.2921e-5; // Earth angular velocity (rad/s)
+  var f=2*omega*Math.sin(lat*Math.PI/180); // Coriolis parameter
+  f=Math.max(1e-5,f); // Prevent zero at equator
+  var lnTerm=Math.log(uStar/(f*z0));
+  var GbyUs=(1/kappa)*Math.sqrt(Math.pow(lnTerm-A,2)+B*B);
+  return GbyUs*uStar;
+}
+
+// Inverse geostrophic drag law: given G, z0, lat → solve for u*
+// Newton-Raphson iteration
+function geostrophicToSurface(G,z0,lat,hubH){
+  if(G<=0)return{uStar:0.1,surfaceWind:0};
+  lat=Math.abs(lat||45);
+  var kappa=0.40;var A=1.8;var B=4.5;
+  var omega=7.2921e-5;
+  var f=2*omega*Math.sin(lat*Math.PI/180);
+  f=Math.max(1e-5,f);
+  var d=displacementHeight(z0);
+  // Initial guess for u*
+  var uStar=0.4; // Typical friction velocity
+  for(var iter=0;iter<20;iter++){
+    var lnTerm=Math.log(uStar/(f*z0));
+    var GbyUs=(1/kappa)*Math.sqrt(Math.pow(lnTerm-A,2)+B*B);
+    var Gcalc=GbyUs*uStar;
+    // dG/du* for Newton step
+    var dlnTerm=1/uStar;
+    var dGbyUs=(1/kappa)*(0.5*(2*(lnTerm-A)*dlnTerm)/Math.sqrt(Math.pow(lnTerm-A,2)+B*B));
+    var dGdu=GbyUs+uStar*dGbyUs;
+    if(Math.abs(dGdu)<1e-12)break;
+    var delta=(Gcalc-G)/dGdu;
+    uStar=Math.max(0.01,uStar-delta);
+    if(Math.abs(delta)<1e-6)break;
+  }
+  // Surface wind at hub height using log-law with displacement
+  var zEff=Math.max(hubH-d,z0*1.05,0.1);
+  var surfaceWind=(uStar/kappa)*Math.log(zEff/z0);
+  return{uStar:uStar,surfaceWind:surfaceWind};
+}
+
+// RIX — Ruggedness Index (WASP flow model quality metric)
+function computeRIX(terrainElevations,terrainGrid,critSlope){
+  if(!terrainElevations||!terrainGrid)return{rix:0,risk:'Unknown'};
+  critSlope=critSlope||0.3;
+  var res=Math.round(Math.sqrt(terrainElevations.length));
+  var mid=Math.floor(res/2);
+  var dx=0,dy=0;
+  if(terrainGrid&&terrainGrid.length>=2){dx=(terrainGrid[1][1]-terrainGrid[0][1])*111320;dy=dx;}
+  if(dx<=0)dx=dy=1000; // Default 1km grid spacing
+  var nDirs=72;var nSteps=20;var radius=5000;
+  var exceedCount=0;
+  for(var di=0;di<nDirs;di++){
+    var angle=di*360/nDirs*Math.PI/180;
+    var maxSlope=0;
+    for(var st=1;st<=nSteps;st++){
+      var dist=st*radius/nSteps;
+      var ci=Math.round(mid-st*Math.cos(angle)*dx/dist*st*0.05);
+      var cj=Math.round(mid+st*Math.sin(angle)*dy/dist*st*0.05);
+      ci=Math.max(0,Math.min(res-1,ci));
+      cj=Math.max(0,Math.min(res-1,cj));
+      var dz=Math.abs(terrainElevations[mid*res+mid]-terrainElevations[ci*res+cj]);
+      var slope=dz/dist;
+      if(slope>maxSlope)maxSlope=slope;
+    }
+    if(maxSlope>critSlope)exceedCount++;
+  }
+  var rix=exceedCount/nDirs*100;
+  var risk=rix<5?'LOW':rix<10?'MODERATE':rix<20?'HIGH':'VERY HIGH';
+  return{rix:rix,risk:risk,exceedCount:exceedCount,totalDirs:nDirs,critSlope:critSlope};
+}
+
 async function runFlowModel(){
   if(!S.windData){alert('Load wind data first.');return;}
-  const height=parseFloat(document.getElementById('flowHeight').value)||100;
-  const fetchDist=parseFloat(document.getElementById('upstreamFetch').value)||5;
-  const modelType=document.getElementById('flowModelType').value;
-  const z0up=parseFloat(document.getElementById('z0Upstream').value)||0.03;
-  const z0site=parseFloat(document.getElementById('z0Site').value)||0.05;
-  // Air density calculation
-  const temp=parseFloat(document.getElementById('airTemp').value)||15;
-  let elev=S.siteElevation||0;
-  if(S.siteBoundary){const c=getPolygonCentroid(S.siteBoundary);elev=await fetchElevation(c[0],c[1]).catch(()=>0);}
+  var height=parseFloat(document.getElementById('flowHeight').value)||100;
+  var fetchDist=parseFloat(document.getElementById('upstreamFetch').value)||5;
+  var modelType=document.getElementById('flowModelType').value;
+  var z0up=parseFloat(document.getElementById('z0Upstream').value)||0.03;
+  var z0site=parseFloat(document.getElementById('z0Site').value)||0.05;
+  var temp=parseFloat(document.getElementById('airTemp').value)||15;
+  var elev=S.siteElevation||0;
+  if(S.siteBoundary){var c=getPolygonCentroid(S.siteBoundary);elev=await fetchElevation(c[0],c[1]).catch(function(){return 0;});}
   S.siteElevation=elev;
   S.airDensity=calcAirDensity(temp,elev);
   document.getElementById('siteElevManual').value=Math.round(elev);
   document.getElementById('airDensityVal').value=S.airDensity.toFixed(3);
+
+  // Compute RIX for flow model quality assessment
+  var rixResult=computeRIX(S.terrainElevations,S.terrainGrid);
+  S.rixResult=rixResult;
+
+  // Displacement height at site
+  var dSite=displacementHeight(z0site);
+  var dUp=displacementHeight(z0up);
+
+  // Get site latitude for geostrophic drag law
+  var siteLat=c[0]||0;
+
   S.flowCorrections=[];
-  S.windData.forEach((s,i)=>{
-    let bzFactor=1.0;let iblFactor=1.0;
-    // BZ orographic speed-up model (simplified WAsP — Troen & Petersen, 1989)
+  S.windData.forEach(function(s,i){
+    var bzFactor=1.0;var iblFactor=1.0;var geoFactor=1.0;
+    // BZ orographic speed-up model (WASP — Troen & Petersen, 1989)
     if(modelType==='combined'||modelType==='bz'){
-      // Use terrain data if available, otherwise simplified model
       if(S.terrainElevations){
-        const dirRad=s.dir*Math.PI/180;const res=Math.round(Math.sqrt(S.terrainElevations.length));
-        const mid=Math.floor(res/2);
-        // Sample terrain profile UPWIND (in the direction wind comes from)
-        // Wind direction = where wind comes FROM (0°=N, 90°=E, 180°=S, 270°=W)
-        // Grid: i=row (inc southward), j=col (inc eastward)
-        // Upwind for direction θ: di = -d*cos(θ), dj = d*sin(θ)
-        let maxSlope=0;const steps=Math.floor(res/2);
-        for(let d=1;d<=steps;d++){
-          const di=Math.round(mid-d*Math.cos(dirRad));const dj=Math.round(mid+d*Math.sin(dirRad));
+        var dirRad=s.dir*Math.PI/180;var res=Math.round(Math.sqrt(S.terrainElevations.length));
+        var mid=Math.floor(res/2);
+        // Sample terrain profile UPWIND
+        var maxSlope=0;var steps=Math.floor(res/2);
+        for(var d=1;d<=steps;d++){
+          var di=Math.round(mid-d*Math.cos(dirRad));var dj=Math.round(mid+d*Math.sin(dirRad));
           if(di<0||di>=res||dj<0||dj>=res)break;
-          const dz=Math.abs(S.terrainElevations[mid*res+mid]-S.terrainElevations[di*res+dj]);
-          const dist=d*(S.terrainGrid?((S.terrainGrid[1][1]-S.terrainGrid[0][1])*111320):1000);
+          var dz=Math.abs(S.terrainElevations[mid*res+mid]-S.terrainElevations[di*res+dj]);
+          var dist=d*(S.terrainGrid?((S.terrainGrid[1][1]-S.terrainGrid[0][1])*111320):1000);
           if(dist>0)maxSlope=Math.max(maxSlope,dz/dist);
         }
-        // BZ speed-up factor (Troen & Petersen, 1989)
-        // Simplified: speed-up ∝ effective hill height / hill length
-        const hillLength=fetchDist*1000;const heff=hillLength*maxSlope;
+        // WASP BZ speed-up with displacement correction
+        var hillLength=fetchDist*1000;
+        var heff=hillLength*maxSlope;
         bzFactor=1+0.5*Math.max(-0.3,Math.min(0.5,heff/hillLength));
+        // Correct for displacement height effect
+        var dCorrection=logLawWithD(height,z0site,dSite)/logLawWithD(height,z0site,0);
+        bzFactor*=Math.max(0.8,Math.min(1.2,dCorrection));
       }else{
-        // Simplified without terrain
-        const latFactor=Math.sin(Math.abs(S.siteBoundary?getPolygonCentroid(S.siteBoundary)[0]:10)*Math.PI/180);
+        // Simplified without terrain — use geostrophic estimate
+        var latFactor=Math.sin(Math.abs(siteLat)*Math.PI/180);
         bzFactor=1+0.05*latFactor*(Math.cos((s.dir-250)*Math.PI/180)*.5+.5);
       }
     }
-    // IBL (Internal Boundary Layer) roughness change model
-    // Standard WAsP methodology — Troen & Petersen (1989)
+    // IBL roughness change model (WASP — Troen & Petersen, 1989)
     if(modelType==='combined'||modelType==='ibl'){
-      const dist=fetchDist*1000;
-      // IBL height growth: dIBL = z0_new^0.2 * x^0.8 (WAsP standard)
-      const dIBL=Math.pow(z0site,0.2)*Math.pow(dist,0.8);
+      var dist=fetchDist*1000;
+      // WASP IBL height growth: dIBL = 0.3 * (x+1)^0.8 * z0_new^0.2
+      var dIBL=0.3*Math.pow(dist+1,0.8)*Math.pow(z0site,0.2);
       if(height>=dIBL){
-        // Fully adjusted to new roughness (above IBL)
-        // Factor = ln(H/z0_site) / ln(H/z0_upstream)
-        // If z0_site > z0_up (rougher terrain): factor < 1 (slow-down) ✓
-        // If z0_site < z0_up (smoother terrain): factor > 1 (speed-up) ✓
-        iblFactor=Math.log(height/z0site)/Math.log(height/z0up);
+        // Above IBL: use log-law with displacement
+        iblFactor=logLawWithD(height,z0site,dSite)/logLawWithD(height,z0up,dUp);
       }else{
-        // Partially adjusted (within IBL)
-        // WAsP formula: [ln(H/z0_site)/ln(dIBL/z0_site)] * [ln(dIBL/z0_up)/ln(H/z0_up)]
-        const profileRatio=Math.log(height/z0site)/Math.log(dIBL/z0site);
-        const iblGrowthRatio=Math.log(dIBL/z0up)/Math.log(height/z0up);
-        iblFactor=profileRatio*iblGrowthRatio;
+        // Within IBL: partial adjustment with displacement
+        var profRatio=logLawWithD(height,z0site,dSite)/Math.max(0.01,logLawWithD(dIBL,z0site,dSite));
+        var iblGrowth=logLawWithD(dIBL,z0up,dUp)/Math.max(0.01,logLawWithD(height,z0up,dUp));
+        iblFactor=profRatio*iblGrowth;
       }
     }
-    const combined=modelType==='bz'?bzFactor:modelType==='ibl'?iblFactor:bzFactor*iblFactor;
-    S.flowCorrections.push({dir:s.dir,freq:s.freq,freeSpeed:s.meanSpeed,bzFactor,iblFactor,combined,correctedSpeed:s.meanSpeed*combined,A:s.A*combined});
+    // Geostrophic drag law correction (WASP standard)
+    // Estimates the effect of different roughness on geostrophic wind
+    if(modelType==='combined'){
+      var geoResult=geostrophicToSurface(s.meanSpeed,z0site,siteLat,height);
+      var geoResultUp=geostrophicToSurface(s.meanSpeed,z0up,siteLat,height);
+      if(geoResultUp.surfaceWind>0){
+        geoFactor=geoResult.surfaceWind/geoResultUp.surfaceWind;
+        geoFactor=Math.max(0.7,Math.min(1.3,geoFactor)); // Physical bounds
+      }
+    }
+    var combined=modelType==='bz'?bzFactor:modelType==='ibl'?iblFactor:bzFactor*iblFactor*geoFactor;
+    combined=Math.max(0.2,Math.min(5.0,combined)); // WASP physical bounds
+    S.flowCorrections.push({dir:s.dir,freq:s.freq,freeSpeed:s.meanSpeed,bzFactor:bzFactor,iblFactor:iblFactor,geoFactor:geoFactor,combined:combined,correctedSpeed:s.meanSpeed*combined,A:s.A*combined,dSite:dSite,dUp:dUp});
   });
   drawFlowWheel();renderFlowTable();
   document.getElementById('flowResultsSection').style.display='block';
-  const avgBZ=S.flowCorrections.reduce((s,c)=>s+c.bzFactor,0)/12;
-  const avgIBL=S.flowCorrections.reduce((s,c)=>s+c.iblFactor,0)/12;
-  const avgC=S.flowCorrections.reduce((s,c)=>s+c.combined,0)/12;
-  document.getElementById('flowKPIStrip').innerHTML=`
-    <div class="kpi"><span class="kpi-v g">${avgBZ.toFixed(3)}</span><span class="kpi-l">Avg BZ Factor</span></div>
-    <div class="kpi"><span class="kpi-v b">${avgIBL.toFixed(3)}</span><span class="kpi-l">Avg IBL Factor</span></div>
-    <div class="kpi"><span class="kpi-v o">${avgC.toFixed(3)}</span><span class="kpi-l">Avg Combined</span></div>
-    <div class="kpi"><span class="kpi-v ${avgC>1?'g':'r'}">${((avgC-1)*100).toFixed(1)}%</span><span class="kpi-l">Net Speed Change</span></div>
-    <div class="kpi"><span class="kpi-v b">${S.terrainElevations?document.getElementById('tRIX').textContent:'—'}</span><span class="kpi-l">RIX (%)</span></div>
-    <div class="kpi"><span class="kpi-v">${height}m</span><span class="kpi-l">Analysis Height</span></div>`;
+  var avgBZ=S.flowCorrections.reduce(function(s,c){return s+c.bzFactor;},0)/12;
+  var avgIBL=S.flowCorrections.reduce(function(s,c){return s+c.iblFactor;},0)/12;
+  var avgGeo=S.flowCorrections.reduce(function(s,c){return s+c.geoFactor;},0)/12;
+  var avgC=S.flowCorrections.reduce(function(s,c){return s+c.combined;},0)/12;
+  var rixColor=rixResult.risk==='LOW'?'var(--mint)':rixResult.risk==='MODERATE'?'var(--gold)':'var(--red)';
+  document.getElementById('flowKPIStrip').innerHTML=
+    '<div class="kpi"><span class="kpi-v g">'+avgBZ.toFixed(3)+'</span><span class="kpi-l">Orographic (BZ)</span></div>'+
+    '<div class="kpi"><span class="kpi-v b">'+avgIBL.toFixed(3)+'</span><span class="kpi-l">Roughness (IBL)</span></div>'+
+    '<div class="kpi"><span class="kpi-v o">'+avgGeo.toFixed(3)+'</span><span class="kpi-l">Geostrophic</span></div>'+
+    '<div class="kpi"><span class="kpi-v '+(avgC>1?'g':'r')+'">'+avgC.toFixed(3)+'</span><span class="kpi-l">Combined Factor</span></div>'+
+    '<div class="kpi"><span class="kpi-v '+rixColor+'">'+rixResult.rix.toFixed(1)+'%</span><span class="kpi-l">RIX ('+rixResult.risk+')</span></div>'+
+    '<div class="kpi"><span class="kpi-v">'+height+'m</span><span class="kpi-l">Analysis Height</span></div>';
   document.getElementById('step5Next').disabled=false;
 }
 
@@ -1704,7 +1813,7 @@ function drawFlowWheel(){
 
 function renderFlowTable(){
   const body=document.getElementById('flowTableBody');body.innerHTML='';
-  S.flowCorrections.forEach((c,i)=>{body.innerHTML+=`<tr><td>${DL[i]}</td><td class="num">${c.dir}°</td><td class="num">${(c.freq*100).toFixed(1)}%</td><td class="num">${c.freeSpeed.toFixed(2)}</td><td class="num" style="color:${c.bzFactor>=1?'var(--mint)':'var(--red)'}">${c.bzFactor.toFixed(3)}</td><td class="num" style="color:${c.iblFactor>=1?'var(--mint)':'var(--red)'}">${c.iblFactor.toFixed(3)}</td><td class="num" style="font-weight:700;color:${c.combined>=1?'var(--mint)':'var(--red)'}">${c.combined.toFixed(3)}</td><td class="num" style="font-weight:700">${c.correctedSpeed.toFixed(2)}</td></tr>`;});
+  S.flowCorrections.forEach((c,i)=>{body.innerHTML+='<tr><td>'+DL[i]+'</td><td class="num">'+c.dir+'°</td><td class="num">'+(c.freq*100).toFixed(1)+'%</td><td class="num">'+c.freeSpeed.toFixed(2)+'</td><td class="num" style="color:'+(c.bzFactor>=1?'var(--mint)':'var(--red)')+'">'+c.bzFactor.toFixed(3)+'</td><td class="num" style="color:'+(c.iblFactor>=1?'var(--mint)':'var(--red)')+'">'+c.iblFactor.toFixed(3)+'</td><td class="num" style="color:'+(c.geoFactor>=1?'var(--mint)':'var(--red)')+'">'+(c.geoFactor||1).toFixed(3)+'</td><td class="num" style="font-weight:700;color:'+(c.combined>=1?'var(--mint)':'var(--red)')+'">'+c.combined.toFixed(3)+'</td><td class="num" style="font-weight:700">'+c.correctedSpeed.toFixed(2)+'</td></tr>';});
 }
 
 // ==================== STEP 6: TURBINE ====================
