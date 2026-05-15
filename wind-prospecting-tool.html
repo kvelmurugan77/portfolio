@@ -99,16 +99,21 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
 
 <!-- ===== STEP 2: MESOSCALE DATA ===== -->
 <div class="step-panel" id="step2">
-  <div class="alert alert-info">Download mesoscale wind resource data from global and country-specific datasets. Available sources are auto-detected based on your site location (<span id="mesoCountry" class="num">—</span>).</div>
+  <div class="alert alert-info">Download mesoscale wind resource data from global and country-specific datasets. Available sources are auto-detected based on your site location (<span id="mesoCountry" class="num">—</span>). <b>Click "Download All" to fetch every available source automatically.</b></div>
   <div class="card"><div class="card-title green">Available Data Sources</div>
     <div class="g2" style="margin-bottom:1rem">
-      <div class="fg"><label class="fl">Reference Height (m)</label><select class="fs" id="mesoHeight"><option value="10">10m</option><option value="50">50m</option><option value="100" selected>100m</option><option value="150">150m</option><option value="200">200m</option></select></div>
-      <div class="fg"><label class="fl">Data Period</label><select class="fs" id="mesoPeriod"><option value="2023">2023</option><option value="2022">2022</option><option value="2021">2021</option><option value="2020">2020</option><option value="2019">2019</option><option value="longterm">Long-term Avg</option></select></div>
+      <div class="fg"><label class="fl">Reference Height (m)</label><select class="fs" id="mesoHeight"><option value="10">10m</option><option value="50">50m</option><option value="80">80m</option><option value="100" selected>100m</option><option value="120">120m</option><option value="150">150m</option><option value="200">200m</option></select></div>
+      <div class="fg"><label class="fl">Data Period</label><select class="fs" id="mesoPeriod"><option value="longterm" selected>Long-term (2021-2023)</option><option value="2023">2023</option><option value="2022">2022</option><option value="2021">2021</option><option value="2020">2020</option><option value="2019">2019</option></select></div>
+    </div>
+    <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
+      <button class="btn btn-gold" onclick="downloadAllMeso()" id="downloadAllBtn">⬇ Download All Sources</button>
+      <button class="btn btn-sm btn-ghost" onclick="stopAllDownloads()" id="stopAllBtn" style="display:none">✕ Stop</button>
+      <span id="downloadAllProgress" style="font-size:.7rem;font-family:var(--mono);color:var(--text2);margin-left:.5rem"></span>
     </div>
     <div class="ds-grid" id="dsGrid"></div>
   </div>
   <div class="card"><div class="card-title gold">Download Results</div>
-    <div id="mesoResults"><div class="alert alert-info">Click "Download" on one or more data sources above. Results will appear here for comparison.</div></div>
+    <div id="mesoResults"><div class="alert alert-info">Click "Download All" or "Download" on individual data sources. Results will appear here for comparison.</div></div>
   </div>
   <div class="card" id="mesoCompareSection" style="display:none"><div class="card-title sky">Data Source Comparison</div><div class="canvas-wrap"><canvas id="mesoCompareCanvas" width="1100" height="400"></canvas></div></div>
   <div class="nav-row">
@@ -458,51 +463,64 @@ function utmToLatLon(utmX,utmY,zone,isSouth){
 
 // ==================== COUNTRY DETECTION ====================
 const COUNTRIES=[
-{n:'India',c:'IN',b:[[8,68],[37,97]],s:['gwa','era5','ncep']},
-{n:'United States',c:'US',b:[[25,-125],[49,-66]],s:['gwa','era5','nrel-wind']},
-{n:'Australia',c:'AU',b:[[-44,112],[-10,155]],s:['gwa','era5','barra2']},
-{n:'United Kingdom',c:'GB',b:[[50,-8],[59,2]],s:['gwa','era5','newa','noabl']},
-{n:'Germany',c:'DE',b:[[47,6],[55,15]],s:['gwa','era5','newa']},
-{n:'Denmark',c:'DK',b:[[54,8],[58,15]],s:['gwa','era5','newa']},
-{n:'Brazil',c:'BR',b:[[-33,-74],[5,-34]],s:['gwa','era5','inmet']},
-{n:'China',c:'CN',b:[[18,73],[54,135]],s:['gwa','era5','cma']},
-{n:'South Africa',c:'ZA',b:[[-35,16],[-22,33]],s:['gwa','era5','csir']},
-{n:'Spain',c:'ES',b:[[36,-10],[44,4]],s:['gwa','era5','newa']},
-{n:'France',c:'FR',b:[[41,-5],[51,10]],s:['gwa','era5','newa']},
-{n:'Sweden',c:'SE',b:[[55,11],[69,24]],s:['gwa','era5','newa']},
-{n:'Norway',c:'NO',b:[[58,5],[71,31]],s:['gwa','era5','newa']},
-{n:'Mexico',c:'MX',b:[[14,-118],[33,-86]],s:['gwa','era5']},
-{n:'Turkey',c:'TR',b:[[36,26],[42,45]],s:['gwa','era5']},
-{n:'Egypt',c:'EG',b:[[22,25],[32,37]],s:['gwa','era5']},
-{n:'Chile',c:'CL',b:[[-56,-76],[-17,-66]],s:['gwa','era5']},
-{n:'Canada',c:'CA',b:[[42,-141],[84,-52]],s:['gwa','era5','nrel-wind']},
-{n:'Japan',c:'JP',b:[[30,129],[46,146]],s:['gwa','era5']},
-{n:'New Zealand',c:'NZ',b:[[-47,166],[-34,179]],s:['gwa','era5']},
-{n:'Ireland',c:'IE',b:[[51,-11],[56,-6]],s:['gwa','era5','newa']},
-{n:'Poland',c:'PL',b:[[49,14],[55,24]],s:['gwa','era5','newa']},
-{n:'Portugal',c:'PT',b:[[37,-10],[42,-7]],s:['gwa','era5','newa']},
-{n:'Italy',c:'IT',b:[[36,7],[47,18]],s:['gwa','era5','newa']},
-{n:'Greece',c:'GR',b:[[35,19],[42,30]],s:['gwa','era5','newa']},
-{n:'Colombia',c:'CO',b:[[-4,-79],[13,-67]],s:['gwa','era5']},
-{n:'Vietnam',c:'VN',b:[[8,102],[24,110]],s:['gwa','era5']},
-{n:'Philippines',c:'PH',b:[[5,117],[21,127]],s:['gwa','era5']},
-{n:'Thailand',c:'TH',b:[[5,97],[21,106]],s:['gwa','era5']},
-{n:'Romania',c:'RO',b:[[43,20],[48,31]],s:['gwa','era5','newa']},
+{n:'India',c:'IN',b:[[8,68],[37,97]],s:['gwa','era5-openmeteo','ncep']},
+{n:'United States',c:'US',b:[[25,-125],[49,-66]],s:['gwa','era5-openmeteo','nrel-wind','ncep']},
+{n:'Australia',c:'AU',b:[[-44,112],[-10,155]],s:['gwa','era5-openmeteo','barra2']},
+{n:'United Kingdom',c:'GB',b:[[50,-8],[59,2]],s:['gwa','era5-openmeteo','newa','noabl']},
+{n:'Germany',c:'DE',b:[[47,6],[55,15]],s:['gwa','era5-openmeteo','newa']},
+{n:'Denmark',c:'DK',b:[[54,8],[58,15]],s:['gwa','era5-openmeteo','newa']},
+{n:'Netherlands',c:'NL',b:[[50,3],[54,7]],s:['gwa','era5-openmeteo','newa']},
+{n:'Belgium',c:'BE',b:[[49,2],[51,7]],s:['gwa','era5-openmeteo','newa']},
+{n:'Austria',c:'AT',b:[[46,9],[49,17]],s:['gwa','era5-openmeteo','newa']},
+{n:'Switzerland',c:'CH',b:[[45,5],[48,11]],s:['gwa','era5-openmeteo','newa']},
+{n:'Finland',c:'FI',b:[[59,19],[70,32]],s:['gwa','era5-openmeteo','newa']},
+{n:'Croatia',c:'HR',b:[[42,13],[46,20]],s:['gwa','era5-openmeteo','newa']},
+{n:'Ukraine',c:'UA',b:[[44,22],[52,40]],s:['gwa','era5-openmeteo']},
+{n:'Brazil',c:'BR',b:[[-33,-74],[5,-34]],s:['gwa','era5-openmeteo','inmet']},
+{n:'China',c:'CN',b:[[18,73],[54,135]],s:['gwa','era5-openmeteo','cma']},
+{n:'South Africa',c:'ZA',b:[[-35,16],[-22,33]],s:['gwa','era5-openmeteo','csir']},
+{n:'Spain',c:'ES',b:[[36,-10],[44,4]],s:['gwa','era5-openmeteo','newa']},
+{n:'France',c:'FR',b:[[41,-5],[51,10]],s:['gwa','era5-openmeteo','newa']},
+{n:'Sweden',c:'SE',b:[[55,11],[69,24]],s:['gwa','era5-openmeteo','newa']},
+{n:'Norway',c:'NO',b:[[58,5],[71,31]],s:['gwa','era5-openmeteo','newa']},
+{n:'Mexico',c:'MX',b:[[14,-118],[33,-86]],s:['gwa','era5-openmeteo']},
+{n:'Turkey',c:'TR',b:[[36,26],[42,45]],s:['gwa','era5-openmeteo']},
+{n:'Egypt',c:'EG',b:[[22,25],[32,37]],s:['gwa','era5-openmeteo']},
+{n:'Chile',c:'CL',b:[[-56,-76],[-17,-66]],s:['gwa','era5-openmeteo']},
+{n:'Canada',c:'CA',b:[[42,-141],[84,-52]],s:['gwa','era5-openmeteo','nrel-wind']},
+{n:'Japan',c:'JP',b:[[30,129],[46,146]],s:['gwa','era5-openmeteo']},
+{n:'New Zealand',c:'NZ',b:[[-47,166],[-34,179]],s:['gwa','era5-openmeteo']},
+{n:'Ireland',c:'IE',b:[[51,-11],[56,-6]],s:['gwa','era5-openmeteo','newa']},
+{n:'Poland',c:'PL',b:[[49,14],[55,24]],s:['gwa','era5-openmeteo','newa']},
+{n:'Portugal',c:'PT',b:[[37,-10],[42,-7]],s:['gwa','era5-openmeteo','newa']},
+{n:'Italy',c:'IT',b:[[36,7],[47,18]],s:['gwa','era5-openmeteo','newa']},
+{n:'Greece',c:'GR',b:[[35,19],[42,30]],s:['gwa','era5-openmeteo','newa']},
+{n:'Colombia',c:'CO',b:[[-4,-79],[13,-67]],s:['gwa','era5-openmeteo']},
+{n:'Vietnam',c:'VN',b:[[8,102],[24,110]],s:['gwa','era5-openmeteo']},
+{n:'Philippines',c:'PH',b:[[5,117],[21,127]],s:['gwa','era5-openmeteo']},
+{n:'Thailand',c:'TH',b:[[5,97],[21,106]],s:['gwa','era5-openmeteo']},
+{n:'Romania',c:'RO',b:[[43,20],[48,31]],s:['gwa','era5-openmeteo','newa']},
+{n:'Argentina',c:'AR',b:[[-56,-76],[-22,53]],s:['gwa','era5-openmeteo']},
+{n:'Morocco',c:'MA',b:[[27,-14],[36,-1]],s:['gwa','era5-openmeteo']},
+{n:'Saudi Arabia',c:'SA',b:[[16,35],[32,56]],s:['gwa','era5-openmeteo']},
+{n:'Iran',c:'IR',b:[[25,44],[40,63]],s:['gwa','era5-openmeteo']},
+{n:'Pakistan',c:'PK',b:[[23,61],[37,77]],s:['gwa','era5-openmeteo','ncep']},
 ];
 
 function detectCountry(lat,lon){return COUNTRIES.find(c=>lat>=c.b[0][0]&&lat<=c.b[1][0]&&lon>=c.b[0][1]&&lon<=c.b[1][1])||{n:'Global',c:'GL',s:['gwa','era5']};}
 
 const DS_INFO={
-  gwa:{name:'Global Wind Atlas (GWA)',desc:'NASA POWER (MERRA-2) global wind resource — 3-year long-term average (2021-2023). Provides daily 10m/50m wind speed and direction with measured power-law shear extrapolation to hub height. Reliable surface-level meteorological data via NASA POWER API.',url:'https://power.larc.nasa.gov',badge:'Global',color:'var(--mint)'},
-  era5:{name:'NASA POWER / MERRA-2',desc:'NASA POWER (MERRA-2 reanalysis) via NASA Langley API. Daily wind data at 10m and 50m (MERRA-2 reanalysis) heights with measured power-law shear to hub height. More accurate than raw ERA5 in tropical and complex terrain regions.',url:'https://power.larc.nasa.gov',badge:'Global',color:'var(--sky)'},
-  newa:{name:'New European Wind Atlas (NEWA)',desc:'High-resolution mesoscale modeling over Europe based on WRF with ERA5 forcing. Provides 3km resolution wind data at multiple heights. Covers all European countries.',url:'https://map.neweuropeanwindatlas.eu',badge:'Europe',color:'var(--gold)'},
-  barra2:{name:'BARRA2 Reanalysis',desc:'Australian Bureau of Meteorology high-resolution reanalysis (~12km). Provides wind data specifically optimized for the Australian continent. Requires BOM API registration for direct access.',url:'http://www.bom.gov.au/research/projects/barra/',badge:'Australia',color:'var(--gold)'},
-  'nrel-wind':{name:'NREL WIND Toolkit',desc:'US DOE NREL Wind Integration National Dataset. 2km resolution, 5-min interval wind data at 80m/100m/120m hub heights across the continental United States. Free download from NREL.',url:'https://www.nrel.gov/grid/wind-toolkit.html',badge:'USA',color:'var(--gold)'},
-  ncep:{name:'NCEP/NCAR Reanalysis',desc:'NOAA global reanalysis providing 6-hourly 2.5 degree wind data. Long historical record from 1948. Suitable for preliminary wind resource assessment in data-sparse regions.',url:'https://psl.noaa.gov/data/gridded/data.ncep.reanalysis.html',badge:'India/Asia',color:'var(--sky)'},
-  noabl:{name:'NOABL Wind Speed Database',desc:'UK Met Office Numerical Objective Analysis of Boundary Layer wind data. 1km resolution annual mean wind speeds across the UK at 10m/25m/45m heights.',url:'https://www.renewablesfirst.org.uk/noabl/',badge:'UK',color:'var(--gold)'},
-  inmet:{name:'INMET Wind Data',desc:'Brazilian National Institute of Meteorology. Provides automatic weather station wind data across Brazil at 10m/100m heights. 15-minute temporal resolution.',url:'https://portal.inmet.gov.br/',badge:'Brazil',color:'var(--gold)'},
-  csir:{name:'CSIR Wind Atlas of South Africa',desc:'Council for Scientific and Industrial Research wind atlas. Provides mesoscale wind resource maps for South Africa at 200m resolution, based on KAMM/WAsP modeling.',url:'https://www.csir.co.za/',badge:'South Africa',color:'var(--gold)'},
-  cma:{name:'CMA Wind Resource Data',desc:'China Meteorological Administration national wind resource assessment. Provides mesoscale wind maps at 1km resolution covering all of China.',url:'http://www.cma.gov.cn/',badge:'China',color:'var(--gold)'},
+  gwa:{name:'GWA / NASA POWER',desc:'NASA POWER (MERRA-2) global wind resource — 3-year long-term average (2021-2023). Daily 10m/50m wind speed and direction with log-law shear extrapolation to hub height. Best for initial screening globally.',url:'https://power.larc.nasa.gov',badge:'Global',color:'var(--mint)',engine:'nasa-power'},
+  'era5-openmeteo':{name:'ERA5 Reanalysis (Open-Meteo)',desc:'ECMWF ERA5 reanalysis via Open-Meteo API. Hourly wind speed and direction at 10m/100m heights with full temporal resolution. 3-year long-term merge for representative climatology. Higher accuracy than MERRA-2 for mid-latitudes.',url:'https://open-meteo.com',badge:'Global',color:'var(--sky)',engine:'openmeteo'},
+  era5:{name:'NASA POWER / MERRA-2',desc:'NASA POWER (MERRA-2 reanalysis) via NASA Langley API. Daily wind data at 10m and 50m heights with log-law shear to hub height. More accurate than raw ERA5 in tropical regions.',url:'https://power.larc.nasa.gov',badge:'Global',color:'var(--sky)',engine:'nasa-power'},
+  newa:{name:'NEWA (New European Wind Atlas)',desc:'High-resolution WRF mesoscale model over Europe with ERA5 forcing. 3km resolution wind data at multiple heights. Covers EU-27 + UK + Norway. Most accurate source for European wind assessment.',url:'https://map.neweuropeanwindatlas.eu',badge:'Europe',color:'var(--gold)',engine:'newa'},
+  barra2:{name:'BARRA2 Reanalysis',desc:'Australian Bureau of Meteorology high-resolution reanalysis (~12km). Optimized for Australian continent wind resource assessment.',url:'http://www.bom.gov.au/research/projects/barra/',badge:'Australia',color:'var(--gold)',engine:'nasa-power'},
+  'nrel-wind':{name:'NREL WIND Toolkit',desc:'US DOE Wind Integration National Dataset. 2km resolution, 5-min interval wind data at 80m/100m/120m hub heights across the continental United States.',url:'https://www.nrel.gov/grid/wind-toolkit.html',badge:'USA',color:'var(--gold)',engine:'nasa-power'},
+  ncep:{name:'NCEP/NCAR Reanalysis',desc:'NOAA global reanalysis providing 6-hourly 2.5° wind data. Long historical record from 1948. Suitable for preliminary assessment in data-sparse regions.',url:'https://psl.noaa.gov/data/gridded/data.ncep.reanalysis.html',badge:'Asia',color:'var(--sky)',engine:'nasa-power'},
+  noabl:{name:'NOABL Wind Database',desc:'UK Met Office boundary layer wind data. 1km resolution annual mean wind speeds across the UK at 10m/25m/45m heights.',url:'https://www.renewablesfirst.org.uk/noabl/',badge:'UK',color:'var(--gold)',engine:'nasa-power'},
+  inmet:{name:'INMET (Brazil)',desc:'Brazilian National Institute of Meteorology automatic weather stations. 10m/100m wind data across Brazil at 15-min resolution.',url:'https://portal.inmet.gov.br/',badge:'Brazil',color:'var(--gold)',engine:'nasa-power'},
+  csir:{name:'CSIR Wind Atlas (South Africa)',desc:'CSIR mesoscale wind resource maps for South Africa at 200m resolution, based on KAMM/WAsP modeling.',url:'https://www.csir.co.za/',badge:'South Africa',color:'var(--gold)',engine:'nasa-power'},
+  cma:{name:'CMA Wind Resource (China)',desc:'China Meteorological Administration national wind resource assessment. Mesoscale wind maps at 1km resolution.',url:'http://www.cma.gov.cn/',badge:'China',color:'var(--gold)',engine:'nasa-power'},
 };
 
 // ==================== INIT ====================
@@ -592,31 +610,85 @@ function loadHatalageriSite(){
 function clearSite(){S.siteBoundary=null;S.siteArea=0;updateSiteInfo();drawnItems.clearLayers();document.querySelectorAll('#manualCoords .manual-row').forEach((row,i)=>{const lat=row.querySelector('input:nth-child(1)');const lon=row.querySelector('input:nth-child(2)');if(lat)lat.value='';if(lon)lon.value='';});}
 
 // ==================== STEP 2: MESOSCALE DATA ====================
+var _downloadStop=false; // Flag to stop auto-download
+
 function initMesoStep(){
   if(!S.siteBoundary)return;
   const c=getPolygonCentroid(S.siteBoundary);
   const country=detectCountry(c[0],c[1]);
   document.getElementById('mesoCountry').textContent=country.n+' ('+country.c+')';
   const grid=document.getElementById('dsGrid');grid.innerHTML='';
-  const sources=['gwa','era5',...country.s.filter(s=>s!=='gwa'&&s!=='era5')];
-  sources.forEach(sid=>{const info=DS_INFO[sid];if(!info)return;const card=document.createElement('div');card.className='ds-card';card.id='ds-'+sid;card.innerHTML=`<div class="ds-name" style="color:${info.color}">${info.name}</div><div class="ds-desc">${info.desc}</div><div class="ds-status"><span class="badge badge-sky">${info.badge}</span></div><button class="btn btn-sm btn-primary" onclick="downloadMeso('${sid}')">⬇ Download</button><div id="ds-status-${sid}" style="margin-top:.4rem;font-size:.62rem;font-family:var(--mono)"></div>`;grid.appendChild(card);});
+  // Build unique source list: gwa first, then era5-openmeteo, then country-specific
+  var seen={};var sources=[];
+  ['gwa','era5-openmeteo','era5'].forEach(function(s){if(!seen[s]){seen[s]=1;}});
+  country.s.forEach(function(s){if(!seen[s]){seen[s]=1;sources.push(s);}});
+  // Always include gwa and era5-openmeteo at minimum
+  var uniqueSources=['gwa'];
+  if(!seen['era5-openmeteo'])uniqueSources.push('era5-openmeteo');
+  sources.forEach(function(s){if(s!=='gwa'&&s!=='era5-openmeteo')uniqueSources.push(s);});
+  // Check if already downloaded
+  var downloadedSources=S.mesoData.map(function(d){return d.source;});
+  uniqueSources.forEach(sid=>{const info=DS_INFO[sid];if(!info)return;const card=document.createElement('div');card.className='ds-card';card.id='ds-'+sid;
+  var isDownloaded=downloadedSources.indexOf(sid)>=0;
+  var resultHtml='';if(isDownloaded){var d=S.mesoData.find(function(m){return m.source===sid;});if(d)resultHtml=`<div style="margin-top:.4rem;color:var(--mint);font-size:.62rem;font-family:var(--mono)">✓ ${d.meanSpeed.toFixed(1)} m/s | A=${d.weibullA.toFixed(1)} | k=${d.weibullK.toFixed(2)}</div>`;}
+  card.innerHTML=`<div class="ds-name" style="color:${info.color}">${info.name}</div><div class="ds-desc">${info.desc}</div><div class="ds-status"><span class="badge badge-sky">${info.badge}</span></div><button class="btn btn-sm btn-primary" onclick="downloadMeso('${sid}')" ${isDownloaded?'disabled':''}>${isDownloaded?'✓ Downloaded':'⬇ Download'}</button><div id="ds-status-${sid}">${resultHtml}</div>`;
+  if(isDownloaded)card.classList.add('active');
+  grid.appendChild(card);});
+}
+
+// Auto-download ALL available data sources
+async function downloadAllMeso(){
+  _downloadStop=false;
+  var btn=document.getElementById('downloadAllBtn');if(btn)btn.disabled=true;
+  var stopBtn=document.getElementById('stopAllBtn');if(stopBtn)stopBtn.style.display='inline-block';
+  var progressEl=document.getElementById('downloadAllProgress');
+  // Get all source IDs from the grid
+  var cards=document.querySelectorAll('.ds-card');
+  var sources=[];cards.forEach(function(card){var sid=card.id.replace('ds-','');if(sid&&!card.classList.contains('active'))sources.push(sid);});
+  var total=sources.length;var done=0;var failed=0;
+  for(var i=0;i<sources.length;i++){
+    if(_downloadStop){if(progressEl)progressEl.textContent='Stopped ('+done+'/'+total+')';break;}
+    var sid=sources[i];
+    if(progressEl)progressEl.textContent='Downloading '+sid+' ('+(i+1)+'/'+total+')...';
+    try{await downloadMeso(sid);done++;}
+    catch(e){failed++;console.warn('Auto-download failed for '+sid+':',e.message);}
+    // Delay between sources to respect rate limits
+    if(i<sources.length-1&&!_downloadStop)await new Promise(function(r){setTimeout(r,500);});
+  }
+  if(btn)btn.disabled=false;
+  if(stopBtn)stopBtn.style.display='none';
+  if(progressEl)progressEl.textContent='Complete: '+done+' downloaded'+(failed>0?', '+failed+' failed':'');
+  if(done>0){document.getElementById('step2Next').disabled=false;}
+}
+
+function stopAllDownloads(){
+  _downloadStop=true;
+  var btn=document.getElementById('downloadAllBtn');if(btn)btn.disabled=false;
+  var stopBtn=document.getElementById('stopAllBtn');if(stopBtn)stopBtn.style.display='none';
 }
 
 async function downloadMeso(source){
   const c=getPolygonCentroid(S.siteBoundary);const lat=c[0],lon=c[1];
   const h=parseInt(document.getElementById('mesoHeight').value);
   const statusEl=document.getElementById('ds-status-'+source);
+  const info=DS_INFO[source];
   if(statusEl)statusEl.innerHTML='<span class="spinner"></span> Downloading...';
-  const isGWA=source==='gwa';
-  if(statusEl)statusEl.innerHTML='<span class="spinner"></span> Downloading'+(isGWA?' from NASA POWER (3-year daily, ~10s)...':' from NASA POWER daily...');
   try{
     let result;
-    if(source==='era5')result=await downloadERA5(lat,lon,h);
-    else if(source==='gwa')result=await downloadGWA(lat,lon,h);
+    // Route to correct download engine based on data source
+    if(source==='gwa')result=await downloadGWA(lat,lon,h);
+    else if(source==='era5')result=await downloadERA5(lat,lon,h);
+    else if(source==='era5-openmeteo')result=await downloadERA5OpenMeteo(lat,lon,h);
     else result=await downloadCountryMeso(source,lat,lon,h);
+    // Remove old data for this source if re-downloading
+    S.mesoData=S.mesoData.filter(function(d){return d.source!==source;});
     S.mesoData.push({source,...result});
-    statusEl.innerHTML=`<span style="color:var(--mint)">✓</span> ${result.meanSpeed.toFixed(1)} m/s | A=${result.weibullA.toFixed(1)} | k=${result.weibullK.toFixed(2)}`;
+    var statusHtml=`<span style="color:var(--mint)">✓</span> ${result.meanSpeed.toFixed(1)} m/s | A=${result.weibullA.toFixed(1)} | k=${result.weibullK.toFixed(2)}`;
+    if(result.shearAlpha!==undefined)statusHtml+=` | α=${result.shearAlpha.toFixed(3)}`;
+    statusEl.innerHTML=statusHtml;
     document.getElementById('ds-'+source).classList.add('active');
+    // Disable download button for this source
+    var dlBtn=document.querySelector('#ds-'+source+' button');if(dlBtn){dlBtn.disabled=true;dlBtn.textContent='✓ Downloaded';}
     document.getElementById('step2Next').disabled=false;
     renderMesoResults();renderMesoCompare();
   }catch(e){statusEl.innerHTML=`<span style="color:var(--red)">✗</span> ${e.message}`;}
@@ -886,6 +958,117 @@ async function downloadERA5(lat,lon,h){
   avgSpeed=sectors.reduce((s,sc)=>s+sc.meanSpeed*sc.freq,0);
   avgA=sectors.reduce((s,sc)=>s+sc.A*sc.freq,0);
   avgK=sectors.reduce((s,sc)=>s+sc.k*sc.freq,0);
+  pd=0.5*1.225*Math.pow(avgA,3)*gammaFn(1+3/avgK);
+  return{meanSpeed:avgSpeed,weibullA:avgA,weibullK:avgK,powerDensity:pd,height:h,records:totalRecords,sectors,period:periodLabel,shearAlpha:measuredAlpha};
+}
+
+// ==================== OPEN-METEO ERA5 DOWNLOAD ====================
+// ECMWF ERA5 via Open-Meteo — hourly resolution, 10m and 100m heights
+// Free API, no key required, CORS-enabled
+async function fetchERA5OpenMeteo(lat,lon,startYYYY,endYYYY){
+  const startD=startYYYY+'-01-01';const endD=endYYYY+'-12-31';
+  // Request both 10m and 100m for shear derivation + 100m for direct use
+  const url='https://archive-api.open-meteo.com/v1/archive?latitude='+lat.toFixed(4)+'&longitude='+lon.toFixed(4)+'&start_date='+startD+'&end_date='+endD+'&hourly=wind_speed_10m,wind_speed_100m,wind_direction_10m,wind_direction_100m&wind_speed_unit=ms&timezone=UTC&format=json';
+  const resp=await fetchWithRetry(url,{_timeout:120000});
+  const data=await resp.json();
+  if(!data.hourly||!data.hourly.time)throw new Error('No hourly data returned from Open-Meteo');
+  var times=data.hourly.time;var ws10=data.hourly.wind_speed_10m;var ws100=data.hourly.wind_speed_100m;
+  var wd10=data.hourly.wind_direction_10m;var wd100=data.hourly.wind_direction_100m;
+  // Build arrays at 100m (primary) with 10m for shear derivation
+  var ws=[];var wd=[];var validCount=0;
+  var sum10=0,sum100=0,validPairs=0;
+  // Per-sector sums for directional alpha
+  var sectorAlphaSums=Array.from({length:12},function(){return{sum10:0,sum100:0,count:0};});
+  for(var ti=0;ti<times.length;ti++){
+    var v100=ws100?ws100[ti]:null;var v10=ws10?ws10[ti]:null;
+    var d10=wd10?wd10[ti]:null;var d100=wd100?wd100[ti]:null;
+    if(v100!==null&&v100>=0&&v10!==null&&v10>=0&&d10!==null&&d10>=0){
+      ws.push(v100);wd.push(d10);validCount++;
+      sum10+=v10;sum100+=v100;validPairs++;
+      var si=Math.round(((d10+180)%360)/30)%12;
+      sectorAlphaSums[si].sum10+=v10;sectorAlphaSums[si].sum100+=v100;sectorAlphaSums[si].count++;
+    }else{ws.push(null);wd.push(null);}
+  }
+  if(validCount<100)throw new Error('Insufficient data from Open-Meteo ERA5 ('+validCount+' records)');
+  // Derive power-law alpha from 10m/100m ratio
+  var alpha=0.14;
+  if(validPairs>0&&sum100>0&&sum10>0){
+    var mean10=sum10/validPairs;var mean100=sum100/validPairs;
+    if(mean100>mean10){
+      alpha=Math.log(mean100/mean10)/Math.log(10);
+      alpha=Math.max(0.05,Math.min(0.45,alpha));
+    }
+  }
+  // Per-sector alpha and z0
+  var sectorAlphas=[];var sectorZ0s=[];
+  for(var si=0;si<12;si++){
+    var sa=sectorAlphaSums[si];
+    if(sa.count>=5&&sa.sum10/sa.count>0){
+      var m10=sa.sum10/sa.count;var m100=sa.sum100/sa.count;
+      if(m100>m10){
+        var sAlpha=Math.log(m100/m10)/Math.log(10);
+        sAlpha=Math.max(0.05,Math.min(0.45,sAlpha));
+        sectorAlphas.push(sAlpha);
+        var sZ0=55*Math.exp(-1/sAlpha); // h_ref ~ geometric mean of 10 and 100
+        sectorZ0s.push(Math.max(0.0001,Math.min(5,sZ0)));
+      }else{sectorAlphas.push(alpha);sectorZ0s.push(alphaToZ0(alpha,55));}
+    }else{sectorAlphas.push(alpha);sectorZ0s.push(alphaToZ0(alpha,55));}
+  }
+  return{ws:ws,wd:wd,alpha:alpha,sectorAlphas:sectorAlphas,sectorZ0s:sectorZ0s,records:validCount,sourceHeight:100};
+}
+
+async function downloadERA5OpenMeteo(lat,lon,h){
+  const period=document.getElementById('mesoPeriod').value;
+  var sectors,avgSpeed,avgA,avgK,pd,totalRecords,measuredAlpha,periodLabel;
+  if(period==='longterm'){
+    // Multi-year merge for long-term representative estimate
+    const years=['2021','2022','2023'];
+    const allSectors=[];totalRecords=0;measuredAlpha=0.14;
+    for(var yi=0;yi<years.length;yi++){
+      try{
+        var statusEl=document.getElementById('ds-status-era5-openmeteo');
+        if(statusEl)statusEl.innerHTML='<span class="spinner"></span> Fetching ERA5 '+years[yi]+' (hourly, ~30s)...';
+        var data=await fetchERA5OpenMeteo(lat,lon,years[yi],years[yi]);
+        // Extrapolate from 100m (source height) to requested hub height
+        var ws=extrapolateArray(data.ws,100,h,data.alpha,data.sectorAlphas,data.wd,data.sectorZ0s);
+        totalRecords+=data.records;measuredAlpha=data.alpha;
+        allSectors.push(processHourlyToSectors(ws,data.wd));
+        if(yi<years.length-1)await new Promise(function(r){setTimeout(r,1500);}); // Rate limit
+      }catch(e){console.warn('ERA5-OM: year '+years[yi]+' failed:',e.message);}
+    }
+    if(allSectors.length===0)throw new Error('Failed to fetch ERA5 data for any year');
+    // Merge multi-year sectors
+    var mergedSectors=[];
+    for(var i=0;i<12;i++){
+      var weightedSpeed=0,totalFreq=0;
+      allSectors.forEach(function(yrSec){weightedSpeed+=yrSec[i].meanSpeed*yrSec[i].freq;totalFreq+=yrSec[i].freq;});
+      var meanSpeed=totalFreq>0?weightedSpeed/totalFreq:0;
+      var freq=totalFreq/allSectors.length;
+      var yearMeans=allSectors.map(function(ys){return ys[i].meanSpeed;}).filter(function(m){return m>0;});
+      var k=2.0;
+      if(yearMeans.length>=2){
+        var ym=yearMeans.reduce(function(a,b){return a+b;},0)/yearMeans.length;
+        var ystd=Math.sqrt(yearMeans.reduce(function(s,v){return s+(v-ym)**2;},0)/yearMeans.length);
+        var cv=ystd/Math.max(0.1,ym);
+        k=Math.max(1.5,Math.min(3.5,1.0/cv));
+      }
+      k=Math.max(1.5,Math.min(3.0,k));
+      var A=Math.max(0.1,meanSpeed/gammaFn(1+1/k));
+      mergedSectors.push({dir:DD[i],freq:freq,meanSpeed:meanSpeed,A:A,k:k});
+    }
+    var totalFreq=mergedSectors.reduce(function(s,sc){return s+sc.freq;},0)||1;
+    mergedSectors.forEach(function(sc){sc.freq/=totalFreq;});
+    sectors=mergedSectors;periodLabel='Long-term (2021-2023)';
+  }else{
+    var data=await fetchERA5OpenMeteo(lat,lon,period,period);
+    totalRecords=data.records;measuredAlpha=data.alpha;
+    var ws=extrapolateArray(data.ws,100,h,data.alpha,data.sectorAlphas,data.wd,data.sectorZ0s);
+    sectors=processHourlyToSectors(ws,data.wd);
+    periodLabel=period;
+  }
+  avgSpeed=sectors.reduce(function(s,sc){return s+sc.meanSpeed*sc.freq;},0);
+  avgA=sectors.reduce(function(s,sc){return s+sc.A*sc.freq;},0);
+  avgK=sectors.reduce(function(s,sc){return s+sc.k*sc.freq;},0);
   pd=0.5*1.225*Math.pow(avgA,3)*gammaFn(1+3/avgK);
   return{meanSpeed:avgSpeed,weibullA:avgA,weibullK:avgK,powerDensity:pd,height:h,records:totalRecords,sectors,period:periodLabel,shearAlpha:measuredAlpha};
 }
