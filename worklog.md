@@ -31,3 +31,28 @@ Stage Summary:
 - WindFlow Pro 7.0 now produces per-WTG hourly power output with wake effects
 - CSV export provides comprehensive time series data for each turbine
 - Elevation validation uses wind-energy-relevant reference sites
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix terrain elevation accuracy and contour alignment issues in WindFlow Pro
+
+Work Log:
+- Analyzed user's uploaded images showing terrain contour misalignment with Google Earth
+- WindFlow Pro showed 25-75m contours while Google Earth showed ~178m for Portugal site
+- Root cause: Synthetic terrain fallback was being used instead of real DEM data
+- Identified multiple bugs in downloadTerrainFromOpenTopo: no retry logic, synthetic fallback for all failed batches, null elevation treated as 0, no rate limit handling
+- Rewrote downloadTerrainFromOpenTopo with: smaller batches (50 vs 100), retry logic (3 attempts with exponential backoff), 429 rate limit handling, Open-Meteo fallback for failed batches, NaN for null elevations with interpolation
+- Fixed Open-Meteo elevation path: null handling now uses NaN instead of 0
+- Added NaN/zero interpolation safety net before Gaussian filter
+- Rewrote contour drawing: connected marching squares segments into smooth polylines using new connectContourSegments() function
+- Improved contour labels: placed along longest connected chains instead of random segments
+- Added 120x120 HD grid option for better resolution
+- Changed default dataset to Copernicus DEM 30m (Open-Meteo) which matches Google Earth within 2-5m
+- Added Portugal validation site (Castelo do Bode, 39.5564°N, -8.3270°W, GE: ~178m)
+- Pushed to GitHub (commit fd2918c2)
+
+Stage Summary:
+- Elevation values should now be accurate (Copernicus DEM matches Google Earth within 2-5m)
+- Contour lines will be smooth connected polylines instead of disconnected segments
+- Better API reliability with retry logic and fallbacks
+- No more synthetic terrain fallback that produced wrong values

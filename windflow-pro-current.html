@@ -425,10 +425,10 @@ canvas{display:block;}
       <div style="font-family:var(--mono);font-size:8px;color:var(--gn);padding:2px 4px;background:rgba(63,185,80,.06);border:1px solid rgba(63,185,80,.2);border-radius:2px">✓ Copernicus DEM 30m matches Google Earth within ~2–5m (Recommended)</div>
       <div class="fl-row">
         <div class="fl"><label>DATASET</label>
-          <select id="tds"><option value="srtm30m" selected>SRTM 30m (NASA — Reliable)</option><option value="open-meteo">Copernicus DEM (Open-Meteo)</option><option value="aster30m">ASTER 30m (METI/NASA)</option><option value="mapzen">Mapzen (multi-source)</option><option value="srtm90m">SRTM 90m (CGIAR)</option></select>
+          <select id="tds"><option value="srtm30m">SRTM 30m (NASA)</option><option value="open-meteo" selected>Copernicus DEM 30m (Open-Meteo — Recommended)</option><option value="aster30m">ASTER 30m (METI/NASA)</option><option value="mapzen">Mapzen (multi-source)</option><option value="srtm90m">SRTM 90m (CGIAR)</option></select>
         </div>
         <div class="fl"><label>GRID</label>
-          <select id="tgrid"><option value="50">50×50</option><option value="70" selected>70×70</option><option value="90">90×90</option></select>
+          <select id="tgrid"><option value="50">50×50</option><option value="70" selected>70×70</option><option value="90">90×90</option><option value="120">120×120 (HD)</option></select>
         </div>
       </div>
       <div class="fl-row">
@@ -2704,10 +2704,12 @@ function drawLabeledContours(grid, nLat, nLon, bbox, interval, map) {
   for(let l=Math.ceil(minH/interval)*interval; l<=maxH; l+=interval) levels.push(l);
 
   levels.forEach(lv => {
-    const majorEvery = interval<=5 ? 5 : interval<=20 ? 5 : 5; // major every 5 intervals
+    const majorEvery = interval<=5 ? 5 : interval<=20 ? 5 : 5;
     const major = (Math.round(lv/interval) % majorEvery === 0);
-    const lineColor = major ? 'rgba(80,60,30,0.75)' : 'rgba(120,100,60,0.35)';
-    const lineW = major ? 1.4 : 0.6;
+    const lineColor = major ? 'rgba(80,60,30,0.85)' : 'rgba(120,100,60,0.45)';
+    const lineW = major ? 1.6 : 0.7;
+
+    // Collect all contour segments for this level
     const segments=[];
     for(let j=0;j<nLat-1;j++) {
       for(let i=0;i<nLon-1;i++) {
@@ -2723,32 +2725,95 @@ function drawLabeledContours(grid, nLat, nLon, bbox, interval, map) {
         const R=[lat0+lr(v[1],v[2])*(lat1-lat0),lon1];
         const B=[lat1,lon0+lr(v[3],v[2])*(lon1-lon0)];
         const Lp=[lat0+lr(v[0],v[3])*(lat1-lat0),lon0];
-        const sg={1:[Lp,B],2:[B,R],3:[Lp,R],4:[T,R],5:[T,B],6:[T,B],7:[T,Lp],
-                  8:[T,Lp],9:[T,B],10:[T,B],11:[T,R],12:[Lp,R],13:[B,R],14:[Lp,B]};
-        const s=sg[code]||sg[15-code];
-        if(s){
-          const line=L.polyline(s,{color:lineColor,weight:lineW,interactive:false});
-          line.addTo(grp);
-          segments.push({pts:s,lv});
+        // Marching squares segment lookup (connected pairs)
+        // Ambiguous cases (5,10): use saddle-point heuristic
+        const sg={1:[Lp,B],2:[B,R],3:[Lp,R],4:[T,R],5:[T,Lp,B,R],6:[T,B],
+                  7:[T,Lp],8:[T,Lp],9:[T,B],10:[T,R,B,Lp],11:[T,R],12:[Lp,R],13:[B,R],14:[Lp,B]};
+        const s=sg[code];
+        if(!s) continue;
+        for(let si=0;si<s.length;si+=2){
+          if(si+1<s.length) segments.push([s[si],s[si+1]]);
         }
       }
     }
-    // Add contour labels every N segments for major contours
-    if(major && segments.length>0) {
-      const step=Math.max(1,Math.floor(segments.length/5));
-      for(let k=0; k<segments.length; k+=step) {
-        const seg=segments[k];
-        const mid=[(seg.pts[0][0]+seg.pts[1][0])/2,(seg.pts[0][1]+seg.pts[1][1])/2];
-        L.marker(mid,{
-          icon:L.divIcon({
-            html:`<span style="background:rgba(255,255,255,0.75);color:#5c3b10;font-size:9px;font-family:monospace;padding:0 2px;border-radius:2px">${lv}m</span>`,
-            className:'',iconSize:'auto',iconAnchor:[12,6]
-          }),interactive:false
-        }).addTo(grp);
+
+    // Connect segments into smooth polylines
+    const connectedChains=connectContourSegments(segments);
+
+    // Draw connected polylines
+    connectedChains.forEach(chain => {
+      if(chain.length<2) return;
+      const line=L.polyline(chain,{color:lineColor,weight:lineW,interactive:false,smoothFactor:0.5});
+      line.addTo(grp);
+    });
+
+    // Add contour labels along longest chains for major contours
+    if(major && connectedChains.length>0) {
+      const sorted=[...connectedChains].sort((a,b)=>b.length-a.length);
+      const numLabels=Math.min(8, sorted.length);
+      for(let ci=0;ci<numLabels;ci++){
+        const chain=sorted[ci];
+        if(chain.length<3) continue;
+        const step=Math.max(1,Math.floor(chain.length/3));
+        for(let k=Math.floor(step/2); k<chain.length; k+=step){
+          const pt=chain[k];
+          L.marker(pt,{
+            icon:L.divIcon({
+              html:`<span style="background:rgba(255,255,255,0.8);color:#5c3b10;font-size:9px;font-family:monospace;padding:0 2px;border-radius:2px;white-space:nowrap">${lv}m</span>`,
+              className:'',iconSize:'auto',iconAnchor:[12,6]
+            }),interactive:false
+          }).addTo(grp);
+        }
       }
     }
   });
   return grp;
+}
+
+// ── Connect contour segments into smooth polylines ──────────────────
+function connectContourSegments(segments){
+  if(segments.length===0) return [];
+  const EPS=1e-8;
+  const chains=[];
+  const used=new Set();
+
+  for(let start=0;start<segments.length;start++){
+    if(used.has(start)) continue;
+    used.add(start);
+    let chain=[segments[start][0],segments[start][1]];
+    let extended=true;
+    // Extend forward
+    while(extended){
+      extended=false;
+      for(let i=0;i<segments.length;i++){
+        if(used.has(i)) continue;
+        const s=segments[i];
+        if(Math.abs(s[0][0]-chain[chain.length-1][0])<EPS && Math.abs(s[0][1]-chain[chain.length-1][1])<EPS){
+          chain.push(s[1]); used.add(i); extended=true; break;
+        }
+        if(Math.abs(s[1][0]-chain[chain.length-1][0])<EPS && Math.abs(s[1][1]-chain[chain.length-1][1])<EPS){
+          chain.push(s[0]); used.add(i); extended=true; break;
+        }
+      }
+    }
+    // Extend backward
+    extended=true;
+    while(extended){
+      extended=false;
+      for(let i=0;i<segments.length;i++){
+        if(used.has(i)) continue;
+        const s=segments[i];
+        if(Math.abs(s[0][0]-chain[0][0])<EPS && Math.abs(s[0][1]-chain[0][1])<EPS){
+          chain.unshift(s[1]); used.add(i); extended=true; break;
+        }
+        if(Math.abs(s[1][0]-chain[0][0])<EPS && Math.abs(s[1][1]-chain[0][1])<EPS){
+          chain.unshift(s[0]); used.add(i); extended=true; break;
+        }
+      }
+    }
+    chains.push(chain);
+  }
+  return chains;
 }
 
 // ── WindPRO-style wind rose canvas ────────────────────────────────────
@@ -3999,7 +4064,7 @@ async function downloadTerrain(){
             }
             data.elevation.forEach((elev,k)=>{
               if(k<cPts.length){
-                grid[cPts[k].j*nLon+cPts[k].i]=(elev!==null && elev!==undefined)?elev:0;
+                grid[cPts[k].j*nLon+cPts[k].i]=(elev!==null && elev!==undefined)?elev:NaN;
               }
             });
             ok=true;
@@ -4017,11 +4082,11 @@ async function downloadTerrain(){
       if(!ok) throw new Error('No elevation data in response');
       if(failedChunks>0) notify('Terrain: '+failedChunks+'/'+nChunks+' chunks failed — retrying failed cells via OpenTopoData','w');
 
-      // Fill in failed cells using OpenTopoData as fallback for individual points
+      // Fill in failed/missing cells using OpenTopoData as fallback for individual points
       if(failedChunks>0){
         const failedPts=[];
         for(let idx=0;idx<grid.length;idx++){
-          if(grid[idx]===0){
+          if(isNaN(grid[idx])||grid[idx]===0){
             const j=Math.floor(idx/nLon), i=idx%nLon;
             failedPts.push({lat:bbox.minLat+j/(nLat-1)*(bbox.maxLat-bbox.minLat),lon:bbox.minLon+i/(nLon-1)*(bbox.maxLon-bbox.minLon),j,i,idx});
           }
@@ -4038,8 +4103,8 @@ async function downloadTerrain(){
               const d2=await r2.json();
               if(d2.status==='OK'){
                 d2.results.forEach((r,k)=>{
-                  if(r.elevation!==null && k<fbPts.length){
-                    grid[fbPts[k].idx]=r.elevation;
+                  if(k<fbPts.length){
+                    grid[fbPts[k].idx]=(r.elevation!==null && r.elevation!==undefined)?r.elevation:NaN;
                   }
                 });
               }
@@ -4067,9 +4132,37 @@ async function downloadTerrain(){
     // OpenTopoData sources (srtm30m, aster30m, mapzen, srtm90m)
     await downloadTerrainFromOpenTopo(pts,grid,nLat,nLon,bbox,ds);
   }
+  // Interpolate any remaining NaN/zero cells from neighbors (safety net)
+  {
+    let nanCount=0;
+    for(let idx=0;idx<grid.length;idx++) if(isNaN(grid[idx])||grid[idx]===0) nanCount++;
+    if(nanCount>0){
+      for(let iter=0;iter<10;iter++){
+        let filled=0;
+        for(let j=0;j<nLat;j++){
+          for(let i=0;i<nLon;i++){
+            const idx=j*nLon+i;
+            if(!isNaN(grid[idx])&&grid[idx]!==0) continue;
+            let sum=0,cnt=0;
+            for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){
+              if(dj===0&&di===0) continue;
+              const nj=j+dj,ni=i+di;
+              if(nj>=0&&nj<nLat&&ni>=0&&ni<nLon&&!isNaN(grid[nj*nLon+ni])&&grid[nj*nLon+ni]!==0){
+                sum+=grid[nj*nLon+ni]; cnt++;
+              }
+            }
+            if(cnt>0){grid[idx]=sum/cnt; filled++;}
+          }
+        }
+        if(filled===0) break;
+      }
+      for(let idx=0;idx<grid.length;idx++) if(isNaN(grid[idx])) grid[idx]=0;
+    }
+  }
   // Apply Gaussian filter
   const smoothed=sigma>0?gaussianFilter2D(Array.from(grid),nLon,nLat,sigma):Array.from(grid);
-  const minH=Math.min(...smoothed),maxH=Math.max(...smoothed);
+  const minH=Math.min(...smoothed.filter(v=>!isNaN(v))),maxH=Math.max(...smoothed.filter(v=>!isNaN(v)));
+  if(isNaN(minH)||isNaN(maxH)){notify('Terrain data error — please retry','e');return;}
   S.terrain={grid:smoothed,nLat,nLon,bbox,minH,maxH,dx:(bbox.maxLon-bbox.minLon)/(nLon-1)*111000*Math.cos(((bbox.minLat+bbox.maxLat)/2)*Math.PI/180),source:ds};
 
   // Auto-set site elevation using smart elevation logic
@@ -4119,56 +4212,116 @@ async function downloadTerrain(){
 
 // ── OpenTopoData terrain download helper ────────────────────────────────────
 async function downloadTerrainFromOpenTopo(pts,grid,nLat,nLon,bbox,ds){
-  const bsz=100,nb=Math.ceil(pts.length/bsz);
-  let anyOK=false;
+  const bsz=50,nb=Math.ceil(pts.length/bsz); // Smaller batches to avoid rate limits
+  let anyOK=false, currentDs=ds;
+  const failedBatches=[]; // Track failed batch indices for retry
   for(let b=0;b<nb;b++){
     const batch=pts.slice(b*bsz,(b+1)*bsz);
     const loc=batch.map(p=>p.lat.toFixed(5)+','+p.lon.toFixed(5)).join('|');
-    try{
-      const r=await fetch('https://api.opentopodata.org/v1/'+ds+'?locations='+encodeURIComponent(loc));
-      const d=await r.json();
-      if(d.status==='OK'){
-        d.results.forEach((r,k)=>{grid[batch[k].j*nLon+batch[k].i]=r.elevation||0;});
-        anyOK=true;
-      } else throw new Error(d.error||'API error');
-    }catch(e){
-      // If first batch fails, try fallback datasets
-      if(!anyOK && b===0){
-        const fallbacks=['srtm30m','aster30m','mapzen','srtm90m'];
-        let fbOK=false;
-        for(const fb of fallbacks){
-          if(fb===ds) continue;
-          try{
-            const r2=await fetch('https://api.opentopodata.org/v1/'+fb+'?locations='+encodeURIComponent(loc));
-            const d2=await r2.json();
-            if(d2.status==='OK'){
-              d2.results.forEach((r,k)=>{grid[batch[k].j*nLon+batch[k].i]=r.elevation||0;});
-              fbOK=true; anyOK=true;
-              notify('Dataset '+ds+' unavailable — using '+fb+' as fallback','w');
-              ds=fb; // switch to working dataset for remaining batches
-              break;
+    let batchOK=false;
+    // Retry logic: up to 3 attempts with exponential backoff
+    for(let attempt=0;attempt<3;attempt++){
+      try{
+        if(attempt>0) await new Promise(r=>setTimeout(r,2000*Math.pow(2,attempt-1))); // 2s, 4s backoff
+        const r=await fetch('https://api.opentopodata.org/v1/'+currentDs+'?locations='+encodeURIComponent(loc));
+        if(r.status===429){
+          console.warn('Rate limited (429), attempt '+attempt+', waiting...');
+          await new Promise(r=>setTimeout(r,3000*Math.pow(2,attempt)));
+          continue;
+        }
+        const d=await r.json();
+        if(d.status==='OK'){
+          d.results.forEach((res,k)=>{
+            // Handle null elevation (e.g. ocean/water) — mark as NaN for later interpolation
+            if(k<batch.length){
+              grid[batch[k].j*nLon+batch[k].i]=(res.elevation!==null && res.elevation!==undefined)?res.elevation:NaN;
             }
-          }catch(e2){continue;}
-        }
-        if(!fbOK){
-          // All APIs failed — use synthetic terrain for this batch
-          batch.forEach(p=>{
-            const x=p.lat*100,y=p.lon*100;
-            grid[p.j*nLon+p.i]=Math.max(0,30+60*Math.sin(x*.3)*Math.cos(y*.25)+25*Math.sin(x*.7+y*.5));
           });
-          if(b===0) notify('All elevation APIs unavailable — synthetic terrain used','w');
+          anyOK=true; batchOK=true; break;
+        } else {
+          throw new Error(d.error||'API error');
         }
-      } else {
-        // Subsequent batch failure — use synthetic
-        batch.forEach(p=>{
-          const x=p.lat*100,y=p.lon*100;
-          grid[p.j*nLon+p.i]=Math.max(0,30+60*Math.sin(x*.3)*Math.cos(y*.25)+25*Math.sin(x*.7+y*.5));
-        });
+      }catch(e){
+        console.warn('Terrain batch '+b+' attempt '+attempt+' failed: '+e.message);
       }
     }
-    stepProg('ter',(b+1)/nb,'Batch '+(b+1)+'/'+nb);
-    if(b<nb-1) await new Promise(r=>setTimeout(r,1100));
+    // If primary dataset failed on first batch, try fallback datasets
+    if(!batchOK && !anyOK && b===0){
+      const fallbacks=['srtm30m','aster30m','mapzen','srtm90m'];
+      for(const fb of fallbacks){
+        if(fb===currentDs) continue;
+        try{
+          const r2=await fetch('https://api.opentopodata.org/v1/'+fb+'?locations='+encodeURIComponent(loc));
+          const d2=await r2.json();
+          if(d2.status==='OK'){
+            d2.results.forEach((res,k)=>{
+              if(k<batch.length) grid[batch[k].j*nLon+batch[k].i]=(res.elevation!==null && res.elevation!==undefined)?res.elevation:NaN;
+            });
+            currentDs=fb; anyOK=true; batchOK=true;
+            notify('Dataset '+ds+' unavailable — using '+fb+' as fallback','w');
+            break;
+          }
+        }catch(e2){continue;}
+      }
+    }
+    if(!batchOK) failedBatches.push(b);
+    stepProg('ter',(b+1)/nb,'Batch '+(b+1)+'/'+nb+(batchOK?'':' (failed)'));
+    if(b<nb-1) await new Promise(r=>setTimeout(r,1500)); // 1.5s between batches
   }
+  // Retry failed batches with Open-Meteo as final fallback
+  if(failedBatches.length>0){
+    notify('Retrying '+failedBatches.length+' failed batches via Open-Meteo...','w');
+    for(const bIdx of failedBatches){
+      const batch=pts.slice(bIdx*bsz,(bIdx+1)*bsz);
+      try{
+        const lats=batch.map(p=>p.lat.toFixed(5)).join(',');
+        const lons=batch.map(p=>p.lon.toFixed(5)).join(',');
+        const url='https://api.open-meteo.com/v1/elevation?latitude='+lats+'&longitude='+lons;
+        const resp=await fetch(url);
+        if(!resp.ok) throw new Error('HTTP '+resp.status);
+        const data=await resp.json();
+        if(data.elevation && Array.isArray(data.elevation)){
+          data.elevation.forEach((elev,k)=>{
+            if(k<batch.length) grid[batch[k].j*nLon+batch[k].i]=(elev!==null && elev!==undefined)?elev:NaN;
+          });
+        }
+        await new Promise(r=>setTimeout(r,800));
+      }catch(e){
+        console.warn('Open-Meteo retry also failed for batch '+bIdx+': '+e.message);
+      }
+    }
+  }
+  // Interpolate any remaining NaN cells from neighbors
+  let nanCount=0;
+  for(let idx=0;idx<grid.length;idx++) if(isNaN(grid[idx])) nanCount++;
+  if(nanCount>0){
+    // Iterative nearest-neighbor interpolation
+    const maxIter=10;
+    for(let iter=0;iter<maxIter;iter++){
+      let filled=0;
+      for(let j=0;j<nLat;j++){
+        for(let i=0;i<nLon;i++){
+          const idx=j*nLon+i;
+          if(!isNaN(grid[idx])) continue;
+          // Average of valid neighbors
+          let sum=0,cnt=0;
+          for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){
+            if(dj===0&&di===0) continue;
+            const nj=j+dj,ni=i+di;
+            if(nj>=0&&nj<nLat&&ni>=0&&ni<nLon&&!isNaN(grid[nj*nLon+ni])){
+              sum+=grid[nj*nLon+ni]; cnt++;
+            }
+          }
+          if(cnt>0){grid[idx]=sum/cnt; filled++;}
+        }
+      }
+      if(filled===0) break;
+    }
+    // Any remaining NaN (edge cases) set to 0
+    for(let idx=0;idx<grid.length;idx++) if(isNaN(grid[idx])) grid[idx]=0;
+    notify('Interpolated '+nanCount+' missing elevation cells','w');
+  }
+  if(!anyOK) throw new Error('All elevation APIs unavailable — please try again later');
 }
 
 // ── Elevation verification (cross-check multiple sources) ────────────────
@@ -5847,16 +6000,17 @@ function exportTimeSeriesCSV(){
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  ELEVATION VALIDATION — 2 Google Earth Reference Sites (Wind-Energy Sites)
-//  Site 1: Horns Rev 2 wind farm, Denmark (55.6000°N, 7.5900°E) — GE: ~0m (offshore)
-//  Site 2: Tehachapi Pass, California (35.0620°N, -118.4400°W) — GE: ~1198m
-//  These are well-known wind energy sites with verified Google Earth elevations.
+//  ELEVATION VALIDATION — Google Earth Reference Sites (Wind-Energy Sites)
+//  Site 1: Castelo do Bode, Portugal (39.5564°N, -8.3270°W) — GE: ~178m
+//  Site 2: Horns Rev 2, Denmark (55.6000°N, 7.5900°E) — GE: ~0m (offshore)
+//  Site 3: Tehachapi Pass, California (35.0620°N, -118.4400°W) — GE: ~1198m
 // ════════════════════════════════════════════════════════════════════════════
 async function runValidationTest(){
-  notify('Elevation validation: testing 2 Google Earth reference sites...','');
+  notify('Elevation validation: testing Google Earth reference sites...','');
   setMsg('Validating elevation accuracy...');
 
   const sites=[
+    {name:'Castelo do Bode, Portugal',lat:39.55643,lon:-8.32700,googleEarth:178,tolerance:15},
     {name:'Horns Rev 2 (offshore), Denmark',lat:55.6000,lon:7.5900,googleEarth:0,tolerance:5},
     {name:'Tehachapi Pass, California',lat:35.0620,lon:-118.4400,googleEarth:1198,tolerance:30}
   ];
@@ -5920,3 +6074,4 @@ async function runValidationTest(){
 
 </body>
 </html>
+
