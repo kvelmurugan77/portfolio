@@ -425,7 +425,7 @@ canvas{display:block;}
       <div style="font-family:var(--mono);font-size:8px;color:var(--gn);padding:2px 4px;background:rgba(63,185,80,.06);border:1px solid rgba(63,185,80,.2);border-radius:2px">✓ Copernicus DEM 30m matches Google Earth within ~2–5m (Recommended)</div>
       <div class="fl-row">
         <div class="fl"><label>DATASET</label>
-          <select id="tds"><option value="open-meteo" selected>Copernicus DEM 30m (Recommended)</option><option value="srtm30m">SRTM 30m (NASA)</option><option value="aster30m">ASTER 30m (METI/NASA)</option><option value="mapzen">Mapzen (multi-source)</option><option value="srtm90m">SRTM 90m (CGIAR)</option></select>
+          <select id="tds"><option value="srtm30m" selected>SRTM 30m (NASA — Reliable)</option><option value="open-meteo">Copernicus DEM (Open-Meteo)</option><option value="aster30m">ASTER 30m (METI/NASA)</option><option value="mapzen">Mapzen (multi-source)</option><option value="srtm90m">SRTM 90m (CGIAR)</option></select>
         </div>
         <div class="fl"><label>GRID</label>
           <select id="tgrid"><option value="50">50×50</option><option value="70" selected>70×70</option><option value="90">90×90</option></select>
@@ -3728,12 +3728,22 @@ function parseKML_layout(kml){
   const ns='http://www.opengis.net/kml/2.2';
   const findAll=(el,tag)=>[...(el.getElementsByTagNameNS(ns,tag).length?el.getElementsByTagNameNS(ns,tag):el.getElementsByTagName(tag))];
   const out=[];
+  const seen=new Set(); // deduplicate by coordinates (Google Earth KMZ has symbol+label duplicates)
   findAll(doc,'Placemark').forEach(pm=>{
     const nm=(findAll(pm,'name')[0])?.textContent?.trim()||'T'+(out.length+1);
     const coords=(findAll(pm,'coordinates')[0])?.textContent?.trim();
     if(coords){
       const p=coords.split(',');
-      if(p.length>=2){try{out.push({lat:parseFloat(p[1]),lon:parseFloat(p[0]),hh:null,name:nm,id:nm});}catch(e){}}
+      if(p.length>=2){
+        try{
+          const lat=parseFloat(p[1]),lon=parseFloat(p[0]);
+          // Skip if same coordinates already seen (deduplicate Symbol + Label placemarks)
+          const key=lat.toFixed(6)+','+lon.toFixed(6);
+          if(seen.has(key)) return;
+          seen.add(key);
+          out.push({lat,lon,hh:null,name:nm,id:nm});
+        }catch(e){}
+      }
     }
   });
   return out;
@@ -3960,36 +3970,84 @@ async function downloadTerrain(){
     try{
       stepProg('ter',0.05,'Open-Meteo Elevation API (Copernicus DEM 30m)...');
       // Open-Meteo elevation API: returns { "elevation": [val1, val2, ...] }
-      // IMPORTANT: Max URL length ~2000 chars — use chunks of 100 points max
-      // (300 points creates ~5000 char URLs which causes HTTP 400 Bad Request)
-      const chunkSize=100;
+      // IMPORTANT: Open-Meteo has strict rate limits. Use small chunks with generous delays.
+      const chunkSize=10; // Very small chunks to avoid 429 rate limiting
       const nChunks=Math.ceil(pts.length/chunkSize);
+      let failedChunks=0;
       for(let c=0;c<nChunks;c++){
         const cPts=pts.slice(c*chunkSize,(c+1)*chunkSize);
         const cLats=cPts.map(p=>p.lat.toFixed(5));
         const cLons=cPts.map(p=>p.lon.toFixed(5));
         const url='https://api.open-meteo.com/v1/elevation?latitude='+cLats.join(',')+'&longitude='+cLons.join(',');
-        const resp=await fetch(url);
-        if(!resp.ok) throw new Error('HTTP '+resp.status);
-        const data=await resp.json();
-        // API returns { elevation: [18.0, 21.0, ...] }
-        if(data.elevation && Array.isArray(data.elevation)){
-          if(data.elevation.length !== cPts.length){
-            console.warn('Open-Meteo elevation: expected '+cPts.length+' values, got '+data.elevation.length);
+        try{
+          let resp=await fetch(url);
+          // Retry on 429 (rate limit) with exponential backoff
+          let retries=0;
+          while(resp.status===429 && retries<5){
+            const waitMs=3000*Math.pow(2,retries); // 3s, 6s, 12s, 24s, 48s
+            console.warn('Rate limited (429), retry '+retries+' in '+waitMs+'ms...');
+            await new Promise(r=>setTimeout(r,waitMs));
+            resp=await fetch(url);
+            retries++;
           }
-          data.elevation.forEach((elev,k)=>{
-            if(k<cPts.length){
-              grid[cPts[k].j*nLon+cPts[k].i]=(elev!==null && elev!==undefined)?elev:0;
+          if(!resp.ok) throw new Error('HTTP '+resp.status);
+          const data=await resp.json();
+          // API returns { elevation: [18.0, 21.0, ...] }
+          if(data.elevation && Array.isArray(data.elevation)){
+            if(data.elevation.length !== cPts.length){
+              console.warn('Open-Meteo elevation: expected '+cPts.length+' values, got '+data.elevation.length);
             }
-          });
-          ok=true;
-        } else {
-          throw new Error('Unexpected API response format');
+            data.elevation.forEach((elev,k)=>{
+              if(k<cPts.length){
+                grid[cPts[k].j*nLon+cPts[k].i]=(elev!==null && elev!==undefined)?elev:0;
+              }
+            });
+            ok=true;
+          } else {
+            throw new Error('Unexpected API response format');
+          }
+        }catch(chunkErr){
+          failedChunks++;
+          console.warn('Terrain chunk '+c+' failed: '+chunkErr.message);
+          // Don't abort - continue with remaining chunks, leave failed cells as 0
         }
         stepProg('ter',0.05+0.9*(c+1)/nChunks,'Open-Meteo chunk '+(c+1)+'/'+nChunks);
-        if(c<nChunks-1) await new Promise(r=>setTimeout(r,500));
+        if(c<nChunks-1) await new Promise(r=>setTimeout(r,800)); // 800ms between chunks
       }
       if(!ok) throw new Error('No elevation data in response');
+      if(failedChunks>0) notify('Terrain: '+failedChunks+'/'+nChunks+' chunks failed — retrying failed cells via OpenTopoData','w');
+
+      // Fill in failed cells using OpenTopoData as fallback for individual points
+      if(failedChunks>0){
+        const failedPts=[];
+        for(let idx=0;idx<grid.length;idx++){
+          if(grid[idx]===0){
+            const j=Math.floor(idx/nLon), i=idx%nLon;
+            failedPts.push({lat:bbox.minLat+j/(nLat-1)*(bbox.maxLat-bbox.minLat),lon:bbox.minLon+i/(nLon-1)*(bbox.maxLon-bbox.minLon),j,i,idx});
+          }
+        }
+        if(failedPts.length>0){
+          notify('Filling '+failedPts.length+' failed cells via OpenTopoData...','w');
+          // Batch fill using OpenTopoData
+          const fbBsz=50;
+          for(let fb=0;fb<Math.ceil(failedPts.length/fbBsz);fb++){
+            const fbPts=failedPts.slice(fb*fbBsz,(fb+1)*fbBsz);
+            const loc=fbPts.map(p=>p.lat.toFixed(5)+','+p.lon.toFixed(5)).join('|');
+            try{
+              const r2=await fetch('https://api.opentopodata.org/v1/srtm30m?locations='+encodeURIComponent(loc));
+              const d2=await r2.json();
+              if(d2.status==='OK'){
+                d2.results.forEach((r,k)=>{
+                  if(r.elevation!==null && k<fbPts.length){
+                    grid[fbPts[k].idx]=r.elevation;
+                  }
+                });
+              }
+            }catch(e3){}
+            if(fb<Math.ceil(failedPts.length/fbBsz)-1) await new Promise(r=>setTimeout(r,1100));
+          }
+        }
+      }
     }catch(e){
       console.warn('Open-Meteo elevation failed:',e.message);
       // Fallback order: Copernicus via OpenTopoData → SRTM 30m → ASTER → Mapzen → SRTM 90m
@@ -4006,7 +4064,7 @@ async function downloadTerrain(){
       if(!fbDone) throw new Error('All elevation APIs unavailable');
     }
   } else {
-    // OpenTopoData sources
+    // OpenTopoData sources (srtm30m, aster30m, mapzen, srtm90m)
     await downloadTerrainFromOpenTopo(pts,grid,nLat,nLon,bbox,ds);
   }
   // Apply Gaussian filter
@@ -4042,7 +4100,7 @@ async function downloadTerrain(){
   const mLon2=111*Math.cos((bbox.minLat+bbox.maxLat)/2*Math.PI/180);
   document.getElementById('ter-dm').textContent=((bbox.maxLon-bbox.minLon)*mLon2).toFixed(1)+'×'+((bbox.maxLat-bbox.minLat)*111).toFixed(1)+' km';
   // Show data source info
-  const dsNames={'srtm30m':'SRTM 30m (NASA SRTM v3)','aster30m':'ASTER 30m (METI/NASA)','mapzen':'Mapzen (multi-source)','srtm90m':'SRTM 90m (CGIAR-CSI)','open-meteo':'Copernicus DEM 30m (Open-Meteo)'};
+  const dsNames={'srtm30m':'SRTM 30m (NASA SRTM v3)','aster30m':'ASTER 30m (METI/NASA)','mapzen':'Mapzen (multi-source)','srtm90m':'SRTM 90m (CGIAR-CSI)','open-meteo':'Copernicus DEM 30m (Open-Meteo)','copernicus30m':'Copernicus DEM 30m (OpenTopoData)'};
   document.getElementById('ter-src').textContent=dsNames[ds]||ds;
   document.getElementById('ter-filt').textContent=sigma>0?'σ='+sigma+' cells':'Off';
   document.getElementById('ter-cint').textContent=document.getElementById('cint').value+'m';
