@@ -229,6 +229,10 @@ canvas{display:block;}
       <div class="mdi" onclick="exportWindAll()">↓ Export Wind Data (all formats)</div>
       <div class="mdi" onclick="exportReport()">↓ Export HTML Report</div>
       <div class="mdi" onclick="exportTimeSeriesCSV()">↓ Export Time Series CSV</div>
+      <div class="ms"></div>
+      <div class="mdi" onclick="exportContourMap()">↓ Export WAsP Contour .map</div>
+      <div class="mdi" onclick="exportRoughnessMap()">↓ Export WAsP Roughness .map</div>
+      <div class="mdi" onclick="exportCombinedMap()">↓ Export WAsP Combined .map</div>
     </div>
   </div>
   <div class="mi">Analysis
@@ -455,6 +459,10 @@ canvas{display:block;}
         <div class="ir"><span class="ik">DATA SOURCE</span><span class="iv c" id="ter-src">—</span></div>
         <div class="ir"><span class="ik">FILTER APPLIED</span><span class="iv g" id="ter-filt">—</span></div>
         <div class="ir"><span class="ik">CONTOUR INT.</span><span class="iv" id="ter-cint">—</span></div>
+        <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">
+          <button class="btn" onclick="exportContourMap()" style="font-size:9px;padding:3px 8px">↓ Contour .map</button>
+          <button class="btn" onclick="exportCombinedMap()" style="font-size:9px;padding:3px 8px">↓ Combined .map</button>
+        </div>
       </div>
     </div>
   </div>
@@ -479,6 +487,9 @@ canvas{display:block;}
       </div>
       <!-- Roughness legend -->
       <div id="rgh-legend" style="display:none;margin-top:4px;font-size:9px"></div>
+      <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">
+        <button class="btn" onclick="exportRoughnessMap()" style="font-size:9px;padding:3px 8px">↓ Roughness .map</button>
+      </div>
       <div class="fl"><label>MAST z₀ REF (m)</label>
         <input type="number" id="z0r" value="0.05" min="0.0001" max="2" step="0.005" onchange="syncSettings()">
       </div>
@@ -1016,7 +1027,7 @@ canvas{display:block;}
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════
-//  WindFlow Pro 5.1 — WAsP + WindPRO Replica
+//  WindFlow Pro 7.0 — WAsP + WindPRO Replica
 //  Engine: 15 WAsP parity fixes (Troen & Petersen 1989)
 //  MCP: WindPRO-equivalent (Linear, Matrix, Variance, Weibull)
 //  Stability: Monin-Obukhov (Businger-Dyer)
@@ -1977,7 +1988,7 @@ function countUpstreamWakes(tdIdx,sorted,startIdx,turbines,wm,s,D,r_rotor,kw,mLa
   let count=0;
   for(let ui=0;ui<startIdx;ui++){
     const Tu=sorted[ui];
-    if(wm[tdIdx][s]<0.01) continue;
+    if(wm[Tu.i][s]<0.01) continue;
     const dx=(turbines[tdIdx].lon-turbines[Tu.i].lon)*mLon;
     const dy=(turbines[tdIdx].lat-turbines[Tu.i].lat)*mLat;
     const x_down=cosD*dx+sinD*dy;
@@ -2081,7 +2092,7 @@ window.ENGINE={
 
 // ── MCP Engine (WindPRO-equivalent) ────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════
-//  WindFlow Pro 5.1 — MCP Engine (WindPRO-equivalent methodology)
+//  WindFlow Pro 7.0 — MCP Engine (WindPRO-equivalent methodology)
 //  Methods: Linear Regression, Matrix, Variance Ratio, Weibull Ratio
 //  Reference: Lackner et al. (2008), Carta et al. (2013), WindPRO 3.5 manual
 // ═══════════════════════════════════════════════════════════════════════
@@ -2480,7 +2491,7 @@ return {
 
 // ── Visualization Engine (WindPRO hypsometric + roughness + wind) ───────
 // ═══════════════════════════════════════════════════════════════════════
-//  WindFlow Pro 5.1 — WindPRO-style Visualization Engine
+//  WindFlow Pro 7.0 — WindPRO-style Visualization Engine
 //  Filled contours (hypsometric), roughness classes, wind resource map
 // ═══════════════════════════════════════════════════════════════════════
 const VIZ = (() => {
@@ -2696,7 +2707,7 @@ function roughnessLegendHTML() {
   return html;
 }
 
-// ── WindPRO-style contour lines with labels ───────────────────────────
+// ── WindPRO-style contour lines with segment chaining and labels ──────
 function drawLabeledContours(grid, nLat, nLon, bbox, interval, map) {
   const grp = L.layerGroup();
   const minH=Math.min(...grid), maxH=Math.max(...grid);
@@ -2704,17 +2715,22 @@ function drawLabeledContours(grid, nLat, nLon, bbox, interval, map) {
   for(let l=Math.ceil(minH/interval)*interval; l<=maxH; l+=interval) levels.push(l);
 
   levels.forEach(lv => {
-    const majorEvery = interval<=5 ? 5 : interval<=20 ? 5 : 5; // major every 5 intervals
+    const majorEvery = interval<=5 ? 5 : interval<=20 ? 5 : 5;
     const major = (Math.round(lv/interval) % majorEvery === 0);
-    const lineColor = major ? 'rgba(80,60,30,0.75)' : 'rgba(120,100,60,0.35)';
-    const lineW = major ? 1.4 : 0.6;
-    const segments=[];
+    const lineColor = major ? 'rgba(80,60,30,0.80)' : 'rgba(120,100,60,0.40)';
+    const lineW = major ? 1.6 : 0.6;
+
+    // Step 1: Generate all edge segments using marching squares
+    // Each segment is defined by two endpoints on cell edges
+    // We use edge-keys (cell face ID + position) to enable chaining
+    const allSegs = [];
+    const lr=(a,b)=>Math.max(0.02,Math.min(0.98,(lv-a)/(b-a+1e-10)));
+
     for(let j=0;j<nLat-1;j++) {
       for(let i=0;i<nLon-1;i++) {
         const v=[grid[j*nLon+i],grid[j*nLon+i+1],grid[(j+1)*nLon+i+1],grid[(j+1)*nLon+i]];
         const code=((v[0]>=lv)?8:0)|((v[1]>=lv)?4:0)|((v[2]>=lv)?2:0)|((v[3]>=lv)?1:0);
         if(code===0||code===15) continue;
-        const lr=(a,b)=>Math.max(0.02,Math.min(0.98,(lv-a)/(b-a+1e-10)));
         const lat0=bbox.minLat+j/(nLat-1)*(bbox.maxLat-bbox.minLat);
         const lat1=bbox.minLat+(j+1)/(nLat-1)*(bbox.maxLat-bbox.minLat);
         const lon0=bbox.minLon+i/(nLon-1)*(bbox.maxLon-bbox.minLon);
@@ -2727,23 +2743,118 @@ function drawLabeledContours(grid, nLat, nLon, bbox, interval, map) {
                   8:[T,Lp],9:[T,B],10:[T,B],11:[T,R],12:[Lp,R],13:[B,R],14:[Lp,B]};
         const s=sg[code]||sg[15-code];
         if(s){
-          const line=L.polyline(s,{color:lineColor,weight:lineW,interactive:false});
-          line.addTo(grp);
-          segments.push({pts:s,lv});
+          allSegs.push({p0:s[0], p1:s[1]});
         }
       }
     }
-    // Add contour labels every N segments for major contours
-    if(major && segments.length>0) {
-      const step=Math.max(1,Math.floor(segments.length/5));
-      for(let k=0; k<segments.length; k+=step) {
-        const seg=segments[k];
-        const mid=[(seg.pts[0][0]+seg.pts[1][0])/2,(seg.pts[0][1]+seg.pts[1][1])/2];
-        L.marker(mid,{
-          icon:L.divIcon({
-            html:`<span style="background:rgba(255,255,255,0.75);color:#5c3b10;font-size:9px;font-family:monospace;padding:0 2px;border-radius:2px">${lv}m</span>`,
-            className:'',iconSize:'auto',iconAnchor:[12,6]
-          }),interactive:false
+
+    // Step 2: Chain segments into continuous polylines
+    // Use a snap distance to match endpoints across adjacent cells
+    const ptKey = (pt) => `${pt[0].toFixed(7)},${pt[1].toFixed(7)}`;
+    const endpointMap = new Map();
+    allSegs.forEach((seg,idx) => {
+      const k0=ptKey(seg.p0), k1=ptKey(seg.p1);
+      if(!endpointMap.has(k0)) endpointMap.set(k0,[]);
+      if(!endpointMap.has(k1)) endpointMap.set(k1,[]);
+      endpointMap.get(k0).push({idx, end:0});
+      endpointMap.get(k1).push({idx, end:1});
+    });
+
+    const used = new Uint8Array(allSegs.length);
+    const chains = [];
+
+    // Greedy chaining: pick unused segment, extend in both directions
+    for(let startIdx=0; startIdx<allSegs.length; startIdx++){
+      if(used[startIdx]) continue;
+      used[startIdx] = 1;
+      const chain = [allSegs[startIdx].p0, allSegs[startIdx].p1];
+
+      // Extend forward (from last point)
+      let extended = true;
+      while(extended){
+        extended = false;
+        const lastKey = ptKey(chain[chain.length-1]);
+        const candidates = endpointMap.get(lastKey) || [];
+        for(const c of candidates){
+          if(used[c.idx]) continue;
+          used[c.idx] = 1;
+          const seg = allSegs[c.idx];
+          if(c.end === 0){
+            chain.push(seg.p1);
+          } else {
+            chain.push(seg.p0);
+          }
+          extended = true;
+          break;
+        }
+      }
+
+      // Extend backward (from first point)
+      extended = true;
+      while(extended){
+        extended = false;
+        const firstKey = ptKey(chain[0]);
+        const candidates = endpointMap.get(firstKey) || [];
+        for(const c of candidates){
+          if(used[c.idx]) continue;
+          used[c.idx] = 1;
+          const seg = allSegs[c.idx];
+          if(c.end === 0){
+            chain.unshift(seg.p0);
+          } else {
+            chain.unshift(seg.p1);
+          }
+          extended = true;
+          break;
+        }
+      }
+
+      chains.push(chain);
+    }
+
+    // Step 3: Create Leaflet polylines from chains (one polyline per chain)
+    // This produces far fewer Leaflet objects than individual segments
+    const labelPositions = [];
+    chains.forEach(chain => {
+      if(chain.length < 2) return;
+      L.polyline(chain, {color:lineColor, weight:lineW, interactive:false, lineCap:'round', lineJoin:'round'}).addTo(grp);
+
+      // Collect label positions along long chains for major contours
+      if(major && chain.length > 10){
+        const step = Math.max(10, Math.floor(chain.length / 4));
+        for(let k = Math.floor(step/2); k < chain.length - 2; k += step){
+          labelPositions.push([chain[k][0], chain[k][1]]);
+        }
+      }
+    });
+
+    // Step 4: Add contour labels for major contours with collision avoidance
+    if(major && labelPositions.length > 0){
+      // Simple collision avoidance: enforce minimum distance between labels
+      const minDist = 0.008; // ~0.8km minimum between labels
+      const placed = [];
+      labelPositions.forEach(pos => {
+        const tooClose = placed.some(p =>
+          Math.abs(p[0]-pos[0]) < minDist && Math.abs(p[1]-pos[1]) < minDist
+        );
+        if(!tooClose){
+          placed.push(pos);
+          L.marker(pos, {
+            icon: L.divIcon({
+              html: `<span style="background:rgba(255,255,255,0.85);color:#5c3b10;font-size:9px;font-family:monospace;padding:0 3px;border-radius:2px;white-space:nowrap">${lv}m</span>`,
+              className:'', iconSize:'auto', iconAnchor:[14,7]
+            }), interactive:false
+          }).addTo(grp);
+        }
+      });
+      // Ensure at least one label per major contour level
+      if(placed.length === 0 && labelPositions.length > 0){
+        const pos = labelPositions[0];
+        L.marker(pos, {
+          icon: L.divIcon({
+            html: `<span style="background:rgba(255,255,255,0.85);color:#5c3b10;font-size:9px;font-family:monospace;padding:0 3px;border-radius:2px;white-space:nowrap">${lv}m</span>`,
+            className:'', iconSize:'auto', iconAnchor:[14,7]
+          }), interactive:false
         }).addTo(grp);
       }
     }
@@ -2922,7 +3033,7 @@ return {
 
 // ── ERA5 & GWA Download Engine ──────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════
-//  WindFlow Pro 5.1 — ERA5 Wind Data Downloader (WindPRO-equivalent)
+//  WindFlow Pro 7.0 — ERA5 Wind Data Downloader (WindPRO-equivalent)
 //  Sources: Open-Meteo ERA5 (free), Global Wind Atlas v3
 //  Features: Multi-year download, height correction, QC filtering
 // ═══════════════════════════════════════════════════════════════════════
@@ -3963,6 +4074,8 @@ async function downloadTerrain(){
               lon:bbox.minLon+i/(nLon-1)*(bbox.maxLon-bbox.minLon),j,i});
   }
   const grid=new Float32Array(nLat*nLon);
+  // Initialize with NaN as sentinel for "not yet downloaded" (0m is valid elevation for sea-level sites)
+  grid.fill(NaN);
 
   // Open-Meteo Elevation API (Copernicus DEM 30m source)
   if(ds==='open-meteo'){
@@ -4021,7 +4134,7 @@ async function downloadTerrain(){
       if(failedChunks>0){
         const failedPts=[];
         for(let idx=0;idx<grid.length;idx++){
-          if(grid[idx]===0){
+          if(isNaN(grid[idx])){
             const j=Math.floor(idx/nLon), i=idx%nLon;
             failedPts.push({lat:bbox.minLat+j/(nLat-1)*(bbox.maxLat-bbox.minLat),lon:bbox.minLon+i/(nLon-1)*(bbox.maxLon-bbox.minLon),j,i,idx});
           }
@@ -4067,10 +4180,40 @@ async function downloadTerrain(){
     // OpenTopoData sources (srtm30m, aster30m, mapzen, srtm90m)
     await downloadTerrainFromOpenTopo(pts,grid,nLat,nLon,bbox,ds);
   }
+  // Interpolate any remaining NaN cells before filtering (bilinear fill from neighbors)
+  const gridArr=Array.from(grid);
+  let nanCount=0;
+  for(let iter=0;iter<5;iter++){ // up to 5 passes to fill gaps
+    let filled=0;
+    for(let j=0;j<nLat;j++){
+      for(let i=0;i<nLon;i++){
+        const idx=j*nLon+i;
+        if(!isNaN(gridArr[idx])) continue;
+        // Average from non-NaN neighbors
+        let sum=0,cnt=0;
+        for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){
+          if(dj===0&&di===0) continue;
+          const jj=j+dj,ii=i+di;
+          if(jj<0||jj>=nLat||ii<0||ii>=nLon) continue;
+          const v=gridArr[jj*nLon+ii];
+          if(!isNaN(v)){sum+=v;cnt++;}
+        }
+        if(cnt>0){gridArr[idx]=sum/cnt;filled++;}
+      }
+    }
+    if(filled===0) break;
+    if(iter===0) nanCount=filled;
+  }
+  // Final safety: replace any remaining NaN with 0 (shouldn't happen but prevents crash)
+  for(let i=0;i<gridArr.length;i++) if(isNaN(gridArr[i])) gridArr[i]=0;
+  if(nanCount>0) notify('Interpolated '+nanCount+' missing elevation cells from neighbors','w');
+
   // Apply Gaussian filter
-  const smoothed=sigma>0?gaussianFilter2D(Array.from(grid),nLon,nLat,sigma):Array.from(grid);
+  const smoothed=sigma>0?gaussianFilter2D(gridArr,nLon,nLat,sigma):gridArr;
   const minH=Math.min(...smoothed),maxH=Math.max(...smoothed);
   S.terrain={grid:smoothed,nLat,nLon,bbox,minH,maxH,dx:(bbox.maxLon-bbox.minLon)/(nLon-1)*111000*Math.cos(((bbox.minLat+bbox.maxLat)/2)*Math.PI/180),source:ds};
+  // Store smoothed terrain for flow calculations (J-H speedup uses filtered grid)
+  S.tSmooth=smoothed;
 
   // Auto-set site elevation using smart elevation logic
   // Priority: DEM at mast position → DEM average at turbines → ERA5 elevation
@@ -4128,7 +4271,7 @@ async function downloadTerrainFromOpenTopo(pts,grid,nLat,nLon,bbox,ds){
       const r=await fetch('https://api.opentopodata.org/v1/'+ds+'?locations='+encodeURIComponent(loc));
       const d=await r.json();
       if(d.status==='OK'){
-        d.results.forEach((r,k)=>{grid[batch[k].j*nLon+batch[k].i]=r.elevation||0;});
+        d.results.forEach((res,k)=>{grid[batch[k].j*nLon+batch[k].i]=(res.elevation!==null&&res.elevation!==undefined)?res.elevation:NaN;});
         anyOK=true;
       } else throw new Error(d.error||'API error');
     }catch(e){
@@ -4142,7 +4285,7 @@ async function downloadTerrainFromOpenTopo(pts,grid,nLat,nLon,bbox,ds){
             const r2=await fetch('https://api.opentopodata.org/v1/'+fb+'?locations='+encodeURIComponent(loc));
             const d2=await r2.json();
             if(d2.status==='OK'){
-              d2.results.forEach((r,k)=>{grid[batch[k].j*nLon+batch[k].i]=r.elevation||0;});
+              d2.results.forEach((res,k)=>{grid[batch[k].j*nLon+batch[k].i]=(res.elevation!==null&&res.elevation!==undefined)?res.elevation:NaN;});
               fbOK=true; anyOK=true;
               notify('Dataset '+ds+' unavailable — using '+fb+' as fallback','w');
               ds=fb; // switch to working dataset for remaining batches
@@ -4151,19 +4294,11 @@ async function downloadTerrainFromOpenTopo(pts,grid,nLat,nLon,bbox,ds){
           }catch(e2){continue;}
         }
         if(!fbOK){
-          // All APIs failed — use synthetic terrain for this batch
-          batch.forEach(p=>{
-            const x=p.lat*100,y=p.lon*100;
-            grid[p.j*nLon+p.i]=Math.max(0,30+60*Math.sin(x*.3)*Math.cos(y*.25)+25*Math.sin(x*.7+y*.5));
-          });
-          if(b===0) notify('All elevation APIs unavailable — synthetic terrain used','w');
+          // All APIs failed — leave as NaN, will be interpolated after smoothing
+          if(b===0) notify('Elevation API unavailable for some cells — will interpolate from neighbors','w');
         }
       } else {
-        // Subsequent batch failure — use synthetic
-        batch.forEach(p=>{
-          const x=p.lat*100,y=p.lon*100;
-          grid[p.j*nLon+p.i]=Math.max(0,30+60*Math.sin(x*.3)*Math.cos(y*.25)+25*Math.sin(x*.7+y*.5));
-        });
+        // Subsequent batch failure — leave as NaN for interpolation
       }
     }
     stepProg('ter',(b+1)/nb,'Batch '+(b+1)+'/'+nb);
@@ -4599,7 +4734,7 @@ async function runAnalysis(){
   const elevLabels = {auto:'Auto (DEM→ERA5)', dem:'Terrain DEM', era5:'ERA5 model', manual:'Manual'};
   notify('Running with wind source: '+srcLabels[windSrc]+', elevation source: '+elevLabels[elevSrc]+' ('+document.getElementById('selev').value+'m)','');
 
-  setMsg('Running WAsP v6.0 pipeline (15 fixes + data source + Copernicus DEM + WTG editor)...');
+  setMsg('Running WAsP v7.0 pipeline (15 fixes + data source + Copernicus DEM + WTG editor)...');
   ['btn-run','btn-run2'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
   document.getElementById('run-wrap').style.display='block';
 
@@ -4701,8 +4836,8 @@ async function runAnalysis(){
 
   ['btn-run','btn-run2'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
   stepDone('run'); switchTab('results');
-  setMsg('WAsP v6.0 complete — all 15 parity fixes + Copernicus DEM + WTG editor applied');
-  notify('✓ WAsP v6.0 — Net: '+(results.reduce((a,r)=>a+r.netMWh,0)/1000).toFixed(3)+' GWh | CF: '+(results.reduce((a,r)=>a+r.CF,0)/results.length).toFixed(1)+'% | Wake: -'+(results.reduce((a,r)=>a+r.wakeLossPct,0)/results.length).toFixed(1)+'%','ok');
+  setMsg('WAsP v7.0 complete — all 15 parity fixes + Copernicus DEM + WTG editor applied');
+  notify('✓ WAsP v7.0 — Net: '+(results.reduce((a,r)=>a+r.netMWh,0)/1000).toFixed(3)+' GWh | CF: '+(results.reduce((a,r)=>a+r.CF,0)/results.length).toFixed(1)+'% | Wake: -'+(results.reduce((a,r)=>a+r.wakeLossPct,0)/results.length).toFixed(1)+'%','ok');
 }
 
 function swcForT1(res,gwc,turb,hub_h,mast_hh,z0_ref,lat_site){
@@ -4914,7 +5049,7 @@ function dlText(content,filename,mime='text/csv'){
 function exportAEP(){
   if(!S.aepResults) return notify('Run analysis first','w');
   const proj=document.getElementById('pname').value;
-  let csv='# WindFlow Pro 5.1 — WAsP+WindPRO Replica\n# Project: '+proj+'\n';
+  let csv='# WindFlow Pro 7.0 — WAsP+WindPRO Replica\n# Project: '+proj+'\n';
   csv+='Turbine,Lat,Lon,HH_m,HubWS_ms,SpeedRatio,Rho,DispH_m,RIX_%,Gross_MWh,WakeLoss_%,Net_MWh,CF_%\n';
   S.aepResults.forEach(r=>{csv+=`${r.name},${r.lat.toFixed(5)},${r.lon.toFixed(5)},${r.HH},${r.hubWS},${r.speedRatio},${r.rho},${r.d_wtg},${r.rix},${r.grossMWh},${r.wakeLossPct},${r.netMWh},${r.CF}\n`;});
   const tG=S.aepResults.reduce((a,r)=>a+r.grossMWh,0),tN=S.aepResults.reduce((a,r)=>a+r.netMWh,0);
@@ -4927,7 +5062,7 @@ function exportWAsPLib(){
   const s={mlat:+document.getElementById('mlat').value,mlon:+document.getElementById('mlon').value,mhh:+document.getElementById('mhh').value,z0ref:+document.getElementById('z0r').value};
   const proj=document.getElementById('pname').value;
   const Z0=[0.0002,0.03,0.10,0.40,1.50];
-  let lib=`:${proj} — WAsP Wind Atlas Library\n:WindFlow Pro 5.1 (15-Fix WAsP Parity Engine)\n:Mast: ${s.mlat.toFixed(4)}N ${s.mlon.toFixed(4)}E HH=${s.mhh}m z0=${s.z0ref}m\n:\n`;
+  let lib=`:${proj} — WAsP Wind Atlas Library\n:WindFlow Pro 7.0 (15-Fix WAsP Parity Engine)\n:Mast: ${s.mlat.toFixed(4)}N ${s.mlon.toFixed(4)}E HH=${s.mhh}m z0=${s.z0ref}m\n:\n`;
   Z0.forEach(z0=>{
     lib+=`\n'${proj}'\n  ${s.mlat.toFixed(3)}  ${s.mlon.toFixed(3)}\n  ${z0.toFixed(4)}  ${S.gwc.length}\n`;
     S.gwc.forEach(sec=>{const lR=Math.log(s.mhh/s.z0ref),lC=Math.log(s.mhh/z0);const A_c=sec.A_gwc*(lR>0.01?lC/lR:1);lib+=`  ${sec.freq.toFixed(4)}  ${A_c.toFixed(3)}  ${sec.k_gwc.toFixed(3)}\n`;});
@@ -4967,7 +5102,7 @@ function exportReport(){
   const cap=S.turbines.length*+document.getElementById('pkw').value/1000;
   const rows=S.aepResults.map(r=>`<tr><td>${r.name}</td><td>${r.lat.toFixed(5)}</td><td>${r.lon.toFixed(5)}</td><td>${r.HH}m</td><td>${r.hubWS.toFixed(2)}</td><td>${r.speedRatio.toFixed(4)}</td><td>${r.d_wtg.toFixed(1)}</td><td>${r.rix.toFixed(1)}%</td><td>${r.rho.toFixed(4)}</td><td>${r.grossMWh.toFixed(0)}</td><td>-${r.wakeLossPct.toFixed(1)}%</td><td style="color:#006600;font-weight:bold">${r.netMWh.toFixed(0)}</td><td>${r.CF.toFixed(1)}%</td></tr>`).join('');
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${proj} Report</title><style>body{font-family:Arial;font-size:12px;margin:40px}h1{color:#003366;border-bottom:2px solid #003366;padding-bottom:8px}h2{color:#003366;margin-top:20px}table{width:100%;border-collapse:collapse}th{background:#003366;color:#fff;padding:5px 8px;text-align:left}td{padding:4px 8px;border-bottom:1px solid #ddd}.kpi{display:inline-block;background:#f0f4f8;border-left:4px solid #003366;padding:8px 16px;margin:4px;border-radius:3px}.kl{font-size:10px;color:#666;text-transform:uppercase}.kv{font-size:18px;font-weight:bold;color:#003366}</style></head><body>
-<h1>⟁ WindFlow Pro 5.1 — WAsP + WindPRO Replica Report</h1>
+<h1>⟁ WindFlow Pro 7.0 — WAsP + WindPRO Replica Report</h1>
 <p><b>Project:</b> ${proj} &nbsp; <b>Date:</b> ${new Date().toISOString().slice(0,10)}</p>
 <h2>Key Results</h2>
 <div class="kpi"><div class="kl">Net AEP</div><div class="kv" style="color:#006633">${(tN/1000).toFixed(3)} GWh</div></div>
@@ -4978,15 +5113,330 @@ function exportReport(){
 <h2>Per-Turbine Results</h2>
 <table><tr><th>Turbine</th><th>Lat</th><th>Lon</th><th>HH</th><th>Hub WS</th><th>SR</th><th>Disp d</th><th>RIX</th><th>Density</th><th>Gross</th><th>Wake</th><th>Net AEP</th><th>CF</th></tr>${rows}
 <tr style="font-weight:bold"><td colspan="9">TOTAL (${S.aepResults.length} turbines)</td><td>${tG.toFixed(0)}</td><td>-${wL.toFixed(1)}%</td><td style="color:#006633">${tN.toFixed(0)} MWh</td><td>${CF.toFixed(1)}%</td></tr></table>
-<p style="margin-top:20px;font-size:11px;color:#555">WindFlow Pro 5.1 · 15-Fix WAsP Parity Engine · WindPRO-equivalent MCP · ${new Date().toISOString().slice(0,10)}</p></html>`;
+<p style="margin-top:20px;font-size:11px;color:#555">WindFlow Pro 7.0 · 15-Fix WAsP Parity Engine · WindPRO-equivalent MCP · ${new Date().toISOString().slice(0,10)}</p></html>`;
   dlText(html,proj.replace(/\s+/g,'_')+'_Report.html','text/html');
   notify('HTML report exported — open in browser → Ctrl+P → PDF','ok');
+}
+
+// ── WAsP .map Export ───────────────────────────────────────────────────────
+// WAsP .map format: standard terrain+roughness map for WAsP/WindPRO import
+// Format spec:
+//   Line 1: UTM zone (or -1 for lat/lon), datum, x0, y0 (reference point)
+//   Line 2: number of height contours
+//   Following lines: each contour = nPoints, then nPoints lines of (x y height)
+//   Then: number of roughness change lines
+//   Following lines: each line = nPoints, then nPoints lines of (x y z0_left z0_right)
+// Coordinates: we use lat/lon directly (zone=-1)
+
+function exportContourMap(){
+  if(!S.terrain) return notify('Download terrain first','w');
+  const proj=document.getElementById('pname').value;
+  const {grid,nLat,nLon,bbox}=S.terrain;
+  const interval=+document.getElementById('cint').value;
+  const minH=Math.min(...grid), maxH=Math.max(...grid);
+  const levels=[];
+  for(let l=Math.ceil(minH/interval)*interval; l<=maxH; l+=interval) levels.push(l);
+
+  // Generate contour polylines using marching squares (same algorithm as drawLabeledContours)
+  const lr=(a,b,lv)=>Math.max(0.02,Math.min(0.98,(lv-a)/(b-a+1e-10)));
+  const contourLines=[];
+
+  levels.forEach(lv => {
+    const ptKey=(pt)=>`${pt[0].toFixed(7)},${pt[1].toFixed(7)}`;
+    const allSegs=[];
+    for(let j=0;j<nLat-1;j++){
+      for(let i=0;i<nLon-1;i++){
+        const v=[grid[j*nLon+i],grid[j*nLon+i+1],grid[(j+1)*nLon+i+1],grid[(j+1)*nLon+i]];
+        const code=((v[0]>=lv)?8:0)|((v[1]>=lv)?4:0)|((v[2]>=lv)?2:0)|((v[3]>=lv)?1:0);
+        if(code===0||code===15) continue;
+        const lat0=bbox.minLat+j/(nLat-1)*(bbox.maxLat-bbox.minLat);
+        const lat1=bbox.minLat+(j+1)/(nLat-1)*(bbox.maxLat-bbox.minLat);
+        const lon0=bbox.minLon+i/(nLon-1)*(bbox.maxLon-bbox.minLon);
+        const lon1=bbox.minLon+(i+1)/(nLon-1)*(bbox.maxLon-bbox.minLon);
+        const T=[lat0,lon0+lr(v[0],v[1],lv)*(lon1-lon0)];
+        const R=[lat0+lr(v[1],v[2],lv)*(lat1-lat0),lon1];
+        const B=[lat1,lon0+lr(v[3],v[2],lv)*(lon1-lon0)];
+        const Lp=[lat0+lr(v[0],v[3],lv)*(lat1-lat0),lon0];
+        const sg={1:[Lp,B],2:[B,R],3:[Lp,R],4:[T,R],5:[T,B],6:[T,B],7:[T,Lp],
+                  8:[T,Lp],9:[T,B],10:[T,B],11:[T,R],12:[Lp,R],13:[B,R],14:[Lp,B]};
+        const s=sg[code]||sg[15-code];
+        if(s) allSegs.push({p0:s[0],p1:s[1]});
+      }
+    }
+
+    // Chain segments into polylines (same algorithm as drawLabeledContours)
+    const endpointMap=new Map();
+    allSegs.forEach((seg,idx)=>{
+      const k0=ptKey(seg.p0),k1=ptKey(seg.p1);
+      if(!endpointMap.has(k0)) endpointMap.set(k0,[]);
+      if(!endpointMap.has(k1)) endpointMap.set(k1,[]);
+      endpointMap.get(k0).push({idx,end:0});
+      endpointMap.get(k1).push({idx,end:1});
+    });
+    const used=new Uint8Array(allSegs.length);
+    for(let si=0;si<allSegs.length;si++){
+      if(used[si]) continue;
+      used[si]=1;
+      const chain=[allSegs[si].p0,allSegs[si].p1];
+      let ext=true;
+      while(ext){ext=false;const lk=ptKey(chain[chain.length-1]);for(const c of(endpointMap.get(lk)||[])){if(used[c.idx])continue;used[c.idx]=1;chain.push(c.end===0?allSegs[c.idx].p1:allSegs[c.idx].p0);ext=true;break;}}
+      ext=true;
+      while(ext){ext=false;const fk=ptKey(chain[0]);for(const c of(endpointMap.get(fk)||[])){if(used[c.idx])continue;used[c.idx]=1;chain.unshift(c.end===0?allSegs[c.idx].p0:allSegs[c.idx].p1);ext=true;break;}}
+      // Simplify: reduce point density for .map (every 3rd point for long chains)
+      const simplified = chain.length > 20 ? chain.filter((_,idx)=>idx%3===0||idx===chain.length-1) : chain;
+      contourLines.push({height:lv, points:simplified});
+    }
+  });
+
+  // Build .map content
+  let map=`! WAsP Map File — ${proj}\n`;
+  map+=`! Generated by WindFlow Pro 7.0\n`;
+  map+=`! Date: ${new Date().toISOString().slice(0,10)}\n`;
+  map+=`! Source: ${S.terrain.source || 'SRTM/DEM'}, Grid: ${nLon}x${nLat}, Contour interval: ${interval}m\n`;
+  map+=`-1 0 0.0 0.0\n`; // zone=-1=lat/lon, datum=0=WGS84
+  map+=`${contourLines.length}\n`;
+  contourLines.forEach(cl=>{
+    map+=`${cl.points.length}\n`;
+    cl.points.forEach(pt=>{
+      // lat lon height (WAsP uses easting northing, but lat/lon accepted with zone=-1)
+      map+=`${pt[1].toFixed(6)} ${pt[0].toFixed(6)} ${cl.height.toFixed(1)}\n`;
+    });
+  });
+  map+=`0\n`; // no roughness change lines in contour-only map
+  dlText(map, proj.replace(/\s+/g,'_')+'_contour.map','text/plain');
+  notify('WAsP contour .map exported ('+contourLines.length+' contour lines)','ok');
+}
+
+function exportRoughnessMap(){
+  if(!S.roughness) return notify('Download roughness first','w');
+  const proj=document.getElementById('pname').value;
+  const {grid,nLat,nLon,bbox}=S.roughness;
+
+  // Generate roughness change lines at boundaries between different roughness classes
+  // We detect class transitions and create boundary polylines
+  const classMap=grid.map(z0=>{
+    const classes=[0.0002,0.03,0.10,0.40,1.50];
+    const lg=Math.log(Math.max(z0,1e-5));
+    return classes.reduce((best,c)=>Math.abs(Math.log(c)-lg)<Math.abs(Math.log(best)-lg)?c:best);
+  });
+
+  // Find class boundaries using horizontal and vertical transitions
+  const boundarySegs=[];
+  for(let j=0;j<nLat-1;j++){
+    for(let i=0;i<nLon-1;i++){
+      const c=classMap[j*nLon+i];
+      const r=classMap[j*nLon+i+1];
+      const b=classMap[(j+1)*nLon+i];
+      const lat0=bbox.minLat+j/(nLat-1)*(bbox.maxLat-bbox.minLat);
+      const lat1=bbox.minLat+(j+1)/(nLat-1)*(bbox.maxLat-bbox.minLat);
+      const lon0=bbox.minLon+i/(nLon-1)*(bbox.maxLon-bbox.minLon);
+      const lon1=bbox.minLon+(i+1)/(nLon-1)*(bbox.maxLon-bbox.minLon);
+      // Horizontal boundary (left-right transition)
+      if(c!==r){
+        const midLon=(lon0+lon1)/2;
+        boundarySegs.push({p0:[lat0,midLon], p1:[lat1,midLon], z0l:c, z0r:r});
+      }
+      // Vertical boundary (top-bottom transition)
+      if(c!==b){
+        const midLat=(lat0+lat1)/2;
+        boundarySegs.push({p0:[midLat,lon0], p1:[midLat,lon1], z0l:c, z0r:b});
+      }
+    }
+  }
+
+  // Chain boundary segments with same roughness transition
+  const ptKey=(pt)=>`${pt[0].toFixed(6)},${pt[1].toFixed(6)}`;
+  const byTransition=new Map();
+  boundarySegs.forEach(seg=>{
+    const key=`${seg.z0l}-${seg.z0r}`;
+    if(!byTransition.has(key)) byTransition.set(key,{z0l:seg.z0l,z0r:seg.z0r,segs:[]});
+    byTransition.get(key).segs.push(seg);
+  });
+
+  const roughnessLines=[];
+  byTransition.forEach(({z0l,z0r,segs})=>{
+    // Chain segments
+    const epMap=new Map();
+    segs.forEach((seg,idx)=>{
+      const k0=ptKey(seg.p0),k1=ptKey(seg.p1);
+      if(!epMap.has(k0)) epMap.set(k0,[]);
+      if(!epMap.has(k1)) epMap.set(k1,[]);
+      epMap.get(k0).push({idx,end:0});
+      epMap.get(k1).push({idx,end:1});
+    });
+    const used=new Uint8Array(segs.length);
+    for(let si=0;si<segs.length;si++){
+      if(used[si]) continue;
+      used[si]=1;
+      const chain=[segs[si].p0,segs[si].p1];
+      let ext=true;
+      while(ext){ext=false;const lk=ptKey(chain[chain.length-1]);for(const c of(epMap.get(lk)||[])){if(used[c.idx])continue;used[c.idx]=1;chain.push(c.end===0?segs[c.idx].p1:segs[c.idx].p0);ext=true;break;}}
+      ext=true;
+      while(ext){ext=false;const fk=ptKey(chain[0]);for(const c of(epMap.get(fk)||[])){if(used[c.idx])continue;used[c.idx]=1;chain.unshift(c.end===0?segs[c.idx].p0:segs[c.idx].p1);ext=true;break;}}
+      if(chain.length>=2){
+        // Simplify
+        const simplified=chain.length>10?chain.filter((_,idx)=>idx%2===0||idx===chain.length-1):chain;
+        roughnessLines.push({points:simplified,z0l,z0r});
+      }
+    }
+  });
+
+  // Build .map content
+  let map=`! WAsP Roughness Map File — ${proj}\n`;
+  map+=`! Generated by WindFlow Pro 7.0\n`;
+  map+=`! Date: ${new Date().toISOString().slice(0,10)}\n`;
+  map+=`! Source: OSM/Overpass, Grid: ${nLon}x${nLat}\n`;
+  map+=`-1 0 0.0 0.0\n`; // zone=-1=lat/lon, datum=0=WGS84
+  map+=`0\n`; // no height contours in roughness-only map
+  map+=`${roughnessLines.length}\n`;
+  roughnessLines.forEach(rl=>{
+    map+=`${rl.points.length}\n`;
+    rl.points.forEach(pt=>{
+      map+=`${pt[1].toFixed(6)} ${pt[0].toFixed(6)} ${rl.z0l.toFixed(4)} ${rl.z0r.toFixed(4)}\n`;
+    });
+  });
+  dlText(map, proj.replace(/\s+/g,'_')+'_roughness.map','text/plain');
+  notify('WAsP roughness .map exported ('+roughnessLines.length+' roughness change lines)','ok');
+}
+
+function exportCombinedMap(){
+  if(!S.terrain) return notify('Download terrain first','w');
+  if(!S.roughness) return notify('Download roughness first (or use contour-only export)','w');
+  const proj=document.getElementById('pname').value;
+  const tGrid=S.terrain.grid, tNlat=S.terrain.nLat, tNlon=S.terrain.nLon, tBbox=S.terrain.bbox;
+  const interval=+document.getElementById('cint').value;
+  const minH=Math.min(...tGrid), maxH=Math.max(...tGrid);
+  const levels=[];
+  for(let l=Math.ceil(minH/interval)*interval; l<=maxH; l+=interval) levels.push(l);
+
+  // Generate contour lines (same as exportContourMap)
+  const lr=(a,b,lv)=>Math.max(0.02,Math.min(0.98,(lv-a)/(b-a+1e-10)));
+  const contourLines=[];
+  levels.forEach(lv=>{
+    const ptKey=(pt)=>`${pt[0].toFixed(7)},${pt[1].toFixed(7)}`;
+    const allSegs=[];
+    for(let j=0;j<tNlat-1;j++){
+      for(let i=0;i<tNlon-1;i++){
+        const v=[tGrid[j*tNlon+i],tGrid[j*tNlon+i+1],tGrid[(j+1)*tNlon+i+1],tGrid[(j+1)*tNlon+i]];
+        const code=((v[0]>=lv)?8:0)|((v[1]>=lv)?4:0)|((v[2]>=lv)?2:0)|((v[3]>=lv)?1:0);
+        if(code===0||code===15) continue;
+        const lat0=tBbox.minLat+j/(tNlat-1)*(tBbox.maxLat-tBbox.minLat);
+        const lat1=tBbox.minLat+(j+1)/(tNlat-1)*(tBbox.maxLat-tBbox.minLat);
+        const lon0=tBbox.minLon+i/(tNlon-1)*(tBbox.maxLon-tBbox.minLon);
+        const lon1=tBbox.minLon+(i+1)/(tNlon-1)*(tBbox.maxLon-tBbox.minLon);
+        const T=[lat0,lon0+lr(v[0],v[1],lv)*(lon1-lon0)];
+        const R=[lat0+lr(v[1],v[2],lv)*(lat1-lat0),lon1];
+        const B=[lat1,lon0+lr(v[3],v[2],lv)*(lon1-lon0)];
+        const Lp=[lat0+lr(v[0],v[3],lv)*(lat1-lat0),lon0];
+        const sg={1:[Lp,B],2:[B,R],3:[Lp,R],4:[T,R],5:[T,B],6:[T,B],7:[T,Lp],
+                  8:[T,Lp],9:[T,B],10:[T,B],11:[T,R],12:[Lp,R],13:[B,R],14:[Lp,B]};
+        const s=sg[code]||sg[15-code];
+        if(s) allSegs.push({p0:s[0],p1:s[1]});
+      }
+    }
+    const endpointMap=new Map();
+    allSegs.forEach((seg,idx)=>{
+      const k0=ptKey(seg.p0),k1=ptKey(seg.p1);
+      if(!endpointMap.has(k0)) endpointMap.set(k0,[]);
+      if(!endpointMap.has(k1)) endpointMap.set(k1,[]);
+      endpointMap.get(k0).push({idx,end:0});
+      endpointMap.get(k1).push({idx,end:1});
+    });
+    const used=new Uint8Array(allSegs.length);
+    for(let si=0;si<allSegs.length;si++){
+      if(used[si]) continue;used[si]=1;
+      const chain=[allSegs[si].p0,allSegs[si].p1];
+      let ext=true;
+      while(ext){ext=false;const lk=ptKey(chain[chain.length-1]);for(const c of(endpointMap.get(lk)||[])){if(used[c.idx])continue;used[c.idx]=1;chain.push(c.end===0?allSegs[c.idx].p1:allSegs[c.idx].p0);ext=true;break;}}
+      ext=true;
+      while(ext){ext=false;const fk=ptKey(chain[0]);for(const c of(endpointMap.get(fk)||[])){if(used[c.idx])continue;used[c.idx]=1;chain.unshift(c.end===0?allSegs[c.idx].p0:allSegs[c.idx].p1);ext=true;break;}}
+      const simplified=chain.length>20?chain.filter((_,idx)=>idx%3===0||idx===chain.length-1):chain;
+      contourLines.push({height:lv,points:simplified});
+    }
+  });
+
+  // Generate roughness change lines (same as exportRoughnessMap)
+  const rGrid=S.roughness.grid, rNlat=S.roughness.nLat, rNlon=S.roughness.nLon, rBbox=S.roughness.bbox;
+  const classMap=rGrid.map(z0=>{
+    const classes=[0.0002,0.03,0.10,0.40,1.50];
+    const lg=Math.log(Math.max(z0,1e-5));
+    return classes.reduce((best,c)=>Math.abs(Math.log(c)-lg)<Math.abs(Math.log(best)-lg)?c:best);
+  });
+  const boundarySegs=[];
+  for(let j=0;j<rNlat-1;j++){
+    for(let i=0;i<rNlon-1;i++){
+      const c=classMap[j*rNlon+i],r=classMap[j*rNlon+i+1],b=classMap[(j+1)*rNlon+i];
+      const lat0=rBbox.minLat+j/(rNlat-1)*(rBbox.maxLat-rBbox.minLat);
+      const lat1=rBbox.minLat+(j+1)/(rNlat-1)*(rBbox.maxLat-rBbox.minLat);
+      const lon0=rBbox.minLon+i/(rNlon-1)*(rBbox.maxLon-rBbox.minLon);
+      const lon1=rBbox.minLon+(i+1)/(rNlon-1)*(rBbox.maxLon-rBbox.minLon);
+      if(c!==r) boundarySegs.push({p0:[lat0,(lon0+lon1)/2],p1:[lat1,(lon0+lon1)/2],z0l:c,z0r:r});
+      if(c!==b) boundarySegs.push({p0:[(lat0+lat1)/2,lon0],p1:[(lat0+lat1)/2,lon1],z0l:c,z0r:b});
+    }
+  }
+  const ptKey2=(pt)=>`${pt[0].toFixed(6)},${pt[1].toFixed(6)}`;
+  const byTransition=new Map();
+  boundarySegs.forEach(seg=>{
+    const key=`${seg.z0l}-${seg.z0r}`;
+    if(!byTransition.has(key)) byTransition.set(key,{z0l:seg.z0l,z0r:seg.z0r,segs:[]});
+    byTransition.get(key).segs.push(seg);
+  });
+  const roughnessLines=[];
+  byTransition.forEach(({z0l,z0r,segs})=>{
+    const epMap=new Map();
+    segs.forEach((seg,idx)=>{
+      const k0=ptKey2(seg.p0),k1=ptKey2(seg.p1);
+      if(!epMap.has(k0)) epMap.set(k0,[]);
+      if(!epMap.has(k1)) epMap.set(k1,[]);
+      epMap.get(k0).push({idx,end:0});
+      epMap.get(k1).push({idx,end:1});
+    });
+    const used=new Uint8Array(segs.length);
+    for(let si=0;si<segs.length;si++){
+      if(used[si]) continue;used[si]=1;
+      const chain=[segs[si].p0,segs[si].p1];
+      let ext=true;
+      while(ext){ext=false;const lk=ptKey2(chain[chain.length-1]);for(const c of(epMap.get(lk)||[])){if(used[c.idx])continue;used[c.idx]=1;chain.push(c.end===0?segs[c.idx].p1:segs[c.idx].p0);ext=true;break;}}
+      ext=true;
+      while(ext){ext=false;const fk=ptKey2(chain[0]);for(const c of(epMap.get(fk)||[])){if(used[c.idx])continue;used[c.idx]=1;chain.unshift(c.end===0?segs[c.idx].p0:segs[c.idx].p1);ext=true;break;}}
+      if(chain.length>=2){
+        const simplified=chain.length>10?chain.filter((_,idx)=>idx%2===0||idx===chain.length-1):chain;
+        roughnessLines.push({points:simplified,z0l,z0r});
+      }
+    }
+  });
+
+  // Build combined .map content
+  let map=`! WAsP Combined Map File — ${proj}\n`;
+  map+=`! Generated by WindFlow Pro 7.0\n`;
+  map+=`! Date: ${new Date().toISOString().slice(0,10)}\n`;
+  map+=`! Terrain source: ${S.terrain.source||'SRTM/DEM'}, Grid: ${tNlon}x${tNlat}, Contour interval: ${interval}m\n`;
+  map+=`! Roughness source: OSM/Overpass, Grid: ${rNlon}x${rNlat}\n`;
+  map+=`-1 0 0.0 0.0\n`; // zone=-1=lat/lon, datum=0=WGS84
+  // Height contours
+  map+=`${contourLines.length}\n`;
+  contourLines.forEach(cl=>{
+    map+=`${cl.points.length}\n`;
+    cl.points.forEach(pt=>{
+      map+=`${pt[1].toFixed(6)} ${pt[0].toFixed(6)} ${cl.height.toFixed(1)}\n`;
+    });
+  });
+  // Roughness change lines
+  map+=`${roughnessLines.length}\n`;
+  roughnessLines.forEach(rl=>{
+    map+=`${rl.points.length}\n`;
+    rl.points.forEach(pt=>{
+      map+=`${pt[1].toFixed(6)} ${pt[0].toFixed(6)} ${rl.z0l.toFixed(4)} ${rl.z0r.toFixed(4)}\n`;
+    });
+  });
+  dlText(map, proj.replace(/\s+/g,'_')+'_combined.map','text/plain');
+  notify('WAsP combined .map exported ('+contourLines.length+' contours, '+roughnessLines.length+' roughness lines)','ok');
 }
 
 // ── Project save/load ─────────────────────────────────────────────────────────
 function saveProject(){
   const proj=document.getElementById('pname').value;
-  const data={version:'5.0',name:proj,settings:{hub_height:+document.getElementById('hh').value,rotor_d:+document.getElementById('rd').value,rated_kw:+document.getElementById('pkw').value,wake_k:+document.getElementById('wk').value,mast_hh:+document.getElementById('mhh').value,mast_lat:+document.getElementById('mlat').value,mast_lon:+document.getElementById('mlon').value,site_lat:+document.getElementById('slat').value,z0_ref:+document.getElementById('z0r').value,n_sectors:+document.getElementById('nsec').value,other_losses:+document.getElementById('oloss').value},
+  const data={version:'7.0',name:proj,settings:{hub_height:+document.getElementById('hh').value,rotor_d:+document.getElementById('rd').value,rated_kw:+document.getElementById('pkw').value,wake_k:+document.getElementById('wk').value,mast_hh:+document.getElementById('mhh').value,mast_lat:+document.getElementById('mlat').value,mast_lon:+document.getElementById('mlon').value,site_lat:+document.getElementById('slat').value,z0_ref:+document.getElementById('z0r').value,n_sectors:+document.getElementById('nsec').value,other_losses:+document.getElementById('oloss').value},
     turbines:S.turbines,wind:S.wind?{owc:S.wind.owc,weibull:S.wind.weibull,n_yrs:S.wind.n_yrs}:null,pcRaw:S.pcRaw,ctCurve:S.ctCurve,aepResults:S.aepResults};
   dlText(JSON.stringify(data,null,2),proj.replace(/\s+/g,'_')+'.wfp','application/json');
   notify('Project saved: '+proj+'.wfp','ok');
@@ -5363,7 +5813,7 @@ window.addEventListener('load',()=>{
   });
   setTimeout(()=>{
     notify('⚡ Click DEMO to load Horns Rev offshore benchmark project','ok');
-    notify('WAsP+WindPRO replica: 13 physics fixes, MCP, ERA5, WindPRO-style maps','');
+    notify('WAsP+WindPRO replica: 15 physics fixes, MCP, ERA5, GWA v4, WindPRO-style maps, .map export','');
   },600);
 });
 
@@ -5545,17 +5995,13 @@ async function runTimeSeries(){
   const wakeMatrix=S.wakeMatrix||null; // [turbine][sector] deficit fraction
 
   // Build a per-sector wake deficit lookup for each turbine
-  // If wake model was run during WAsP analysis, use those results
   const sectorWakeDeficit=Array.from({length:N},()=>new Float64Array(nSect));
   if(S.aepResults && S.aepResults.length===N){
-    // Use per-turbine wake loss percentage from AEP results as approximate sector-average
     for(let ti=0;ti<N;ti++){
       const wl=S.aepResults[ti].wakeLossPct/100;
       sectorWakeDeficit[ti].fill(wl);
     }
   }
-
-  // If we have the full wake matrix from the WAsP run, use it for per-sector wake
   if(wakeMatrix && wakeMatrix.length===N){
     for(let ti=0;ti<N;ti++){
       for(let s=0;s<nSect;s++){
@@ -5564,9 +6010,35 @@ async function runTimeSeries(){
     }
   }
 
-  // Per-turbine hourly power records (for CSV export)
-  // Store only every record to allow full export
-  const hourlyResults=[]; // [{time, ws, wd, perTurbine:[{wsHub, powerGross, powerNet, rho, wakeLoss}]}]
+  // CRITICAL FIX: Pre-compute site ratios per turbine per sector
+  // This replaces the per-hour FFT call that caused UI freeze
+  // Only N_turbines × N_sectors FFT calls (e.g., 12×16=192) instead of 8760×12=105,120
+  const siteRatioCache=Array.from({length:N},()=>new Float64Array(nSect));
+  document.getElementById('ts-lbl').textContent='Pre-computing site ratios ('+N+' turbines × '+nSect+' sectors)...';
+  await new Promise(r=>setTimeout(r,50));
+  for(let ti=0;ti<N;ti++){
+    const t=S.turbines[ti];
+    const tHH=t.hh||hubH;
+    for(let s=0;s<nSect;s++){
+      const dirCenter=s*dA+dA/2;
+      siteRatioCache[ti][s]=ENGINE.siteRatioV5({lat:t.lat,lon:t.lon},dirCenter,S.terrain,S.tSmooth,S.roughness,tHH,z0,latSite);
+    }
+    // Yield to UI every turbine
+    if(ti%2===0) await new Promise(r=>setTimeout(r,5));
+  }
+
+  // Pre-compute density-corrected power curve per turbine
+  // CRITICAL FIX: resample PC with density correction for each turbine
+  const pcResampledPerTurb=[];
+  for(let ti=0;ti<N;ti++){
+    const t=S.turbines[ti];
+    const tHH=t.hh||hubH;
+    const rho_turb=rhoAtWTG(t.lat,t.lon,tHH);
+    pcResampledPerTurb.push(ENGINE.resamplePC_WAsP(S.pcRaw,rho_turb));
+  }
+
+  // Per-turbine hourly results storage
+  const hourlyResults=[];
   let hourlyIdx=0;
 
   // Process each record
@@ -5585,24 +6057,24 @@ async function runTimeSeries(){
       const z0local=ENGINE.getZ0local({lat,lon},S.roughness,z0);
       const wsHub=ws100*(Math.log(hubH/z0local)/Math.log(100/z0local));
 
-      // Determine sector for wake lookup
+      // Determine sector for site ratio and wake lookup
       const sIdx=Math.floor(((dir+dA/2)%360)/dA)%nSect;
 
-      // Per-turbine computation for this hour
+      // Per-turbine computation for this hour (using cached site ratios)
       const perTurbine=[];
       for(let ti=0;ti<N;ti++){
         const t=S.turbines[ti];
         const tHH=t.hh||hubH;
 
-        // Site ratio for this turbine (WAsP flow correction)
-        const sr=ENGINE.siteRatioV5({lat:t.lat,lon:t.lon},dir,S.terrain,S.tSmooth,S.roughness,tHH,z0,latSite);
+        // Use cached site ratio instead of calling siteRatioV5 per hour
+        const sr=siteRatioCache[ti][sIdx];
         const wsWTG=wsHub*sr;
 
         // Air density at WTG
         const rho_turb=rhoAtWTG(t.lat,t.lon,tHH);
 
-        // Gross power from PC (density-corrected)
-        const pwrGross=ENGINE.getPower(wsWTG,S.pcRaw,rho_turb);
+        // Gross power from density-corrected PC (CRITICAL FIX: use resampled PC)
+        const pwrGross=ENGINE.getPower(wsWTG,pcResampledPerTurb[ti],rho_turb);
 
         // Apply per-sector wake deficit for this turbine
         const wakeFrac=sectorWakeDeficit[ti][sIdx]||0;
@@ -5613,7 +6085,7 @@ async function runTimeSeries(){
           powerGross: pwrGross,
           powerNet: pwrNet,
           rho: rho_turb,
-          wakeLoss: wakeFrac*100 // percentage
+          wakeLoss: wakeFrac*100
         });
 
         // Accumulate statistics
@@ -5627,7 +6099,6 @@ async function runTimeSeries(){
         if(wsWTG>=0) turbineWScount[ti]++;
       }
 
-      // Store hourly record for CSV export
       hourlyResults.push({
         time: rec.time,
         ws: wsHub,
@@ -5852,7 +6323,7 @@ function exportTimeSeriesCSV(){
 //  Site 2: Tehachapi Pass, California (35.0620°N, -118.4400°W) — GE: ~1198m
 //  These are well-known wind energy sites with verified Google Earth elevations.
 // ════════════════════════════════════════════════════════════════════════════
-async function runValidationTest(){
+async function runElevationValidation(){
   notify('Elevation validation: testing 2 Google Earth reference sites...','');
   setMsg('Validating elevation accuracy...');
 
