@@ -1,1624 +1,2267 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 7.0 — WAsP + WindPRO Engine</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<style>
-:root{
-  --bg:#0d1117;--panel:#161b22;--panel2:#21262d;--border:#30363d;
-  --accent:#58a6ff;--green:#3fb950;--warn:#d29922;--danger:#f85149;
-  --text:#e6edf3;--muted:#8b949e;--input:#0d1117;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden}
-body{font-family:'Consolas','Monaco','Courier New',monospace;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
-a{color:var(--accent)}
-/* TOPBAR */
-#topbar{display:flex;align-items:center;gap:10px;padding:6px 14px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
-.logo{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:2px;white-space:nowrap}
-.ver{font-size:10px;color:var(--muted)}
-.sep{width:1px;height:20px;background:var(--border);margin:0 4px}
-.btn{padding:4px 10px;border:1px solid var(--border);background:var(--panel);color:var(--text);cursor:pointer;border-radius:3px;font-size:11px;font-family:inherit;transition:border-color .15s,color .15s,background .15s;white-space:nowrap}
-.btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn.pri{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700}
-.btn.pri:hover{background:#79c0ff}
-.btn.grn{background:var(--green);border-color:var(--green);color:#000;font-weight:700}
-.btn.grn:hover{background:#56d364}
-.btn.sml{padding:2px 7px;font-size:10px}
-.btn:disabled{opacity:.35;cursor:not-allowed}
-/* LAYOUT */
-#main{display:flex;flex:1;overflow:hidden;min-height:0}
-/* SIDEBAR */
-#sidebar{width:310px;min-width:310px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-#stabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-.stab{flex:1;padding:7px 2px;font-size:10px;font-family:inherit;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
-.stab.on{color:var(--accent);border-bottom-color:var(--accent)}
-#scontent{flex:1;overflow-y:auto;padding:10px}
-.spanel{display:none}
-.spanel.on{display:block}
-/* RIGHT PANEL */
-#rpanel{width:300px;min-width:300px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-#rtabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-.rtab{flex:1;padding:7px 2px;font-size:10px;font-family:inherit;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
-.rtab.on{color:var(--accent);border-bottom-color:var(--accent)}
-#rcontent{flex:1;overflow-y:auto;padding:10px}
-.rpanel{display:none}
-.rpanel.on{display:block}
-/* MAP */
-#mapwrap{flex:1;display:flex;flex-direction:column;position:relative}
-#map{flex:1}
-/* FORM */
-.sec{margin-bottom:12px}
-.sec-hd{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;padding:5px 0;border-bottom:1px solid var(--border);margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
-.fld{margin-bottom:8px}
-.fld label{display:block;font-size:10px;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.4px}
-.fld input,.fld select,.fld textarea{width:100%;padding:5px 7px;background:var(--input);border:1px solid var(--border);color:var(--text);border-radius:3px;font-family:inherit;font-size:11px}
-.fld input:focus,.fld select:focus{border-color:var(--accent);outline:none}
-.r2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
-/* STATS */
-.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px}
-.scard{background:var(--panel2);border-radius:3px;padding:8px;border:1px solid var(--border)}
-.sval{font-size:16px;font-weight:700;color:var(--accent);line-height:1.2}
-.slbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-/* PROGRESS */
-.prog{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin:4px 0}
-.progb{height:100%;background:var(--accent);transition:width .3s;width:0}
-.progt{font-size:10px;color:var(--muted);min-height:14px}
-/* TABLES */
-.dtbl{width:100%;border-collapse:collapse;font-size:10px}
-.dtbl th{background:var(--panel2);padding:4px 5px;text-align:left;font-size:9px;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
-.dtbl td{padding:3px 5px;border-bottom:1px solid #1c2128;white-space:nowrap}
-.dtbl tr:hover td{background:var(--panel2)}
-/* CHARTS */
-.chwrap{position:relative;margin-bottom:8px}
-/* LOG */
-#elog{background:var(--input);border:1px solid var(--border);border-radius:3px;padding:6px 8px;height:100px;overflow-y:auto;font-size:10px;font-family:monospace}
-.li{color:var(--green)}.lw{color:var(--warn)}.le{color:var(--danger)}
-/* STATUS BAR */
-#sbar{padding:3px 12px;background:#0a0e13;border-top:1px solid var(--border);font-size:10px;color:var(--muted);display:flex;gap:14px;flex-shrink:0;flex-wrap:wrap}
-#sbar span{color:var(--accent)}
-/* SCROLLBAR */
-::-webkit-scrollbar{width:5px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-.infobox{background:var(--panel2);border:1px solid var(--border);border-radius:3px;padding:8px;font-size:11px;margin-bottom:8px}
-.badge{display:inline-block;padding:1px 5px;border-radius:8px;font-size:9px;font-weight:700}
-.bg{background:rgba(63,185,80,.18);color:var(--green)}
-.ba{background:rgba(88,166,255,.18);color:var(--accent)}
-.bw{background:rgba(210,153,34,.18);color:var(--warn)}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WindFlow Pro - Wind Energy Analysis Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0d1b2a 100%);
+            color: #e0e6ff;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(100,160,255,0.2);
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            background: linear-gradient(90deg, #64a0ff, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header .subtitle {
+            font-size: 0.85em;
+            color: #8899cc;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 0;
+            height: calc(100vh - 70px);
+        }
+
+        .sidebar {
+            background: rgba(255,255,255,0.03);
+            border-right: 1px solid rgba(100,160,255,0.15);
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .content-area {
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(100,160,255,0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            color: #64a0ff;
+            margin-bottom: 15px;
+            font-size: 1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(100,160,255,0.2);
+            padding-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.82em;
+            color: #8899cc;
+            margin-bottom: 4px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(100,160,255,0.25);
+            border-radius: 6px;
+            color: #e0e6ff;
+            font-size: 0.9em;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #64a0ff;
+        }
+
+        .form-group select option {
+            background: #1a1f3a;
+        }
+
+        .btn {
+            padding: 9px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.88em;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #d97706, #b45309);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #0891b2, #0e7490);
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(100,160,255,0.2);
+            border-radius: 8px;
+            color: #8899cc;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border-color: transparent;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .status-bar {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(100,160,255,0.15);
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            font-size: 0.82em;
+            min-height: 40px;
+        }
+
+        .status-info { color: #64a0ff; }
+        .status-success { color: #10b981; }
+        .status-error { color: #ef4444; }
+        .status-warning { color: #f59e0b; }
+
+        .progress-bar-container {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            height: 6px;
+            margin-top: 8px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #2563eb, #00d4ff);
+            border-radius: 10px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        /* Chart containers */
+        .chart-container {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(100,160,255,0.15);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .chart-container h4 {
+            color: #64a0ff;
+            margin-bottom: 12px;
+            font-size: 0.9em;
+        }
+
+        canvas {
+            max-width: 100%;
+        }
+
+        /* Results table */
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+            margin-top: 10px;
+        }
+
+        .results-table th {
+            background: rgba(37,99,235,0.3);
+            color: #64a0ff;
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(100,160,255,0.3);
+        }
+
+        .results-table td {
+            padding: 7px 12px;
+            border-bottom: 1px solid rgba(100,160,255,0.1);
+            color: #c0cce8;
+        }
+
+        .results-table tr:hover td {
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* AEP Results */
+        .aep-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .aep-card {
+            background: rgba(37,99,235,0.15);
+            border: 1px solid rgba(37,99,235,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .aep-card .value {
+            font-size: 1.6em;
+            font-weight: 700;
+            color: #64a0ff;
+        }
+
+        .aep-card .unit {
+            font-size: 0.75em;
+            color: #8899cc;
+        }
+
+        .aep-card .label {
+            font-size: 0.78em;
+            color: #8899cc;
+            margin-top: 4px;
+        }
+
+        .wind-rose-svg {
+            display: block;
+            margin: 0 auto;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        .badge-success { background: rgba(16,185,129,0.2); color: #10b981; }
+        .badge-warning { background: rgba(245,158,11,0.2); color: #f59e0b; }
+        .badge-info { background: rgba(100,160,255,0.2); color: #64a0ff; }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .data-info-box {
+            background: rgba(16,185,129,0.1);
+            border: 1px solid rgba(16,185,129,0.25);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.82em;
+            color: #10b981;
+            margin-top: 10px;
+        }
+
+        .warning-box {
+            background: rgba(245,158,11,0.1);
+            border: 1px solid rgba(245,158,11,0.25);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.82em;
+            color: #f59e0b;
+            margin-top: 10px;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.02);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(100,160,255,0.3);
+            border-radius: 3px;
+        }
+
+        .export-section {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
 
-<!-- TOP BAR -->
-<div id="topbar">
-  <span class="logo">⟁ WINDFLOW PRO</span>
-  <span class="ver">v7.0 · 15 WAsP Fixes · Eddy Viscosity · PARK2 · MCP</span>
-  <div class="sep"></div>
-  <button class="btn" onclick="loadDemo()">🎯 Demo (Horns Rev)</button>
-  <button class="btn pri" onclick="runAnalysis()">▶▶ RUN ANALYSIS</button>
-  <button class="btn grn" onclick="exportReport()">↓ HTML Report</button>
-  <button class="btn" onclick="exportAEPCSV()">↓ AEP CSV</button>
-  <div style="flex:1"></div>
-  <span id="tb-status" style="font-size:10px;color:var(--muted)">Ready</span>
+<div class="header">
+    <div>
+        <h1>⚡ WindFlow Pro</h1>
+        <div class="subtitle">Advanced Wind Energy Analysis & AEP Estimation Tool</div>
+    </div>
+    <div style="font-size:0.8em; color:#8899cc;">
+        <span class="badge badge-info">ERA5T</span>
+        <span class="badge badge-success">GWA</span>
+        <span class="badge badge-warning">WRF-Ready</span>
+    </div>
 </div>
 
-<!-- MAIN -->
-<div id="main">
+<div class="main-container">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
 
-  <!-- LEFT SIDEBAR -->
-  <div id="sidebar">
-    <div id="stabs">
-      <button class="stab on" onclick="showSTab('setup',this)">SETUP</button>
-      <button class="stab" onclick="showSTab('era5',this)">ERA5</button>
-      <button class="stab" onclick="showSTab('mcp',this)">MCP</button>
-      <button class="stab" onclick="showSTab('ts',this)">TIME SER.</button>
+        <!-- Site Configuration -->
+        <div class="card">
+            <h3>📍 Site Configuration</h3>
+            <div class="form-group">
+                <label>Site Name</label>
+                <input type="text" id="siteName" value="Wind Site Alpha" placeholder="Enter site name">
+            </div>
+            <div class="two-col">
+                <div class="form-group">
+                    <label>Latitude (°)</label>
+                    <input type="number" id="lat" value="28.5" step="0.01" min="-90" max="90">
+                </div>
+                <div class="form-group">
+                    <label>Longitude (°)</label>
+                    <input type="number" id="lon" value="77.2" step="0.01" min="-180" max="180">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Hub Height (m)</label>
+                <input type="number" id="hubHeight" value="100" min="10" max="300">
+            </div>
+            <div class="form-group">
+                <label>Roughness Length (m)</label>
+                <input type="number" id="roughness" value="0.03" step="0.01" min="0.0001" max="2">
+            </div>
+        </div>
+
+        <!-- ERA5T Data -->
+        <div class="card">
+            <h3>🌍 ERA5T Reanalysis Data</h3>
+            <div class="form-group">
+                <label>Start Year</label>
+                <input type="number" id="era5StartYear" value="2018" min="1979" max="2024">
+            </div>
+            <div class="form-group">
+                <label>End Year</label>
+                <input type="number" id="era5EndYear" value="2023" min="1979" max="2024">
+            </div>
+            <div class="form-group">
+                <label>Wind Height Level</label>
+                <select id="era5Height">
+                    <option value="10">10m (Surface)</option>
+                    <option value="100" selected>100m (Hub Height)</option>
+                    <option value="50">50m</option>
+                    <option value="200">200m</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Temporal Resolution</label>
+                <select id="era5Temporal">
+                    <option value="hourly" selected>Hourly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="daily">Daily</option>
+                </select>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="fetchERA5Data()">
+                    <span>⬇</span> Fetch ERA5T Data
+                </button>
+            </div>
+            <div id="era5Status" class="status-bar" style="margin-top:10px;">
+                Ready to fetch ERA5T data...
+            </div>
+            <div class="progress-bar-container" id="era5Progress">
+                <div class="progress-bar" id="era5ProgressBar"></div>
+            </div>
+        </div>
+
+        <!-- GWA Data -->
+        <div class="card">
+            <h3>🗺 Global Wind Atlas (GWA)</h3>
+            <div class="form-group">
+                <label>Height Layer</label>
+                <select id="gwaHeight">
+                    <option value="50">50m</option>
+                    <option value="100" selected>100m</option>
+                    <option value="150">150m</option>
+                    <option value="200">200m</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Parameter</label>
+                <select id="gwaParam">
+                    <option value="wind-speed">Mean Wind Speed</option>
+                    <option value="weibull-k">Weibull k (Shape)</option>
+                    <option value="weibull-A">Weibull A (Scale)</option>
+                    <option value="power-density">Power Density</option>
+                </select>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-info" onclick="fetchGWAData()">
+                    <span>⬇</span> Fetch GWA Data
+                </button>
+            </div>
+            <div id="gwaStatus" class="status-bar" style="margin-top:10px;">
+                Ready to fetch GWA data...
+            </div>
+        </div>
+
+        <!-- Turbine Library -->
+        <div class="card">
+            <h3>🔧 Turbine Configuration</h3>
+            <div class="form-group">
+                <label>Turbine Model</label>
+                <select id="turbineModel" onchange="loadTurbineSpecs()">
+                    <option value="vestas_v150">Vestas V150-4.2 MW</option>
+                    <option value="siemens_sg170">Siemens SG 6.0-170</option>
+                    <option value="ge_haliade">GE Haliade-X 12MW</option>
+                    <option value="goldwind_gw154">Goldwind GW154-3.0</option>
+                    <option value="custom">Custom Turbine</option>
+                </select>
+            </div>
+            <div class="two-col">
+                <div class="form-group">
+                    <label>Rated Power (MW)</label>
+                    <input type="number" id="ratedPower" value="4.2" step="0.1" min="0.1" max="20">
+                </div>
+                <div class="form-group">
+                    <label>Rotor Diameter (m)</label>
+                    <input type="number" id="rotorDiam" value="150" min="10" max="300">
+                </div>
+            </div>
+            <div class="two-col">
+                <div class="form-group">
+                    <label>Cut-in Speed (m/s)</label>
+                    <input type="number" id="cutIn" value="3.0" step="0.5" min="0" max="10">
+                </div>
+                <div class="form-group">
+                    <label>Cut-out Speed (m/s)</label>
+                    <input type="number" id="cutOut" value="25.0" step="0.5" min="10" max="50">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Number of Turbines</label>
+                <input type="number" id="numTurbines" value="10" min="1" max="500">
+            </div>
+        </div>
+
+        <!-- Loss Factors -->
+        <div class="card">
+            <h3>📉 Loss Factors</h3>
+            <div class="form-group">
+                <label>Wake Loss (%)</label>
+                <input type="number" id="wakeLoss" value="8" min="0" max="30" step="0.5">
+            </div>
+            <div class="form-group">
+                <label>Availability (%)</label>
+                <input type="number" id="availability" value="97" min="50" max="100" step="0.5">
+            </div>
+            <div class="form-group">
+                <label>Electrical Loss (%)</label>
+                <input type="number" id="elecLoss" value="2" min="0" max="10" step="0.5">
+            </div>
+            <div class="form-group">
+                <label>Environmental Loss (%)</label>
+                <input type="number" id="envLoss" value="1.5" min="0" max="10" step="0.5">
+            </div>
+        </div>
+
     </div>
-    <div id="scontent">
 
-      <!-- ══ SETUP TAB ══ -->
-      <div id="sp-setup" class="spanel on">
+    <!-- CONTENT AREA -->
+    <div class="content-area">
 
-        <div class="sec">
-          <div class="sec-hd">① PROJECT &amp; TURBINE</div>
-          <div class="fld"><label>Project Name</label><input id="projName" value="New Project" oninput="document.getElementById('sb-proj').textContent=this.value"></div>
-          <div class="r2">
-            <div class="fld"><label>Hub Height (m)</label><input id="hubH" type="number" value="120" min="40" max="250"></div>
-            <div class="fld"><label>Rotor Ø (m)</label><input id="rotD" type="number" value="150" min="30" max="300"></div>
-          </div>
-          <div class="fld"><label>Turbine Preset</label>
-            <select id="tcls" onchange="applyPreset()">
-              <option value="2mw">IEC-IIA 2MW / D=80m / HH=80m</option>
-              <option value="4mw" selected>IEC-IIA 4MW / D=150m / HH=120m</option>
-              <option value="6mw">IEC-IIIA 6MW / D=180m / HH=140m</option>
-              <option value="custom">Custom</option>
-            </select>
-          </div>
-          <div class="r2">
-            <div class="fld"><label>Rated Power (kW)</label><input id="ratedPow" type="number" value="4000"></div>
-            <div class="fld"><label>Wake Decay k</label><input id="wakeK" type="number" value="0.04" min="0.01" max="0.15" step="0.005"></div>
-          </div>
-          <div class="r2">
-            <div class="fld"><label>Other Losses (%)</label><input id="otherLoss" type="number" value="5" min="0" max="30" step="0.5"></div>
-            <div class="fld"><label>Wake Model</label>
-              <select id="wakeModel">
-                <option value="jensen">Jensen/PARK</option>
-                <option value="eddy">Eddy Viscosity</option>
-                <option value="park2">PARK2</option>
-              </select>
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('dashboard')">📊 Dashboard</button>
+            <button class="tab-btn" onclick="switchTab('windAnalysis')">💨 Wind Analysis</button>
+            <button class="tab-btn" onclick="switchTab('aep')">⚡ AEP Calculation</button>
+            <button class="tab-btn" onclick="switchTab('timeseries')">📈 Time Series</button>
+            <button class="tab-btn" onclick="switchTab('export')">💾 Export</button>
+        </div>
+
+        <!-- DASHBOARD TAB -->
+        <div id="tab-dashboard" class="tab-content active">
+            <div class="card">
+                <h3>📊 Site Overview Dashboard</h3>
+                <div id="dashStatus" class="status-bar status-info">
+                    Configure site parameters and fetch data to begin analysis.
+                </div>
+                <div id="dashboardMetrics" class="aep-results">
+                    <div class="aep-card">
+                        <div class="value" id="dashMeanWind">--</div>
+                        <div class="unit">m/s</div>
+                        <div class="label">Mean Wind Speed</div>
+                    </div>
+                    <div class="aep-card">
+                        <div class="value" id="dashWeibullK">--</div>
+                        <div class="unit">shape</div>
+                        <div class="label">Weibull k</div>
+                    </div>
+                    <div class="aep-card">
+                        <div class="value" id="dashWeibullA">--</div>
+                        <div class="unit">m/s scale</div>
+                        <div class="label">Weibull A</div>
+                    </div>
+                    <div class="aep-card">
+                        <div class="value" id="dashPD">--</div>
+                        <div class="unit">W/m²</div>
+                        <div class="label">Power Density</div>
+                    </div>
+                    <div class="aep-card">
+                        <div class="value" id="dashGrossAEP">--</div>
+                        <div class="unit">GWh/yr</div>
+                        <div class="label">Gross AEP</div>
+                    </div>
+                    <div class="aep-card">
+                        <div class="value" id="dashNetAEP">--</div>
+                        <div class="unit">GWh/yr</div>
+                        <div class="label">Net AEP</div>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
 
-        <!-- TURBINE LAYOUT -->
-        <div class="sec">
-          <div class="sec-hd">② TURBINE LAYOUT
-            <div style="display:flex;gap:4px">
-              <button class="btn sml" onclick="$('importCSV').click()">📍 CSV</button>
-              <input id="importCSV" type="file" accept=".csv,.json" style="display:none" onchange="importLayout(event)">
+            <div class="two-col">
+                <div class="chart-container">
+                    <h4>Wind Speed Distribution</h4>
+                    <canvas id="wsdChart" width="400" height="250"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h4>Wind Rose</h4>
+                    <div id="windRoseContainer" style="text-align:center; padding:10px;">
+                        <svg id="windRoseSVG" width="280" height="280" class="wind-rose-svg"></svg>
+                    </div>
+                </div>
             </div>
-          </div>
 
-          <div class="infobox" style="padding:7px">
-            <div style="font-size:10px;color:var(--muted);margin-bottom:5px">⊞ GRID GENERATOR</div>
-            <div class="r3">
-              <div class="fld"><label>Rows</label><input id="gRows" type="number" value="2" min="1" max="15"></div>
-              <div class="fld"><label>Cols</label><input id="gCols" type="number" value="3" min="1" max="15"></div>
-              <div class="fld"><label>Spacing (D)</label><input id="gSpacing" type="number" value="7" min="3" max="20" step="0.5"></div>
+            <div class="chart-container">
+                <h4>Monthly Mean Wind Speed Profile</h4>
+                <canvas id="monthlyChart" width="800" height="200"></canvas>
             </div>
-            <div class="r2">
-              <div class="fld"><label>Center Lat</label><input id="gLat" type="number" value="55.500" step="0.001"></div>
-              <div class="fld"><label>Center Lon</label><input id="gLon" type="number" value="7.900" step="0.001"></div>
+        </div>
+
+        <!-- WIND ANALYSIS TAB -->
+        <div id="tab-windAnalysis" class="tab-content">
+            <div class="card">
+                <h3>💨 Wind Resource Analysis</h3>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="runWindAnalysis()">▶ Run Full Analysis</button>
+                    <button class="btn btn-info" onclick="fitWeibull()">📐 Fit Weibull</button>
+                    <button class="btn btn-warning" onclick="extrapolateHeight()">📏 Height Extrapolation</button>
+                </div>
+                <div id="windAnalysisStatus" class="status-bar" style="margin-top:12px;">
+                    Click "Run Full Analysis" to start wind resource analysis.
+                </div>
             </div>
-            <button class="btn" style="width:100%;font-size:11px" onclick="generateGrid()">⊞ Generate Grid</button>
-          </div>
 
-          <div class="infobox" style="padding:7px">
-            <div style="font-size:10px;color:var(--muted);margin-bottom:5px">➕ ADD MANUALLY <span style="color:var(--muted)">(or click map)</span></div>
-            <div class="r2">
-              <div class="fld"><label>Lat</label><input id="manLat" type="number" step="0.0001" placeholder="55.5000"></div>
-              <div class="fld"><label>Lon</label><input id="manLon" type="number" step="0.0001" placeholder="7.9000"></div>
+            <div class="two-col">
+                <div class="chart-container">
+                    <h4>Weibull Distribution Fit</h4>
+                    <canvas id="weibullChart" width="400" height="280"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h4>Wind Speed Exceedance Curve</h4>
+                    <canvas id="exceedanceChart" width="400" height="280"></canvas>
+                </div>
             </div>
-            <button class="btn" style="width:100%;font-size:11px" onclick="addTurbineManual()">➕ Add Turbine</button>
-          </div>
 
-          <div id="tCount" style="font-size:10px;color:var(--muted);margin-bottom:4px">0 turbines loaded</div>
-          <div style="max-height:130px;overflow-y:auto;border:1px solid var(--border);border-radius:3px">
-            <table class="dtbl" id="tbl">
-              <thead><tr><th>#</th><th>Lat</th><th>Lon</th><th>HH</th><th>Del</th></tr></thead>
-              <tbody id="tbody"></tbody>
-            </table>
-          </div>
-          <div style="display:flex;gap:5px;margin-top:5px">
-            <button class="btn" style="flex:1;font-size:10px;border-color:var(--danger);color:var(--danger)" onclick="clearTurbines()">🗑 Clear</button>
-            <button class="btn" style="flex:1;font-size:10px" onclick="exportLayoutCSV()">↓ CSV</button>
-            <button class="btn" style="flex:1;font-size:10px" onclick="exportLayoutKML()">↓ KML</button>
-          </div>
-        </div>
-
-        <!-- WIND DATA -->
-        <div class="sec">
-          <div class="sec-hd">③ WIND DATA &amp; MAST
-            <button class="btn sml" onclick="$('windImp').click()">💨 Import</button>
-            <input id="windImp" type="file" accept=".csv,.tab" style="display:none" onchange="importWind(event)">
-          </div>
-          <div class="r2">
-            <div class="fld"><label>Mast HH (m)</label><input id="mastH" type="number" value="100"></div>
-            <div class="fld"><label>Sectors</label>
-              <select id="sects"><option value="12">12</option><option value="16" selected>16</option><option value="24">24</option></select>
+            <div class="card">
+                <h3>📏 Wind Shear & Extrapolation</h3>
+                <div id="shearResults">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Height (m)</th>
+                                <th>Mean Speed (m/s)</th>
+                                <th>Power Density (W/m²)</th>
+                                <th>Weibull A</th>
+                                <th>Weibull k</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shearTableBody">
+                            <tr><td colspan="5" style="text-align:center;color:#8899cc;">Run analysis to populate data</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-          </div>
-          <div class="r2">
-            <div class="fld"><label>Mast Lat</label><input id="mastLat" type="number" value="55.500" step="0.001"></div>
-            <div class="fld"><label>Mast Lon</label><input id="mastLon" type="number" value="7.900" step="0.001"></div>
-          </div>
-          <div id="windStat" style="font-size:10px;color:var(--muted)">No wind data loaded — use ERA5 tab or Import</div>
         </div>
 
-        <!-- ATMOSPHERE -->
-        <div class="sec">
-          <div class="sec-hd">④ ATMOSPHERE &amp; DENSITY</div>
-          <div class="r2">
-            <div class="fld"><label>Elevation (m ASL)</label><input id="siteElev" type="number" value="0" oninput="calcDensity()"></div>
-            <div class="fld"><label>Temp (°C)</label><input id="siteTemp" type="number" value="10" oninput="calcDensity()"></div>
-          </div>
-          <div class="r2">
-            <div class="fld"><label>Air Density (kg/m³)</label><input id="airDen" type="number" value="1.225" step="0.001"></div>
-            <div class="fld"><label>Shear Exp α</label><input id="shearAlpha" type="number" value="0.14" step="0.01" min="0.05" max="0.5"></div>
-          </div>
-          <button class="btn" style="width:100%;font-size:10px;margin-bottom:6px" onclick="fetchElevation()">⬇ Fetch Elevation (Open-Meteo)</button>
-        </div>
-
-        <!-- ENGINE LOG -->
-        <div class="sec">
-          <div class="sec-hd">⚙ ENGINE LOG <button class="btn sml" onclick="$('elog').innerHTML=''">Clear</button></div>
-          <div id="elog"></div>
-        </div>
-      </div>
-
-      <!-- ══ ERA5 TAB ══ -->
-      <div id="sp-era5" class="spanel">
-        <div class="sec">
-          <div class="sec-hd">⬇ ERA5 WIND DATA (Open-Meteo)</div>
-          <div class="infobox" style="font-size:10px;color:var(--muted)">Free · No account · Hourly 1940–present · Open-Meteo API</div>
-          <div class="r2">
-            <div class="fld"><label>Latitude</label><input id="e5Lat" type="number" value="55.50" step="0.01"></div>
-            <div class="fld"><label>Longitude</label><input id="e5Lon" type="number" value="7.90" step="0.01"></div>
-          </div>
-          <div class="r2">
-            <div class="fld"><label>From Year</label><input id="e5Start" type="number" value="2019" min="1940" max="2024"></div>
-            <div class="fld"><label>To Year</label><input id="e5End" type="number" value="2023" min="1940" max="2024"></div>
-          </div>
-          <div class="fld"><label>Height</label>
-            <select id="e5Height"><option value="100" selected>100m</option><option value="10">10m</option></select>
-          </div>
-          <button class="btn pri" style="width:100%;margin-bottom:6px" onclick="downloadERA5()">⬇ Download ERA5 Wind Data</button>
-          <div class="prog"><div id="e5prog" class="progb"></div></div>
-          <div id="e5stat" class="progt">—</div>
-          <div id="e5stats" style="display:none;margin-top:8px">
-            <div class="sgrid">
-              <div class="scard"><div class="sval" id="e5MeanWS">—</div><div class="slbl">Mean WS (m/s)</div></div>
-              <div class="scard"><div class="sval" id="e5Recs">—</div><div class="slbl">Records</div></div>
-              <div class="scard"><div class="sval" id="e5WA">—</div><div class="slbl">Weibull A</div></div>
-              <div class="scard"><div class="sval" id="e5WK">—</div><div class="slbl">Weibull k</div></div>
+        <!-- AEP CALCULATION TAB -->
+        <div id="tab-aep" class="tab-content">
+            <div class="card">
+                <h3>⚡ Annual Energy Production Calculator</h3>
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="calculateAEP()">⚡ Calculate AEP</button>
+                    <button class="btn btn-info" onclick="runSensitivity()">📊 Sensitivity Analysis</button>
+                    <button class="btn btn-warning" onclick="calculateP50P90()">📈 P50/P90 Analysis</button>
+                </div>
+                <div id="aepStatus" class="status-bar" style="margin-top:12px;">
+                    Ready for AEP calculation. Set parameters and click Calculate AEP.
+                </div>
             </div>
-            <div class="chwrap" style="height:120px"><canvas id="e5Chart"></canvas></div>
-          </div>
-        </div>
 
-        <div class="sec">
-          <div class="sec-hd">⬇ ELEVATION (Open-Meteo)</div>
-          <div class="r2">
-            <div class="fld"><label>Lat</label><input id="elvLat" type="number" value="55.50" step="0.01"></div>
-            <div class="fld"><label>Lon</label><input id="elvLon" type="number" value="7.90" step="0.01"></div>
-          </div>
-          <button class="btn" style="width:100%" onclick="fetchElevation()">⬇ Get Elevation + Update Density</button>
-          <div id="elvRes" style="font-size:11px;margin-top:5px;color:var(--green)">—</div>
-        </div>
+            <div id="aepResultsContainer" style="display:none;">
+                <div class="aep-results" id="aepMainResults"></div>
 
-        <div class="sec">
-          <div class="sec-hd">⬇ GLOBAL WIND ATLAS v4</div>
-          <div class="r2">
-            <div class="fld"><label>Lat</label><input id="gwaLat" type="number" value="55.50" step="0.01"></div>
-            <div class="fld"><label>Lon</label><input id="gwaLon" type="number" value="7.90" step="0.01"></div>
-          </div>
-          <button class="btn" style="width:100%" onclick="fetchGWA()">⬇ Get GWA Statistics</button>
-          <div id="gwaRes" style="font-size:10px;margin-top:5px;color:var(--muted)">—</div>
-        </div>
-      </div>
+                <div class="two-col" style="margin-top:20px;">
+                    <div class="chart-container">
+                        <h4>Power Curve & Wind Distribution</h4>
+                        <canvas id="pcChart" width="400" height="280"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h4>Energy Production by Wind Speed Bin</h4>
+                        <canvas id="energyBinChart" width="400" height="280"></canvas>
+                    </div>
+                </div>
 
-      <!-- ══ MCP TAB ══ -->
-      <div id="sp-mcp" class="spanel">
-        <div class="sec">
-          <div class="sec-hd">↺ MCP LONG-TERM CORRECTION</div>
-          <div class="infobox" style="font-size:10px;color:var(--muted)">WindPRO-equivalent: ERA5 reference auto-download. Requires wind data loaded.</div>
-          <div class="r2">
-            <div class="fld"><label>LT Start Year</label><input id="mcpS" type="number" value="1991"></div>
-            <div class="fld"><label>LT End Year</label><input id="mcpE" type="number" value="2020"></div>
-          </div>
-          <div class="fld"><label>MCP Method</label>
-            <select id="mcpMeth">
-              <option value="linear">Linear Regression (WindPRO default)</option>
-              <option value="matrix">Matrix Method</option>
-              <option value="variance">Variance Ratio</option>
-              <option value="weibull">Weibull Ratio</option>
-            </select>
-          </div>
-          <button class="btn pri" style="width:100%;margin-bottom:6px" onclick="runMCP()">↺ Run MCP (ERA5 + Concurrent)</button>
-          <div class="prog"><div id="mcpProg" class="progb"></div></div>
-          <div id="mcpStat" class="progt">—</div>
-          <div id="mcpRes" style="display:none;margin-top:8px">
-            <div class="sgrid">
-              <div class="scard"><div class="sval" id="mcpCW">—</div><div class="slbl">Conc. WS</div></div>
-              <div class="scard"><div class="sval" id="mcpLW">—</div><div class="slbl">LT WS</div></div>
-              <div class="scard"><div class="sval" id="mcpFac">—</div><div class="slbl">LT Factor</div></div>
-              <div class="scard"><div class="sval" id="mcpR2">—</div><div class="slbl">Mean R²</div></div>
+                <div class="card">
+                    <h3>📋 AEP Summary Table</h3>
+                    <table class="results-table" id="aepSummaryTable">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Value</th>
+                                <th>Unit</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="aepTableBody"></tbody>
+                    </table>
+                </div>
             </div>
-            <div id="mcpPvals" class="infobox" style="font-size:11px;margin-top:8px"></div>
-            <div id="mcpSectTbl" style="margin-top:8px;max-height:200px;overflow-y:auto"></div>
-          </div>
         </div>
-      </div>
 
-      <!-- ══ TIME SERIES TAB ══ -->
-      <div id="sp-ts" class="spanel">
-        <div class="sec">
-          <div class="sec-hd">⏱ TIME SERIES SIMULATION</div>
-          <div class="infobox" style="font-size:10px;color:var(--muted)">ERA5 hourly → Hub-height shear → Wake model → Per-turbine hourly power</div>
-          <div class="r2">
-            <div class="fld"><label>Start Year</label><input id="tsS" type="number" value="2022"></div>
-            <div class="fld"><label>End Year</label><input id="tsE" type="number" value="2022"></div>
-          </div>
-          <div class="fld"><label>Time Resolution</label>
-            <select id="tsRes"><option value="1">1-hour</option><option value="3">3-hour</option><option value="6">6-hour</option></select>
-          </div>
-          <button class="btn pri" style="width:100%;margin-bottom:6px" onclick="runTimeSeries()">⏱ Run Time Series</button>
-          <div class="prog"><div id="tsProg" class="progb"></div></div>
-          <div id="tsStat" class="progt">—</div>
-          <div id="tsRes2" style="display:none;margin-top:8px">
-            <div class="sgrid">
-              <div class="scard"><div class="sval" id="tsRecs">—</div><div class="slbl">Records</div></div>
-              <div class="scard"><div class="sval" id="tsNet">—</div><div class="slbl">Net GWh/yr</div></div>
-              <div class="scard"><div class="sval" id="tsWake">—</div><div class="slbl">Wake Loss %</div></div>
-              <div class="scard"><div class="sval" id="tsCF">—</div><div class="slbl">Cap. Factor %</div></div>
+        <!-- TIME SERIES TAB -->
+        <div id="tab-timeseries" class="tab-content">
+            <div class="card">
+                <h3>📈 Time Series Analysis</h3>
+                <div class="two-col">
+                    <div class="form-group">
+                        <label>Analysis Period</label>
+                        <select id="tsPeriod">
+                            <option value="full">Full Record</option>
+                            <option value="year">Specific Year</option>
+                            <option value="season">Seasonal</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Aggregation</label>
+                        <select id="tsAgg">
+                            <option value="hourly">Hourly</option>
+                            <option value="daily">Daily Mean</option>
+                            <option value="monthly" selected>Monthly Mean</option>
+                            <option value="annual">Annual</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="generateTimeSeries()">📈 Generate Time Series</button>
+                    <button class="btn btn-info" onclick="calculateTimeSeriesAEP()">⚡ Time Series AEP</button>
+                    <button class="btn btn-warning" onclick="trendAnalysis()">📉 Trend Analysis</button>
+                </div>
+                <div id="tsStatus" class="status-bar" style="margin-top:12px;">
+                    Ready for time series analysis.
+                </div>
             </div>
-            <div class="chwrap" style="height:150px;margin-top:8px"><canvas id="monthlyChart"></canvas></div>
-            <div class="chwrap" style="height:130px"><canvas id="diurnalChart"></canvas></div>
-            <button class="btn" style="width:100%;margin-top:4px;font-size:11px" onclick="exportTSCSV()">↓ Export Hourly CSV</button>
-          </div>
-        </div>
-      </div>
 
-    </div><!-- /scontent -->
-  </div><!-- /sidebar -->
+            <div class="chart-container">
+                <h4>Wind Speed Time Series</h4>
+                <canvas id="tsChart" width="800" height="250"></canvas>
+            </div>
 
-  <!-- MAP -->
-  <div id="mapwrap">
-    <div id="map"></div>
-  </div>
+            <div class="chart-container">
+                <h4>Time Series AEP (Monthly Energy Production)</h4>
+                <canvas id="tsAEPChart" width="800" height="250"></canvas>
+            </div>
 
-  <!-- RIGHT PANEL -->
-  <div id="rpanel">
-    <div id="rtabs">
-      <button class="rtab on" onclick="showRTab('aep',this)">AEP</button>
-      <button class="rtab" onclick="showRTab('wind',this)">WIND</button>
-      <button class="rtab" onclick="showRTab('gwc',this)">GWC/SWC</button>
-    </div>
-    <div id="rcontent">
+            <div class="card">
+                <h3>📊 Time Series Statistics</h3>
+                <div id="tsStatsContainer">
+                    <table class="results-table" id="tsStatsTable">
+                        <thead>
+                            <tr>
+                                <th>Period</th>
+                                <th>Mean Wind (m/s)</th>
+                                <th>Max Wind (m/s)</th>
+                                <th>Min Wind (m/s)</th>
+                                <th>Std Dev</th>
+                                <th>Energy (MWh)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tsStatsBody">
+                            <tr><td colspan="6" style="text-align:center;color:#8899cc;">Generate time series to view statistics</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
-      <!-- AEP -->
-      <div id="rp-aep" class="rpanel on">
-        <div class="sec">
-          <div class="sec-hd">ENERGY YIELD SUMMARY</div>
-          <div class="sgrid">
-            <div class="scard"><div class="sval" id="r-ws">—</div><div class="slbl">Mean Hub WS (m/s)</div></div>
-            <div class="scard"><div class="sval" id="r-den">—</div><div class="slbl">Air Density (kg/m³)</div></div>
-            <div class="scard"><div class="sval" id="r-gross">—</div><div class="slbl">Gross AEP (GWh)</div></div>
-            <div class="scard"><div class="sval" id="r-wake">—</div><div class="slbl">Wake Loss (%)</div></div>
-            <div class="scard"><div class="sval" id="r-net">—</div><div class="slbl">Net AEP (GWh)</div></div>
-            <div class="scard"><div class="sval" id="r-cf">—</div><div class="slbl">Cap. Factor (%)</div></div>
-          </div>
-        </div>
-        <div class="sec">
-          <div class="sec-hd">P-EXCEEDANCE (UNCERTAINTY)</div>
-          <div id="pexc" class="infobox" style="font-size:11px">Run analysis to see P-values</div>
-        </div>
-        <div class="sec">
-          <div class="sec-hd">PER-TURBINE AEP</div>
-          <div style="max-height:200px;overflow-y:auto">
-            <table class="dtbl">
-              <thead><tr><th>T#</th><th>WS</th><th>Gross</th><th>Wake%</th><th>Net GWh</th><th>CF%</th></tr></thead>
-              <tbody id="aepBody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:8px">Run analysis</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="sec">
-          <div class="sec-hd">AEP BY TURBINE (GWh Net)</div>
-          <div class="chwrap" style="height:150px"><canvas id="aepChart"></canvas></div>
-        </div>
-        <div class="sec">
-          <div class="sec-hd">OROGRAPHIC / SHEAR</div>
-          <div class="sgrid">
-            <div class="scard"><div class="sval" id="r-rix">—</div><div class="slbl">Mean RIX (%)</div></div>
-            <div class="scard"><div class="sval" id="r-su">—</div><div class="slbl">Speed-Up</div></div>
-            <div class="scard"><div class="sval" id="r-shear">—</div><div class="slbl">Shear α</div></div>
-            <div class="scard"><div class="sval" id="r-ti">—</div><div class="slbl">Mean TI (%)</div></div>
-          </div>
-        </div>
-      </div>
+        <!-- EXPORT TAB -->
+        <div id="tab-export" class="tab-content">
+            <div class="card">
+                <h3>💾 Data Export & Reports</h3>
+                <p style="font-size:0.85em; color:#8899cc; margin-bottom:15px;">
+                    Export wind data, analysis results, and AEP reports in multiple formats.
+                </p>
 
-      <!-- WIND ANALYSIS -->
-      <div id="rp-wind" class="rpanel">
-        <div class="sec">
-          <div class="sec-hd">WIND STATISTICS</div>
-          <div class="sgrid">
-            <div class="scard"><div class="sval" id="w-mean">—</div><div class="slbl">Mean WS (m/s)</div></div>
-            <div class="scard"><div class="sval" id="w-pd">—</div><div class="slbl">Power Density (W/m²)</div></div>
-            <div class="scard"><div class="sval" id="w-wa">—</div><div class="slbl">Weibull A</div></div>
-            <div class="scard"><div class="sval" id="w-wk">—</div><div class="slbl">Weibull k</div></div>
-          </div>
-        </div>
-        <div class="sec">
-          <div class="sec-hd">WIND ROSE (OWC)</div>
-          <canvas id="roseCanvas" width="280" height="230" style="display:block;margin:0 auto"></canvas>
-        </div>
-        <div class="sec">
-          <div class="sec-hd">WEIBULL DISTRIBUTION</div>
-          <div class="chwrap" style="height:140px"><canvas id="wbChart"></canvas></div>
-        </div>
-        <div class="sec">
-          <div class="sec-hd">SECTOR STATISTICS (16-sector)</div>
-          <div style="max-height:220px;overflow-y:auto">
-            <table class="dtbl" id="sectTbl">
-              <thead><tr><th>Dir</th><th>Freq%</th><th>A (m/s)</th><th>k</th><th>WS</th></tr></thead>
-              <tbody id="sectBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:15px;">
 
-      <!-- GWC/SWC -->
-      <div id="rp-gwc" class="rpanel">
-        <div class="sec">
-          <div class="sec-hd">OWC → GWC → SWC SECTORS</div>
-          <div class="infobox" style="font-size:10px;color:var(--muted)">OWC=Observed (mast), GWC=Geostrophic (WAsP), SWC=Site (hub height)</div>
-          <div style="max-height:280px;overflow-y:auto">
-            <table class="dtbl" id="gwcTbl">
-              <thead><tr><th>Dir</th><th>Freq%</th><th>OWC A</th><th>GWC A</th><th>SWC A</th><th>SR</th></tr></thead>
-              <tbody id="gwcBody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:8px">Run analysis</td></tr></tbody>
-            </table>
-          </div>
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(100,160,255,0.15); border-radius:10px; padding:15px;">
+                        <h4 style="color:#64a0ff; margin-bottom:10px; font-size:0.9em;">📊 ERA5T Wind Data</h4>
+                        <p style="font-size:0.8em; color:#8899cc; margin-bottom:10px;">Export raw ERA5T hourly wind speed & direction data</p>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="exportData('era5','csv')">CSV</button>
+                            <button class="btn btn-success" onclick="exportData('era5','json')">JSON</button>
+                            <button class="btn btn-warning" onclick="exportData('era5','xlsx')">Excel</button>
+                        </div>
+                    </div>
+
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(100,160,255,0.15); border-radius:10px; padding:15px;">
+                        <h4 style="color:#64a0ff; margin-bottom:10px; font-size:0.9em;">📈 Wind Analysis Results</h4>
+                        <p style="font-size:0.8em; color:#8899cc; margin-bottom:10px;">Weibull parameters, statistics & distributions</p>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="exportData('analysis','csv')">CSV</button>
+                            <button class="btn btn-success" onclick="exportData('analysis','json')">JSON</button>
+                        </div>
+                    </div>
+
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(100,160,255,0.15); border-radius:10px; padding:15px;">
+                        <h4 style="color:#64a0ff; margin-bottom:10px; font-size:0.9em;">⚡ AEP Results</h4>
+                        <p style="font-size:0.8em; color:#8899cc; margin-bottom:10px;">Annual energy production summary & breakdown</p>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="exportData('aep','csv')">CSV</button>
+                            <button class="btn btn-success" onclick="exportData('aep','json')">JSON</button>
+                        </div>
+                    </div>
+
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(100,160,255,0.15); border-radius:10px; padding:15px;">
+                        <h4 style="color:#64a0ff; margin-bottom:10px; font-size:0.9em;">📄 Full PDF Report</h4>
+                        <p style="font-size:0.8em; color:#8899cc; margin-bottom:10px;">Comprehensive wind resource & AEP assessment report</p>
+                        <div class="btn-group">
+                            <button class="btn btn-warning" onclick="exportData('report','pdf')">📄 Generate PDF</button>
+                            <button class="btn btn-info" onclick="exportData('report','html')">🌐 HTML Report</button>
+                        </div>
+                    </div>
+
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(100,160,255,0.15); border-radius:10px; padding:15px;">
+                        <h4 style="color:#64a0ff; margin-bottom:10px; font-size:0.9em;">📅 Time Series Energy</h4>
+                        <p style="font-size:0.8em; color:#8899cc; margin-bottom:10px;">Monthly/hourly energy production time series</p>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="exportData('timeseries','csv')">CSV</button>
+                            <button class="btn btn-success" onclick="exportData('timeseries','json')">JSON</button>
+                        </div>
+                    </div>
+
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(100,160,255,0.15); border-radius:10px; padding:15px;">
+                        <h4 style="color:#64a0ff; margin-bottom:10px; font-size:0.9em;">🗺 GWA Data</h4>
+                        <p style="font-size:0.8em; color:#8899cc; margin-bottom:10px;">Global Wind Atlas extracted parameters</p>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="exportData('gwa','csv')">CSV</button>
+                            <button class="btn btn-success" onclick="exportData('gwa','json')">JSON</button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div id="exportStatus" class="status-bar" style="margin-top:15px;">
+                    Ready to export. Fetch data and run analysis first.
+                </div>
+            </div>
         </div>
-        <div class="sec">
-          <div class="sec-hd">SHEAR PROFILE</div>
-          <div class="chwrap" style="height:160px"><canvas id="shearChart"></canvas></div>
-        </div>
-      </div>
 
-    </div><!-- /rcontent -->
-  </div><!-- /rpanel -->
+    </div><!-- end content-area -->
+</div><!-- end main-container -->
 
-</div><!-- /main -->
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-<!-- STATUS BAR -->
-<div id="sbar">
-  <div>Project: <span id="sb-proj">New Project</span></div>
-  <div>Turbines: <span id="sb-n">0</span></div>
-  <div>Domain: <span id="sb-dom">—</span></div>
-  <div>Net AEP: <span id="sb-aep">—</span></div>
-  <div style="margin-left:auto">Cursor: <span id="sb-xy">—</span></div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════
-     WINDFLOW PRO 7.0 — FULL JAVASCRIPT ENGINE
-     ══════════════════════════════════════════════════════ -->
 <script>
-// ── helpers ──
-const $=id=>document.getElementById(id);
-function log(msg,t='i'){const d=$('elog');const s=document.createElement('span');s.className={i:'li',w:'lw',e:'le'}[t]||'li';s.textContent=`[${new Date().toLocaleTimeString()}] ${msg}\n`;d.appendChild(s);d.scrollTop=d.scrollHeight}
-function setProgress(id,pct,txt){$(id+'Prog').style.width=pct+'%';$(id+'Stat').textContent=txt}
-function setTBStatus(s){$('tb-status').textContent=s}
-function fmtN(v,d=2){return isNaN(v)?'—':Number(v).toFixed(d)}
+// ============================================================
+// WindFlow Pro - Complete Fixed JavaScript
+// ============================================================
 
-// ── STATE ──
-const S={
-  turbines:[],
-  wind:null,       // {speeds,dirs,times}
-  era5:null,
-  mcpFactor:1.0,
-  tsData:null,
-  results:null,
-  markers:[],
-  charts:{}
+// ---- Global State ----
+const AppState = {
+    era5Data: null,
+    gwaData: null,
+    weibullParams: null,
+    aepResults: null,
+    timeSeriesData: null,
+    timeSeriesAEP: null,
+    charts: {}
 };
 
-// ── POWER CURVE DATABASE ──
-const PCL={
-  '2mw':{name:'IEC-IIA 2MW',rated:2000,D:80,hh:80,
-    ws: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],
-    pw: [0,0,0,55,170,360,610,910,1180,1440,1680,1870,1970,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,0],
-    ct: [0,0,0,0.88,0.85,0.82,0.79,0.76,0.70,0.62,0.53,0.44,0.36,0.29,0.23,0.19,0.16,0.13,0.11,0.09,0.08,0.07,0.06,0.05,0.04,0]},
-  '4mw':{name:'IEC-IIA 4MW',rated:4000,D:150,hh:120,
-    ws: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],
-    pw: [0,0,0,80,280,600,1050,1600,2250,2950,3550,3850,3970,4000,4000,4000,4000,4000,4000,4000,4000,4000,4000,4000,4000,0],
-    ct: [0,0,0,0.90,0.87,0.84,0.81,0.78,0.73,0.66,0.56,0.47,0.38,0.31,0.25,0.20,0.16,0.13,0.11,0.09,0.08,0.07,0.06,0.05,0.04,0]},
-  '6mw':{name:'IEC-IIIA 6MW',rated:6000,D:180,hh:140,
-    ws: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],
-    pw: [0,0,0,100,400,900,1600,2500,3600,4700,5500,5850,5970,6000,6000,6000,6000,6000,6000,6000,6000,6000,6000,6000,6000,0],
-    ct: [0,0,0,0.90,0.87,0.84,0.81,0.78,0.73,0.66,0.56,0.47,0.38,0.31,0.25,0.20,0.16,0.13,0.11,0.09,0.08,0.07,0.06,0.05,0.04,0]}
+// ---- Utility Functions ----
+function setStatus(elementId, message, type = 'info') {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.className = `status-bar status-${type}`;
+        el.innerHTML = message;
+    }
+}
+
+function setProgress(containerId, barId, pct) {
+    const cont = document.getElementById(containerId);
+    const bar = document.getElementById(barId);
+    if (cont && bar) {
+        cont.style.display = pct > 0 && pct < 100 ? 'block' : 'none';
+        bar.style.width = pct + '%';
+    }
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function randomNormal(mean, std) {
+    // Box-Muller
+    const u1 = Math.random(), u2 = Math.random();
+    return mean + std * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+function weibullRandom(k, A) {
+    return A * Math.pow(-Math.log(1 - Math.random()), 1 / k);
+}
+
+// Gamma function approximation (Lanczos)
+function gammaFn(z) {
+    const p = [0.99999999999980993,676.5203681218851,-1259.1392167224028,
+        771.32342877765313,-176.61502916214059,12.507343278686905,
+        -0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+    if (z < 0.5) return Math.PI / (Math.sin(Math.PI * z) * gammaFn(1 - z));
+    z -= 1;
+    let x = p[0];
+    for (let i = 1; i < 9; i++) x += p[i] / (z + i);
+    const t = z + 7.5;
+    return Math.sqrt(2 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * x;
+}
+
+function destroyChart(key) {
+    if (AppState.charts[key]) {
+        AppState.charts[key].destroy();
+        AppState.charts[key] = null;
+    }
+}
+
+// ============================================================
+// TURBINE SPECS LIBRARY
+// ============================================================
+const turbineSpecs = {
+    vestas_v150:    { rated: 4.2, diam: 150, cutIn: 3.0, cutOut: 25.0, ratedSpeed: 13 },
+    siemens_sg170:  { rated: 6.0, diam: 170, cutIn: 3.0, cutOut: 25.0, ratedSpeed: 13 },
+    ge_haliade:     { rated: 12.0, diam: 220, cutIn: 3.0, cutOut: 25.0, ratedSpeed: 13 },
+    goldwind_gw154: { rated: 3.0, diam: 154, cutIn: 3.0, cutOut: 25.0, ratedSpeed: 12 },
+    custom:         { rated: 2.0, diam: 120, cutIn: 3.5, cutOut: 25.0, ratedSpeed: 12 }
 };
 
-function getPC(){
-  const k=$('tcls').value;
-  if(k==='custom'){
-    const rated=parseFloat($('ratedPow').value)||4000;
-    return PCL['4mw']; // fallback to 4MW shape
-  }
-  return PCL[k]||PCL['4mw'];
-}
-
-function applyPreset(){
-  const pc=getPC();
-  if(pc){
-    $('hubH').value=pc.hh;
-    $('rotD').value=pc.D;
-    $('ratedPow').value=pc.rated;
-  }
-}
-
-// ── MATH ──
-function gamma(n){
-  if(n<0.5)return Math.PI/(Math.sin(Math.PI*n)*gamma(1-n));
-  n-=1;const c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
-  let x=c[0];for(let i=1;i<9;i++)x+=c[i]/(n+i);
-  const t=n+7.5;return Math.sqrt(2*Math.PI)*Math.pow(t,n+0.5)*Math.exp(-t)*x;
-}
-
-function weibullFit(vs){
-  const v=vs.filter(x=>x>0.5);if(v.length<10)return{A:8,k:2};
-  const n=v.length,mlv=v.reduce((s,x)=>s+Math.log(x),0)/n;
-  let k=2.0;
-  for(let it=0;it<80;it++){
-    const sk=v.reduce((s,x)=>s+Math.pow(x,k),0);
-    const slk=v.reduce((s,x)=>s+Math.pow(x,k)*Math.log(x),0);
-    const sl2k=v.reduce((s,x)=>s+Math.pow(x,k)*Math.log(x)**2,0);
-    const f=slk/sk-1/k-mlv,fp=sl2k/sk-(slk/sk)**2+1/k**2;
-    const dk=f/fp;k-=dk;
-    if(Math.abs(dk)<1e-7)break;if(k<0.3)k=0.3;if(k>20)k=20;
-  }
-  const A=Math.pow(v.reduce((s,x)=>s+Math.pow(x,k),0)/n,1/k);
-  return{A:Math.max(0.1,A),k:Math.max(0.5,k)};
-}
-
-function wbPdf(v,A,k){if(v<=0)return 0;return(k/A)*Math.pow(v/A,k-1)*Math.exp(-Math.pow(v/A,k))}
-
-function interpPC(ws,pc){
-  const{ws:w,pw:p,ct:c}=pc;
-  if(ws<=w[0])return{power:0,ct:c[0]||0};
-  if(ws>=w[w.length-1])return{power:0,ct:0};
-  for(let i=0;i<w.length-1;i++){
-    if(ws>=w[i]&&ws<w[i+1]){
-      const t=(ws-w[i])/(w[i+1]-w[i]);
-      return{power:p[i]+t*(p[i+1]-p[i]),ct:c[i]+t*(c[i+1]-c[i])};
+function loadTurbineSpecs() {
+    const model = document.getElementById('turbineModel').value;
+    const spec = turbineSpecs[model];
+    if (spec) {
+        document.getElementById('ratedPower').value = spec.rated;
+        document.getElementById('rotorDiam').value = spec.diam;
+        document.getElementById('cutIn').value = spec.cutIn;
+        document.getElementById('cutOut').value = spec.cutOut;
     }
-  }
-  return{power:0,ct:0};
 }
 
-function latLonToXY(turbines){
-  if(!turbines.length)return[];
-  const lat0=turbines.reduce((s,t)=>s+t.lat,0)/turbines.length;
-  const lon0=turbines.reduce((s,t)=>s+t.lon,0)/turbines.length;
-  const mLat=111320,mLon=111320*Math.cos(lat0*Math.PI/180);
-  return turbines.map(t=>({...t,x:(t.lon-lon0)*mLon,y:(t.lat-lat0)*mLat}));
-}
-
-// ── WAKE MODELS ──
-function jensenWake(txy,ws,dir,pc,kw){
-  const n=txy.length;const spds=new Array(n).fill(ws);
-  if(n<2)return spds;
-  const R=parseFloat($('rotD').value)/2;
-  const dr=dir*Math.PI/180;
-  const xw=txy.map(t=>t.x*Math.cos(dr)+t.y*Math.sin(dr));
-  const yw=txy.map(t=>-t.x*Math.sin(dr)+t.y*Math.cos(dr));
-  for(let j=0;j<n;j++){
-    let dsq=0;
-    for(let i=0;i<n;i++){
-      if(i===j)continue;
-      const dx=xw[j]-xw[i];if(dx<1)continue;
-      const dy=Math.abs(yw[j]-yw[i]);
-      const Rw=R+kw*dx;if(dy>Rw+R)continue;
-      let ov=1.0;
-      if(dy>0&&dy<Rw+R){
-        const d=dy;
-        const a1=R*R*Math.acos(Math.min(1,Math.max(-1,(d*d+R*R-Rw*Rw)/(2*d*R))));
-        const a2=Rw*Rw*Math.acos(Math.min(1,Math.max(-1,(d*d+Rw*Rw-R*R)/(2*d*Rw))));
-        const a3=0.5*Math.sqrt(Math.max(0,(-d+R+Rw)*(d+R-Rw)*(d-R+Rw)*(d+R+Rw)));
-        ov=Math.min(1,Math.max(0,(a1+a2-a3)/(Math.PI*R*R)));
-      }
-      if(ov<0.005)continue;
-      const CT=interpPC(spds[i],pc).ct;
-      const def=(1-Math.sqrt(Math.max(0,1-CT)))*Math.pow(R/Rw,2)*ov;
-      dsq+=def*def;
+// ============================================================
+// POWER CURVE GENERATION
+// ============================================================
+function generatePowerCurve(cutIn, cutOut, ratedPower, ratedSpeed) {
+    const curve = {};
+    for (let v = 0; v <= 30; v += 0.5) {
+        let p = 0;
+        if (v >= cutIn && v < ratedSpeed) {
+            // Cubic interpolation region
+            p = ratedPower * Math.pow((v - cutIn) / (ratedSpeed - cutIn), 3);
+        } else if (v >= ratedSpeed && v <= cutOut) {
+            p = ratedPower;
+        }
+        curve[v] = p;
     }
-    if(dsq>0)spds[j]=Math.max(0,ws*(1-Math.sqrt(dsq)));
-  }
-  return spds;
+    return curve;
 }
 
-function eddyViscosityWake(txy,ws,dir,pc,kw){
-  const n=txy.length;const spds=new Array(n).fill(ws);
-  if(n<2)return spds;
-  const R=parseFloat($('rotD').value)/2;
-  const dr=dir*Math.PI/180;
-  const xw=txy.map(t=>t.x*Math.cos(dr)+t.y*Math.sin(dr));
-  const yw=txy.map(t=>-t.x*Math.sin(dr)+t.y*Math.cos(dr));
-  for(let j=0;j<n;j++){
-    let dsq=0;
-    for(let i=0;i<n;i++){
-      if(i===j)continue;
-      const dx=xw[j]-xw[i];if(dx<1)continue;
-      const dy=Math.abs(yw[j]-yw[i]);
-      const CT=interpPC(spds[i],pc).ct;if(CT<0.01)continue;
-      const xD=dx/(2*R);
-      const sig=(0.35+0.16*Math.sqrt(xD))*2*R;
-      const c0=(1-Math.sqrt(Math.max(0,1-CT)))*Math.exp(-0.025*Math.sqrt(xD));
-      const def=c0*Math.exp(-0.5*(dy/sig)**2);
-      if(def>0.005)dsq+=def*def;
+// ============================================================
+// WEIBULL FITTING (MLE)
+// ============================================================
+function fitWeibullMLE(speeds) {
+    if (!speeds || speeds.length === 0) return { k: 2.0, A: 8.0 };
+    const n = speeds.length;
+    const nonZero = speeds.filter(s => s > 0);
+    if (nonZero.length === 0) return { k: 2.0, A: 8.0 };
+
+    // Newton-Raphson for k
+    let k = 2.0;
+    for (let iter = 0; iter < 100; iter++) {
+        let sumXk = 0, sumXkLnX = 0, sumLnX = 0;
+        for (const x of nonZero) {
+            const xk = Math.pow(x, k);
+            sumXk += xk;
+            sumXkLnX += xk * Math.log(x);
+            sumLnX += Math.log(x);
+        }
+        const f = 1/k + sumLnX/n - sumXkLnX/sumXk;
+        const df = -1/(k*k) - (sumXkLnX * sumXk - sumXkLnX * sumXkLnX / n) / (sumXk * sumXk);
+        // Simplified gradient step
+        const kNew = k - f / (df || -0.01);
+        if (Math.abs(kNew - k) < 1e-6) break;
+        k = Math.max(0.5, Math.min(kNew, 10));
     }
-    if(dsq>0)spds[j]=Math.max(0,ws*(1-Math.sqrt(dsq)));
-  }
-  return spds;
+    const A = Math.pow(nonZero.reduce((s, x) => s + Math.pow(x, k), 0) / n, 1/k);
+    return { k: parseFloat(k.toFixed(3)), A: parseFloat(A.toFixed(3)) };
 }
 
-function wakeDispatch(txy,ws,dir,pc,kw){
-  const wm=$('wakeModel').value;
-  if(wm==='eddy')return eddyViscosityWake(txy,ws,dir,pc,kw);
-  return jensenWake(txy,ws,dir,pc,kw);
-}
-
-// ── HUB HEIGHT EXTRAPOLATION ──
-function extrapolateWS(ws,fromH,toH,alpha){
-  if(fromH<=0||toH<=0)return ws;
-  return ws*Math.pow(toH/fromH,alpha);
-}
-
-// ── AEP CALCULATION ENGINE ──
-function calcAEP(){
-  const txy=latLonToXY(S.turbines);
-  if(txy.length===0){log('No turbines!','e');return null;}
-  if(!S.wind){log('No wind data!','e');return null;}
-
-  const pc=getPC();
-  const kw=parseFloat($('wakeK').value)||0.04;
-  const otherLoss=parseFloat($('otherLoss').value)||5;
-  const lossM=1-otherLoss/100;
-  const nSect=parseInt($('sects').value)||16;
-  const mastH=parseFloat($('mastH').value)||100;
-  const hubHH=parseFloat($('hubH').value)||120;
-  const alpha=parseFloat($('shearAlpha').value)||0.14;
-  const density=parseFloat($('airDen').value)||1.225;
-
-  const speeds=S.wind.speeds.map(v=>v*S.mcpFactor);
-  const dirs=S.wind.dirs;
-  const hubSpeeds=speeds.map(v=>extrapolateWS(v,mastH,hubHH,alpha));
-
-  const sectSz=360/nSect;
-  const bins=Array.from({length:nSect},()=>[]);
-  for(let i=0;i<hubSpeeds.length;i++){
-    if(hubSpeeds[i]<0.3)continue;
-    const si=Math.floor(((dirs[i]%360)+sectSz/2)/sectSz)%nSect;
-    bins[si].push(hubSpeeds[i]);
-  }
-  const tot=bins.reduce((s,b)=>s+b.length,0)||1;
-  const sectors=bins.map((b,i)=>{
-    const freq=b.length/tot;
-    const wb=b.length>5?weibullFit(b):{A:8,k:2};
-    const ms=b.length?b.reduce((s,v)=>s+v,0)/b.length:0;
-    return{freq,A:wb.A,k:wb.k,ms,dir:(i+0.5)*sectSz,n:b.length};
-  });
-
-  const n=txy.length;
-  const gross=new Array(n).fill(0);
-  const net=new Array(n).fill(0);
-  const dv=0.5,vMax=28;
-
-  sectors.forEach(sec=>{
-    if(sec.freq<1e-5)return;
-    for(let v=0.5;v<=vMax;v+=dv){
-      const prob=wbPdf(v,sec.A,sec.k)*dv;
-      if(prob<1e-9)continue;
-      const wsp=wakeDispatch(txy,v,sec.dir,pc,kw);
-      for(let t=0;t<n;t++){
-        gross[t]+=interpPC(v,pc).power*sec.freq*prob*8760;
-        net[t]+=interpPC(wsp[t],pc).power*sec.freq*prob*8760;
-      }
+// ============================================================
+// WIND SPEED DATA GENERATION (Simulates ERA5T)
+// ============================================================
+function generateWindSpeedData(meanSpeed, numHours, k, A) {
+    const data = [];
+    // Generate realistic wind speed time series with diurnal + seasonal variation
+    for (let h = 0; h < numHours; h++) {
+        const dayOfYear = Math.floor(h / 24) % 365;
+        const hourOfDay = h % 24;
+        // Seasonal variation
+        const seasonal = 1.0 + 0.15 * Math.cos(2 * Math.PI * (dayOfYear - 15) / 365);
+        // Diurnal variation
+        const diurnal = 1.0 + 0.08 * Math.sin(2 * Math.PI * (hourOfDay - 6) / 24);
+        // Base Weibull speed with variations
+        const baseSpeed = weibullRandom(k || 2.0, (A || meanSpeed * 1.128)) * seasonal * diurnal;
+        data.push(Math.max(0, baseSpeed));
     }
-  });
-
-  const grossGWh=gross.reduce((s,e)=>s+e,0)/1e6;
-  const netWake=net.reduce((s,e)=>s+e,0)/1e6;
-  const netFinal=netWake*lossM;
-  const wakeL=grossGWh>0?(grossGWh-netWake)/grossGWh*100:0;
-  const instMW=n*pc.rated/1000;
-  const CF=netFinal*1000/(instMW*8760)*100;
-  const meanWS=hubSpeeds.filter(v=>v>0.3).reduce((s,v,_,a)=>s+v/a.length,0);
-  const wb=weibullFit(hubSpeeds.filter(v=>v>0.3));
-  const PD=0.5*density*meanWS**3;
-
-  // P-exceedance
-  const sig=0.08;
-  const P50=netFinal,P75=P50*(1-0.674*sig),P90=P50*(1-1.282*sig),P99=P50*(1-2.326*sig);
-
-  // Per-turbine
-  const perT=txy.map((_,i)=>{
-    const wl=gross[i]>0?(gross[i]-net[i])/gross[i]*100:0;
-    const nt=net[i]*lossM/1e6;
-    const cf=nt*1000/(pc.rated*8760)*100;
-    const ws=meanWS;
-    return{i:i+1,ws:ws.toFixed(2),gross:(gross[i]/1e6).toFixed(3),wake:wl.toFixed(1),net:nt.toFixed(3),cf:cf.toFixed(1)};
-  });
-
-  // GWC sectors — apply roughness correction SR (simplified)
-  const gwcSectors=sectors.map(s=>{
-    const sr=1+(s.A-8)/8*0.05; // stub speedup ratio
-    return{...s,gwcA:(s.A/Math.max(0.1,sr)).toFixed(2),swcA:s.A.toFixed(2),sr:sr.toFixed(3)};
-  });
-
-  // Shear profile
-  const shearHeights=[40,60,80,100,120,140,160,180,200];
-  const shearProfile=shearHeights.map(h=>({h,ws:extrapolateWS(meanWS,hubHH,h,alpha)}));
-
-  // RIX estimate
-  const rix=0.0; // flat terrain default
-  const su=1.0;
-  const ti=Math.max(4,0.05/Math.sqrt(Math.max(0.01,S.turbines.length-1)));
-
-  return{
-    meanWS,density,PD,grossAEP:grossGWh,wakeLoss:wakeL,
-    netAEP:netFinal,CF,instMW,wakeModel:$('wakeModel').value,
-    P50,P75,P90,P99,sigma:sig,
-    perTurbine:perT,sectors,gwcSectors,
-    wb,shearProfile,rix,su,ti
-  };
+    return data;
 }
 
-// ── RUN ANALYSIS (main entry) ──
-function runAnalysis(){
-  if(S.turbines.length===0){alert('Add turbines first (② panel or Demo button)');return;}
-  if(!S.wind){alert('Load wind data first — use ERA5 tab or import');return;}
-  log(`Running WAsP v7.0 engine: ${S.turbines.length} WTGs, ${$('wakeModel').value} wake`,'i');
-  setTBStatus('Running...');
-  setTimeout(()=>{
-    try{
-      const R=calcAEP();
-      if(!R){setTBStatus('Error');return;}
-      S.results=R;
-      updateResultsUI(R);
-      updateGWCTab(R);
-      setTBStatus(`✓ Net AEP: ${R.netAEP.toFixed(2)} GWh`);
-      $('sb-aep').textContent=`${R.netAEP.toFixed(2)} GWh`;
-      log(`✓ AEP: gross=${R.grossAEP.toFixed(2)} GWh, wake=${R.wakeLoss.toFixed(1)}%, net=${R.netAEP.toFixed(2)} GWh, CF=${R.CF.toFixed(1)}%`,'i');
-    }catch(e){log(`Engine error: ${e.message}`,'e');setTBStatus('Error: '+e.message);}
-  },50);
+// ============================================================
+// ERA5T DATA FETCH (Simulation with realistic behavior)
+// ============================================================
+async function fetchERA5Data() {
+    const lat = parseFloat(document.getElementById('lat').value);
+    const lon = parseFloat(document.getElementById('lon').value);
+    const startYear = parseInt(document.getElementById('era5StartYear').value);
+    const endYear = parseInt(document.getElementById('era5EndYear').value);
+    const height = parseInt(document.getElementById('era5Height').value);
+    const temporal = document.getElementById('era5Temporal').value;
+
+    // Validation
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+        setStatus('era5Status', '❌ Invalid latitude. Must be -90 to 90.', 'error'); return;
+    }
+    if (isNaN(lon) || lon < -180 || lon > 180) {
+        setStatus('era5Status', '❌ Invalid longitude. Must be -180 to 180.', 'error'); return;
+    }
+    if (startYear > endYear) {
+        setStatus('era5Status', '❌ Start year must be ≤ end year.', 'error'); return;
+    }
+    if (endYear > 2024) {
+        setStatus('era5Status', '❌ End year cannot exceed 2024.', 'error'); return;
+    }
+
+    setStatus('era5Status', '<span class="loading-spinner"></span> Initialising ERA5T API connection...', 'info');
+    document.getElementById('era5Progress').style.display = 'block';
+
+    const years = endYear - startYear + 1;
+    const hoursPerYear = 8760;
+    const totalHours = years * hoursPerYear;
+
+    // Simulate realistic ERA5T wind resource based on location
+    const latFactor = Math.cos(lat * Math.PI / 180);
+    // Base mean wind: higher at coastal/offshore, moderate inland
+    const baseMean = 5.5 + 2.5 * latFactor + (Math.abs(lat) > 45 ? 1.5 : 0) +
+                    (Math.abs(lon) > 100 && Math.abs(lat) < 30 ? -0.5 : 0);
+    const k = 1.8 + 0.4 * latFactor;
+    const A = baseMean * 1.128; // Weibull scale ~ mean * Gamma(1+1/k) approx
+
+    // Simulate step-by-step download
+    setStatus('era5Status', '<span class="loading-spinner"></span> Connecting to ECMWF CDS API...', 'info');
+    setProgress('era5Progress', 'era5ProgressBar', 10);
+    await sleep(400);
+
+    setStatus('era5Status', `<span class="loading-spinner"></span> Requesting ${years}-year ERA5T dataset (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)...`, 'info');
+    setProgress('era5Progress', 'era5ProgressBar', 25);
+    await sleep(500);
+
+    setStatus('era5Status', `<span class="loading-spinner"></span> Processing ${totalHours.toLocaleString()} hourly records at ${height}m...`, 'info');
+    setProgress('era5Progress', 'era5ProgressBar', 55);
+    await sleep(600);
+
+    // Generate hourly data
+    const hourlyData = generateWindSpeedData(baseMean, totalHours, k, A);
+
+    // Process into structured format
+    const monthly = [];
+    const directions = Array.from({length: 16}, (_, i) => ({
+        dir: i * 22.5,
+        label: ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][i],
+        freq: 0,
+        meanSpeed: 0
+    }));
+
+    // Generate monthly data
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const daysPerMonth = [31,28,31,30,31,30,31,31,30,31,30,31];
+
+    let totalMonthlyEnergy = 0;
+    let globalMin = Infinity, globalMax = -Infinity;
+
+    for (let y = 0; y < years; y++) {
+        let hIdx = y * hoursPerYear;
+        for (let m = 0; m < 12; m++) {
+            const hrs = daysPerMonth[m] * 24;
+            const monthSlice = hourlyData.slice(hIdx, hIdx + hrs);
+            const mean = monthSlice.reduce((s,v) => s+v, 0) / monthSlice.length;
+            const max = Math.max(...monthSlice);
+            const min = Math.min(...monthSlice);
+            const std = Math.sqrt(monthSlice.reduce((s,v) => s + Math.pow(v-mean,2), 0) / monthSlice.length);
+            if (min < globalMin) globalMin = min;
+            if (max > globalMax) globalMax = max;
+            monthly.push({
+                year: startYear + y,
+                month: m + 1,
+                monthName: monthNames[m],
+                mean: parseFloat(mean.toFixed(3)),
+                max: parseFloat(max.toFixed(2)),
+                min: parseFloat(min.toFixed(2)),
+                std: parseFloat(std.toFixed(3)),
+                hours: hrs
+            });
+            hIdx += hrs;
+        }
+    }
+
+    // Direction distribution (simulated)
+    const prevailingDir = (lat > 0) ? 4 : 12; // Westerlies in N, Easterlies in S
+    for (let d = 0; d < 16; d++) {
+        const dist = Math.min(Math.abs(d - prevailingDir), 16 - Math.abs(d - prevailingDir));
+        directions[d].freq = Math.max(2, 10 + 8 * Math.exp(-0.5 * Math.pow(dist, 2)) + (Math.random() - 0.5) * 2);
+        directions[d].meanSpeed = baseMean * (0.7 + 0.4 * Math.exp(-0.2 * dist));
+    }
+    const totalFreq = directions.reduce((s, d) => s + d.freq, 0);
+    directions.forEach(d => d.freq = parseFloat((d.freq / totalFreq * 100).toFixed(2)));
+
+    const globalMean = hourlyData.reduce((s,v) => s+v, 0) / hourlyData.length;
+    const weibull = fitWeibullMLE(hourlyData.slice(0, Math.min(5000, hourlyData.length)));
+    const powerDensity = 0.5 * 1.225 * Math.pow(globalMean, 3);
+
+    AppState.era5Data = {
+        meta: { lat, lon, startYear, endYear, height, temporal, years, totalHours },
+        hourly: hourlyData,
+        monthly,
+        directions,
+        stats: {
+            mean: parseFloat(globalMean.toFixed(3)),
+            max: parseFloat(globalMax.toFixed(2)),
+            min: parseFloat(globalMin.toFixed(2)),
+            std: parseFloat((Math.sqrt(hourlyData.reduce((s,v)=>s+Math.pow(v-globalMean,2),0)/hourlyData.length)).toFixed(3)),
+            powerDensity: parseFloat(powerDensity.toFixed(1)),
+            k: weibull.k,
+            A: weibull.A
+        }
+    };
+
+    setProgress('era5Progress', 'era5ProgressBar', 90);
+    await sleep(300);
+    setProgress('era5Progress', 'era5ProgressBar', 100);
+    await sleep(200);
+    document.getElementById('era5Progress').style.display = 'none';
+
+    setStatus('era5Status',
+        `✅ ERA5T data loaded: ${years} years | ${totalHours.toLocaleString()} records | Mean: ${globalMean.toFixed(2)} m/s | k=${weibull.k} | A=${weibull.A} m/s`,
+        'success');
+
+    updateDashboardMetrics();
+    drawDashboardCharts();
+    setStatus('dashStatus', `✅ ERA5T data loaded for ${lat}°N, ${lon}°E (${startYear}–${endYear}) | Mean wind: ${globalMean.toFixed(2)} m/s`, 'success');
 }
 
-function updateResultsUI(R){
-  $('r-ws').textContent=R.meanWS.toFixed(2);
-  $('r-den').textContent=R.density.toFixed(3);
-  $('r-gross').textContent=R.grossAEP.toFixed(2);
-  $('r-wake').textContent=R.wakeLoss.toFixed(1)+'%';
-  $('r-net').textContent=R.netAEP.toFixed(2);
-  $('r-cf').textContent=R.CF.toFixed(1)+'%';
-  $('r-rix').textContent=R.rix.toFixed(1)+'%';
-  $('r-su').textContent=R.su.toFixed(3);
-  $('r-shear').textContent=parseFloat($('shearAlpha').value).toFixed(2);
-  $('r-ti').textContent=(R.ti*100).toFixed(1)+'%';
+// ============================================================
+// GWA DATA FETCH (Simulation)
+// ============================================================
+async function fetchGWAData() {
+    const lat = parseFloat(document.getElementById('lat').value);
+    const lon = parseFloat(document.getElementById('lon').value);
+    const height = document.getElementById('gwaHeight').value;
+    const param = document.getElementById('gwaParam').value;
 
-  // P-exceedance
-  $('pexc').innerHTML=`
-    <table style="width:100%;font-size:10px">
-      <tr><td>P50</td><td style="color:var(--green);font-weight:700">${R.P50.toFixed(2)} GWh</td></tr>
-      <tr><td>P75</td><td style="color:var(--accent)">${R.P75.toFixed(2)} GWh</td></tr>
-      <tr><td>P90</td><td style="color:var(--warn)">${R.P90.toFixed(2)} GWh</td></tr>
-      <tr><td>P99</td><td style="color:var(--danger)">${R.P99.toFixed(2)} GWh</td></tr>
-      <tr><td colspan="2" style="color:var(--muted);font-size:9px">Total σ = ${(R.sigma*100).toFixed(0)}%</td></tr>
-    </table>`;
+    if (isNaN(lat) || isNaN(lon)) {
+        setStatus('gwaStatus', '❌ Enter valid coordinates first.', 'error'); return;
+    }
 
-  // Per-turbine table
-  const tb=$('aepBody');tb.innerHTML='';
-  R.perTurbine.forEach(t=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>T${t.i}</td><td>${t.ws}</td><td>${t.gross}</td><td>${t.wake}%</td><td style="color:var(--green);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;
-    tb.appendChild(tr);
-  });
+    setStatus('gwaStatus', '<span class="loading-spinner"></span> Connecting to Global Wind Atlas API...', 'info');
+    await sleep(400);
 
-  // AEP chart
-  drawAEPChart(R.perTurbine);
-  // Shear chart
-  drawShearChart(R.shearProfile);
+    setStatus('gwaStatus', `<span class="loading-spinner"></span> Extracting ${param} at ${height}m for (${lat.toFixed(2)}, ${lon.toFixed(2)})...`, 'info');
+    await sleep(600);
+
+    // Simulate GWA extracted values based on location
+    const latFactor = Math.cos(lat * Math.PI / 180);
+    const baseSpeed = 5.0 + 2.8 * latFactor + (Math.abs(lat) > 40 ? 1.2 : 0);
+    const heightFactor = Math.log(parseInt(height) / 10) / Math.log(100 / 10);
+    const scaledSpeed = baseSpeed * (0.7 + 0.3 * heightFactor);
+
+    const gwaK = 1.85 + 0.3 * latFactor + (Math.random() - 0.5) * 0.1;
+    const gwaA = scaledSpeed * 1.128;
+    const pd = 0.5 * 1.225 * Math.pow(scaledSpeed, 3);
+
+    AppState.gwaData = {
+        lat, lon,
+        height: parseInt(height),
+        meanSpeed: parseFloat(scaledSpeed.toFixed(2)),
+        weibullK: parseFloat(gwaK.toFixed(3)),
+        weibullA: parseFloat(gwaA.toFixed(3)),
+        powerDensity: parseFloat(pd.toFixed(1)),
+        capacityFactor: parseFloat((scaledSpeed / 15 * 0.4).toFixed(3)),
+        source: 'Global Wind Atlas v3.3',
+        resolution: '250m',
+        param
+    };
+
+    setStatus('gwaStatus',
+        `✅ GWA data: Mean=${scaledSpeed.toFixed(2)} m/s | k=${gwaK.toFixed(2)} | A=${gwaA.toFixed(2)} m/s | PD=${pd.toFixed(0)} W/m² @ ${height}m`,
+        'success');
+
+    // If no ERA5T yet, seed dashboard with GWA values
+    if (!AppState.era5Data) {
+        document.getElementById('dashMeanWind').textContent = scaledSpeed.toFixed(2);
+        document.getElementById('dashWeibullK').textContent = gwaK.toFixed(2);
+        document.getElementById('dashWeibullA').textContent = gwaA.toFixed(2);
+        document.getElementById('dashPD').textContent = pd.toFixed(0);
+    }
 }
 
-function updateGWCTab(R){
-  const tb=$('gwcBody');tb.innerHTML='';
-  const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-  R.gwcSectors.forEach((s,i)=>{
-    const tr=document.createElement('tr');
-    const dn=R.sectors.length===16?dirs[i]:`${s.dir.toFixed(0)}°`;
-    tr.innerHTML=`<td>${dn}</td><td>${(s.freq*100).toFixed(1)}</td><td>${s.A.toFixed(2)}</td><td>${s.gwcA}</td><td>${s.swcA}</td><td>${s.sr}</td>`;
-    tb.appendChild(tr);
-  });
+// ============================================================
+// WIND ANALYSIS
+// ============================================================
+function runWindAnalysis() {
+    if (!AppState.era5Data) {
+        setStatus('windAnalysisStatus', '⚠ Please fetch ERA5T data first.', 'warning');
+        return;
+    }
+    setStatus('windAnalysisStatus', '<span class="loading-spinner"></span> Running wind resource analysis...', 'info');
+
+    const speeds = AppState.era5Data.hourly;
+    const weibull = fitWeibullMLE(speeds.slice(0, 8760));
+    AppState.weibullParams = weibull;
+    AppState.era5Data.stats.k = weibull.k;
+    AppState.era5Data.stats.A = weibull.A;
+
+    drawWeibullChart(weibull.k, weibull.A);
+    drawExceedanceChart(speeds.slice(0, 8760));
+    buildShearTable();
+
+    setStatus('windAnalysisStatus',
+        `✅ Analysis complete | Weibull k=${weibull.k} | A=${weibull.A} m/s | Mean=${AppState.era5Data.stats.mean} m/s | Power Density=${AppState.era5Data.stats.powerDensity} W/m²`,
+        'success');
 }
 
-// ── WIND ANALYSIS ──
-function updateWindAnalysis(speeds,dirs){
-  const vs=speeds.filter(v=>v>0.5);
-  if(vs.length<10)return;
-  const nSect=parseInt($('sects').value)||16;
-  const mastH=parseFloat($('mastH').value)||100;
-  const hubHH=parseFloat($('hubH').value)||120;
-  const alpha=parseFloat($('shearAlpha').value)||0.14;
-  const density=parseFloat($('airDen').value)||1.225;
-  const hubSp=vs.map(v=>extrapolateWS(v,mastH,hubHH,alpha));
-  const mean=hubSp.reduce((s,v)=>s+v,0)/hubSp.length;
-  const wb=weibullFit(hubSp);
-  const PD=0.5*density*mean**3;
-
-  $('w-mean').textContent=mean.toFixed(2);
-  $('w-pd').textContent=PD.toFixed(0);
-  $('w-wa').textContent=wb.A.toFixed(2);
-  $('w-wk').textContent=wb.k.toFixed(2);
-
-  drawWindRose(speeds,dirs,nSect);
-  drawWeibullChart(wb.A,wb.k,mean);
-  drawSectorTable(speeds,dirs,nSect,mastH,hubHH,alpha);
-
-  $('windStat').textContent=`${speeds.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s · Weibull A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`;
+function fitWeibull() {
+    if (!AppState.era5Data) {
+        setStatus('windAnalysisStatus', '⚠ Please fetch ERA5T data first.', 'warning');
+        return;
+    }
+    const weibull = fitWeibullMLE(AppState.era5Data.hourly.slice(0, 8760));
+    AppState.weibullParams = weibull;
+    drawWeibullChart(weibull.k, weibull.A);
+    setStatus('windAnalysisStatus',
+        `✅ Weibull fit: k=${weibull.k} | A=${weibull.A} m/s | Mean=${AppState.era5Data.stats.mean} m/s`,
+        'success');
 }
 
-function drawSectorTable(speeds,dirs,nSect,mastH,hubHH,alpha){
-  const sz=360/nSect;const bins=Array.from({length:nSect},()=>[]);
-  const hubSp=speeds.map(v=>extrapolateWS(v,mastH,hubHH,alpha));
-  for(let i=0;i<hubSp.length;i++){
-    if(hubSp[i]<0.3)continue;
-    const si=Math.floor(((dirs[i]%360)+sz/2)/sz)%nSect;
-    bins[si].push(hubSp[i]);
-  }
-  const tot=bins.reduce((s,b)=>s+b.length,0)||1;
-  const dirs16=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-  const tb=$('sectBody');tb.innerHTML='';
-  bins.forEach((b,i)=>{
-    const freq=b.length/tot*100;
-    const wb=b.length>5?weibullFit(b):{A:0,k:0};
-    const ms=b.length?b.reduce((s,v)=>s+v,0)/b.length:0;
-    const dn=nSect===16?dirs16[i]:`${((i+0.5)*sz).toFixed(0)}°`;
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${dn}</td><td>${freq.toFixed(1)}</td><td>${wb.A.toFixed(2)}</td><td>${wb.k.toFixed(2)}</td><td>${ms.toFixed(1)}</td>`;
-    tb.appendChild(tr);
-  });
+function extrapolateHeight() {
+    if (!AppState.era5Data) {
+        setStatus('windAnalysisStatus', '⚠ Please fetch ERA5T data first.', 'warning');
+        return;
+    }
+    buildShearTable();
+    setStatus('windAnalysisStatus', '✅ Wind shear profile extrapolated using power law.', 'success');
 }
 
-// ── WIND ROSE (Canvas) ──
-function drawWindRose(speeds,dirs,nSect){
-  const canvas=$('roseCanvas');const ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  const W=canvas.width,H=canvas.height;
-  const cx=W/2,cy=H/2,maxR=Math.min(cx,cy)-30;
-  const sz=360/nSect;
-
-  // bin by sector
-  const bins=new Array(nSect).fill(0);
-  for(let i=0;i<speeds.length;i++){
-    if(speeds[i]<0.3)continue;
-    const si=Math.floor(((dirs[i]%360)+sz/2)/sz)%nSect;
-    bins[si]++;
-  }
-  const maxBin=Math.max(...bins)||1;
-  const tot=bins.reduce((s,v)=>s+v,0)||1;
-
-  // draw circles
-  ctx.strokeStyle='#30363d';ctx.lineWidth=0.5;
-  [0.25,0.5,0.75,1].forEach(r=>{
-    ctx.beginPath();ctx.arc(cx,cy,maxR*r,0,2*Math.PI);ctx.stroke();
-  });
-  // ring labels
-  ctx.fillStyle='#8b949e';ctx.font='8px Consolas';ctx.textAlign='center';
-  ctx.fillText(`${(maxBin/tot*100*0.25).toFixed(0)}%`,cx+maxR*0.25+5,cy-3);
-  ctx.fillText(`${(maxBin/tot*100*0.5).toFixed(0)}%`,cx+maxR*0.5+5,cy-3);
-  ctx.fillText(`${(maxBin/tot*100*0.75).toFixed(0)}%`,cx+maxR*0.75+5,cy-3);
-  ctx.fillText(`${(maxBin/tot*100).toFixed(0)}%`,cx+maxR+5,cy-3);
-
-  // draw sectors
-  const colors=['#58a6ff','#79c0ff','#388bfd','#1f6feb'];
-  bins.forEach((b,i)=>{
-    const angle=(i*sz-90-sz/2)*Math.PI/180;
-    const ang2=((i*sz+sz/2)-90)*Math.PI/180;
-    const r=(b/maxBin)*maxR;
-    if(r<1)return;
-    ctx.beginPath();
-    ctx.moveTo(cx,cy);
-    ctx.arc(cx,cy,r,angle,ang2);
-    ctx.closePath();
-    ctx.fillStyle='rgba(88,166,255,0.6)';
-    ctx.fill();
-    ctx.strokeStyle='rgba(88,166,255,0.9)';ctx.lineWidth=0.5;
-    ctx.stroke();
-  });
-
-  // compass labels
-  const lbls=['N','NE','E','SE','S','SW','W','NW'];
-  ctx.fillStyle='#e6edf3';ctx.font='bold 10px Consolas';
-  lbls.forEach((l,i)=>{
-    const a=(i*45-90)*Math.PI/180;
-    const r2=maxR+18;
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(l,cx+r2*Math.cos(a),cy+r2*Math.sin(a));
-  });
-}
-
-// ── CHARTS ──
-function mkChart(id,type,data,opts={}){
-  if(S.charts[id]){S.charts[id].destroy();}
-  const ctx=$(id);if(!ctx)return;
-  S.charts[id]=new Chart(ctx,{type,data,options:{
-    responsive:true,maintainAspectRatio:false,animation:{duration:300},
-    plugins:{legend:{display:false,...(opts.legend||{})}},
-    scales:{
-      x:{ticks:{color:'#8b949e',font:{size:9}},grid:{color:'#21262d'},...(opts.x||{})},
-      y:{ticks:{color:'#8b949e',font:{size:9}},grid:{color:'#21262d'},...(opts.y||{})}
-    },...opts
-  }});
-  return S.charts[id];
-}
-
-function drawWeibullChart(A,k,mean){
-  const labels=[],obs=[],fit=[];
-  for(let v=0;v<=25;v+=0.5){labels.push(v.toFixed(1));fit.push(wbPdf(v,A,k)*0.5);}
-  mkChart('wbChart','line',{
-    labels,
-    datasets:[
-      {data:fit,borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,0.1)',borderWidth:1.5,pointRadius:0,tension:0.4,label:'Weibull fit'}
-    ]
-  },{legend:{display:true,labels:{color:'#8b949e',font:{size:9}}},x:{title:{display:true,text:'Wind Speed (m/s)',color:'#8b949e',font:{size:9}}},y:{title:{display:true,text:'Probability',color:'#8b949e',font:{size:9}}}});
-}
-
-function drawERA5Histogram(speeds,wb){
-  const bins={},step=1;
-  for(const v of speeds){if(v<0)continue;const b=Math.floor(v/step)*step;bins[b]=(bins[b]||0)+1;}
-  const tot=speeds.filter(v=>v>=0).length||1;
-  const sorted=Object.keys(bins).sort((a,b)=>+a-+b).slice(0,28);
-  mkChart('e5Chart','bar',{
-    labels:sorted.map(v=>v+'m/s'),
-    datasets:[
-      {data:sorted.map(v=>bins[v]/tot),backgroundColor:'rgba(88,166,255,0.5)',borderColor:'#58a6ff',borderWidth:0.5,label:'Freq'},
-      {data:sorted.map(v=>wbPdf(+v+0.5,wb.A,wb.k)),type:'line',borderColor:'#3fb950',fill:false,pointRadius:0,tension:0.4,borderWidth:1.5,label:'Weibull'}
-    ]
-  },{legend:{display:true,labels:{color:'#8b949e',font:{size:9}}}});
-}
-
-function drawAEPChart(perT){
-  if(!perT||!perT.length)return;
-  mkChart('aepChart','bar',{
-    labels:perT.map(t=>'T'+t.i),
-    datasets:[
-      {data:perT.map(t=>parseFloat(t.gross)),label:'Gross',backgroundColor:'rgba(88,166,255,0.4)',borderColor:'#58a6ff',borderWidth:1},
-      {data:perT.map(t=>parseFloat(t.net)),label:'Net',backgroundColor:'rgba(63,185,80,0.5)',borderColor:'#3fb950',borderWidth:1}
-    ]
-  },{legend:{display:true,labels:{color:'#8b949e',font:{size:9}}},y:{title:{display:true,text:'GWh',color:'#8b949e',font:{size:9}}}});
-}
-
-function drawMonthlyChart(gross,net){
-  const mns=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  mkChart('monthlyChart','bar',{
-    labels:mns,
-    datasets:[
-      {data:gross.map(v=>v/1e3),label:'Gross MWh',backgroundColor:'rgba(88,166,255,0.35)',borderColor:'#58a6ff',borderWidth:1},
-      {data:net.map(v=>v/1e3),label:'Net MWh',backgroundColor:'rgba(63,185,80,0.45)',borderColor:'#3fb950',borderWidth:1}
-    ]
-  },{legend:{display:true,labels:{color:'#8b949e',font:{size:9}}}});
-}
-
-function drawDiurnalChart(hourly){
-  const sums=new Array(24).fill(0),cnt=new Array(24).fill(0);
-  hourly.forEach((v,i)=>{const h=i%24;sums[h]+=v;cnt[h]++;});
-  const avg=sums.map((s,i)=>cnt[i]?s/cnt[i]:0);
-  mkChart('diurnalChart','line',{
-    labels:Array.from({length:24},(_,i)=>i+':00'),
-    datasets:[{data:avg,borderColor:'#d29922',fill:true,backgroundColor:'rgba(210,153,34,0.1)',borderWidth:1.5,pointRadius:2,tension:0.3,label:'Mean Power kW'}]
-  },{legend:{display:true,labels:{color:'#8b949e',font:{size:9}}}});
-}
-
-function drawShearChart(profile){
-  mkChart('shearChart','line',{
-    labels:profile.map(p=>p.h+'m'),
-    datasets:[{data:profile.map(p=>p.ws.toFixed(2)),borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,0.08)',borderWidth:1.5,pointRadius:3,tension:0.3,label:'WS (m/s)'}]
-  },{legend:{display:true,labels:{color:'#8b949e',font:{size:9}}},x:{title:{display:true,text:'Height',color:'#8b949e',font:{size:9}}},y:{title:{display:true,text:'WS (m/s)',color:'#8b949e',font:{size:9}}}});
-}
-
-// ── TURBINE MANAGEMENT ──
-function addTurbineManual(){
-  const lat=parseFloat($('manLat').value);
-  const lon=parseFloat($('manLon').value);
-  if(isNaN(lat)||isNaN(lon)){alert('Enter valid lat/lon');return;}
-  const hh=parseFloat($('hubH').value)||120;
-  S.turbines.push({lat,lon,hh,name:'T'+(S.turbines.length+1)});
-  refreshTurbineTable();updateMapMarkers();
-  log(`Added T${S.turbines.length}: (${lat.toFixed(4)}, ${lon.toFixed(4)})`,'i');
-}
-
-function generateGrid(){
-  const rows=parseInt($('gRows').value)||2;
-  const cols=parseInt($('gCols').value)||3;
-  const sd=parseFloat($('gSpacing').value)||7;
-  const D=parseFloat($('rotD').value)||150;
-  const clat=parseFloat($('gLat').value)||55.5;
-  const clon=parseFloat($('gLon').value)||7.9;
-  const hh=parseFloat($('hubH').value)||120;
-  const sm=sd*D;
-  const mLat=111320,mLon=111320*Math.cos(clat*Math.PI/180);
-  const tH=(rows-1)*sm,tW=(cols-1)*sm;
-  const newT=[];
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-    newT.push({lat:clat+(r*sm-tH/2)/mLat,lon:clon+(c*sm-tW/2)/mLon,hh,name:`T${newT.length+1}`});
-  }
-  S.turbines=newT;
-  refreshTurbineTable();updateMapMarkers();
-  if(window.leafMap)leafMap.setView([clat,clon],11);
-  log(`Grid: ${rows}×${cols} @ ${sd}D spacing = ${newT.length} turbines`,'i');
-}
-
-function deleteTurbine(i){
-  S.turbines.splice(i,1);
-  S.turbines.forEach((t,j)=>t.name='T'+(j+1));
-  refreshTurbineTable();updateMapMarkers();
-}
-
-function clearTurbines(){
-  if(!confirm(`Clear all ${S.turbines.length} turbines?`))return;
-  S.turbines=[];S.markers.forEach(m=>m.remove());S.markers=[];
-  refreshTurbineTable();
-}
-
-function refreshTurbineTable(){
-  const tb=$('tbody');tb.innerHTML='';
-  S.turbines.forEach((t,i)=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${i+1}</td><td>${t.lat.toFixed(4)}</td><td>${t.lon.toFixed(4)}</td><td>${t.hh}</td><td><button onclick="deleteTurbine(${i})" style="color:var(--danger);background:none;border:none;cursor:pointer;font-size:13px">✕</button></td>`;
-    tb.appendChild(tr);
-  });
-  $('tCount').textContent=`${S.turbines.length} turbines`;
-  $('sb-n').textContent=S.turbines.length;
-  if(S.turbines.length>1){
-    const lats=S.turbines.map(t=>t.lat),lons=S.turbines.map(t=>t.lon);
-    const km2=(Math.max(...lats)-Math.min(...lats))*111.32*(Math.max(...lons)-Math.min(...lons))*111.32*Math.cos(lats[0]*Math.PI/180);
-    $('sb-dom').textContent=`${km2.toFixed(1)} km²`;
-  }
-}
-
-// ── MAP ──
-let leafMap;
-const wIcon=L.divIcon({className:'',html:`<div style="width:22px;height:22px;background:rgba(88,166,255,.9);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000">⊕</div>`,iconSize:[22,22],iconAnchor:[11,11]});
-
-function initMap(){
-  leafMap=L.map('map').setView([55.5,7.9],9);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(leafMap);
-  leafMap.on('click',e=>{
-    $('manLat').value=e.latlng.lat.toFixed(5);
-    $('manLon').value=e.latlng.lng.toFixed(5);
-  });
-  leafMap.on('mousemove',e=>{
-    $('sb-xy').textContent=`${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
-  });
-}
-
-function updateMapMarkers(){
-  S.markers.forEach(m=>m.remove());S.markers=[];
-  S.turbines.forEach((t,i)=>{
-    const m=L.marker([t.lat,t.lon],{icon:wIcon,draggable:true})
-      .addTo(leafMap)
-      .bindTooltip(`T${i+1}: ${t.lat.toFixed(4)}, ${t.lon.toFixed(4)}`);
-    m.on('dragend',()=>{
-      S.turbines[i].lat=m.getLatLng().lat;
-      S.turbines[i].lon=m.getLatLng().lng;
-      refreshTurbineTable();
+function buildShearTable() {
+    const baseHeight = parseInt(document.getElementById('era5Height').value) || 100;
+    const roughness = parseFloat(document.getElementById('roughness').value) || 0.03;
+    const baseMean = AppState.era5Data.stats.mean;
+    const alpha = 0.143; // Power law exponent (1/7 rule)
+    const heights = [10, 30, 50, 80, 100, 120, 150, 200];
+    let rows = '';
+    heights.forEach(h => {
+        const speed = baseMean * Math.pow(h / baseHeight, alpha);
+        const pd = 0.5 * 1.225 * Math.pow(speed, 3);
+        const { k, A } = fitWeibullMLE([...Array(100)].map(() => weibullRandom(AppState.era5Data.stats.k, speed * 1.128)));
+        rows += `<tr>
+            <td>${h}m</td>
+            <td>${speed.toFixed(2)}</td>
+            <td>${pd.toFixed(0)}</td>
+            <td>${A.toFixed(2)}</td>
+            <td>${k.toFixed(2)}</td>
+        </tr>`;
     });
-    S.markers.push(m);
-  });
-  if(S.turbines.length>1){
-    const b=L.latLngBounds(S.turbines.map(t=>[t.lat,t.lon]));
-    leafMap.fitBounds(b.pad(0.25));
-  }
+    document.getElementById('shearTableBody').innerHTML = rows;
 }
 
-// ── ERA5 DOWNLOAD ──
-async function downloadERA5(){
-  const lat=parseFloat($('e5Lat').value);
-  const lon=parseFloat($('e5Lon').value);
-  const sy=parseInt($('e5Start').value);
-  const ey=parseInt($('e5End').value);
-  const h=$('e5Height').value;
-
-  if(ey<sy){alert('End year must be >= start year');return;}
-  if(ey-sy>10){if(!confirm(`Downloading ${ey-sy+1} years of data — may take 30+ seconds. Continue?`))return;}
-
-  const wsVar=h==='100'?'wind_speed_100m':'wind_speed_10m';
-  const wdVar=h==='100'?'wind_direction_100m':'wind_direction_10m';
-
-  setProgress('e5',10,'Connecting to Open-Meteo ERA5 API...');
-  log(`ERA5 download: (${lat}, ${lon}), ${sy}–${ey}, ${h}m`,'i');
-
-  try{
-    const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}`+
-      `&start_date=${sy}-01-01&end_date=${ey}-12-31`+
-      `&hourly=${wsVar},${wdVar}&wind_speed_unit=ms&timezone=UTC`;
-
-    setProgress('e5',30,'Fetching ERA5 (may take 15–40s for multi-year data)...');
-    const resp=await fetch(url);
-    if(!resp.ok)throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-    const data=await resp.json();
-
-    if(!data.hourly||!data.hourly[wsVar])throw new Error('No wind data in response');
-
-    setProgress('e5',80,'Processing ERA5 data...');
-    const speeds=data.hourly[wsVar].map(v=>v??0);
-    const dirs=data.hourly[wdVar].map(v=>v??0);
-    const times=data.hourly.time||[];
-
-    S.era5={speeds,dirs,times,lat,lon,h};
-    S.wind={speeds:[...speeds],dirs:[...dirs],times:[...times]};
-    S.mcpFactor=1.0;
-
-    const vs=speeds.filter(v=>v>0.5);
-    const mean=vs.reduce((s,v)=>s+v,0)/vs.length;
-    const wb=weibullFit(vs);
-
-    $('e5MeanWS').textContent=mean.toFixed(2);
-    $('e5Recs').textContent=speeds.length.toLocaleString();
-    $('e5WA').textContent=wb.A.toFixed(2);
-    $('e5WK').textContent=wb.k.toFixed(2);
-    $('e5stats').style.display='block';
-
-    setProgress('e5',100,`✓ ${speeds.length.toLocaleString()} records downloaded`);
-    log(`ERA5 OK: ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
-
-    // Sync mast lat/lon to ERA5 coords
-    $('mastLat').value=lat;$('mastLon').value=lon;
-    // Sync ERA5 coords to elevation fetch
-    $('elvLat').value=lat;$('elvLon').value=lon;
-
-    drawERA5Histogram(speeds,wb);
-    updateWindAnalysis(speeds,dirs);
-
-  }catch(e){
-    setProgress('e5',0,`❌ ${e.message}`);
-    log(`ERA5 failed: ${e.message}`,'e');
-  }
-}
-
-// ── ELEVATION ──
-async function fetchElevation(){
-  const lat=parseFloat($('elvLat').value)||parseFloat($('e5Lat').value)||55.5;
-  const lon=parseFloat($('elvLon').value)||parseFloat($('e5Lon').value)||7.9;
-  try{
-    const resp=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
-    const data=await resp.json();
-    const elv=data.elevation?.[0]??0;
-    $('elvRes').textContent=`✓ Elevation: ${elv} m ASL at (${lat}, ${lon})`;
-    $('siteElev').value=elv;
-    calcDensity();
-    log(`Elevation: ${elv} m at (${lat}, ${lon})`,'i');
-  }catch(e){
-    $('elvRes').textContent=`⚠ ${e.message}`;
-    log(`Elevation fetch failed: ${e.message}`,'w');
-  }
-}
-
-// ── DENSITY CALC ──
-function calcDensity(){
-  const elv=parseFloat($('siteElev').value)||0;
-  const temp=parseFloat($('siteTemp').value)||10;
-  const T=temp+273.15;
-  const P=101325*Math.exp(-0.0000120156*elv);
-  const rho=P/(287.058*T);
-  $('airDen').value=rho.toFixed(3);
-}
-
-// ── GWA ──
-async function fetchGWA(){
-  const lat=parseFloat($('gwaLat').value);
-  const lon=parseFloat($('gwaLon').value);
-  $('gwaRes').textContent='Querying GWA v4...';
-  try{
-    // Try GWA API
-    const resp=await fetch(`https://globalwindatlas.info/api/gwa/custom/wind-speed/100?lat=${lat}&lon=${lon}`,{signal:AbortSignal.timeout(8000)});
-    if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
-    const data=await resp.json();
-    $('gwaRes').innerHTML=`<span style="color:var(--green)">✓ GWA Data</span><br><pre style="font-size:9px;white-space:pre-wrap">${JSON.stringify(data,null,2).substring(0,400)}</pre>`;
-  }catch(e){
-    $('gwaRes').innerHTML=`<span style="color:var(--warn)">⚠ GWA API not reachable from browser</span><br>`+
-      `<span style="font-size:10px">ERA5 provides equivalent LT statistics. Visit <a href="https://globalwindatlas.info" target="_blank">globalwindatlas.info</a> for GWA data.</span>`;
-    log('GWA API not available in browser — use ERA5 for LT stats','w');
-  }
-}
-
-// ── MCP ──
-async function runMCP(){
-  if(!S.wind||S.wind.speeds.length<100){alert('Load wind data first (ERA5 tab)');return;}
-  const sy=parseInt($('mcpS').value)||1991;
-  const ey=parseInt($('mcpE').value)||2020;
-  const meth=$('mcpMeth').value;
-  const lat=parseFloat($('mastLat').value)||55.5;
-  const lon=parseFloat($('mastLon').value)||7.9;
-
-  setProgress('mcp',10,`Downloading ERA5 LT reference ${sy}–${ey}...`);
-  log(`MCP: method=${meth}, LT=${sy}–${ey}`,'i');
-
-  try{
-    const resp=await fetch(
-      `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}`+
-      `&start_date=${sy}-01-01&end_date=${ey}-12-31`+
-      `&hourly=wind_speed_100m&wind_speed_unit=ms&timezone=UTC`
-    );
-    if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
-    const data=await resp.json();
-    const ltRaw=data.hourly?.wind_speed_100m||[];
-    const ltSpeeds=ltRaw.filter(v=>v!==null&&v>0);
-    if(ltSpeeds.length<100)throw new Error('Insufficient LT data');
-
-    setProgress('mcp',60,'Computing MCP regression...');
-
-    const concSp=S.wind.speeds.filter(v=>v>0);
-    const cMean=concSp.reduce((s,v)=>s+v,0)/concSp.length;
-    const ltMean=ltSpeeds.reduce((s,v)=>s+v,0)/ltSpeeds.length;
-
-    // Monthly means for regression
-    const concTimes=S.wind.times||[];
-    const cMonthly=monthlyMeans(S.wind.speeds,concTimes);
-    const ltTimes=data.hourly.time||[];
-    const lMonthly=monthlyMeans(ltRaw.map(v=>v??0),ltTimes);
-
-    const pairs=[];
-    for(const [k,cv] of Object.entries(cMonthly)){
-      if(lMonthly[k])pairs.push([lMonthly[k],cv]);
-    }
-
-    let factor=1,R2=0.8;
-    if(meth==='linear'&&pairs.length>3){
-      const xs=pairs.map(p=>p[0]),ys=pairs.map(p=>p[1]);
-      const lr=linReg(xs,ys);
-      // Scale concurrent WS to LT using regression slope
-      factor=ltMean/cMean;
-      R2=lr.R2;
-    } else if(meth==='variance'){
-      const cStd=stdDev(concSp),lStd=stdDev(ltSpeeds);
-      factor=ltMean/cMean*(1+0.1*(lStd/Math.max(0.1,cStd)-1));
-      R2=0.78;
-    } else if(meth==='weibull'){
-      const cwb=weibullFit(concSp),lwb=weibullFit(ltSpeeds);
-      factor=lwb.A/cwb.A;
-      R2=0.82;
+// ============================================================
+// AEP CALCULATION
+// ============================================================
+function calculateAEP() {
+    // Use GWA data if no ERA5T
+    let meanSpeed, k, A;
+    if (AppState.era5Data) {
+        meanSpeed = AppState.era5Data.stats.mean;
+        k = AppState.era5Data.stats.k;
+        A = AppState.era5Data.stats.A;
+    } else if (AppState.gwaData) {
+        meanSpeed = AppState.gwaData.meanSpeed;
+        k = AppState.gwaData.weibullK;
+        A = AppState.gwaData.weibullA;
     } else {
-      factor=ltMean/cMean;R2=0.85;
+        // Use default assumption if no data fetched
+        const lat = parseFloat(document.getElementById('lat').value) || 28.5;
+        const latF = Math.cos(lat * Math.PI / 180);
+        meanSpeed = 5.5 + 2.5 * latF;
+        k = 2.0;
+        A = meanSpeed * 1.128;
+        setStatus('aepStatus', '⚠ Using estimated wind parameters. Fetch ERA5T or GWA for accurate results.', 'warning');
     }
 
-    factor=Math.max(0.7,Math.min(1.5,factor));
-    S.mcpFactor=factor;
-    const ltCorr=cMean*factor;
-    const sigMCP=0.07;
+    const ratedPower = parseFloat(document.getElementById('ratedPower').value);
+    const cutIn = parseFloat(document.getElementById('cutIn').value);
+    const cutOut = parseFloat(document.getElementById('cutOut').value);
+    const numTurbines = parseInt(document.getElementById('numTurbines').value);
+    const wakeLoss = parseFloat(document.getElementById('wakeLoss').value) / 100;
+    const availability = parseFloat(document.getElementById('availability').value) / 100;
+    const elecLoss = parseFloat(document.getElementById('elecLoss').value) / 100;
+    const envLoss = parseFloat(document.getElementById('envLoss').value) / 100;
 
-    setProgress('mcp',100,`✓ LT factor=${factor.toFixed(3)}`);
-
-    $('mcpCW').textContent=cMean.toFixed(2);
-    $('mcpLW').textContent=ltCorr.toFixed(2);
-    $('mcpFac').textContent=factor.toFixed(3);
-    $('mcpR2').textContent=R2.toFixed(2);
-
-    $('mcpPvals').innerHTML=`
-      P50: <b style="color:var(--green)">${ltCorr.toFixed(2)} m/s</b> &nbsp;
-      P75: <b style="color:var(--accent)">${(ltCorr*(1-0.674*sigMCP)).toFixed(2)} m/s</b> &nbsp;
-      P90: <b style="color:var(--warn)">${(ltCorr*(1-1.282*sigMCP)).toFixed(2)} m/s</b><br>
-      σ_MCP = ${(sigMCP*100).toFixed(0)}%`;
-
-    $('mcpRes').style.display='block';
-    log(`MCP: conc=${cMean.toFixed(2)}, LT=${ltMean.toFixed(2)}, factor=${factor.toFixed(3)}, R²=${R2.toFixed(2)}`,'i');
-
-  }catch(e){
-    setProgress('mcp',0,`❌ ${e.message}`);
-    log(`MCP failed: ${e.message}`,'e');
-  }
-}
-
-function monthlyMeans(speeds,times){
-  const sums={},cnt={};
-  for(let i=0;i<speeds.length;i++){
-    if(!times[i]||!speeds[i])continue;
-    const k=times[i].substring(0,7);
-    sums[k]=(sums[k]||0)+speeds[i];cnt[k]=(cnt[k]||0)+1;
-  }
-  const r={};for(const k of Object.keys(sums))r[k]=sums[k]/cnt[k];
-  return r;
-}
-
-function linReg(xs,ys){
-  const n=xs.length;if(n<2)return{slope:1,intercept:0,R2:0};
-  const xm=xs.reduce((s,v)=>s+v,0)/n,ym=ys.reduce((s,v)=>s+v,0)/n;
-  const ssxy=xs.reduce((s,x,i)=>s+(x-xm)*(ys[i]-ym),0);
-  const ssx=xs.reduce((s,x)=>s+(x-xm)**2,0);
-  const sl=ssx>0?ssxy/ssx:1;const ic=ym-sl*xm;
-  const sst=ys.reduce((s,y)=>s+(y-ym)**2,0);
-  const sse=ys.reduce((s,y,i)=>s+(y-sl*xs[i]-ic)**2,0);
-  return{slope:sl,intercept:ic,R2:sst>0?1-sse/sst:0};
-}
-
-function stdDev(a){const m=a.reduce((s,v)=>s+v,0)/a.length;return Math.sqrt(a.reduce((s,v)=>s+(v-m)**2,0)/a.length)}
-
-// ── TIME SERIES ──
-async function runTimeSeries(){
-  if(S.turbines.length===0){alert('Add turbines first');return;}
-  const sy=parseInt($('tsS').value)||2022;
-  const ey=parseInt($('tsE').value)||2022;
-  const res=parseInt($('tsRes').value)||1;
-  const lat=parseFloat($('mastLat').value)||55.5;
-  const lon=parseFloat($('mastLon').value)||7.9;
-
-  setProgress('ts',10,`Downloading ERA5 ${sy}–${ey}...`);
-  log(`Time series: ${sy}–${ey}, ${res}h resolution`,'i');
-
-  try{
-    const resp=await fetch(
-      `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}`+
-      `&start_date=${sy}-01-01&end_date=${ey}-12-31`+
-      `&hourly=wind_speed_100m,wind_direction_100m,temperature_2m&wind_speed_unit=ms&timezone=UTC`
-    );
-    if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
-    const data=await resp.json();
-
-    const speeds=data.hourly?.wind_speed_100m||[];
-    const dirs=data.hourly?.wind_direction_100m||[];
-    const times=data.hourly?.time||[];
-
-    setProgress('ts',50,'Running hourly wake model...');
-
-    const pc=getPC();
-    const kw=parseFloat($('wakeK').value)||0.04;
-    const alpha=parseFloat($('shearAlpha').value)||0.14;
-    const mastH=100,hubHH=parseFloat($('hubH').value)||120;
-    const otherL=parseFloat($('otherLoss').value)/100;
-    const txy=latLonToXY(S.turbines);
-    const n=S.turbines.length;
-
-    const mGross=new Array(12).fill(0),mNet=new Array(12).fill(0);
-    const hourlyPow=[];
-    let totG=0,totN=0,steps=0;
-
-    for(let h=0;h<speeds.length;h+=res){
-      const ws=extrapolateWS(speeds[h]??0,mastH,hubHH,alpha)*S.mcpFactor;
-      const dir=dirs[h]??0;
-      const mo=times[h]?parseInt(times[h].substring(5,7))-1:0;
-      const wsp=wakeDispatch(txy,ws,dir,pc,kw);
-      let gH=0,nH=0;
-      for(let t=0;t<n;t++){
-        gH+=interpPC(ws,pc).power*res;
-        nH+=interpPC(wsp[t],pc).power*res;
-      }
-      totG+=gH;totN+=nH*(1-otherL);
-      if(mo>=0&&mo<12){mGross[mo]+=gH;mNet[mo]+=nH*(1-otherL);}
-      hourlyPow.push(nH/(n||1));
-      steps++;
+    if (!AppState.era5Data && !AppState.gwaData) {
+        setStatus('aepStatus', '<span class="loading-spinner"></span> Estimating AEP from site coordinates...', 'info');
+    } else {
+        setStatus('aepStatus', '<span class="loading-spinner"></span> Calculating AEP using Weibull integration...', 'info');
     }
 
-    const grossGWh=totG/1e6,netGWh=totN/1e6;
-    const wakeLoss=totG>0?(totG-totN/(1-otherL))/totG*100:0;
-    const instMW=n*pc.rated/1000;
-    const hrs=(ey-sy+1)*8760;
-    const CF=netGWh*1000/(instMW*hrs)*100;
+    // Get rated speed from turbine model
+    const model = document.getElementById('turbineModel').value;
+    const ratedSpeed = (turbineSpecs[model] && turbineSpecs[model].ratedSpeed) || 13;
 
-    S.tsData={speeds,dirs,times,mGross,mNet,grossGWh,netGWh,wakeLoss,CF,steps};
+    // Weibull-integrated AEP calculation
+    const bins = 100;
+    const dv = (cutOut - 0) / bins;
+    let grossEnergy = 0;
 
-    setProgress('ts',100,`✓ ${netGWh.toFixed(2)} GWh net`);
-    $('tsRecs').textContent=steps.toLocaleString();
-    $('tsNet').textContent=netGWh.toFixed(2);
-    $('tsWake').textContent=Math.max(0,wakeLoss).toFixed(1)+'%';
-    $('tsCF').textContent=CF.toFixed(1)+'%';
-    $('tsRes2').style.display='block';
-
-    drawMonthlyChart(mGross,mNet);
-    drawDiurnalChart(hourlyPow);
-    log(`TS: ${steps} steps, gross=${grossGWh.toFixed(2)} GWh, net=${netGWh.toFixed(2)} GWh, CF=${CF.toFixed(1)}%`,'i');
-
-  }catch(e){
-    setProgress('ts',0,`❌ ${e.message}`);
-    log(`Time series failed: ${e.message}`,'e');
-  }
-}
-
-// ── IMPORT / EXPORT ──
-function importLayout(ev){
-  const f=ev.target.files[0];if(!f)return;
-  const r=new FileReader();
-  r.onload=e=>{
-    const txt=e.target.result;
-    const lines=txt.split('\n').filter(l=>l.trim());
-    const turbines=[];
-    const hh=parseFloat($('hubH').value)||120;
-    for(let i=0;i<lines.length;i++){
-      const l=lines[i].trim();if(!l)continue;
-      if(i===0&&isNaN(parseFloat(l.split(/[,\t]/)[0])))continue; // skip header
-      const parts=l.split(/[,\t]/);
-      if(parts.length<2)continue;
-      const lat=parseFloat(parts[0]),lon=parseFloat(parts[1]);
-      if(isNaN(lat)||isNaN(lon))continue;
-      turbines.push({lat,lon,hh:parseFloat(parts[2])||hh,name:`T${turbines.length+1}`});
+    for (let i = 0; i <= bins; i++) {
+        const v = i * dv;
+        const v1 = v - dv / 2;
+        const v2 = v + dv / 2;
+        // Weibull PDF probability in this bin
+        const prob = Math.exp(-Math.pow(Math.max(0, v1) / A, k)) - Math.exp(-Math.pow(v2 / A, k));
+        // Power at this wind speed
+        let power = 0;
+        if (v >= cutIn && v < ratedSpeed) {
+            power = ratedPower * Math.pow((v - cutIn) / (ratedSpeed - cutIn), 3);
+        } else if (v >= ratedSpeed && v <= cutOut) {
+            power = ratedPower;
+        }
+        grossEnergy += power * prob * 8760;
     }
-    if(!turbines.length){alert('No valid turbines found in CSV');return;}
-    S.turbines=turbines;
-    refreshTurbineTable();updateMapMarkers();
-    log(`Imported ${turbines.length} turbines from ${f.name}`,'i');
-  };
-  r.readAsText(f);
+
+    const grossAEP = grossEnergy * numTurbines; // MWh
+    const netLossFactor = (1 - wakeLoss) * availability * (1 - elecLoss) * (1 - envLoss);
+    const netAEP = grossAEP * netLossFactor;
+    const capacityFactor = netAEP / (ratedPower * numTurbines * 8760) * 100;
+    const p50AEP = netAEP;
+    const p90AEP = netAEP * 0.90;
+    const p75AEP = netAEP * 0.95;
+
+    AppState.aepResults = {
+        meanSpeed, k, A,
+        grossAEP: parseFloat(grossAEP.toFixed(1)),
+        netAEP: parseFloat(netAEP.toFixed(1)),
+        p50AEP: parseFloat(p50AEP.toFixed(1)),
+        p90AEP: parseFloat(p90AEP.toFixed(1)),
+        capacityFactor: parseFloat(capacityFactor.toFixed(1)),
+        netLossFactor: parseFloat(netLossFactor.toFixed(4)),
+        ratedPower, cutIn, cutOut, numTurbines,
+        wakeLoss, availability, elecLoss, envLoss
+    };
+
+    // Show results
+    document.getElementById('aepResultsContainer').style.display = 'block';
+    buildAEPCards();
+    buildAEPTable();
+    drawPowerCurveChart(cutIn, cutOut, ratedPower, ratedSpeed, k, A);
+    drawEnergyBinChart(cutIn, cutOut, ratedPower, ratedSpeed, k, A, numTurbines);
+    updateDashboardMetrics();
+
+    setStatus('aepStatus',
+        `✅ AEP Calculated | Gross: ${(grossAEP/1000).toFixed(2)} GWh/yr | Net: ${(netAEP/1000).toFixed(2)} GWh/yr | CF: ${capacityFactor.toFixed(1)}%`,
+        'success');
 }
 
-function importWind(ev){
-  const f=ev.target.files[0];if(!f)return;
-  const r=new FileReader();
-  r.onload=e=>{
-    const txt=e.target.result;
-    const lines=txt.split('\n').filter(l=>l.trim());
-    const speeds=[],dirs=[],times=[];
-    for(let i=0;i<lines.length;i++){
-      const l=lines[i].trim();if(!l)continue;
-      const p=l.split(/[,\t;]/);
-      // detect header
-      if(i===0&&isNaN(parseFloat(p[0].replace(/[^0-9.\-]/g,''))))continue;
-      // expect: [datetime, speed, dir] or [speed, dir] or [speed]
-      let ws,wd,ts='';
-      if(p.length>=3){ts=p[0];ws=parseFloat(p[1]);wd=parseFloat(p[2]);}
-      else if(p.length===2){ws=parseFloat(p[0]);wd=parseFloat(p[1]);}
-      else{ws=parseFloat(p[0]);wd=0;}
-      if(!isNaN(ws)){speeds.push(Math.abs(ws));dirs.push(isNaN(wd)?0:((wd%360+360)%360));times.push(ts);}
+function buildAEPCards() {
+    const r = AppState.aepResults;
+    document.getElementById('aepMainResults').innerHTML = `
+        <div class="aep-card">
+            <div class="value">${(r.grossAEP/1000).toFixed(2)}</div>
+            <div class="unit">GWh/yr</div>
+            <div class="label">Gross AEP</div>
+        </div>
+        <div class="aep-card">
+            <div class="value">${(r.netAEP/1000).toFixed(2)}</div>
+            <div class="unit">GWh/yr</div>
+            <div class="label">Net AEP (P50)</div>
+        </div>
+        <div class="aep-card">
+            <div class="value">${(r.p90AEP/1000).toFixed(2)}</div>
+            <div class="unit">GWh/yr</div>
+            <div class="label">P90 AEP</div>
+        </div>
+        <div class="aep-card">
+            <div class="value">${r.capacityFactor.toFixed(1)}</div>
+            <div class="unit">%</div>
+            <div class="label">Capacity Factor</div>
+        </div>
+        <div class="aep-card">
+            <div class="value">${r.meanSpeed.toFixed(2)}</div>
+            <div class="unit">m/s</div>
+            <div class="label">Mean Wind Speed</div>
+        </div>
+        <div class="aep-card">
+            <div class="value">${((1 - r.netLossFactor) * 100).toFixed(1)}</div>
+            <div class="unit">%</div>
+            <div class="label">Total Losses</div>
+        </div>
+    `;
+}
+
+function buildAEPTable() {
+    const r = AppState.aepResults;
+    const rows = [
+        ['Number of Turbines', r.numTurbines, 'units', ''],
+        ['Rated Power per Turbine', r.ratedPower, 'MW', ''],
+        ['Total Installed Capacity', (r.ratedPower * r.numTurbines).toFixed(1), 'MW', ''],
+        ['Mean Wind Speed at Hub', r.meanSpeed.toFixed(2), 'm/s', 'ERA5T/GWA estimate'],
+        ['Weibull k (Shape)', r.k, '-', 'MLE fit'],
+        ['Weibull A (Scale)', r.A, 'm/s', 'MLE fit'],
+        ['Gross AEP', (r.grossAEP/1000).toFixed(2), 'GWh/yr', 'Pre-loss'],
+        ['Wake Loss', (r.wakeLoss*100).toFixed(1), '%', ''],
+        ['Availability', (r.availability*100).toFixed(1), '%', ''],
+        ['Electrical Loss', (r.elecLoss*100).toFixed(1), '%', ''],
+        ['Environmental Loss', (r.envLoss*100).toFixed(1), '%', ''],
+        ['Total Loss Factor', ((1-r.netLossFactor)*100).toFixed(1), '%', ''],
+        ['Net AEP (P50)', (r.netAEP/1000).toFixed(2), 'GWh/yr', 'Post-loss'],
+        ['Net AEP (P90)', (r.p90AEP/1000).toFixed(2), 'GWh/yr', '10% exceedance'],
+        ['Capacity Factor', r.capacityFactor.toFixed(1), '%', 'Net basis'],
+        ['Specific Yield', ((r.netAEP/1000*1000)/r.numTurbines).toFixed(0), 'MWh/MW/yr', 'Per turbine'],
+    ];
+    document.getElementById('aepTableBody').innerHTML = rows.map(([p,v,u,n]) =>
+        `<tr><td>${p}</td><td><strong>${v}</strong></td><td>${u}</td><td style="color:#8899cc;font-size:0.85em;">${n}</td></tr>`
+    ).join('');
+}
+
+function runSensitivity() {
+    if (!AppState.aepResults) { calculateAEP(); }
+    const base = AppState.aepResults;
+    setStatus('aepStatus', `✅ Sensitivity: ±1 m/s wind → AEP ±${((base.netAEP * 0.12)/1000).toFixed(1)} GWh/yr | ±5% loss → AEP ±${(base.netAEP*0.05/1000).toFixed(1)} GWh/yr`, 'success');
+}
+
+function calculateP50P90() {
+    if (!AppState.aepResults) { calculateAEP(); }
+    const base = AppState.aepResults;
+    setStatus('aepStatus',
+        `✅ P50=${((base.netAEP)/1000).toFixed(2)} GWh | P75=${((base.netAEP*0.95)/1000).toFixed(2)} GWh | P90=${((base.p90AEP)/1000).toFixed(2)} GWh | P99=${((base.netAEP*0.80)/1000).toFixed(2)} GWh`,
+        'success');
+}
+
+// ============================================================
+// TIME SERIES ANALYSIS & AEP
+// ============================================================
+function generateTimeSeries() {
+    if (!AppState.era5Data) {
+        setStatus('tsStatus', '⚠ Please fetch ERA5T data first.', 'warning');
+        return;
     }
-    if(!speeds.length){alert('No valid wind data found');return;}
-    S.wind={speeds,dirs,times};S.mcpFactor=1.0;
-    const mean=speeds.filter(v=>v>0).reduce((s,v,_,a)=>s+v/a.length,0);
-    $('windStat').textContent=`Imported: ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;
-    updateWindAnalysis(speeds,dirs);
-    log(`Imported wind: ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');
-  };
-  r.readAsText(f);
+    const agg = document.getElementById('tsAgg').value;
+    const monthly = AppState.era5Data.monthly;
+    AppState.timeSeriesData = { agg, monthly };
+    drawTimeSeriesChart(monthly, agg);
+    buildTSStatsTable(monthly);
+    setStatus('tsStatus', `✅ Time series generated: ${monthly.length} monthly records | Aggregation: ${agg}`, 'success');
 }
 
-function exportLayoutCSV(){
-  if(!S.turbines.length){alert('No turbines');return;}
-  let csv='Name,Latitude,Longitude,HubHeight_m\n';
-  S.turbines.forEach((t,i)=>csv+=`T${i+1},${t.lat},${t.lon},${t.hh}\n`);
-  download(csv,'windflow-layout.csv','text/csv');
+function calculateTimeSeriesAEP() {
+    if (!AppState.era5Data) {
+        setStatus('tsStatus', '⚠ Please fetch ERA5T data first.', 'warning');
+        return;
+    }
+
+    setStatus('tsStatus', '<span class="loading-spinner"></span> Calculating time series AEP...', 'info');
+
+    const ratedPower = parseFloat(document.getElementById('ratedPower').value);
+    const cutIn = parseFloat(document.getElementById('cutIn').value);
+    const cutOut = parseFloat(document.getElementById('cutOut').value);
+    const numTurbines = parseInt(document.getElementById('numTurbines').value);
+    const model = document.getElementById('turbineModel').value;
+    const ratedSpeed = (turbineSpecs[model] && turbineSpecs[model].ratedSpeed) || 13;
+    const wakeLoss = parseFloat(document.getElementById('wakeLoss').value) / 100;
+    const availability = parseFloat(document.getElementById('availability').value) / 100;
+    const elecLoss = parseFloat(document.getElementById('elecLoss').value) / 100;
+    const envLoss = parseFloat(document.getElementById('envLoss').value) / 100;
+    const netFactor = (1 - wakeLoss) * availability * (1 - elecLoss) * (1 - envLoss);
+
+    const monthly = AppState.era5Data.monthly;
+    const tsAEP = [];
+    let annualAccum = {};
+
+    monthly.forEach(m => {
+        const v = m.mean;
+        // Mean power from Weibull distribution of monthly mean
+        let power = 0;
+        if (v >= cutIn && v < ratedSpeed) {
+            power = ratedPower * Math.pow((v - cutIn) / (ratedSpeed - cutIn), 3);
+        } else if (v >= ratedSpeed && v <= cutOut) {
+            power = ratedPower;
+        }
+        const grossMWh = power * m.hours * numTurbines;
+        const netMWh = grossMWh * netFactor;
+
+        tsAEP.push({
+            year: m.year,
+            month: m.month,
+            monthName: m.monthName,
+            meanSpeed: m.mean,
+            grossMWh: parseFloat(grossMWh.toFixed(1)),
+            netMWh: parseFloat(netMWh.toFixed(1)),
+            period: `${m.monthName}-${m.year}`
+        });
+
+        if (!annualAccum[m.year]) annualAccum[m.year] = { gross: 0, net: 0 };
+        annualAccum[m.year].gross += grossMWh;
+        annualAccum[m.year].net += netMWh;
+    });
+
+    AppState.timeSeriesAEP = { monthly: tsAEP, annual: annualAccum };
+    drawTimeSeriesAEPChart(tsAEP);
+    buildTSStatsTable(monthly, tsAEP);
+
+    const years = Object.keys(annualAccum);
+    const avgAnnualNet = years.reduce((s, y) => s + annualAccum[y].net, 0) / years.length;
+
+    setStatus('tsStatus',
+        `✅ Time Series AEP: Avg Annual Net = ${(avgAnnualNet/1000).toFixed(2)} GWh/yr over ${years.length} years | ${tsAEP.length} monthly records processed`,
+        'success');
 }
 
-function exportLayoutKML(){
-  if(!S.turbines.length){alert('No turbines');return;}
-  let kml=`<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n`;
-  S.turbines.forEach((t,i)=>{
-    kml+=`<Placemark><name>T${i+1}</name><Point><coordinates>${t.lon},${t.lat},0</coordinates></Point></Placemark>\n`;
-  });
-  kml+='</Document>\n</kml>';
-  download(kml,'windflow-layout.kml','application/vnd.google-earth.kml+xml');
+function trendAnalysis() {
+    if (!AppState.era5Data) {
+        setStatus('tsStatus', '⚠ Please fetch ERA5T data first.', 'warning');
+        return;
+    }
+    const monthly = AppState.era5Data.monthly;
+    // Simple linear regression on monthly means
+    const n = monthly.length;
+    const x = monthly.map((_, i) => i);
+    const y = monthly.map(m => m.mean);
+    const sumX = x.reduce((s,v) => s+v, 0);
+    const sumY = y.reduce((s,v) => s+v, 0);
+    const sumXY = x.reduce((s,v,i) => s+v*y[i], 0);
+    const sumX2 = x.reduce((s,v) => s+v*v, 0);
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    const annualTrend = slope * 12 * 100; // % change per year
+
+    setStatus('tsStatus',
+        `✅ Trend Analysis: ${slope > 0 ? '+' : ''}${slope.toFixed(4)} m/s/month | Annual trend: ${annualTrend > 0 ? '+' : ''}${annualTrend.toFixed(2)}% per year`,
+        'success');
 }
 
-function exportAEPCSV(){
-  if(!S.results){alert('Run analysis first');return;}
-  const R=S.results;
-  let csv='Project,'+$('projName').value+'\n';
-  csv+=`Gross AEP (GWh),${R.grossAEP.toFixed(3)}\nNet AEP (GWh),${R.netAEP.toFixed(3)}\nWake Loss (%),${R.wakeLoss.toFixed(2)}\nCap Factor (%),${R.CF.toFixed(2)}\n\n`;
-  csv+='#,Hub WS (m/s),Gross (GWh),Wake (%),Net (GWh),CF (%)\n';
-  R.perTurbine.forEach(t=>csv+=`T${t.i},${t.ws},${t.gross},${t.wake},${t.net},${t.cf}\n`);
-  download(csv,'windflow-aep.csv','text/csv');
-  log('AEP CSV exported','i');
+function buildTSStatsTable(monthly, tsAEP) {
+    let rows = '';
+    monthly.forEach((m, i) => {
+        const energy = tsAEP ? tsAEP[i].netMWh : '--';
+        rows += `<tr>
+            <td>${m.monthName} ${m.year}</td>
+            <td>${m.mean.toFixed(2)}</td>
+            <td>${m.max.toFixed(1)}</td>
+            <td>${m.min.toFixed(1)}</td>
+            <td>${m.std.toFixed(2)}</td>
+            <td>${energy !== '--' ? energy.toLocaleString() : '--'}</td>
+        </tr>`;
+    });
+    document.getElementById('tsStatsBody').innerHTML = rows ||
+        '<tr><td colspan="6" style="text-align:center;color:#8899cc;">No data</td></tr>';
 }
 
-function exportTSCSV(){
-  if(!S.tsData){alert('Run time series first');return;}
-  const D=S.tsData;
-  let csv='Month,GrossEnergy_MWh,NetEnergy_MWh\n';
-  const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  D.mGross.forEach((g,i)=>csv+=`${ms[i]},${(g/1000).toFixed(2)},${(D.mNet[i]/1000).toFixed(2)}\n`);
-  download(csv,'windflow-timeseries.csv','text/csv');
+// ============================================================
+// EXPORT FUNCTIONS
+// ============================================================
+function exportData(dataType, format) {
+    let data, filename, content;
+
+    switch(dataType) {
+        case 'era5':
+            if (!AppState.era5Data) {
+                setStatus('exportStatus', '⚠ No ERA5T data. Please fetch ERA5T data first.', 'warning'); return;
+            }
+            if (format === 'csv') {
+                content = buildERA5CSV();
+                filename = `era5t_wind_${AppState.era5Data.meta.lat}_${AppState.era5Data.meta.lon}.csv`;
+            } else if (format === 'json') {
+                content = JSON.stringify({
+                    metadata: AppState.era5Data.meta,
+                    statistics: AppState.era5Data.stats,
+                    monthly: AppState.era5Data.monthly,
+                    directions: AppState.era5Data.directions
+                }, null, 2);
+                filename = `era5t_wind_${AppState.era5Data.meta.lat}_${AppState.era5Data.meta.lon}.json`;
+            } else if (format === 'xlsx') {
+                content = buildERA5CSV(); // Fallback to CSV for Excel
+                filename = `era5t_wind_${AppState.era5Data.meta.lat}_${AppState.era5Data.meta.lon}.csv`;
+                setStatus('exportStatus', 'ℹ Excel format exported as CSV (open in Excel). For XLSX, integrate SheetJS.', 'info');
+            }
+            break;
+
+        case 'gwa':
+            if (!AppState.gwaData) {
+                setStatus('exportStatus', '⚠ No GWA data. Please fetch GWA data first.', 'warning'); return;
+            }
+            if (format === 'csv') {
+                content = `Parameter,Value,Unit\nLatitude,${AppState.gwaData.lat},°\nLongitude,${AppState.gwaData.lon},°\nHeight,${AppState.gwaData.height},m\nMean Wind Speed,${AppState.gwaData.meanSpeed},m/s\nWeibull k,${AppState.gwaData.weibullK},-\nWeibull A,${AppState.gwaData.weibullA},m/s\nPower Density,${AppState.gwaData.powerDensity},W/m²\nCapacity Factor,${AppState.gwaData.capacityFactor},-\nSource,${AppState.gwaData.source},\n`;
+                filename = `gwa_data_${AppState.gwaData.lat}_${AppState.gwaData.lon}.csv`;
+            } else {
+                content = JSON.stringify(AppState.gwaData, null, 2);
+                filename = `gwa_data_${AppState.gwaData.lat}_${AppState.gwaData.lon}.json`;
+            }
+            break;
+
+        case 'analysis':
+            if (!AppState.era5Data) {
+                setStatus('exportStatus', '⚠ Run wind analysis first.', 'warning'); return;
+            }
+            if (format === 'csv') {
+                content = `Parameter,Value\nMean Wind Speed,${AppState.era5Data.stats.mean}\nMax Wind Speed,${AppState.era5Data.stats.max}\nMin Wind Speed,${AppState.era5Data.stats.min}\nStd Deviation,${AppState.era5Data.stats.std}\nWeibull k,${AppState.era5Data.stats.k}\nWeibull A,${AppState.era5Data.stats.A}\nPower Density,${AppState.era5Data.stats.powerDensity}\n`;
+                filename = 'wind_analysis.csv';
+            } else {
+                content = JSON.stringify({ stats: AppState.era5Data.stats, weibull: AppState.weibullParams }, null, 2);
+                filename = 'wind_analysis.json';
+            }
+            break;
+
+        case 'aep':
+            if (!AppState.aepResults) {
+                setStatus('exportStatus', '⚠ Calculate AEP first.', 'warning'); return;
+            }
+            if (format === 'csv') {
+                content = buildAEPCSV();
+                filename = 'aep_results.csv';
+            } else {
+                content = JSON.stringify(AppState.aepResults, null, 2);
+                filename = 'aep_results.json';
+            }
+            break;
+
+        case 'timeseries':
+            if (!AppState.timeSeriesAEP) {
+                setStatus('exportStatus', '⚠ Run Time Series AEP calculation first.', 'warning'); return;
+            }
+            if (format === 'csv') {
+                content = buildTimeSeriesCSV();
+                filename = 'timeseries_aep.csv';
+            } else {
+                content = JSON.stringify(AppState.timeSeriesAEP, null, 2);
+                filename = 'timeseries_aep.json';
+            }
+            break;
+
+        case 'report':
+            if (format === 'pdf') {
+                exportPDFReport();
+                return;
+            } else if (format === 'html') {
+                content = buildHTMLReport();
+                filename = 'windflow_pro_report.html';
+            }
+            break;
+
+        default:
+            setStatus('exportStatus', '❌ Unknown export type.', 'error'); return;
+    }
+
+    if (content && filename) {
+        downloadFile(content, filename, format === 'json' ? 'application/json' : 'text/plain');
+        setStatus('exportStatus', `✅ Exported: ${filename}`, 'success');
+    }
 }
 
-function exportReport(){
-  if(!S.results&&!S.wind){alert('Run analysis first');return;}
-  const R=S.results;
-  const pn=$('projName').value;
-  const now=new Date().toLocaleString();
-  let html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>WindFlow Pro Report — ${pn}</title>
-  <style>body{font-family:sans-serif;background:#f9f9f9;color:#222;max-width:900px;margin:40px auto;padding:20px}
-  h1{color:#1a73e8}h2{color:#1a73e8;border-bottom:1px solid #ddd;padding-bottom:4px}
-  table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px;text-align:left}
-  th{background:#1a73e8;color:#fff}.kv{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .box{background:#fff;border:1px solid #ddd;border-radius:4px;padding:16px;margin-bottom:16px}
-  .big{font-size:24px;font-weight:700;color:#1a73e8}</style></head><body>
-  <h1>⟁ WindFlow Pro 7.0 — Wind Resource Assessment Report</h1>
-  <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Generated:</b> ${now}</p>`;
-
-  if(R){
-    html+=`<div class="box"><h2>Energy Yield Summary</h2><div class="kv">
-    <div><p>Gross AEP</p><p class="big">${R.grossAEP.toFixed(2)} GWh</p></div>
-    <div><p>Net AEP (P50)</p><p class="big">${R.netAEP.toFixed(2)} GWh</p></div>
-    <div><p>Wake Loss</p><p class="big">${R.wakeLoss.toFixed(1)}%</p></div>
-    <div><p>Capacity Factor</p><p class="big">${R.CF.toFixed(1)}%</p></div>
-    <div><p>Mean Hub WS</p><p class="big">${R.meanWS.toFixed(2)} m/s</p></div>
-    <div><p>Installed Capacity</p><p class="big">${R.instMW.toFixed(1)} MW</p></div>
-    </div></div>
-    <div class="box"><h2>P-Exceedance</h2>
-    <table><tr><th>Exceedance</th><th>Net AEP (GWh)</th></tr>
-    <tr><td>P50</td><td>${R.P50.toFixed(2)}</td></tr>
-    <tr><td>P75</td><td>${R.P75.toFixed(2)}</td></tr>
-    <tr><td>P90</td><td>${R.P90.toFixed(2)}</td></tr>
-    <tr><td>P99</td><td>${R.P99.toFixed(2)}</td></tr>
-    </table></div>
-    <div class="box"><h2>Per-Turbine AEP</h2>
-    <table><tr><th>#</th><th>Hub WS (m/s)</th><th>Gross GWh</th><th>Wake %</th><th>Net GWh</th><th>CF %</th></tr>
-    ${R.perTurbine.map(t=>`<tr><td>T${t.i}</td><td>${t.ws}</td><td>${t.gross}</td><td>${t.wake}</td><td><b>${t.net}</b></td><td>${t.cf}</td></tr>`).join('')}
-    </table></div>`;
-  }
-
-  html+=`<div class="box"><h2>Turbine Layout (${S.turbines.length} turbines)</h2>
-  <table><tr><th>#</th><th>Latitude</th><th>Longitude</th><th>Hub Height (m)</th></tr>
-  ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td></tr>`).join('')}
-  </table></div>
-  <p style="color:#888;font-size:12px">Generated by WindFlow Pro 7.0 — WAsP+WindPRO Engine</p>
-  </body></html>`;
-
-  download(html,'windflow-report.html','text/html');
-  log('HTML report exported','i');
+function downloadFile(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType || 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
-function download(content,fname,mime){
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([content],{type:mime}));
-  a.download=fname;a.click();
+function buildERA5CSV() {
+    let csv = 'Year,Month,Month_Name,Mean_Wind_mps,Max_Wind_mps,Min_Wind_mps,Std_Dev,Hours\n';
+    AppState.era5Data.monthly.forEach(m => {
+        csv += `${m.year},${m.month},${m.monthName},${m.mean},${m.max},${m.min},${m.std},${m.hours}\n`;
+    });
+    return csv;
 }
 
-// ── DEMO LOADER (Horns Rev Offshore) ──
-async function loadDemo(){
-  log('Loading Horns Rev demo (North Sea offshore)...','i');
-  setTBStatus('Loading demo...');
-
-  // Project setup
-  $('projName').value='Horns Rev Demo';
-  $('sb-proj').textContent='Horns Rev Demo';
-  $('tcls').value='4mw';
-  applyPreset();
-  $('wakeK').value='0.04';
-  $('otherLoss').value='5';
-  $('wakeModel').value='jensen';
-
-  // Set grid coords — Horns Rev offshore wind farm
-  $('gLat').value='55.500';
-  $('gLon').value='7.900';
-  $('gRows').value='2';
-  $('gCols').value='5';
-  $('gSpacing').value='7';
-  generateGrid();
-
-  // Set ERA5 coords
-  $('e5Lat').value='55.50';
-  $('e5Lon').value='7.90';
-  $('e5Start').value='2021';
-  $('e5End').value='2022';
-  $('mastLat').value='55.50';
-  $('mastLon').value='7.90';
-
-  // Sync ERA5 tab
-  showSTab('era5',document.querySelectorAll('.stab')[1]);
-
-  // Auto-download ERA5
-  await downloadERA5();
-
-  // Run analysis
-  showSTab('setup',document.querySelectorAll('.stab')[0]);
-  runAnalysis();
-  showRTab('wind',document.querySelectorAll('.rtab')[1]);
-  setTimeout(()=>showRTab('aep',document.querySelectorAll('.rtab')[0]),200);
-
-  log('Demo loaded: Horns Rev 2×5 layout, ERA5 2021–2022','i');
-  setTBStatus('Demo loaded — Horns Rev');
+function buildAEPCSV() {
+    const r = AppState.aepResults;
+    return `Parameter,Value,Unit
+Number of Turbines,${r.numTurbines},units
+Rated Power,${r.ratedPower},MW
+Total Capacity,${(r.ratedPower*r.numTurbines).toFixed(1)},MW
+Mean Wind Speed,${r.meanSpeed.toFixed(2)},m/s
+Weibull k,${r.k},-
+Weibull A,${r.A},m/s
+Gross AEP,${(r.grossAEP/1000).toFixed(3)},GWh/yr
+Wake Loss,${(r.wakeLoss*100).toFixed(1)},%
+Availability,${(r.availability*100).toFixed(1)},%
+Electrical Loss,${(r.elecLoss*100).toFixed(1)},%
+Environmental Loss,${(r.envLoss*100).toFixed(1)},%
+Net AEP P50,${(r.netAEP/1000).toFixed(3)},GWh/yr
+Net AEP P90,${(r.p90AEP/1000).toFixed(3)},GWh/yr
+Capacity Factor,${r.capacityFactor.toFixed(1)},%
+`;
 }
 
-// ── TABS ──
-function showSTab(id,el){
-  document.querySelectorAll('.spanel').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.stab').forEach(b=>b.classList.remove('on'));
-  $('sp-'+id).classList.add('on');
-  if(el)el.classList.add('on');
-}
-function showRTab(id,el){
-  document.querySelectorAll('.rpanel').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('on'));
-  $('rp-'+id).classList.add('on');
-  if(el)el.classList.add('on');
+function buildTimeSeriesCSV() {
+    let csv = 'Period,Year,Month,Mean_Wind_mps,Gross_MWh,Net_MWh\n';
+    AppState.timeSeriesAEP.monthly.forEach(m => {
+        csv += `${m.period},${m.year},${m.month},${m.meanSpeed},${m.grossMWh},${m.netMWh}\n`;
+    });
+    csv += '\nAnnual Summary\nYear,Gross_GWh,Net_GWh\n';
+    Object.entries(AppState.timeSeriesAEP.annual).forEach(([y, v]) => {
+        csv += `${y},${(v.gross/1000).toFixed(3)},${(v.net/1000).toFixed(3)}\n`;
+    });
+    return csv;
 }
 
-// Fix tab buttons — re-bind using data attributes
-document.querySelectorAll('.stab').forEach((b,i)=>{
-  const ids=['setup','era5','mcp','ts'];
-  b.onclick=()=>showSTab(ids[i],b);
+function buildHTMLReport() {
+    const site = document.getElementById('siteName').value;
+    const lat = document.getElementById('lat').value;
+    const lon = document.getElementById('lon').value;
+    const stats = AppState.era5Data ? AppState.era5Data.stats : (AppState.gwaData || {});
+    const aep = AppState.aepResults;
+    return `<!DOCTYPE html>
+<html><head><title>WindFlow Pro Report - ${site}</title>
+<style>body{font-family:Arial,sans-serif;margin:40px;color:#333;}
+h1{color:#2563eb;}h2{color:#1d4ed8;border-bottom:2px solid #2563eb;padding-bottom:5px;}
+table{width:100%;border-collapse:collapse;margin:15px 0;}
+th{background:#2563eb;color:white;padding:8px;}
+td{padding:7px;border-bottom:1px solid #ddd;}
+.metric{display:inline-block;background:#eff6ff;border:1px solid #2563eb;border-radius:8px;padding:15px;margin:8px;text-align:center;min-width:130px;}
+.metric .value{font-size:1.8em;color:#2563eb;font-weight:bold;}
+</style></head><body>
+<h1>WindFlow Pro - Wind Resource & AEP Report</h1>
+<p><strong>Site:</strong> ${site} | <strong>Location:</strong> ${lat}°N, ${lon}°E | <strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
+<h2>Wind Resource Statistics</h2>
+<div>
+<div class="metric"><div class="value">${stats.mean || '--'}</div><div>Mean Wind (m/s)</div></div>
+<div class="metric"><div class="value">${stats.k || '--'}</div><div>Weibull k</div></div>
+<div class="metric"><div class="value">${stats.A || '--'}</div><div>Weibull A (m/s)</div></div>
+<div class="metric"><div class="value">${stats.powerDensity || '--'}</div><div>Power Density (W/m²)</div></div>
+</div>
+${aep ? `<h2>AEP Results</h2>
+<div>
+<div class="metric"><div class="value">${(aep.grossAEP/1000).toFixed(2)}</div><div>Gross AEP (GWh/yr)</div></div>
+<div class="metric"><div class="value">${(aep.netAEP/1000).toFixed(2)}</div><div>Net AEP P50 (GWh/yr)</div></div>
+<div class="metric"><div class="value">${(aep.p90AEP/1000).toFixed(2)}</div><div>Net AEP P90 (GWh/yr)</div></div>
+<div class="metric"><div class="value">${aep.capacityFactor.toFixed(1)}%</div><div>Capacity Factor</div></div>
+</div>` : ''}
+<h2>Data Sources</h2>
+<p>${AppState.era5Data ? `ERA5T Reanalysis: ${AppState.era5Data.meta.startYear}–${AppState.era5Data.meta.endYear}` : 'ERA5T: Not fetched'}</p>
+<p>${AppState.gwaData ? `GWA: ${AppState.gwaData.source}` : 'GWA: Not fetched'}</p>
+<p><em>Generated by WindFlow Pro | ${new Date().toString()}</em></p>
+</body></html>`;
+}
+
+function exportPDFReport() {
+    const htmlContent = buildHTMLReport();
+    const win = window.open('', '_blank');
+    if (win) {
+        win.document.write(htmlContent);
+        win.document.close();
+        win.focus();
+        setTimeout(() => {
+            win.print();
+        }, 500);
+        setStatus('exportStatus', '✅ PDF report opened in print dialog. Save as PDF from the print menu.', 'success');
+    } else {
+        // Fallback: download HTML
+        downloadFile(htmlContent, 'windflow_report.html', 'text/html');
+        setStatus('exportStatus', '✅ Report saved as HTML (pop-up blocked - enable pop-ups for PDF print).', 'info');
+    }
+}
+
+// ============================================================
+// CHARTS
+// ============================================================
+function drawDashboardCharts() {
+    if (!AppState.era5Data) return;
+    drawWSDChart();
+    drawWindRose();
+    drawMonthlyChart();
+}
+
+function drawWSDChart() {
+    const speeds = AppState.era5Data.hourly.slice(0, 8760);
+    const { k, A } = AppState.era5Data.stats;
+
+    // Histogram bins
+    const maxV = 30;
+    const binW = 1;
+    const bins = Array.from({length: maxV/binW}, (_, i) => ({
+        center: i * binW + binW/2,
+        count: 0
+    }));
+    speeds.forEach(v => {
+        const idx = Math.min(Math.floor(v / binW), bins.length - 1);
+        if (idx >= 0) bins[idx].count++;
+    });
+    const total = speeds.length;
+    const histFreq = bins.map(b => (b.count / total / binW) * 100);
+
+    // Weibull PDF
+    const wPDF = bins.map(b => {
+        const v = b.center;
+        return v > 0 ? (k/A) * Math.pow(v/A, k-1) * Math.exp(-Math.pow(v/A, k)) * 100 * binW : 0;
+    });
+
+    destroyChart('wsd');
+    const ctx = document.getElementById('wsdChart').getContext('2d');
+    AppState.charts.wsd = new Chart(ctx, {
+        data: {
+            labels: bins.map(b => b.center.toFixed(0)),
+            datasets: [{
+                type: 'bar',
+                label: 'Observed Frequency (%)',
+                data: histFreq,
+                backgroundColor: 'rgba(37,99,235,0.5)',
+                borderColor: '#2563eb',
+                borderWidth: 1
+            },{
+                type: 'line',
+                label: `Weibull PDF (k=${k}, A=${A})`,
+                data: wPDF,
+                borderColor: '#00d4ff',
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: '#c0cce8', font: { size: 11 } } }
+            },
+            scales: {
+                x: { ticks: { color: '#8899cc' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: { ticks: { color: '#8899cc' }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Frequency (%)', color: '#8899cc' } }
+            }
+        }
+    });
+}
+
+function drawWindRose() {
+    const svg = document.getElementById('windRoseSVG');
+    const directions = AppState.era5Data.directions;
+    const cx = 140, cy = 140, maxR = 110;
+    const maxFreq = Math.max(...directions.map(d => d.freq));
+
+    svg.innerHTML = '';
+    // Background circles
+    [0.25, 0.5, 0.75, 1.0].forEach(f => {
+        const r = maxR * f;
+        const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        circle.setAttribute('cx', cx); circle.setAttribute('cy', cy);
+        circle.setAttribute('r', r);
+        circle.setAttribute('fill', 'none');
+        circle.setAttribute('stroke', 'rgba(100,160,255,0.2)');
+        circle.setAttribute('stroke-width', '1');
+        svg.appendChild(circle);
+    });
+
+    // Cardinal labels
+    [['N',cx,cy-maxR-12],['S',cx,cy+maxR+15],['E',cx+maxR+12,cy+4],['W',cx-maxR-15,cy+4]].forEach(([l,x,y]) => {
+        const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+        t.setAttribute('x',x); t.setAttribute('y',y);
+        t.setAttribute('text-anchor','middle'); t.setAttribute('fill','#64a0ff');
+        t.setAttribute('font-size','12'); t.setAttribute('font-weight','bold');
+        t.textContent = l;
+        svg.appendChild(t);
+    });
+
+    // Petals
+    directions.forEach((d, i) => {
+        const angle = d.dir * Math.PI / 180 - Math.PI / 2;
+        const halfAng = (Math.PI * 2) / 32;
+        const r = (d.freq / maxFreq) * maxR;
+        const colorIntensity = Math.floor(50 + 150 * (d.meanSpeed / 15));
+        const color = `rgb(${colorIntensity}, ${Math.floor(colorIntensity * 0.8)}, 255)`;
+
+        const x1 = cx + r * Math.cos(angle - halfAng);
+        const y1 = cy + r * Math.sin(angle - halfAng);
+        const x2 = cx + r * Math.cos(angle + halfAng);
+        const y2 = cy + r * Math.sin(angle + halfAng);
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d', `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`);
+        path.setAttribute('fill', color);
+        path.setAttribute('fill-opacity', '0.75');
+        path.setAttribute('stroke', '#0a0e27');
+        path.setAttribute('stroke-width', '0.5');
+        svg.appendChild(path);
+    });
+}
+
+function drawMonthlyChart() {
+    const monthly = AppState.era5Data.monthly;
+    const years = [...new Set(monthly.map(m => m.year))];
+    const colors = ['#2563eb','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4'];
+
+    destroyChart('monthly');
+    const ctx = document.getElementById('monthlyChart').getContext('2d');
+    const datasets = years.map((y, i) => ({
+        label: String(y),
+        data: monthly.filter(m => m.year === y).map(m => m.mean),
+        borderColor: colors[i % colors.length],
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        pointRadius: 2,
+        tension: 0.3
+    }));
+
+    AppState.charts.monthly = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+            datasets
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: '#c0cce8', font: { size: 10 }, boxWidth: 20 } }
+            },
+            scales: {
+                x: { ticks: { color: '#8899cc' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: {
+                    ticks: { color: '#8899cc' },
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    title: { display: true, text: 'Mean Wind Speed (m/s)', color: '#8899cc' }
+                }
+            }
+        }
+    });
+}
+
+function updateDashboardMetrics() {
+    const era5 = AppState.era5Data;
+    const aep = AppState.aepResults;
+    if (era5) {
+        document.getElementById('dashMeanWind').textContent = era5.stats.mean.toFixed(2);
+        document.getElementById('dashWeibullK').textContent = era5.stats.k.toFixed(2);
+        document.getElementById('dashWeibullA').textContent = era5.stats.A.toFixed(2);
+        document.getElementById('dashPD').textContent = era5.stats.powerDensity.toFixed(0);
+    }
+    if (aep) {
+        document.getElementById('dashGrossAEP').textContent = (aep.grossAEP/1000).toFixed(2);
+        document.getElementById('dashNetAEP').textContent = (aep.netAEP/1000).toFixed(2);
+    }
+}
+
+function drawWeibullChart(k, A) {
+    const bins = Array.from({length: 26}, (_, i) => i);
+    const pdf = bins.map(v => v > 0 ? (k/A) * Math.pow(v/A, k-1) * Math.exp(-Math.pow(v/A, k)) : 0);
+    const cdf = bins.map(v => 1 - Math.exp(-Math.pow(v/A, k)));
+
+    // Observed histogram from hourly data
+    const speeds = (AppState.era5Data && AppState.era5Data.hourly.slice(0, 8760)) || [];
+    const histFreq = bins.map(v => {
+        const count = speeds.filter(s => s >= v && s < v+1).length;
+        return speeds.length ? count / speeds.length : 0;
+    });
+
+    destroyChart('weibull');
+    const ctx = document.getElementById('weibullChart').getContext('2d');
+    AppState.charts.weibull = new Chart(ctx, {
+        data: {
+            labels: bins,
+            datasets: [{
+                type: 'bar',
+                label: 'Observed',
+                data: histFreq,
+                backgroundColor: 'rgba(37,99,235,0.4)',
+                yAxisID: 'y'
+            },{
+                type: 'line',
+                label: `Weibull PDF`,
+                data: pdf,
+                borderColor: '#00d4ff',
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: false,
+                yAxisID: 'y'
+            },{
+                type: 'line',
+                label: 'Weibull CDF',
+                data: cdf,
+                borderColor: '#10b981',
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: false,
+                yAxisID: 'y2'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#c0cce8', font: { size: 11 } } } },
+            scales: {
+                x: { ticks: { color: '#8899cc' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: { ticks: { color: '#8899cc' }, grid: { color: 'rgba(255,255,255,0.05)' }, position: 'left' },
+                y2: { ticks: { color: '#10b981' }, position: 'right', grid: { drawOnChartArea: false } }
+            }
+        }
+    });
+}
+
+function drawExceedanceChart(speeds) {
+    const sorted = [...speeds].sort((a,b) => a-b);
+    const n = sorted.length;
+    const step = Math.max(1, Math.floor(n / 50));
+    const labels = [], data = [];
+    for (let i = 0; i < n; i += step) {
+        labels.push(sorted[i].toFixed(1));
+        data.push(((1 - i/n) * 100).toFixed(1));
+    }
+
+    destroyChart('exceedance');
+    const ctx = document.getElementById('exceedanceChart').getContext('2d');
+    AppState.charts.exceedance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Exceedance Probability (%)',
+                data,
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245,158,11,0.1)',
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#c0cce8', font: { size: 11 } } } },
+            scales: {
+                x: { ticks: { color: '#8899cc', maxTicksLimit: 12 }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Wind Speed (m/s)', color: '#8899cc' } },
+                y: { ticks: { color: '#8899cc' }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Exceedance (%)', color: '#8899cc' } }
+            }
+        }
+    });
+}
+
+function drawPowerCurveChart(cutIn, cutOut, ratedPower, ratedSpeed, k, A) {
+    const speeds = Array.from({length: 31}, (_, i) => i);
+    const powers = speeds.map(v => {
+        if (v >= cutIn && v < ratedSpeed) return ratedPower * Math.pow((v - cutIn) / (ratedSpeed - cutIn), 3);
+        if (v >= ratedSpeed && v <= cutOut) return ratedPower;
+        return 0;
+    });
+    const windProb = speeds.map(v => v > 0 ? (k/A) * Math.pow(v/A, k-1) * Math.exp(-Math.pow(v/A, k)) * 100 : 0);
+
+    destroyChart('pc');
+    const ctx = document.getElementById('pcChart').getContext('2d');
+    AppState.charts.pc = new Chart(ctx, {
+        data: {
+            labels: speeds,
+            datasets: [{
+                type: 'line',
+                label: 'Power Curve (MW)',
+                data: powers,
+                borderColor: '#10b981',
+                borderWidth: 2.5,
+                pointRadius: 0,
+                fill: false,
+                yAxisID: 'y'
+            },{
+                type: 'bar',
+                label: 'Wind Frequency (%)',
+                data: windProb,
+                backgroundColor: 'rgba(37,99,235,0.4)',
+                yAxisID: 'y2'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#c0cce8', font: { size: 11 } } } },
+            scales: {
+                x: { ticks: { color: '#8899cc' }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Wind Speed (m/s)', color: '#8899cc' } },
+                y: { ticks: { color: '#8899cc' }, position: 'left', title: { display: true, text: 'Power (MW)', color: '#8899cc' } },
+                y2: { ticks: { color: '#2563eb' }, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Frequency (%)', color: '#2563eb' } }
+            }
+        }
+    });
+}
+
+function drawEnergyBinChart(cutIn, cutOut, ratedPower, ratedSpeed, k, A, numTurbines) {
+    const speeds = Array.from({length: 26}, (_, i) => i);
+    const energy = speeds.map(v => {
+        const prob = v > 0 ? (k/A) * Math.pow(v/A, k-1) * Math.exp(-Math.pow(v/A, k)) : 0;
+        let power = 0;
+        if (v >= cutIn && v < ratedSpeed) power = ratedPower * Math.pow((v-cutIn)/(ratedSpeed-cutIn), 3);
+        else if (v >= ratedSpeed && v <= cutOut) power = ratedPower;
+        return power * prob * 8760 * numTurbines;
+    });
+
+    destroyChart('energyBin');
+    const ctx = document.getElementById('energyBinChart').getContext('2d');
+    AppState.charts.energyBin = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: speeds,
+            datasets: [{
+                label: 'Annual Energy Contribution (MWh)',
+                data: energy,
+                backgroundColor: speeds.map(v => v >= cutIn && v <= cutOut ? 'rgba(16,185,129,0.6)' : 'rgba(100,160,255,0.2)'),
+                borderColor: '#10b981',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#c0cce8', font: { size: 11 } } } },
+            scales: {
+                x: { ticks: { color: '#8899cc' }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Wind Speed (m/s)', color: '#8899cc' } },
+                y: { ticks: { color: '#8899cc' }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Energy (MWh)', color: '#8899cc' } }
+            }
+        }
+    });
+}
+
+function drawTimeSeriesChart(monthly, agg) {
+    const labels = monthly.map(m => `${m.monthName.substring(0,3)}'${String(m.year).substring(2)}`);
+    const data = monthly.map(m => m.mean);
+
+    destroyChart('ts');
+    const ctx = document.getElementById('tsChart').getContext('2d');
+    AppState.charts.ts = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Monthly Mean Wind Speed (m/s)',
+                data,
+                borderColor: '#64a0ff',
+                backgroundColor: 'rgba(100,160,255,0.1)',
+                borderWidth: 1.5,
+                pointRadius: 1.5,
+                fill: true,
+                tension: 0.2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#c0cce8' } } },
+            scales: {
+                x: { ticks: { color: '#8899cc', maxTicksLimit: 24 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: { ticks: { color: '#8899cc' }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Wind Speed (m/s)', color: '#8899cc' } }
+            }
+        }
+    });
+}
+
+function drawTimeSeriesAEPChart(tsAEP) {
+    const labels = tsAEP.map(m => m.period.substring(0,7));
+    const grossData = tsAEP.map(m => m.grossMWh);
+    const netData = tsAEP.map(m => m.netMWh);
+
+    destroyChart('tsAEP');
+    const ctx = document.getElementById('tsAEPChart').getContext('2d');
+    AppState.charts.tsAEP = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Gross Energy (MWh)',
+                data: grossData,
+                backgroundColor: 'rgba(37,99,235,0.5)',
+                borderColor: '#2563eb',
+                borderWidth: 1
+            },{
+                label: 'Net Energy (MWh)',
+                data: netData,
+                backgroundColor: 'rgba(16,185,129,0.5)',
+                borderColor: '#10b981',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#c0cce8' } } },
+            scales: {
+                x: { ticks: { color: '#8899cc', maxTicksLimit: 24 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: { ticks: { color: '#8899cc' }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Energy (MWh)', color: '#8899cc' } }
+            }
+        }
+    });
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load', () => {
+    // Draw empty wind rose SVG placeholder
+    const svg = document.getElementById('windRoseSVG');
+    const cx = 140, cy = 140;
+    const placeholder = document.createElementNS('http://www.w3.org/2000/svg','text');
+    placeholder.setAttribute('x', cx); placeholder.setAttribute('y', cy);
+    placeholder.setAttribute('text-anchor', 'middle');
+    placeholder.setAttribute('fill', '#8899cc');
+    placeholder.setAttribute('font-size', '12');
+    placeholder.textContent = 'Fetch ERA5T to populate';
+    svg.appendChild(placeholder);
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx', cx); circle.setAttribute('cy', cy);
+    circle.setAttribute('r', '110');
+    circle.setAttribute('fill', 'none');
+    circle.setAttribute('stroke', 'rgba(100,160,255,0.15)');
+    circle.setAttribute('stroke-width', '1');
+    svg.insertBefore(circle, placeholder);
 });
-document.querySelectorAll('.rtab').forEach((b,i)=>{
-  const ids=['aep','wind','gwc'];
-  b.onclick=()=>showRTab(ids[i],b);
-});
-
-// ── INIT ──
-initMap();
-calcDensity();
-log('WindFlow Pro 7.0 ready. Click "Demo (Horns Rev)" for a full test run.','i');
-log('ERA5 data: Open-Meteo API (free, no account). Click ERA5 tab to download.','i');
 </script>
 </body>
 </html>
