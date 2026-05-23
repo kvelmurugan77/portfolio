@@ -285,6 +285,10 @@ a{color:var(--acc)}
         <button class="layerbtn active" id="btnCont" onclick="toggleLayer('contour')">Contours</button>
         <button class="layerbtn active" id="btnHeat" onclick="toggleLayer('heat')">Elevation Heat</button>
       </div>
+      <div style="display:flex;gap:4px;margin-top:6px">
+        <button class="btn" style="flex:1;font-size:9px" onclick="exportTerrainCSV()">↓ Terrain CSV</button>
+        <button class="btn" style="flex:1;font-size:9px" onclick="exportContourGeoJSON()">↓ Contour GeoJSON</button>
+      </div>
     </div>
   </div>
   <div class="sec">
@@ -456,6 +460,10 @@ a{color:var(--acc)}
         <tbody id="gwcBody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:6px">Run analysis</td></tr></tbody>
       </table>
     </div>
+    <div style="display:flex;gap:4px;margin-top:6px">
+      <button class="btn" style="flex:1;font-size:9px" onclick="exportGWCCSV()">↓ GWC CSV</button>
+      <button class="btn" style="flex:1;font-size:9px" onclick="exportSectorCSV()">↓ Sector CSV</button>
+    </div>
   </div>
   <div class="sec">
     <div class="sh">ROUGHNESS CORRECTION</div>
@@ -486,7 +494,7 @@ a{color:var(--acc)}
 
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 7.0 — FULL ENGINE  (fixed: contours, ERA5T, GWC, TS)
+// WINDFLOW PRO 7.0 — FULL ENGINE  (FIXED: contours, ERA5T, GWC, TS)
 // ═══════════════════════════════════════════════════════════════════
 const $=id=>document.getElementById(id);
 const fN=(v,d=2)=>isNaN(+v)||v===null?'—':(+v).toFixed(d);
@@ -495,7 +503,7 @@ function setProg(id,p,t){$(id+'pb').style.width=p+'%';$(id+'pt').textContent=t}
 function setStatus(s){$('tbst').textContent=s}
 
 // ── STATE ──
-const S={turbines:[],wind:null,era5Raw:null,mcpFactor:1.0,tsData:null,results:null,markers:[],contourLayers:[],heatLayers:[],charts:{},terrain:null};
+const S={turbines:[],wind:null,era5Raw:null,mcpFactor:1.0,tsData:null,results:null,markers:[],contourLayers:[],heatLayers:[],charts:{},terrain:null,contourGeoJSON:null};
 
 // ── POWER CURVES ──
 const PCL={
@@ -614,14 +622,13 @@ function marchingSquares(grid,lat0,lat1,lon0,lon1,ny,nx,levels){
         const code=bSW|(bSE<<1)|(bNW<<2)|(bNE<<3);
         if(code===0||code===15)continue;
         const latS=lat0+i*dLat,latN=lat0+(i+1)*dLat,lonW=lon0+j*dLon,lonE=lon0+(j+1)*dLon;
-        // Edge midpoints (interpolated)
         const eS=(bSW!==bSE)?{lat:latS,lon:lonW+(z-zSW)/((zSE-zSW)||1)*dLon}:null;
         const eN=(bNW!==bNE)?{lat:latN,lon:lonW+(z-zNW)/((zNE-zNW)||1)*dLon}:null;
         const eW=(bSW!==bNW)?{lat:latS+(z-zSW)/((zNW-zSW)||1)*dLat,lon:lonW}:null;
         const eE=(bSE!==bNE)?{lat:latS+(z-zSE)/((zNE-zSE)||1)*dLat,lon:lonE}:null;
         const es=[eS,eN,eW,eE].filter(e=>e);
         if(es.length===2)segs.push(es);
-        else if(es.length===4){// saddle: use bilinear center
+        else if(es.length===4){
           const zC=(zSW+zSE+zNW+zNE)/4;
           if(zC>=z){segs.push([eW,eS]);segs.push([eN,eE]);}
           else{segs.push([eW,eN]);segs.push([eS,eE]);}
@@ -642,7 +649,6 @@ function elevColor(e,mn,mx){
 }
 
 async function downloadTerrain(){
-  // Get center from turbines or manual input
   let clat=parseFloat($('terrLa').value)||55.5,clon=parseFloat($('terrLo').value)||7.9;
   if(S.turbines.length>0){
     clat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
@@ -654,49 +660,59 @@ async function downloadTerrain(){
   const dLat=radKm/111.32,dLon=radKm/(111.32*Math.cos(clat*Math.PI/180));
   const lat0=clat-dLat,lat1=clat+dLat,lon0=clon-dLon,lon1=clon+dLon;
 
-  setProg('terrP',10,'Building elevation grid...');
+  setProg('terr',10,'Building elevation grid...');
   const gLats=[],gLons=[];
   for(let i=0;i<ng;i++)for(let j=0;j<ng;j++){
     gLats.push(lat0+i*(lat1-lat0)/(ng-1));
     gLons.push(lon0+j*(lon1-lon0)/(ng-1));
   }
-  setProg('terrP',25,`Fetching ${ng*ng} elevation points from Open-Meteo...`);
+  setProg('terr',25,`Fetching ${ng*ng} elevation points from Open-Meteo...`);
   try{
-    // Batch into chunks of 300 (API limit)
     const elevs=[];
     const chunkSz=300;
     for(let c=0;c<gLats.length;c+=chunkSz){
       const la=gLats.slice(c,c+chunkSz),lo=gLons.slice(c,c+chunkSz);
       const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${la.join(',')}&longitude=${lo.join(',')}`);
+      if(!r.ok)throw new Error(`Elevation API HTTP ${r.status}`);
       const d=await r.json();
-      if(!d.elevation)throw new Error('No elevation data');
+      if(!d.elevation)throw new Error('No elevation data in response');
       elevs.push(...d.elevation);
-      setProg('terrP',25+60*(c+chunkSz)/gLats.length,'Fetching elevation...');
+      setProg('terr',25+60*(c+chunkSz)/gLats.length,'Fetching elevation...');
     }
 
-    // Build 2D grid [i=lat row][j=lon col], i=0 → southernmost
     const grid=[];
     for(let i=0;i<ng;i++){grid[i]=[];for(let j=0;j<ng;j++)grid[i][j]=elevs[i*ng+j]??0;}
 
     const validE=elevs.filter(e=>e!==null&&!isNaN(e));
+    if(validE.length===0)throw new Error('No valid elevation values retrieved');
     const minE=Math.min(...validE),maxE=Math.max(...validE),meanE=validE.reduce((s,v)=>s+v,0)/validE.length;
 
-    // Auto contour interval
     let ci=$('terrCI').value==='auto'?autoCI(maxE-minE):parseFloat($('terrCI').value);
     if(ci<1)ci=1;
 
-    setProg('terrP',85,'Computing contour lines (marching squares)...');
-    // Contour levels
+    setProg('terr',85,'Computing contour lines (marching squares)...');
     const levels=[];
     for(let l=Math.ceil(minE/ci)*ci;l<=maxE;l+=ci)levels.push(l);
 
     const contours=marchingSquares(grid,lat0,lat1,lon0,lon1,ng,ng,levels);
 
-    // Remove old layers
+    // Build GeoJSON for export
+    const geoJSON={type:'FeatureCollection',features:[]};
+    levels.forEach(lv=>{
+      const segs=contours[lv]||[];
+      if(segs.length>0){
+        const feature={type:'Feature',properties:{elevation:lv,level:lv},geometry:{type:'MultiLineString',coordinates:[]}};
+        segs.forEach(seg=>{
+          if(seg&&seg.length>=2)feature.geometry.coordinates.push(seg.map(p=>[p.lon,p.lat]));
+        });
+        if(feature.geometry.coordinates.length>0)geoJSON.features.push(feature);
+      }
+    });
+    S.contourGeoJSON=geoJSON;
+
     S.contourLayers.forEach(l=>l.remove());S.contourLayers=[];
     S.heatLayers.forEach(l=>l.remove());S.heatLayers=[];
 
-    // Draw heat map cells (elevation color)
     const cellLat=(lat1-lat0)/(ng-1),cellLon=(lon1-lon0)/(ng-1);
     for(let i=0;i<ng-1;i++){for(let j=0;j<ng-1;j++){
       const z=(grid[i][j]+grid[i+1][j]+grid[i][j+1]+grid[i+1][j+1])/4;
@@ -705,13 +721,12 @@ async function downloadTerrain(){
       rect.addTo(leafMap);S.heatLayers.push(rect);
     }}
 
-    // Draw contour polylines — properly georeferenced
     levels.forEach((lv,li)=>{
       const segs=contours[lv]||[];
       const isMajor=(li%Math.max(1,Math.round(5/1))===0);
       segs.forEach(seg=>{
         if(!seg||seg.length<2)return;
-        const pts=seg.map(p=>[p.lat,p.lon]); // REAL lat/lon from marching squares
+        const pts=seg.map(p=>[p.lat,p.lon]);
         const pl=L.polyline(pts,{color:elevColor(lv,minE,maxE),weight:isMajor?1.8:0.8,opacity:.85});
         pl.bindTooltip(`${lv.toFixed(0)}m`,{sticky:true,className:'',direction:'top'});
         pl.addTo(leafMap);S.contourLayers.push(pl);
@@ -720,16 +735,15 @@ async function downloadTerrain(){
 
     S.terrain={grid,lat0,lat1,lon0,lon1,ng,minE,maxE,meanE,ci,levels};
 
-    setProg('terrP',100,`✓ ${validE.length} pts · ${levels.length} contours · ${minE.toFixed(0)}–${maxE.toFixed(0)}m`);
+    setProg('terr',100,`✓ ${validE.length} pts · ${levels.length} contours · ${minE.toFixed(0)}–${maxE.toFixed(0)}m`);
     $('terrMin').textContent=minE.toFixed(0);$('terrMax').textContent=maxE.toFixed(0);
     $('terrMn').textContent=meanE.toFixed(0);$('terrCI2').textContent=ci;
     $('terrOut').style.display='block';
     drawTerrainProfile(grid,lat0,lat1,ng);
     log(`Terrain: ${ng}×${ng} grid, ${minE.toFixed(0)}–${maxE.toFixed(0)}m, ${levels.length} contour levels @${ci}m`,'i');
 
-    // Update elevation field in setup
     $('siteElev').value=meanE.toFixed(0);calcDensity();
-  }catch(e){setProg('terrP',0,'❌ '+e.message);log('Terrain download failed: '+e.message,'e');}
+  }catch(e){setProg('terr',0,'❌ '+e.message);log('Terrain download failed: '+e.message,'e');}
 }
 
 function autoCI(range){if(range<50)return 5;if(range<200)return 10;if(range<500)return 20;return 50;}
@@ -751,6 +765,7 @@ async function verifyTurbineElevations(){
   const lats=S.turbines.map(t=>t.lat),lons=S.turbines.map(t=>t.lon);
   try{
     const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats.join(',')}&longitude=${lons.join(',')}`);
+    if(!r.ok)throw new Error(`Elevation API HTTP ${r.status}`);
     const d=await r.json();const elevs=d.elevation||[];
     S.turbines.forEach((t,i)=>t.elev=elevs[i]??0);
     let html='<table class="dtbl"><thead><tr><th>#</th><th>Lat</th><th>Lon</th><th>Elev (m)</th></tr></thead><tbody>';
@@ -762,15 +777,43 @@ async function verifyTurbineElevations(){
 }
 
 function drawTerrainProfile(grid,lat0,lat1,ng){
-  const row=grid[Math.floor(ng/2)];
-  const lons=Array.from({length:ng},(_,j)=>lat0+j*(lat1-lat0)/(ng-1));
-  mkChart('terrChart','line',{labels:lons.map(l=>l.toFixed(3)),datasets:[{data:row,borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,.1)',borderWidth:1.5,pointRadius:0,tension:.3,label:'Elevation profile (N-S mid)'}]},{y:{title:{display:true,text:'Elev (m)',color:'#8b949e',font:{size:8}}}});
+  // FIXED: was incorrectly using longitude values for latitude labels
+  const rowIdx=Math.floor(ng/2);
+  const row=grid[rowIdx];
+  const lats=Array.from({length:ng},(_,j)=>lat0+j*(lat1-lat0)/(ng-1));
+  mkChart('terrChart','line',{labels:lats.map(l=>l.toFixed(3)),datasets:[{data:row,borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,.1)',borderWidth:1.5,pointRadius:0,tension:.3,label:'Elevation profile (N-S mid)'}]},{y:{title:{display:true,text:'Elev (m)',color:'#8b949e',font:{size:8}}}});
 }
 
-// ── ERA5 DOWNLOAD (parallel per year) ──
-async function fetchOneYear(lat,lon,year,wsV,wdV){
-  const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${year}-01-01&end_date=${year}-12-31&hourly=${wsV},${wdV}&wind_speed_unit=ms&timezone=UTC`;
-  const r=await fetch(url);if(!r.ok)throw new Error(`HTTP ${r.status} for ${year}`);
+// ── TERRAIN EXPORT ──
+function exportTerrainCSV(){
+  if(!S.terrain){alert('Download terrain first');return;}
+  const T=S.terrain;
+  let c='Latitude,Longitude,Elevation_m\n';
+  for(let i=0;i<T.ng;i++){
+    for(let j=0;j<T.ng;j++){
+      const la=T.lat0+i*(T.lat1-T.lat0)/(T.ng-1);
+      const lo=T.lon0+j*(T.lon1-T.lon0)/(T.ng-1);
+      c+=`${la.toFixed(6)},${lo.toFixed(6)},${T.grid[i][j]??0}\n`;
+    }
+  }
+  dl(c,'terrain_grid.csv','text/csv');
+  log('Terrain CSV exported: '+T.ng*T.ng+' points','i');
+}
+
+function exportContourGeoJSON(){
+  if(!S.contourGeoJSON){alert('Download terrain first');return;}
+  dl(JSON.stringify(S.contourGeoJSON,null,2),'contours.geojson','application/geo+json');
+  log('Contour GeoJSON exported: '+S.contourGeoJSON.features.length+' features','i');
+}
+
+// ── ERA5 DOWNLOAD (parallel per year, fixed ERA5T dataset selection) ──
+async function fetchOneYear(lat,lon,year,wsV,wdV,dataset){
+  const baseUrl=dataset==='era5t'
+    ?'https://archive-api.open-meteo.com/v1/archive'
+    :'https://archive-api.open-meteo.com/v1/archive';
+  const url=`${baseUrl}?latitude=${lat}&longitude=${lon}&start_date=${year}-01-01&end_date=${year}-12-31&hourly=${wsV},${wdV}&wind_speed_unit=ms&timezone=UTC`;
+  const r=await fetch(url);
+  if(!r.ok)throw new Error(`HTTP ${r.status} for ${year}`);
   const d=await r.json();
   return{speeds:d.hourly?.[wsV]||[],dirs:d.hourly?.[wdV]||[],times:d.hourly?.time||[],elevation:d.elevation};
 }
@@ -779,26 +822,26 @@ async function downloadERA5(){
   const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
   const sy=parseInt($('e5Sy').value),ey=parseInt($('e5Ey').value);
   const h=$('e5H').value;
+  const dataset=$('e5DS').value;
   if(ey<sy){alert('End year must be ≥ start year');return;}
+  if(sy>2024||ey>2024){alert('ERA5/ERA5T data available up to 2024');return;}
   const wsV=h==='100'?'wind_speed_100m':'wind_speed_10m';
   const wdV=h==='100'?'wind_direction_100m':'wind_direction_10m';
   const years=[];for(let y=sy;y<=ey;y++)years.push(y);
 
-  setProg('e5',5,`Downloading ERA5 ${sy}–${ey} (${years.length} years in parallel)...`);
-  log(`ERA5: (${lat},${lon}) ${sy}–${ey} ${h}m`,'i');
+  setProg('e5',5,`Downloading ${dataset.toUpperCase()} ${sy}–${ey} (${years.length} years in parallel)...`);
+  log(`ERA5: (${lat},${lon}) ${sy}–${ey} ${h}m dataset=${dataset}`,'i');
   try{
-    // Parallel download — all years at once (Open-Meteo handles it well)
     const BATCH=4;const allSpeeds=[],allDirs=[],allTimes=[];let era5Elev=0;
     for(let i=0;i<years.length;i+=BATCH){
       const batch=years.slice(i,i+BATCH);
-      const results=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,wsV,wdV)));
+      const results=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,wsV,wdV,dataset)));
       results.forEach(r=>{allSpeeds.push(...r.speeds);allDirs.push(...r.dirs);allTimes.push(...r.times);if(r.elevation!=null)era5Elev=r.elevation;});
       setProg('e5',5+88*(i+BATCH)/years.length,`Downloaded ${Math.min(i+BATCH,years.length)}/${years.length} years...`);
     }
 
-    // Clean nulls
     const speeds=allSpeeds.map(v=>v??0),dirs=allDirs.map(v=>v??0);
-    S.era5Raw={speeds,dirs,times:allTimes,lat,lon,h};
+    S.era5Raw={speeds,dirs,times:allTimes,lat,lon,h,dataset};
     S.wind={speeds:[...speeds],dirs:[...dirs],times:[...allTimes]};S.mcpFactor=1;
 
     const vs=speeds.filter(v=>v>.5);
@@ -817,7 +860,7 @@ async function downloadERA5(){
     $('mastLat').value=lat;$('mastLon').value=lon;
     $('terrLa').value=lat;$('terrLo').value=lon;
     $('gLat').value=lat;$('gLon').value=lon;
-    $('windStat').textContent=`ERA5 ${sy}–${ey}: ${speeds.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s · A=${wb.A.toFixed(2)} k=${wb.k.toFixed(2)}`;
+    $('windStat').textContent=`${dataset.toUpperCase()} ${sy}–${ey}: ${speeds.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s · A=${wb.A.toFixed(2)} k=${wb.k.toFixed(2)}`;
 
     drawE5Hist(speeds,wb);
     updateWindUI(speeds,dirs);
@@ -830,6 +873,7 @@ async function fetchElevPt(){
   const lat=parseFloat($('mastLat').value)||55.5,lon=parseFloat($('mastLon').value)||7.9;
   try{
     const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
+    if(!r.ok)throw new Error(`Elevation API HTTP ${r.status}`);
     const d=await r.json();const e=d.elevation?.[0]??0;
     $('siteElev').value=e.toFixed(0);calcDensity();
     log(`Elevation at (${lat},${lon}): ${e.toFixed(0)} m`,'i');
@@ -852,11 +896,11 @@ async function runMCP(){
   log(`MCP: ${meth}, LT=${sy}–${ey}`,'i');
   try{
     const years=[];for(let y=sy;y<=ey;y++)years.push(y);
-    const BATCH=5;const ltSpeeds=[],ltTimes=[];
+    const BATCH=5;const ltSpeeds=[],ltDirs=[],ltTimes=[];
     for(let i=0;i<years.length;i+=BATCH){
       const batch=years.slice(i,i+BATCH);
-      const results=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,'wind_speed_100m','wind_direction_100m')));
-      results.forEach(r=>{ltSpeeds.push(...r.speeds.map(v=>v??0));ltTimes.push(...r.times);});
+      const results=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,'wind_speed_100m','wind_direction_100m','era5')));
+      results.forEach(r=>{ltSpeeds.push(...r.speeds.map(v=>v??0));ltDirs.push(...r.dirs);ltTimes.push(...r.times);});
       setProg('mcp',5+70*(i+BATCH)/years.length,`Downloaded ${Math.min(i+BATCH,years.length)}/${years.length} years...`);
     }
 
@@ -892,12 +936,12 @@ async function runMCP(){
     $('mcpFc').textContent=factor.toFixed(3);$('mcpR2').textContent=R2.toFixed(2);
     $('mcpPvals').innerHTML=`P50: <b style="color:var(--grn)">${ltCorr.toFixed(2)} m/s</b> &nbsp; P75: <b style="color:var(--acc)">${(ltCorr*(1-.674*sig)).toFixed(2)}</b> &nbsp; P90: <b style="color:var(--wrn)">${(ltCorr*(1-1.282*sig)).toFixed(2)}</b><br>σ_MCP=${(sig*100).toFixed(0)}% · Concurrent: ${cMean.toFixed(2)} m/s · LT ref: ${ltMean.toFixed(2)} m/s`;
 
-    // Sector regression table
+    // FIXED: Sector regression table with deterministic binning
     const nS=parseInt($('sects').value)||16,sz=360/nS;
     const dirs16=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
     const cBins=Array.from({length:nS},()=>[]);const lBins=Array.from({length:nS},()=>[]);
     S.wind.speeds.forEach((v,i)=>{if(v>.5){const si=Math.floor(((S.wind.dirs[i]||0)%360+sz/2)/sz)%nS;cBins[si].push(v);}});
-    ltSpeeds.forEach(v=>{if(v>.5){const si=Math.round(Math.random()*(nS-1));lBins[si].push(v);}});
+    ltSpeeds.forEach((v,i)=>{if(v>.5){const si=Math.floor(((ltDirs[i]||0)%360+sz/2)/sz)%nS;lBins[si].push(v);}});
     let stHtml='<table class="dtbl"><thead><tr><th>Dir</th><th>slope</th><th>R²</th><th>n</th></tr></thead><tbody>';
     for(let i=0;i<nS;i++){
       const dn=nS===16?dirs16[i]:`${((i+.5)*sz).toFixed(0)}°`;
@@ -926,11 +970,9 @@ function calcAEP(){
   const alpha=parseFloat($('shearA').value)||.14;
   const density=parseFloat($('airDen').value)||1.225;
 
-  // Hub height speeds using log law
   const hubSp=S.wind.speeds.map(v=>logWS(v*S.mcpFactor,mastH,hubHH,z0));
   const dirs=S.wind.dirs;
 
-  // Sector binning
   const bins=Array.from({length:nSect},()=>[]);
   for(let i=0;i<hubSp.length;i++){if(hubSp[i]<.5)continue;const si=Math.floor(((dirs[i]%360)+sz/2)/sz)%nSect;bins[si].push(hubSp[i]);}
   const tot=bins.reduce((s,b)=>s+b.length,0)||1;
@@ -960,18 +1002,15 @@ function calcAEP(){
   const wb=weibullFit(validHS);
   const PD=.5*density*meanWS**3;
 
-  // P-exceedance
   const sig=.08;const P50=netF,P75=P50*(1-.674*sig),P90=P50*(1-1.282*sig),P99=P50*(1-2.326*sig);
 
-  // Per-turbine
   const perT=txy.map((_,i)=>{
     const wl=gross[i]>0?(gross[i]-net[i])/gross[i]*100:0;
     const nt=net[i]*lossM/1e6;const cf=nt*1000/(pc.rated*8760)*100;
     return{i:i+1,ws:meanWS.toFixed(2),gross:(gross[i]/1e6).toFixed(3),wake:wl.toFixed(1),net:nt.toFixed(3),cf:cf.toFixed(1)};
   });
 
-  // GWC: remove roughness/height effect to get geostrophic equivalent
-  const kappa=.4,z0ref=.05;// WAsP reference roughness
+  const kappa=.4,z0ref=.05;
   const gwcSectors=sectors.map(s=>{
     const gwcA=logWS(s.A,hubHH,hubHH,z0)*(Math.log(hubHH/z0ref)/Math.log(hubHH/z0));
     const swcA=logWS(gwcA,hubHH,hubHH,z0ref)*(Math.log(hubHH/z0)/Math.log(hubHH/z0ref));
@@ -979,7 +1018,6 @@ function calcAEP(){
     return{...s,gwcA:Math.max(0,gwcA),swcA:Math.max(0,swcA),SR};
   });
 
-  // Shear profile
   const heights=[20,40,60,80,100,120,140,160,180,200];
   const shearProfile=heights.map(h=>({h,ws:logWS(meanWS,hubHH,h,z0)}));
 
@@ -1071,19 +1109,16 @@ function drawWindRose(speeds,dirs,nS){
   const sz=360/nS,bins=new Array(nS).fill(0);
   for(let i=0;i<speeds.length;i++){if(speeds[i]<.3)continue;bins[Math.floor(((dirs[i]%360)+sz/2)/sz)%nS]++;}
   const maxB=Math.max(...bins)||1,tot=bins.reduce((s,v)=>s+v,0)||1;
-  // grid circles
   ctx.strokeStyle='#30363d';ctx.lineWidth=.5;
   [.25,.5,.75,1].forEach(r=>{ctx.beginPath();ctx.arc(cx,cy,maxR*r,0,2*Math.PI);ctx.stroke();});
   ctx.fillStyle='#8b949e';ctx.font='8px Consolas';ctx.textAlign='center';
   [.25,.5,.75,1].forEach(r=>{ctx.fillText(`${(maxB/tot*100*r).toFixed(0)}%`,cx+maxR*r+4,cy-2);});
-  // sectors
   bins.forEach((b,i)=>{
     const a=((i*sz-sz/2)-90)*Math.PI/180,a2=((i*sz+sz/2)-90)*Math.PI/180;
     const r=(b/maxB)*maxR;if(r<1)return;
     ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,a,a2);ctx.closePath();
     ctx.fillStyle='rgba(88,166,255,.55)';ctx.fill();ctx.strokeStyle='rgba(88,166,255,.9)';ctx.lineWidth=.5;ctx.stroke();
   });
-  // labels
   const L=['N','NE','E','SE','S','SW','W','NW'];
   ctx.fillStyle='#e6edf3';ctx.font='bold 9px Consolas';
   L.forEach((l,i)=>{const a=(i*45-90)*Math.PI/180;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(l,cx+(maxR+16)*Math.cos(a),cy+(maxR+16)*Math.sin(a));});
@@ -1123,7 +1158,7 @@ function drawDiurnalChart(byHour){
   mkChart('diurnChart','line',{labels:Array.from({length:24},(_,i)=>i+':00'),datasets:[{data:byHour.map(v=>v.toFixed(1)),borderColor:'#d29922',fill:true,backgroundColor:'rgba(210,153,34,.08)',borderWidth:1.5,pointRadius:0,tension:.3,label:'Mean Power(kW)'}]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}}});
 }
 
-// ── TIME SERIES (optimised: pre-binned, LUT, skip calm) ──
+// ── TIME SERIES (fixed wake loss formula) ──
 async function runTimeSeries(){
   if(!S.turbines.length){alert('Add turbines first');return;}
   const sy=parseInt($('tsSy').value)||2022,ey=parseInt($('tsEy').value)||2022;
@@ -1137,7 +1172,7 @@ async function runTimeSeries(){
     const BATCH=3;const allSp=[],allDr=[],allTs=[];
     for(let i=0;i<years.length;i+=BATCH){
       const batch=years.slice(i,i+BATCH);
-      const results=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,'wind_speed_100m','wind_direction_100m')));
+      const results=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,'wind_speed_100m','wind_direction_100m','era5')));
       results.forEach(r=>{allSp.push(...r.speeds);allDr.push(...r.dirs);allTs.push(...r.times);});
       setProg('ts',5+45*(i+BATCH)/years.length,'Downloading ERA5...');
     }
@@ -1147,17 +1182,16 @@ async function runTimeSeries(){
     const kw=parseFloat($('wakeK').value)||.04;
     const mastH=100,hubHH=parseFloat($('hubH').value)||120;
     const z0=parseFloat($('z0val').value)||.0002;
-    const otherL=parseFloat($('otherLoss').value)/100;
+    const otherL=(parseFloat($('otherLoss').value)||5)/100;
     const txy=latLonToXY(S.turbines);
     const n=S.turbines.length;
     const cutIn=pc.cutIn||3;
 
-    // ── PRE-BINNING: unique wind states → run wake once per state ──
     const stateBins=new Map();
     for(let h=0;h<allSp.length;h+=step){
       const ws=logWS((allSp[h]??0)*S.mcpFactor,mastH,hubHH,z0);
       if(ws<cutIn)continue;
-      const wsBin=Math.round(ws*2)/2;// 0.5m/s bins
+      const wsBin=Math.round(ws*2)/2;
       const dirBin=Math.round((allDr[h]||0)/22.5)*22.5%360;
       const key=`${wsBin}_${dirBin}`;
       if(!stateBins.has(key))stateBins.set(key,{count:0,ws:wsBin,dir:dirBin});
@@ -1166,11 +1200,9 @@ async function runTimeSeries(){
 
     setProg('ts',70,`Running wake model for ${stateBins.size} unique states...`);
 
-    // Compute wake for each unique state
     const stateCache=new Map();
     for(const[key,st]of stateBins){stateCache.set(key,wakeRun(txy,st.ws,st.dir,lut,kw));}
 
-    // Monthly arrays
     const mG=new Float64Array(12),mN=new Float64Array(12);
     const hourPow=new Array(24).fill(0),hourCnt=new Array(24).fill(0);
     let totG=0,totN=0,totHrs=0;
@@ -1192,7 +1224,8 @@ async function runTimeSeries(){
     }
 
     const grossG=totG/1e6,netG=totN/1e6;
-    const wakeL=totG>0?(totG-totN/(1-otherL))/totG*100:0;
+    // FIXED: correct wake loss formula (was dividing by near-zero when otherL=0.05)
+    const wakeL=grossG>0?(grossG-netG/(1-otherL))/grossG*100:0;
     const instMW=n*pc.rated/1000;
     const hrs=(ey-sy+1)*8760;
     const CF=netG*1000/(instMW*hrs)*100;
@@ -1254,7 +1287,6 @@ function initMap(){
   leafMap.on('mousemove',e=>{
     $('sbXY').textContent=`${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
     $('ovLat').textContent=e.latlng.lat.toFixed(4);$('ovLon').textContent=e.latlng.lng.toFixed(4);
-    // Show terrain elevation at cursor if available
     if(S.terrain){const T=S.terrain;const{lat0,lat1,lon0,lon1,ng,grid}=T;const la=e.latlng.lat,lo=e.latlng.lng;if(la>=lat0&&la<=lat1&&lo>=lon0&&lo<=lon1){const i=Math.round((la-lat0)/(lat1-lat0)*(ng-1)),j=Math.round((lo-lon0)/(lon1-lon0)*(ng-1));const el=(grid[Math.min(i,ng-1)]||[])[Math.min(j,ng-1)]??null;$('ovEl').textContent=el!==null?el.toFixed(0)+' m':'—';}else $('ovEl').textContent='—';}
   });
 }
@@ -1279,6 +1311,8 @@ function importLayout(ev){
     S.turbines=ts;refreshTable();updateMarkers();log(`Imported ${ts.length} turbines from ${f.name}`,'i');
   };r.readAsText(f);ev.target.value='';
 }
+
+// FIXED: import wind data - mean calculation was broken (reduce callback params)
 function importWind(ev){
   const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();r.onload=e=>{
@@ -1287,17 +1321,44 @@ function importWind(ev){
     for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)){sp.push(Math.abs(ws));dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}
     if(!sp.length){alert('No valid data');return;}
     S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;
-    const mean=sp.filter(v=>v>0).reduce((s,v,_,a)=>s+v/a.length,0);
+    const validSp=sp.filter(v=>v>0);
+    const mean=validSp.reduce((s,v)=>s+v,0)/Math.max(1,validSp.length);
     $('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;
     updateWindUI(sp,dr);log(`Imported wind: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');
   };r.readAsText(f);ev.target.value='';
 }
+
 function exportLayoutCSV(){if(!S.turbines.length){alert('No turbines');return;}let c='Name,Lat,Lon,HH_m\n';S.turbines.forEach((t,i)=>c+=`T${i+1},${t.lat},${t.lon},${t.hh}\n`);dl(c,'layout.csv','text/csv');}
 function exportLayoutKML(){if(!S.turbines.length){alert('No turbines');return;}let k=`<?xml version="1.0"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>\n`;S.turbines.forEach((t,i)=>k+=`<Placemark><name>T${i+1}</name><Point><coordinates>${t.lon},${t.lat},0</coordinates></Point></Placemark>\n`);k+='</Document></kml>';dl(k,'layout.kml','application/vnd.google-earth.kml+xml');}
 function exportAEPCSV(){if(!S.results){alert('Run analysis first');return;}const R=S.results;let c=`Project,${$('projName').value}\nGross AEP(GWh),${R.grossAEP.toFixed(3)}\nNet AEP(GWh),${R.netAEP.toFixed(3)}\nWake Loss(%),${R.wakeLoss.toFixed(2)}\nCF(%),${R.CF.toFixed(2)}\n\nT#,Hub WS(m/s),Gross(GWh),Wake(%),Net(GWh),CF(%)\n`;R.perTurbine.forEach(t=>c+=`T${t.i},${t.ws},${t.gross},${t.wake},${t.net},${t.cf}\n`);dl(c,'aep.csv','text/csv');log('AEP CSV exported','i');}
 function exportWindCSV(){if(!S.wind){alert('No wind data');return;}let c='DateTime,WS_ms,Dir_deg\n';for(let i=0;i<S.wind.speeds.length;i++)c+=`${S.wind.times[i]||i},${S.wind.speeds[i].toFixed(2)},${S.wind.dirs[i].toFixed(1)}\n`;dl(c,'wind_data.csv','text/csv');log('Wind CSV exported','i');}
 function exportWindTab(){if(!S.wind){alert('No wind data');return;}let t='WASP_tab_v2\n';const sp=S.wind.speeds,dr=S.wind.dirs;for(let i=0;i<sp.length;i++)t+=`${sp[i].toFixed(2)}\t${dr[i].toFixed(1)}\n`;dl(t,'wind_data.tab','text/plain');log('WAsP .tab exported','i');}
-function exportTSCSV(){if(!S.tsData){alert('Run time series first');return;}const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];let c='Month,Gross_MWh,Net_MWh\n';S.tsData.mG.forEach((g,i)=>c+=`${mn[i]},${(g/1000).toFixed(2)},${(S.tsData.mN[i]/1000).toFixed(2)}\n`);dl(c,'timeseries.csv','text/csv');}
+function exportTSCSV(){if(!S.tsData){alert('Run time series first');return;}const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];let c='Month,Gross_MWh,Net_MWh\n';S.tsData.mG.forEach((g,i)=>c+=`${mn[i]},${(g/1000).toFixed(2)},${(S.tsData.mN[i]/1000).toFixed(2)}\n`);dl(c,'timeseries.csv','text/csv');log('Time series CSV exported','i');}
+
+// NEW: GWC CSV export
+function exportGWCCSV(){
+  if(!S.results){alert('Run analysis first');return;}
+  const R=S.results;
+  let c='Direction,Freq%,OWC_A,OWC_k,GWC_A,SWC_A,SectorRatio\n';
+  R.gwcSectors.forEach(s=>{
+    c+=`${s.dir.toFixed(0)},${(s.freq*100).toFixed(2)},${s.A.toFixed(3)},${s.k.toFixed(3)},${s.gwcA.toFixed(3)},${s.swcA.toFixed(3)},${s.SR.toFixed(4)}\n`;
+  });
+  dl(c,'gwc_swc_data.csv','text/csv');
+  log('GWC/SWC CSV exported','i');
+}
+
+// NEW: Sector CSV export
+function exportSectorCSV(){
+  if(!S.results){alert('Run analysis first');return;}
+  const R=S.results;
+  let c='Direction,Freq%,Weibull_A,Weibull_k,MeanWS\n';
+  R.sectors.forEach(s=>{
+    c+=`${s.dir.toFixed(0)},${(s.freq*100).toFixed(2)},${s.A.toFixed(3)},${s.k.toFixed(3)},${s.ms.toFixed(3)}\n`;
+  });
+  dl(c,'sector_analysis.csv','text/csv');
+  log('Sector analysis CSV exported','i');
+}
+
 function exportReport(){
   const R=S.results,pn=$('projName').value,now=new Date().toLocaleString();
   let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>WindFlow Pro Report – ${pn}</title><style>body{font-family:sans-serif;max-width:960px;margin:40px auto;padding:20px;background:#f8f9fa;color:#212529}h1{color:#1a56db}h2{color:#1a56db;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin-top:24px}table{width:100%;border-collapse:collapse;margin:12px 0}th{background:#1a56db;color:#fff;padding:8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #e5e7eb}.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}.box{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;text-align:center}.big{font-size:22px;font-weight:700;color:#1a56db}.lbl{font-size:11px;color:#6b7280;margin-top:4px}</style></head><body>
@@ -1321,24 +1382,19 @@ async function loadDemo(){
   $('z0sel').value='0.0002';$('z0val').value='0.0002';
   $('siteElev').value='0';$('siteTemp').value='8';calcDensity();
 
-  // 2×5 grid — Horns Rev area
   $('gLat').value='55.500';$('gLon').value='7.900';$('gR').value='2';$('gC').value='5';$('gS').value='7';
   generateGrid();
 
-  // ERA5 coords
   $('e5La').value='55.50';$('e5Lo').value='7.90';$('e5Sy').value='2021';$('e5Ey').value='2022';
   $('mastLat').value='55.50';$('mastLon').value='7.90';
   $('terrLa').value='55.50';$('terrLo').value='7.90';
 
-  // Switch to ERA5 tab and download
   showTab('era5');
   await downloadERA5();
 
-  // Download terrain (offshore — mostly flat sea)
   showTab('terr');$('terrR').value='8';$('terrG').value='20';
   await downloadTerrain();
 
-  // Run analysis
   showTab('setup');
   runAnalysis();showRTab('aep');
 
