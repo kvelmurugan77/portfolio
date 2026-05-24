@@ -1,509 +1,385 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 7.0</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>WindFlow Pro 7.1</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 :root{--bg:#0d1117;--pan:#161b22;--pan2:#21262d;--bdr:#30363d;--acc:#58a6ff;--grn:#3fb950;--wrn:#d29922;--red:#f85149;--txt:#e6edf3;--muted:#8b949e;--inp:#0a0e14}
 *{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;overflow:hidden}
-body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;font-size:12px}
-a{color:var(--acc)}
-#top{display:flex;align-items:center;gap:8px;padding:5px 12px;background:var(--pan);border-bottom:1px solid var(--bdr);flex-shrink:0;flex-wrap:wrap}
+body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;font-size:11px}
+#top{display:flex;align-items:center;gap:7px;padding:5px 11px;background:var(--pan);border-bottom:1px solid var(--bdr);flex-shrink:0;flex-wrap:wrap}
 .logo{font-size:13px;font-weight:700;color:var(--acc);letter-spacing:2px;white-space:nowrap}
 .ver{font-size:9px;color:var(--muted);white-space:nowrap}
-.sp{width:1px;height:18px;background:var(--bdr)}
+.vsep{width:1px;height:18px;background:var(--bdr)}
 .btn{padding:4px 9px;border:1px solid var(--bdr);background:var(--pan);color:var(--txt);cursor:pointer;border-radius:3px;font-size:10px;font-family:inherit;transition:.15s;white-space:nowrap}
 .btn:hover{border-color:var(--acc);color:var(--acc)}.btn.pri{background:var(--acc);border-color:var(--acc);color:#000;font-weight:700}.btn.pri:hover{background:#79c0ff}
-.btn.grn{background:var(--grn);border-color:var(--grn);color:#000;font-weight:700}.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.grn{background:var(--grn);border-color:var(--grn);color:#000;font-weight:700}
+.btn.drw{background:rgba(210,153,34,.18);border-color:var(--wrn);color:var(--wrn);font-weight:700}
+.btn.drw.active{background:var(--wrn);color:#000}
+.btn:disabled{opacity:.35;cursor:not-allowed}
 #main{display:flex;flex:1;overflow:hidden;min-height:0}
-#side{width:315px;min-width:315px;background:var(--pan);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
-#stabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0}
-.stab{flex:1;padding:6px 2px;font-size:9px;font-family:inherit;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+#side{width:312px;min-width:312px;background:var(--pan);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
+#stabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0;overflow-x:auto}
+.stab{flex-shrink:0;padding:6px 7px;font-size:9px;font-family:inherit;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap}
 .stab.on{color:var(--acc);border-bottom-color:var(--acc)}
-#sc{flex:1;overflow-y:auto;padding:9px}
-.sp2{display:none}.sp2.on{display:block}
-#rside{width:295px;min-width:295px;background:var(--pan);border-left:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
-#rtabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0}
-.rtab{flex:1;padding:6px 2px;font-size:9px;font-family:inherit;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+#sc{flex:1;overflow-y:auto;padding:8px}.sp2{display:none}.sp2.on{display:block}
+#rside{width:298px;min-width:298px;background:var(--pan);border-left:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
+#rtabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0;overflow-x:auto}
+.rtab{flex-shrink:0;padding:6px 7px;font-size:9px;font-family:inherit;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap}
 .rtab.on{color:var(--acc);border-bottom-color:var(--acc)}
-#rc{flex:1;overflow-y:auto;padding:9px}
-.rp{display:none}.rp.on{display:block}
+#rc{flex:1;overflow-y:auto;padding:8px}.rp{display:none}.rp.on{display:block}
 #mapw{flex:1;position:relative;overflow:hidden}#map{width:100%;height:100%}
-.sec{margin-bottom:11px}
-.sh{font-size:9px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.9px;padding:4px 0;border-bottom:1px solid var(--bdr);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
-.fld{margin-bottom:7px}.fld label{display:block;font-size:9px;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.3px}
-.fld input,.fld select,.fld textarea{width:100%;padding:4px 6px;background:var(--inp);border:1px solid var(--bdr);color:var(--txt);border-radius:3px;font-family:inherit;font-size:10px}
+#contCanvas{position:absolute;top:0;left:0;pointer-events:none;z-index:400}
+.sec{margin-bottom:10px}
+.sh{font-size:9px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.9px;padding:4px 0;border-bottom:1px solid var(--bdr);margin-bottom:5px;display:flex;justify-content:space-between;align-items:center}
+.fld{margin-bottom:6px}.fld label{display:block;font-size:9px;color:var(--muted);margin-bottom:2px;text-transform:uppercase}
+.fld input,.fld select{width:100%;padding:4px 6px;background:var(--inp);border:1px solid var(--bdr);color:var(--txt);border-radius:3px;font-family:inherit;font-size:10px}
 .fld input:focus,.fld select:focus{border-color:var(--acc);outline:none}
-.r2{display:grid;grid-template-columns:1fr 1fr;gap:6px}.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
-.sg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px}
-.sc2{background:var(--pan2);border-radius:3px;padding:7px;border:1px solid var(--bdr)}
-.sv{font-size:15px;font-weight:700;color:var(--acc);line-height:1.2}.sl{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:5px}.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:7px}
+.sc2{background:var(--pan2);border-radius:3px;padding:6px;border:1px solid var(--bdr)}
+.sv{font-size:14px;font-weight:700;color:var(--acc);line-height:1.2}.sl{font-size:8px;color:var(--muted);text-transform:uppercase}
 .prg{height:3px;background:var(--bdr);border-radius:2px;overflow:hidden;margin:4px 0}
-.pb{height:100%;background:var(--acc);transition:width .3s;width:0}
-.pt{font-size:9px;color:var(--muted);min-height:13px}
+.pb{height:100%;background:var(--acc);transition:width .25s;width:0}.pt{font-size:9px;color:var(--muted);min-height:12px}
 .dtbl{width:100%;border-collapse:collapse;font-size:9px}
-.dtbl th{background:var(--pan2);padding:3px 4px;text-align:left;font-size:8px;color:var(--muted);border-bottom:1px solid var(--bdr)}
-.dtbl td{padding:2px 4px;border-bottom:1px solid #1c2128}
+.dtbl th{background:var(--pan2);padding:3px 4px;text-align:left;font-size:8px;color:var(--muted);border-bottom:1px solid var(--bdr);white-space:nowrap}
+.dtbl td{padding:3px 4px;border-bottom:1px solid #1c2128;white-space:nowrap}
 .dtbl tr:hover td{background:var(--pan2)}
-.cw{position:relative;margin-bottom:7px}
-#elog{background:var(--inp);border:1px solid var(--bdr);border-radius:3px;padding:5px 7px;height:90px;overflow-y:auto;font-size:9px;font-family:monospace}
+.cw{position:relative;margin-bottom:6px}
+#elog{background:var(--inp);border:1px solid var(--bdr);border-radius:3px;padding:5px 7px;height:80px;overflow-y:auto;font-size:9px}
 .li{color:var(--grn)}.lw{color:var(--wrn)}.le{color:var(--red)}
 #sbar{padding:3px 10px;background:#080c10;border-top:1px solid var(--bdr);font-size:9px;color:var(--muted);display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap}
 #sbar span{color:var(--acc)}
-.ibox{background:var(--pan2);border:1px solid var(--bdr);border-radius:3px;padding:7px;font-size:9px;margin-bottom:7px;color:var(--muted)}
+.ibox{background:var(--pan2);border:1px solid var(--bdr);border-radius:3px;padding:6px;font-size:9px;margin-bottom:6px;color:var(--muted)}
+#mapInfo{position:absolute;bottom:8px;left:8px;background:rgba(13,17,23,.88);border:1px solid var(--bdr);border-radius:4px;padding:5px 8px;font-size:9px;color:var(--muted);pointer-events:none;z-index:500;line-height:1.7}
+#mapInfo span{color:var(--acc)}
+#drawStatus{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(210,153,34,.92);color:#000;font-weight:700;padding:4px 14px;border-radius:3px;font-size:10px;z-index:600;pointer-events:none}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px}
-#mapOverlay{position:absolute;bottom:8px;left:8px;background:rgba(13,17,23,.85);border:1px solid var(--bdr);border-radius:4px;padding:6px 9px;font-size:9px;color:var(--muted);pointer-events:none;z-index:500;line-height:1.6}
-#mapOverlay span{color:var(--acc)}
-.tag{display:inline-block;padding:1px 5px;border-radius:8px;font-size:8px;font-weight:700}
-.tg{background:rgba(63,185,80,.18);color:var(--grn)}.ta{background:rgba(88,166,255,.18);color:var(--acc)}.tw{background:rgba(210,153,34,.18);color:var(--wrn)}
-.layerbtn{padding:3px 7px;font-size:9px;margin:0 2px 3px 0;border:1px solid var(--bdr);background:var(--pan2);color:var(--muted);cursor:pointer;border-radius:2px;font-family:inherit}
-.layerbtn.active{border-color:var(--acc);color:var(--acc);background:rgba(88,166,255,.1)}
+.wsc-row{display:flex;align-items:center;gap:5px;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:9px}
+.wsc-step{font-size:8px;color:var(--muted);width:138px;flex-shrink:0}
+.wsc-val{color:var(--acc);font-weight:700;width:62px;flex-shrink:0}
+.wsc-delta{font-size:8px;width:52px;flex-shrink:0}
+.wsc-bar{flex:1;height:5px;background:var(--pan2);border-radius:2px;overflow:hidden}
+.wsc-fill{height:100%;background:var(--acc);border-radius:2px}
 </style>
 </head>
 <body>
 <div id="top">
   <span class="logo">⟁ WINDFLOW PRO</span>
-  <span class="ver">v7.0 · WAsP+WindPRO · Eddy Viscosity · PARK2 · MCP · ERA5T</span>
-  <div class="sp"></div>
-  <button class="btn" onclick="loadDemo()">🎯 Demo (Horns Rev)</button>
-  <button class="btn pri" onclick="runAnalysis()" id="runBtn">▶▶ RUN ANALYSIS</button>
+  <span class="ver">v7.1 · Canvas Contours · Boundary Optimizer · WS Chain · ERA5T</span>
+  <div class="vsep"></div>
+  <button class="btn drw" id="drawBtn" onclick="toggleDraw()">✏ Draw Boundary</button>
+  <button class="btn" onclick="doneDraw()">✓ Close Poly</button>
+  <button class="btn" onclick="clearBoundary()">✕ Bnd</button>
+  <div class="vsep"></div>
+  <button class="btn" onclick="loadDemo()">🎯 Demo</button>
+  <button class="btn pri" id="runBtn" onclick="runAnalysis()">▶▶ RUN ANALYSIS</button>
   <button class="btn grn" onclick="exportReport()">↓ Report</button>
   <button class="btn" onclick="exportAEPCSV()">↓ AEP CSV</button>
   <div style="flex:1"></div>
-  <span id="tbst" style="font-size:9px;color:var(--muted)">Ready — Click Demo to start</span>
+  <span id="tbst" style="font-size:9px;color:var(--muted)">Ready — click Demo</span>
 </div>
 <div id="main">
-<!-- ═══ LEFT SIDEBAR ═══ -->
 <div id="side">
 <div id="stabs">
   <button class="stab on" data-tab="setup">SETUP</button>
+  <button class="stab" data-tab="bnd">BOUNDARY</button>
   <button class="stab" data-tab="era5">ERA5</button>
   <button class="stab" data-tab="terr">TERRAIN</button>
   <button class="stab" data-tab="mcp">MCP</button>
   <button class="stab" data-tab="ts">TIME SER.</button>
 </div>
 <div id="sc">
-
-<!-- SETUP TAB -->
 <div id="sp-setup" class="sp2 on">
-  <div class="sec">
-    <div class="sh">① PROJECT &amp; TURBINE</div>
-    <div class="fld"><label>Project Name</label><input id="projName" value="New Project" oninput="$('sbProj').textContent=this.value"></div>
-    <div class="r2">
-      <div class="fld"><label>Hub Height (m)</label><input id="hubH" type="number" value="120" min="40" max="250"></div>
-      <div class="fld"><label>Rotor Ø (m)</label><input id="rotD" type="number" value="150" min="30" max="300"></div>
-    </div>
-    <div class="fld"><label>Turbine Preset</label>
-      <select id="tcls" onchange="applyPreset()">
-        <option value="2mw">IEC-IIA 2MW · D=80m · HH=80m</option>
-        <option value="4mw" selected>IEC-IIA 4MW · D=150m · HH=120m</option>
-        <option value="6mw">IEC-IIIA 6MW · D=180m · HH=140m</option>
-        <option value="custom">Custom</option>
-      </select>
-    </div>
-    <div class="r3">
-      <div class="fld"><label>Rated (kW)</label><input id="ratedPow" type="number" value="4000"></div>
-      <div class="fld"><label>Wake k</label><input id="wakeK" type="number" value="0.04" step="0.005" min="0.01" max="0.15"></div>
-      <div class="fld"><label>Losses (%)</label><input id="otherLoss" type="number" value="5" min="0" max="30" step="0.5"></div>
-    </div>
-    <div class="fld"><label>Wake Model</label>
-      <select id="wakeModel">
-        <option value="jensen">Jensen/PARK (WAsP default)</option>
-        <option value="eddy">Eddy Viscosity (Ainslie)</option>
-        <option value="park2">PARK2 Deep-Array</option>
-      </select>
-    </div>
+<div class="sec"><div class="sh">① PROJECT &amp; TURBINE</div>
+  <div class="fld"><label>Project Name</label><input id="projName" value="New Project" oninput="$('sbProj').textContent=this.value"></div>
+  <div class="r2"><div class="fld"><label>Hub Height (m)</label><input id="hubH" type="number" value="120"></div><div class="fld"><label>Rotor Ø (m)</label><input id="rotD" type="number" value="150"></div></div>
+  <div class="fld"><label>Turbine Preset</label>
+    <select id="tcls" onchange="applyPreset()"><option value="2mw">IEC-IIA 2MW D=80m HH=80m</option><option value="4mw" selected>IEC-IIA 4MW D=150m HH=120m</option><option value="6mw">IEC-IIIA 6MW D=180m HH=140m</option></select>
   </div>
-
-  <div class="sec">
-    <div class="sh">② TURBINE LAYOUT
-      <button class="btn" style="padding:2px 5px;font-size:9px" onclick="$('impCSV').click()">📍 Import CSV</button>
-      <input id="impCSV" type="file" accept=".csv,.json" style="display:none" onchange="importLayout(event)">
-    </div>
-    <div class="ibox" style="padding:6px">
-      <div style="font-size:9px;color:var(--muted);margin-bottom:5px">⊞ GRID GENERATOR</div>
-      <div class="r3">
-        <div class="fld"><label>Rows</label><input id="gR" type="number" value="2" min="1" max="15"></div>
-        <div class="fld"><label>Cols</label><input id="gC" type="number" value="5" min="1" max="15"></div>
-        <div class="fld"><label>Spacing(D)</label><input id="gS" type="number" value="7" min="3" max="20" step="0.5"></div>
-      </div>
-      <div class="r2">
-        <div class="fld"><label>Center Lat</label><input id="gLat" type="number" value="55.500" step="0.001"></div>
-        <div class="fld"><label>Center Lon</label><input id="gLon" type="number" value="7.900" step="0.001"></div>
-      </div>
-      <button class="btn" style="width:100%" onclick="generateGrid()">⊞ Generate Grid</button>
-    </div>
-    <div class="ibox" style="padding:6px">
-      <div style="font-size:9px;color:var(--muted);margin-bottom:4px">➕ ADD MANUALLY (or click map)</div>
-      <div class="r2">
-        <div class="fld"><label>Lat</label><input id="manLat" type="number" step="0.0001"></div>
-        <div class="fld"><label>Lon</label><input id="manLon" type="number" step="0.0001"></div>
-      </div>
-      <button class="btn" style="width:100%" onclick="addManual()">➕ Add Turbine</button>
-    </div>
-    <div id="tCnt" style="font-size:9px;color:var(--muted);margin-bottom:3px">0 turbines</div>
-    <div style="max-height:120px;overflow-y:auto;border:1px solid var(--bdr);border-radius:3px">
-      <table class="dtbl"><thead><tr><th>#</th><th>Lat</th><th>Lon</th><th>HH</th><th>✕</th></tr></thead>
-      <tbody id="tbody"></tbody></table>
-    </div>
-    <div style="display:flex;gap:4px;margin-top:4px">
-      <button class="btn" style="flex:1;color:var(--red);border-color:var(--red)" onclick="clearTurbines()">🗑 Clear</button>
-      <button class="btn" style="flex:1" onclick="exportLayoutCSV()">↓ CSV</button>
-      <button class="btn" style="flex:1" onclick="exportLayoutKML()">↓ KML</button>
-    </div>
-  </div>
-
-  <div class="sec">
-    <div class="sh">③ WIND DATA &amp; MAST
-      <button class="btn" style="padding:2px 5px;font-size:9px" onclick="$('impWind').click()">💨 Import</button>
-      <input id="impWind" type="file" accept=".csv,.tab" style="display:none" onchange="importWind(event)">
-    </div>
-    <div class="r2">
-      <div class="fld"><label>Mast HH (m)</label><input id="mastH" type="number" value="100"></div>
-      <div class="fld"><label>Sectors</label>
-        <select id="sects"><option value="12">12</option><option value="16" selected>16</option><option value="24">24</option></select>
-      </div>
-    </div>
-    <div class="r2">
-      <div class="fld"><label>Mast Lat</label><input id="mastLat" type="number" value="55.500" step="0.001"></div>
-      <div class="fld"><label>Mast Lon</label><input id="mastLon" type="number" value="7.900" step="0.001"></div>
-    </div>
-    <div class="r2">
-      <div class="fld"><label>Roughness z₀ (m)</label>
-        <select id="z0sel" onchange="$('z0val').value=this.value">
-          <option value="0.0002" selected>0.0002 — Offshore/Water</option>
-          <option value="0.03">0.03 — Open flat terrain</option>
-          <option value="0.10">0.10 — Agricultural</option>
-          <option value="0.40">0.40 — Many obstacles</option>
-          <option value="1.50">1.50 — Urban</option>
-        </select>
-      </div>
-      <div class="fld"><label>z₀ custom (m)</label><input id="z0val" type="number" value="0.0002" step="0.0001" min="0.0001"></div>
-    </div>
-    <div id="windStat" style="font-size:9px;color:var(--muted)">No wind data — use ERA5 tab or Import ↑</div>
-  </div>
-
-  <div class="sec">
-    <div class="sh">④ ATMOSPHERE</div>
-    <div class="r3">
-      <div class="fld"><label>Elev (m ASL)</label><input id="siteElev" type="number" value="0" oninput="calcDensity()"></div>
-      <div class="fld"><label>Temp (°C)</label><input id="siteTemp" type="number" value="10" oninput="calcDensity()"></div>
-      <div class="fld"><label>ρ (kg/m³)</label><input id="airDen" type="number" value="1.225" step="0.001"></div>
-    </div>
-    <div class="r2">
-      <div class="fld"><label>Shear Exp α</label><input id="shearA" type="number" value="0.14" step="0.01"></div>
-      <div class="fld"><label>Stability</label>
-        <select id="stab"><option value="N" selected>Neutral (WAsP)</option><option value="O">Offshore</option><option value="S">Stable</option></select>
-      </div>
-    </div>
-    <button class="btn" style="width:100%;margin-bottom:4px;font-size:9px" onclick="fetchElevPt()">⬇ Fetch Site Elevation</button>
-  </div>
-
-  <div class="sec">
-    <div class="sh">ENGINE LOG <button class="btn" style="padding:1px 5px;font-size:8px" onclick="$('elog').innerHTML=''">Clear</button></div>
-    <div id="elog"></div>
-  </div>
-</div><!-- /setup -->
-
-<!-- ERA5 TAB -->
-<div id="sp-era5" class="sp2">
-  <div class="sec">
-    <div class="sh">⬇ ERA5 / ERA5T WIND DATA</div>
-    <div class="ibox">Open-Meteo · Free · No key · Hourly 1940→present (ERA5T for recent)</div>
-    <div class="r2">
-      <div class="fld"><label>Latitude</label><input id="e5La" type="number" value="55.50" step="0.01"></div>
-      <div class="fld"><label>Longitude</label><input id="e5Lo" type="number" value="7.90" step="0.01"></div>
-    </div>
-    <div class="r2">
-      <div class="fld"><label>From Year</label><input id="e5Sy" type="number" value="2020" min="1940" max="2025"></div>
-      <div class="fld"><label>To Year</label><input id="e5Ey" type="number" value="2023" min="1940" max="2025"></div>
-    </div>
-    <div class="r2">
-      <div class="fld"><label>Height</label>
-        <select id="e5H"><option value="100" selected>100m (ERA5)</option><option value="10">10m (ERA5)</option></select>
-      </div>
-      <div class="fld"><label>Dataset</label>
-        <select id="e5DS"><option value="era5" selected>ERA5</option><option value="era5t">ERA5T (recent)</option></select>
-      </div>
-    </div>
-    <button class="btn pri" style="width:100%;margin-bottom:5px" onclick="downloadERA5()">⬇ Download ERA5/ERA5T</button>
-    <div class="prg"><div id="e5pb" class="pb"></div></div>
-    <div id="e5pt" class="pt">—</div>
-    <div id="e5out" style="display:none;margin-top:7px">
-      <div class="sg">
-        <div class="sc2"><div class="sv" id="e5WS">—</div><div class="sl">Mean WS (m/s)</div></div>
-        <div class="sc2"><div class="sv" id="e5RC">—</div><div class="sl">Records</div></div>
-        <div class="sc2"><div class="sv" id="e5WA">—</div><div class="sl">Weibull A</div></div>
-        <div class="sc2"><div class="sv" id="e5WK">—</div><div class="sl">Weibull k</div></div>
-        <div class="sc2"><div class="sv" id="e5PD">—</div><div class="sl">Power Density W/m²</div></div>
-        <div class="sc2"><div class="sv" id="e5EL">—</div><div class="sl">ERA5 Elevation (m)</div></div>
-      </div>
-      <div class="cw" style="height:120px"><canvas id="e5Chart"></canvas></div>
-      <div style="display:flex;gap:4px;margin-top:4px">
-        <button class="btn" style="flex:1;font-size:9px" onclick="exportWindCSV()">↓ CSV</button>
-        <button class="btn" style="flex:1;font-size:9px" onclick="exportWindTab()">↓ WAsP .tab</button>
-      </div>
-    </div>
-  </div>
-</div><!-- /era5 -->
-
-<!-- TERRAIN TAB -->
-<div id="sp-terr" class="sp2">
-  <div class="sec">
-    <div class="sh">⬇ TERRAIN / CONTOUR</div>
-    <div class="ibox">Open-Meteo elevation API · Georeferenced contours overlaid on map</div>
-    <div class="r2">
-      <div class="fld"><label>Domain Radius (km)</label><input id="terrR" type="number" value="10" min="2" max="50"></div>
-      <div class="fld"><label>Grid Resolution</label>
-        <select id="terrG"><option value="20">20×20 (fast)</option><option value="30" selected>30×30 (std)</option><option value="40">40×40 (HD)</option></select>
-      </div>
-    </div>
-    <div class="fld"><label>Contour Interval (m)</label>
-      <select id="terrCI"><option value="auto" selected>Auto</option><option value="5">5m</option><option value="10">10m</option><option value="20">20m</option><option value="50">50m</option></select>
-    </div>
-    <div class="r2">
-      <div class="fld"><label>Center Lat</label><input id="terrLa" type="number" value="55.500" step="0.001"></div>
-      <div class="fld"><label>Center Lon</label><input id="terrLo" type="number" value="7.900" step="0.001"></div>
-    </div>
-    <button class="btn pri" style="width:100%;margin-bottom:5px" onclick="downloadTerrain()">⬇ Download Terrain + Draw Contours</button>
-    <div class="prg"><div id="terrPb" class="pb"></div></div>
-    <div id="terrPt" class="pt">—</div>
-    <div id="terrOut" style="display:none;margin-top:7px">
-      <div class="sg">
-        <div class="sc2"><div class="sv" id="terrMin">—</div><div class="sl">Min Elev (m)</div></div>
-        <div class="sc2"><div class="sv" id="terrMax">—</div><div class="sl">Max Elev (m)</div></div>
-        <div class="sc2"><div class="sv" id="terrMn">—</div><div class="sl">Mean Elev (m)</div></div>
-        <div class="sc2"><div class="sv" id="terrCI2">—</div><div class="sl">Contour Int (m)</div></div>
-      </div>
-      <div class="cw" style="height:120px"><canvas id="terrChart"></canvas></div>
-      <div style="margin-top:4px;font-size:9px;color:var(--muted)">
-        Layer controls:
-        <button class="layerbtn active" id="btnCont" onclick="toggleLayer('contour')">Contours</button>
-        <button class="layerbtn active" id="btnHeat" onclick="toggleLayer('heat')">Elevation Heat</button>
-      </div>
-      <div style="display:flex;gap:4px;margin-top:6px">
-        <button class="btn" style="flex:1;font-size:9px" onclick="exportTerrainCSV()">↓ Terrain CSV</button>
-        <button class="btn" style="flex:1;font-size:9px" onclick="exportContourGeoJSON()">↓ Contour GeoJSON</button>
-      </div>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="sh">⬇ VERIFY ELEVATION (per-turbine)</div>
-    <button class="btn" style="width:100%" onclick="verifyTurbineElevations()">🔍 Fetch Turbine Elevations</button>
-    <div id="elevTable" style="margin-top:6px;max-height:150px;overflow-y:auto"></div>
-  </div>
-</div><!-- /terr -->
-
-<!-- MCP TAB -->
-<div id="sp-mcp" class="sp2">
-  <div class="sec">
-    <div class="sh">↺ MCP LONG-TERM CORRECTION</div>
-    <div class="ibox">WindPRO-equivalent · ERA5 LT reference auto-downloaded · Requires wind data loaded</div>
-    <div class="r2">
-      <div class="fld"><label>LT Start Year</label><input id="mcpSy" type="number" value="1991"></div>
-      <div class="fld"><label>LT End Year</label><input id="mcpEy" type="number" value="2020"></div>
-    </div>
-    <div class="fld"><label>MCP Method</label>
-      <select id="mcpMeth">
-        <option value="linear">Linear Regression (default)</option>
-        <option value="matrix">Matrix Method</option>
-        <option value="variance">Variance Ratio</option>
-        <option value="weibull">Weibull Ratio</option>
-      </select>
-    </div>
-    <button class="btn pri" style="width:100%;margin-bottom:5px" onclick="runMCP()">↺ Download ERA5 LT + Run MCP</button>
-    <div class="prg"><div id="mcpPb" class="pb"></div></div>
-    <div id="mcpPt" class="pt">—</div>
-    <div id="mcpOut" style="display:none;margin-top:7px">
-      <div class="sg">
-        <div class="sc2"><div class="sv" id="mcpCW">—</div><div class="sl">Conc. WS (m/s)</div></div>
-        <div class="sc2"><div class="sv" id="mcpLW">—</div><div class="sl">LT WS (m/s)</div></div>
-        <div class="sc2"><div class="sv" id="mcpFc">—</div><div class="sl">LT Factor</div></div>
-        <div class="sc2"><div class="sv" id="mcpR2">—</div><div class="sl">R²</div></div>
-      </div>
-      <div id="mcpPvals" class="ibox" style="font-size:10px;line-height:1.8;margin-top:4px"></div>
-      <div id="mcpSectWrap" style="margin-top:6px;max-height:200px;overflow-y:auto"></div>
-    </div>
-  </div>
-</div><!-- /mcp -->
-
-<!-- TIME SERIES TAB -->
-<div id="sp-ts" class="sp2">
-  <div class="sec">
-    <div class="sh">⏱ TIME SERIES SIMULATION</div>
-    <div class="ibox">Pre-binned wake model · ~100× faster · ERA5 hourly → per-turbine power</div>
-    <div class="r2">
-      <div class="fld"><label>Start Year</label><input id="tsSy" type="number" value="2022"></div>
-      <div class="fld"><label>End Year</label><input id="tsEy" type="number" value="2022"></div>
-    </div>
-    <div class="fld"><label>Time Step</label>
-      <select id="tsStep"><option value="1">1-hour</option><option value="3" selected>3-hour (faster)</option><option value="6">6-hour</option></select>
-    </div>
-    <button class="btn pri" style="width:100%;margin-bottom:5px" onclick="runTimeSeries()">⏱ Run Time Series</button>
-    <div class="prg"><div id="tsPb" class="pb"></div></div>
-    <div id="tsPt" class="pt">—</div>
-    <div id="tsOut" style="display:none;margin-top:7px">
-      <div class="sg">
-        <div class="sc2"><div class="sv" id="tsRc">—</div><div class="sl">Records</div></div>
-        <div class="sc2"><div class="sv" id="tsNt">—</div><div class="sl">Net GWh/yr</div></div>
-        <div class="sc2"><div class="sv" id="tsWk">—</div><div class="sl">Wake Loss %</div></div>
-        <div class="sc2"><div class="sv" id="tsCf">—</div><div class="sl">Cap.Factor %</div></div>
-      </div>
-      <div class="cw" style="height:130px;margin-top:6px"><canvas id="monthChart"></canvas></div>
-      <div class="cw" style="height:110px"><canvas id="diurnChart"></canvas></div>
-      <button class="btn" style="width:100%;margin-top:4px;font-size:9px" onclick="exportTSCSV()">↓ Export Hourly CSV</button>
-    </div>
-  </div>
-</div><!-- /ts -->
-
-</div><!-- /sc -->
-</div><!-- /side -->
-
-<!-- MAP -->
-<div id="mapw">
-  <div id="map"></div>
-  <div id="mapOverlay">
-    Cursor: <span id="ovLat">—</span>, <span id="ovLon">—</span><br>
-    Elevation: <span id="ovEl">—</span> | Hub WS: <span id="ovWS">—</span>
+  <div class="r3"><div class="fld"><label>Rated (kW)</label><input id="ratedPow" type="number" value="4000"></div><div class="fld"><label>Wake k</label><input id="wakeK" type="number" value="0.04" step="0.005"></div><div class="fld"><label>Losses %</label><input id="otherLoss" type="number" value="5" step="0.5"></div></div>
+  <div class="r2">
+    <div class="fld"><label>Wake Model</label><select id="wakeModel"><option value="jensen">Jensen/PARK</option><option value="eddy">Eddy Viscosity</option></select></div>
+    <div class="fld"><label>Sectors</label><select id="sects"><option value="12">12</option><option value="16" selected>16</option><option value="24">24</option></select></div>
   </div>
 </div>
-
-<!-- RIGHT PANEL -->
+<div class="sec"><div class="sh">② TURBINE LAYOUT
+  <button class="btn" style="padding:2px 5px;font-size:9px" onclick="$('impCSV').click()">📍 CSV</button>
+  <input id="impCSV" type="file" accept=".csv" style="display:none" onchange="importLayout(event)">
+</div>
+  <div class="ibox" style="padding:5px">
+    <div style="font-size:9px;margin-bottom:4px;color:var(--muted)">⊞ GRID GENERATOR</div>
+    <div class="r3"><div class="fld"><label>Rows</label><input id="gR" type="number" value="2" min="1" max="15"></div><div class="fld"><label>Cols</label><input id="gC" type="number" value="5" min="1" max="15"></div><div class="fld"><label>Spac(D)</label><input id="gS" type="number" value="7" min="3" max="20" step="0.5"></div></div>
+    <div class="r2"><div class="fld"><label>Center Lat</label><input id="gLat" type="number" value="55.500" step="0.001"></div><div class="fld"><label>Center Lon</label><input id="gLon" type="number" value="7.900" step="0.001"></div></div>
+    <button class="btn" style="width:100%" onclick="generateGrid()">⊞ Generate Grid</button>
+  </div>
+  <div class="ibox" style="padding:5px">
+    <div style="font-size:9px;margin-bottom:3px;color:var(--muted)">➕ ADD MANUALLY (or click map)</div>
+    <div class="r2"><div class="fld"><label>Lat</label><input id="manLat" type="number" step="0.0001"></div><div class="fld"><label>Lon</label><input id="manLon" type="number" step="0.0001"></div></div>
+    <button class="btn" style="width:100%" onclick="addManual()">➕ Add Turbine</button>
+  </div>
+  <div id="tCnt" style="font-size:9px;color:var(--muted);margin-bottom:3px">0 turbines</div>
+  <div style="max-height:110px;overflow-y:auto;border:1px solid var(--bdr);border-radius:3px">
+    <table class="dtbl"><thead><tr><th>#</th><th>Lat</th><th>Lon</th><th>HH</th><th>Elev</th><th>✕</th></tr></thead><tbody id="tbody"></tbody></table>
+  </div>
+  <div style="display:flex;gap:4px;margin-top:4px">
+    <button class="btn" style="flex:1;color:var(--red);border-color:var(--red);font-size:9px" onclick="clearTurbines()">🗑 Clear</button>
+    <button class="btn" style="flex:1;font-size:9px" onclick="exportLayoutCSV()">↓ CSV</button>
+    <button class="btn" style="flex:1;font-size:9px" onclick="exportLayoutKML()">↓ KML</button>
+  </div>
+</div>
+<div class="sec"><div class="sh">③ WIND DATA &amp; MAST
+  <button class="btn" style="padding:2px 5px;font-size:9px" onclick="$('impWind').click()">💨 Import</button>
+  <input id="impWind" type="file" accept=".csv,.tab" style="display:none" onchange="importWind(event)">
+</div>
+  <div class="r2"><div class="fld"><label>Mast Height (m)</label><input id="mastH" type="number" value="100"></div>
+    <div class="fld"><label>Roughness z₀ (m)</label>
+      <select id="z0sel" onchange="$('z0val').value=this.value;calcDensity()"><option value="0.0002" selected>0.0002 Offshore</option><option value="0.03">0.03 Open flat</option><option value="0.10">0.10 Agricultural</option><option value="0.40">0.40 Obstacles</option><option value="1.50">1.50 Urban</option></select>
+    </div>
+  </div>
+  <div class="r2"><div class="fld"><label>Mast Lat</label><input id="mastLat" type="number" value="55.500" step="0.001"></div><div class="fld"><label>Mast Lon</label><input id="mastLon" type="number" value="7.900" step="0.001"></div></div>
+  <div style="display:none"><input id="z0val" value="0.0002"></div>
+  <div id="windStat" style="font-size:9px;color:var(--muted)">No wind data — ERA5 tab or Import</div>
+</div>
+<div class="sec"><div class="sh">④ ATMOSPHERE</div>
+  <div class="r3"><div class="fld"><label>Elev (m)</label><input id="siteElev" type="number" value="0" oninput="calcDensity()"></div><div class="fld"><label>Temp (°C)</label><input id="siteTemp" type="number" value="10" oninput="calcDensity()"></div><div class="fld"><label>ρ (kg/m³)</label><input id="airDen" type="number" value="1.225" step="0.001"></div></div>
+  <div class="r2"><div class="fld"><label>Shear α</label><input id="shearA" type="number" value="0.14" step="0.01"></div><div class="fld"><label>Stability</label><select id="stab"><option value="N" selected>Neutral</option><option value="O">Offshore</option><option value="S">Stable</option></select></div></div>
+</div>
+<div class="sec"><div class="sh">ENGINE LOG <button class="btn" style="padding:1px 5px;font-size:8px" onclick="$('elog').innerHTML=''">Clr</button></div><div id="elog"></div></div>
+</div>
+<div id="sp-bnd" class="sp2">
+<div class="sec"><div class="sh">✏ WIND FARM BOUNDARY</div>
+  <div class="ibox">Click "Draw Boundary" (top bar) → click map → double-click or "Close Poly" to finish. Then set target MW and optimize.</div>
+  <div id="bndStats" style="font-size:9px;color:var(--muted);margin-bottom:6px">No boundary defined</div>
+</div>
+<div class="sec"><div class="sh">⚡ CAPACITY-BASED OPTIMIZER</div>
+  <div class="r2"><div class="fld"><label>Target Capacity (MW)</label><input id="targetMW" type="number" value="100" min="1"></div><div class="fld"><label>Min Spacing (D)</label><input id="minSpacD" type="number" value="5" min="3" max="15" step="0.5"></div></div>
+  <div class="r2">
+    <div class="fld"><label>Layout Pattern</label><select id="layoutPat"><option value="grid">Regular Grid</option><option value="stagger">Staggered Rows</option><option value="wind">Wind-optimized</option></select></div>
+    <div class="fld"><label>Prevail. Wind Dir (°)</label><input id="prevWD" type="number" value="270" min="0" max="359"></div>
+  </div>
+  <button class="btn pri" style="width:100%;margin-bottom:4px" onclick="optimizeLayout()">⚡ Optimize Layout to Target MW</button>
+  <div id="optResult" style="font-size:9px;color:var(--muted)">—</div>
+</div>
+<div class="sec"><div class="sh">⬇ TERRAIN + ROUGHNESS IN BOUNDARY</div>
+  <div class="r2"><div class="fld"><label>Grid Res</label><select id="bndGrid"><option value="20" selected>20×20</option><option value="30">30×30</option></select></div><div class="fld"><label>Contour Int</label><select id="bndCI"><option value="auto" selected>Auto</option><option value="5">5m</option><option value="10">10m</option><option value="20">20m</option></select></div></div>
+  <button class="btn" style="width:100%;margin-bottom:4px" onclick="downloadTerrainBoundary()">⬇ Terrain within Boundary</button>
+  <button class="btn" style="width:100%;margin-bottom:4px" onclick="downloadRoughness()">⬇ OSM Roughness Map</button>
+  <div id="roughStat" style="font-size:9px;color:var(--muted)">—</div>
+</div>
+</div>
+<div id="sp-era5" class="sp2">
+<div class="sec"><div class="sh">⬇ ERA5 / ERA5T (Open-Meteo)</div>
+  <div class="ibox">Free · No key · Parallel year batching · 1940→present (ERA5T for recent)</div>
+  <div class="r2"><div class="fld"><label>Latitude</label><input id="e5La" type="number" value="55.50" step="0.01"></div><div class="fld"><label>Longitude</label><input id="e5Lo" type="number" value="7.90" step="0.01"></div></div>
+  <div class="r2"><div class="fld"><label>From Year</label><input id="e5Sy" type="number" value="2020" min="1940" max="2025"></div><div class="fld"><label>To Year</label><input id="e5Ey" type="number" value="2023" min="1940" max="2025"></div></div>
+  <div class="fld"><label>Height</label><select id="e5H"><option value="100" selected>100m (ERA5/ERA5T)</option><option value="10">10m</option></select></div>
+  <button class="btn pri" style="width:100%;margin-bottom:5px" onclick="downloadERA5()">⬇ Download ERA5/ERA5T (Parallel)</button>
+  <div class="prg"><div id="e5pb" class="pb"></div></div><div id="e5pt" class="pt">—</div>
+  <div id="e5out" style="display:none;margin-top:6px">
+    <div class="sg">
+      <div class="sc2"><div class="sv" id="e5WS">—</div><div class="sl">Mean WS m/s</div></div>
+      <div class="sc2"><div class="sv" id="e5RC">—</div><div class="sl">Records</div></div>
+      <div class="sc2"><div class="sv" id="e5WA">—</div><div class="sl">Weibull A</div></div>
+      <div class="sc2"><div class="sv" id="e5WK">—</div><div class="sl">Weibull k</div></div>
+      <div class="sc2"><div class="sv" id="e5PD">—</div><div class="sl">Power Density W/m²</div></div>
+      <div class="sc2"><div class="sv" id="e5EL">—</div><div class="sl">ERA5 Elevation m</div></div>
+    </div>
+    <div class="cw" style="height:110px"><canvas id="e5Chart"></canvas></div>
+    <div style="display:flex;gap:4px;margin-top:4px">
+      <button class="btn" style="flex:1;font-size:9px" onclick="exportWindCSV()">↓ CSV</button>
+      <button class="btn" style="flex:1;font-size:9px" onclick="exportWindTab()">↓ WAsP .tab</button>
+    </div>
+  </div>
+</div>
+</div>
+<div id="sp-terr" class="sp2">
+<div class="sec"><div class="sh">⬇ TERRAIN (Canvas — Optimised)</div>
+  <div class="ibox">Parallel fetches · Canvas rendering · ~20× faster · Georeferenced marching squares</div>
+  <div class="r2"><div class="fld"><label>Domain Radius (km)</label><input id="terrR" type="number" value="10" min="2" max="50"></div><div class="fld"><label>Grid</label><select id="terrG"><option value="20" selected>20×20 fast</option><option value="30">30×30</option><option value="40">40×40</option></select></div></div>
+  <div class="r2"><div class="fld"><label>Center Lat</label><input id="terrLa" type="number" value="55.500" step="0.001"></div><div class="fld"><label>Center Lon</label><input id="terrLo" type="number" value="7.900" step="0.001"></div></div>
+  <div class="r2">
+    <div class="fld"><label>Contour Int (m)</label><select id="terrCI"><option value="auto" selected>Auto</option><option value="5">5m</option><option value="10">10m</option><option value="20">20m</option><option value="50">50m</option></select></div>
+    <div class="fld"><label>Opacity</label><input id="terrOp" type="range" min="0" max="1" step="0.05" value="0.5" oninput="redrawCanvas()"></div>
+  </div>
+  <button class="btn pri" style="width:100%;margin-bottom:5px" onclick="downloadTerrain()">⬇ Download + Draw Contours</button>
+  <div class="prg"><div id="terrPb" class="pb"></div></div><div id="terrPt" class="pt">—</div>
+  <div id="terrOut" style="display:none;margin-top:6px">
+    <div class="sg">
+      <div class="sc2"><div class="sv" id="terrMin">—</div><div class="sl">Min Elev m</div></div>
+      <div class="sc2"><div class="sv" id="terrMax">—</div><div class="sl">Max Elev m</div></div>
+      <div class="sc2"><div class="sv" id="terrMn">—</div><div class="sl">Mean Elev m</div></div>
+      <div class="sc2"><div class="sv" id="terrCI2">—</div><div class="sl">Contour Int m</div></div>
+    </div>
+    <div class="cw" style="height:110px"><canvas id="terrChart"></canvas></div>
+    <div style="margin-top:4px;font-size:9px;color:var(--muted)">
+      Layers:
+      <button id="btnCont" onclick="toggleCont()" style="padding:2px 6px;font-size:9px;border:1px solid var(--acc);background:rgba(88,166,255,.1);color:var(--acc);cursor:pointer;border-radius:2px">✓ Contours</button>
+      <button id="btnHeat" onclick="toggleHeat()" style="padding:2px 6px;font-size:9px;border:1px solid var(--acc);background:rgba(88,166,255,.1);color:var(--acc);cursor:pointer;border-radius:2px">✓ Heat</button>
+    </div>
+  </div>
+  <div style="margin-top:6px">
+    <button class="btn" style="width:100%;font-size:9px" onclick="verifyTurbineElevations()">🔍 Fetch Turbine Elevations</button>
+    <div id="elevTable" style="margin-top:4px;max-height:120px;overflow-y:auto"></div>
+  </div>
+</div>
+</div>
+<div id="sp-mcp" class="sp2">
+<div class="sec"><div class="sh">↺ MCP LONG-TERM CORRECTION</div>
+  <div class="ibox">ERA5 LT parallel download · WindPRO-equivalent · Requires wind data loaded first</div>
+  <div class="r2"><div class="fld"><label>LT Start Year</label><input id="mcpSy" type="number" value="1991"></div><div class="fld"><label>LT End Year</label><input id="mcpEy" type="number" value="2020"></div></div>
+  <div class="fld"><label>MCP Method</label>
+    <select id="mcpMeth"><option value="linear">Linear Regression</option><option value="matrix">Matrix Method</option><option value="variance">Variance Ratio</option><option value="weibull">Weibull Ratio</option></select>
+  </div>
+  <button class="btn pri" style="width:100%;margin-bottom:5px" onclick="runMCP()">↺ Download ERA5 LT + Run MCP</button>
+  <div class="prg"><div id="mcpPb" class="pb"></div></div><div id="mcpPt" class="pt">—</div>
+  <div id="mcpOut" style="display:none;margin-top:6px">
+    <div class="sg">
+      <div class="sc2"><div class="sv" id="mcpCW">—</div><div class="sl">Conc. WS</div></div>
+      <div class="sc2"><div class="sv" id="mcpLW">—</div><div class="sl">LT WS</div></div>
+      <div class="sc2"><div class="sv" id="mcpFc">—</div><div class="sl">LT Factor</div></div>
+      <div class="sc2"><div class="sv" id="mcpR2">—</div><div class="sl">R²</div></div>
+    </div>
+    <div id="mcpPvals" class="ibox" style="font-size:9px;margin-top:4px;line-height:1.8"></div>
+  </div>
+</div>
+</div>
+<div id="sp-ts" class="sp2">
+<div class="sec"><div class="sh">⏱ TIME SERIES (Pre-binned, Fast)</div>
+  <div class="ibox">~50× faster · Pre-bins wind states · ERA5 → hub height → wake → hourly power</div>
+  <div class="r2"><div class="fld"><label>Start Year</label><input id="tsSy" type="number" value="2022"></div><div class="fld"><label>End Year</label><input id="tsEy" type="number" value="2022"></div></div>
+  <div class="fld"><label>Time Step</label><select id="tsStep"><option value="1">1-hour</option><option value="3" selected>3-hour</option><option value="6">6-hour</option></select></div>
+  <button class="btn pri" style="width:100%;margin-bottom:5px" onclick="runTimeSeries()">⏱ Run Time Series</button>
+  <div class="prg"><div id="tsPb" class="pb"></div></div><div id="tsPt" class="pt">—</div>
+  <div id="tsOut" style="display:none;margin-top:6px">
+    <div class="sg">
+      <div class="sc2"><div class="sv" id="tsRc">—</div><div class="sl">Records</div></div>
+      <div class="sc2"><div class="sv" id="tsNt">—</div><div class="sl">Net GWh/yr</div></div>
+      <div class="sc2"><div class="sv" id="tsWk">—</div><div class="sl">Wake Loss %</div></div>
+      <div class="sc2"><div class="sv" id="tsCf">—</div><div class="sl">Cap.Factor %</div></div>
+    </div>
+    <div class="cw" style="height:120px;margin-top:6px"><canvas id="monthChart"></canvas></div>
+    <div class="cw" style="height:100px"><canvas id="diurnChart"></canvas></div>
+    <button class="btn" style="width:100%;margin-top:4px;font-size:9px" onclick="exportTSCSV()">↓ Hourly CSV</button>
+  </div>
+</div>
+</div>
+</div></div>
+<div id="mapw">
+  <div id="map"></div>
+  <canvas id="contCanvas"></canvas>
+  <div id="drawStatus"></div>
+  <div id="mapInfo">Lat: <span id="ovLat">—</span> Lon: <span id="ovLon">—</span><br>Elev: <span id="ovEl">—</span> | Hub WS: <span id="ovWS">—</span></div>
+</div>
 <div id="rside">
 <div id="rtabs">
   <button class="rtab on" data-rtab="aep">AEP</button>
+  <button class="rtab" data-rtab="wsc">WS CHAIN</button>
   <button class="rtab" data-rtab="wind">WIND</button>
-  <button class="rtab" data-rtab="gwc">GWC/SWC</button>
+  <button class="rtab" data-rtab="gwc">GWC</button>
 </div>
 <div id="rc">
-
-<!-- AEP -->
 <div id="rp-aep" class="rp on">
-  <div class="sec">
-    <div class="sh">ENERGY YIELD SUMMARY</div>
-    <div class="sg">
-      <div class="sc2"><div class="sv" id="rWS">—</div><div class="sl">Hub WS (m/s)</div></div>
-      <div class="sc2"><div class="sv" id="rDen">—</div><div class="sl">ρ (kg/m³)</div></div>
-      <div class="sc2"><div class="sv" id="rGross">—</div><div class="sl">Gross AEP (GWh)</div></div>
-      <div class="sc2"><div class="sv" id="rWake">—</div><div class="sl">Wake Loss (%)</div></div>
-      <div class="sc2"><div class="sv" id="rNet">—</div><div class="sl">Net AEP (GWh)</div></div>
-      <div class="sc2"><div class="sv" id="rCF">—</div><div class="sl">Cap.Factor (%)</div></div>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="sh">P-EXCEEDANCE</div>
-    <div id="pexc" class="ibox" style="font-size:10px">Run analysis to see P-values</div>
-  </div>
-  <div class="sec">
-    <div class="sh">PER-TURBINE AEP</div>
-    <div style="max-height:180px;overflow-y:auto">
-      <table class="dtbl"><thead><tr><th>T#</th><th>WS</th><th>Gross</th><th>Wake%</th><th>Net GWh</th><th>CF%</th></tr></thead>
-      <tbody id="aepBody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:6px">Run analysis</td></tr></tbody></table>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="sh">AEP BY TURBINE</div>
-    <div class="cw" style="height:140px"><canvas id="aepChart"></canvas></div>
-  </div>
-  <div class="sec">
-    <div class="sh">OROGRAPHIC + SHEAR</div>
-    <div class="sg">
-      <div class="sc2"><div class="sv" id="rRIX">—</div><div class="sl">Mean RIX (%)</div></div>
-      <div class="sc2"><div class="sv" id="rSU">—</div><div class="sl">Max Speedup</div></div>
-      <div class="sc2"><div class="sv" id="rShr">—</div><div class="sl">Shear α</div></div>
-      <div class="sc2"><div class="sv" id="rTI">—</div><div class="sl">Mean TI (%)</div></div>
-    </div>
-    <div class="cw" style="height:110px"><canvas id="shearChart"></canvas></div>
+<div class="sec"><div class="sh">ENERGY YIELD</div>
+  <div class="sg">
+    <div class="sc2"><div class="sv" id="rWS">—</div><div class="sl">Hub WS m/s</div></div>
+    <div class="sc2"><div class="sv" id="rDen">—</div><div class="sl">ρ kg/m³</div></div>
+    <div class="sc2"><div class="sv" id="rGross">—</div><div class="sl">Gross AEP GWh</div></div>
+    <div class="sc2"><div class="sv" id="rWake">—</div><div class="sl">Wake Loss %</div></div>
+    <div class="sc2"><div class="sv" id="rNet">—</div><div class="sl">Net AEP GWh</div></div>
+    <div class="sc2"><div class="sv" id="rCF">—</div><div class="sl">Cap.Factor %</div></div>
   </div>
 </div>
-
-<!-- WIND -->
+<div class="sec"><div class="sh">P-EXCEEDANCE</div><div id="pexc" class="ibox" style="font-size:9px">Run analysis</div></div>
+<div class="sec"><div class="sh">PER-TURBINE AEP</div>
+  <div style="max-height:155px;overflow-y:auto">
+    <table class="dtbl"><thead><tr><th>T#</th><th>WS</th><th>Gross</th><th>Wake%</th><th>Net GWh</th><th>CF%</th></tr></thead>
+    <tbody id="aepBody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:5px">Run analysis</td></tr></tbody></table>
+  </div>
+</div>
+<div class="sec"><div class="sh">AEP BY TURBINE</div><div class="cw" style="height:125px"><canvas id="aepChart"></canvas></div></div>
+<div class="sec"><div class="sh">SHEAR + OROGRAPHY</div>
+  <div class="sg"><div class="sc2"><div class="sv" id="rRIX">—</div><div class="sl">RIX %</div></div><div class="sc2"><div class="sv" id="rShr">—</div><div class="sl">Shear α</div></div></div>
+  <div class="cw" style="height:95px"><canvas id="shearChart"></canvas></div>
+</div>
+</div>
+<div id="rp-wsc" class="rp">
+<div class="sec"><div class="sh">WIND SPEED CHAIN REPORT</div>
+  <div class="ibox" style="font-size:9px">Full WS transformation: Mast OWC → log extrapolation to hub → MCP LT → Weibull → wake per turbine</div>
+  <div id="wscChain">Run analysis to see WS chain</div>
+</div>
+<div class="sec"><div class="sh">PER-TURBINE WS BREAKDOWN</div>
+  <div style="max-height:230px;overflow-y:auto">
+    <table class="dtbl"><thead><tr><th>T#</th><th>Free WS</th><th>Wake Δ%</th><th>Net WS</th><th>Power kW</th><th>Avail%</th></tr></thead>
+    <tbody id="wscBody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:5px">Run analysis</td></tr></tbody></table>
+  </div>
+</div>
+<div class="sec"><div class="sh">WEIBULL: MAST vs HUB HEIGHT</div><div class="cw" style="height:125px"><canvas id="wscChart"></canvas></div></div>
+</div>
 <div id="rp-wind" class="rp">
-  <div class="sec">
-    <div class="sh">WIND STATISTICS</div>
-    <div class="sg">
-      <div class="sc2"><div class="sv" id="wMean">—</div><div class="sl">Mean WS (m/s)</div></div>
-      <div class="sc2"><div class="sv" id="wPD">—</div><div class="sl">Power Density W/m²</div></div>
-      <div class="sc2"><div class="sv" id="wA">—</div><div class="sl">Weibull A</div></div>
-      <div class="sc2"><div class="sv" id="wK">—</div><div class="sl">Weibull k</div></div>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="sh">WIND ROSE (OWC)</div>
-    <canvas id="roseCanvas" width="275" height="210" style="display:block;margin:0 auto"></canvas>
-  </div>
-  <div class="sec">
-    <div class="sh">WEIBULL DISTRIBUTION</div>
-    <div class="cw" style="height:130px"><canvas id="wbChart"></canvas></div>
-  </div>
-  <div class="sec">
-    <div class="sh">SECTOR TABLE (OWC at hub height)</div>
-    <div style="max-height:200px;overflow-y:auto">
-      <table class="dtbl"><thead><tr><th>Dir</th><th>Freq%</th><th>A(m/s)</th><th>k</th><th>WS</th></tr></thead>
-      <tbody id="sectBody"></tbody></table>
-    </div>
+<div class="sec"><div class="sh">WIND STATISTICS</div>
+  <div class="sg">
+    <div class="sc2"><div class="sv" id="wMean">—</div><div class="sl">Mean WS m/s</div></div>
+    <div class="sc2"><div class="sv" id="wPD">—</div><div class="sl">Power Density W/m²</div></div>
+    <div class="sc2"><div class="sv" id="wA">—</div><div class="sl">Weibull A</div></div>
+    <div class="sc2"><div class="sv" id="wK">—</div><div class="sl">Weibull k</div></div>
   </div>
 </div>
-
-<!-- GWC/SWC -->
+<div class="sec"><div class="sh">WIND ROSE (OWC)</div><canvas id="roseCanvas" width="270" height="195" style="display:block;margin:0 auto"></canvas></div>
+<div class="sec"><div class="sh">WEIBULL DISTRIBUTION</div><div class="cw" style="height:115px"><canvas id="wbChart"></canvas></div></div>
+<div class="sec"><div class="sh">SECTOR TABLE</div>
+  <div style="max-height:185px;overflow-y:auto">
+    <table class="dtbl"><thead><tr><th>Dir</th><th>Freq%</th><th>A</th><th>k</th><th>WS</th></tr></thead><tbody id="sectBody"></tbody></table>
+  </div>
+</div>
+</div>
 <div id="rp-gwc" class="rp">
-  <div class="sec">
-    <div class="sh">OWC → GWC → SWC</div>
-    <div class="ibox" style="font-size:9px">OWC=Observed (mast) · GWC=Geostrophic (log profile correction) · SWC=Site hub-height</div>
-    <div style="max-height:250px;overflow-y:auto">
-      <table class="dtbl" id="gwcTbl">
-        <thead><tr><th>Dir</th><th>Freq%</th><th>OWC A</th><th>OWC k</th><th>GWC A</th><th>SWC A</th><th>SR</th></tr></thead>
-        <tbody id="gwcBody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:6px">Run analysis</td></tr></tbody>
-      </table>
-    </div>
-    <div style="display:flex;gap:4px;margin-top:6px">
-      <button class="btn" style="flex:1;font-size:9px" onclick="exportGWCCSV()">↓ GWC CSV</button>
-      <button class="btn" style="flex:1;font-size:9px" onclick="exportSectorCSV()">↓ Sector CSV</button>
-    </div>
+<div class="sec"><div class="sh">OWC → GWC → SWC</div>
+  <div class="sg">
+    <div class="sc2"><div class="sv" id="gcZ0">—</div><div class="sl">z₀ m</div></div>
+    <div class="sc2"><div class="sv" id="gcSR">—</div><div class="sl">Mean SR</div></div>
+    <div class="sc2"><div class="sv" id="gcWS">—</div><div class="sl">GWC WS</div></div>
+    <div class="sc2"><div class="sv" id="gcSW">—</div><div class="sl">SWC WS</div></div>
   </div>
-  <div class="sec">
-    <div class="sh">ROUGHNESS CORRECTION</div>
-    <div class="sg">
-      <div class="sc2"><div class="sv" id="gcZ0">—</div><div class="sl">z₀ (m)</div></div>
-      <div class="sc2"><div class="sv" id="gcSR">—</div><div class="sl">Mean SR</div></div>
-      <div class="sc2"><div class="sv" id="gcWS">—</div><div class="sl">GWC WS (m/s)</div></div>
-      <div class="sc2"><div class="sv" id="gcSW">—</div><div class="sl">SWC WS (m/s)</div></div>
-    </div>
-  </div>
-  <div class="sec">
-    <div class="sh">SHEAR PROFILE (log law)</div>
-    <div class="cw" style="height:140px"><canvas id="shearChart2"></canvas></div>
+  <div style="max-height:225px;overflow-y:auto">
+    <table class="dtbl"><thead><tr><th>Dir</th><th>Freq%</th><th>OWC A</th><th>OWC k</th><th>GWC A</th><th>SWC A</th><th>SR</th></tr></thead>
+    <tbody id="gwcBody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:5px">Run analysis</td></tr></tbody></table>
   </div>
 </div>
-
-</div><!-- /rc -->
-</div><!-- /rside -->
-</div><!-- /main -->
-
+<div class="sec"><div class="sh">SHEAR PROFILE (log law)</div><div class="cw" style="height:135px"><canvas id="shearChart2"></canvas></div></div>
+</div>
+</div></div>
+</div>
 <div id="sbar">
   <div>Project: <span id="sbProj">New Project</span></div>
   <div>WTGs: <span id="sbN">0</span></div>
-  <div>Domain: <span id="sbDom">—</span></div>
+  <div>Capacity: <span id="sbCap">—</span></div>
   <div>Net AEP: <span id="sbAEP">—</span></div>
   <div style="margin-left:auto">Cursor: <span id="sbXY">—</span></div>
 </div>
 
+
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 7.0 — FULL ENGINE  (FIXED: contours, ERA5T, GWC, TS)
+// WINDFLOW PRO 7.1  — Canvas Contours · Boundary Optimizer · WS Chain
 // ═══════════════════════════════════════════════════════════════════
 const $=id=>document.getElementById(id);
-const fN=(v,d=2)=>isNaN(+v)||v===null?'—':(+v).toFixed(d);
 function log(m,t='i'){const d=$('elog');const s=document.createElement('span');s.className={i:'li',w:'lw',e:'le'}[t]||'li';s.textContent=`[${new Date().toLocaleTimeString()}] ${m}\n`;d.appendChild(s);d.scrollTop=1e6}
 function setProg(id,p,t){$(id+'pb').style.width=p+'%';$(id+'pt').textContent=t}
 function setStatus(s){$('tbst').textContent=s}
 
 // ── STATE ──
-const S={turbines:[],wind:null,era5Raw:null,mcpFactor:1.0,tsData:null,results:null,markers:[],contourLayers:[],heatLayers:[],charts:{},terrain:null,contourGeoJSON:null};
+const S={
+  turbines:[],wind:null,era5Raw:null,mcpFactor:1.0,
+  tsData:null,results:null,markers:[],
+  terrain:null,contoursData:[],
+  showContours:true,showHeat:true,
+  boundary:[],boundaryLayer:null,boundaryMarkers:[],
+  drawMode:false,charts:{}
+};
 
 // ── POWER CURVES ──
 const PCL={
@@ -520,576 +396,516 @@ const PCL={
     pw:[0,0,0,100,400,900,1600,2500,3600,4700,5500,5850,5970,6000,6000,6000,6000,6000,6000,6000,6000,6000,6000,6000,6000,0],
     ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]}
 };
-
 function getPC(){return PCL[$('tcls').value]||PCL['4mw'];}
-function applyPreset(){const p=getPC();if(p){$('hubH').value=p.hh;$('rotD').value=p.D;$('ratedPow').value=p.rated;}}
-
-// ── POWER CURVE LOOKUP TABLE (fast) ──
-function buildPCLUT(pc){
-  const step=0.05,n=Math.ceil(30/step)+1;
-  const pow=new Float32Array(n),ct=new Float32Array(n);
-  for(let i=0;i<n;i++){const r=interpPC(i*step,pc);pow[i]=r.power;ct[i]=r.ct;}
-  return{pow,ct,step};
-}
-function lutLookup(lut,ws){const i=Math.min(Math.floor(ws/lut.step),lut.pow.length-1);return{power:lut.pow[i],ct:lut.ct[i]};}
+function applyPreset(){const p=getPC();$('hubH').value=p.hh;$('rotD').value=p.D;$('ratedPow').value=p.rated;}
 
 // ── MATH ──
-function gamma(n){
-  if(n<0.5)return Math.PI/(Math.sin(Math.PI*n)*gamma(1-n));
-  n-=1;const c=[.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
-  let x=c[0];for(let i=1;i<9;i++)x+=c[i]/(n+i);const t=n+7.5;return Math.sqrt(2*Math.PI)*Math.pow(t,n+.5)*Math.exp(-t)*x;
-}
-function weibullFit(vs){
-  const v=vs.filter(x=>x>.5);if(v.length<10)return{A:8,k:2};
-  const n=v.length,mlv=v.reduce((s,x)=>s+Math.log(x),0)/n;
-  let k=2;
-  for(let it=0;it<100;it++){
-    const sk=v.reduce((s,x)=>s+x**k,0),slk=v.reduce((s,x)=>s+x**k*Math.log(x),0),sl2=v.reduce((s,x)=>s+x**k*Math.log(x)**2,0);
-    const f=slk/sk-1/k-mlv,fp=sl2/sk-(slk/sk)**2+1/k**2;
-    const dk=f/fp;k-=dk;if(Math.abs(dk)<1e-8)break;k=Math.max(.3,Math.min(20,k));
-  }
-  return{A:Math.max(.1,Math.pow(v.reduce((s,x)=>s+x**k,0)/n,1/k)),k};
-}
+function gamma(n){if(n<.5)return Math.PI/(Math.sin(Math.PI*n)*gamma(1-n));n-=1;const c=[.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];let x=c[0];for(let i=1;i<9;i++)x+=c[i]/(n+i);const t=n+7.5;return Math.sqrt(2*Math.PI)*Math.pow(t,n+.5)*Math.exp(-t)*x;}
+function weibullFit(vs){const v=vs.filter(x=>x>.5);if(v.length<10)return{A:8,k:2};const n=v.length,mlv=v.reduce((s,x)=>s+Math.log(x),0)/n;let k=2;for(let it=0;it<100;it++){const sk=v.reduce((s,x)=>s+x**k,0),slk=v.reduce((s,x)=>s+x**k*Math.log(x),0),sl2=v.reduce((s,x)=>s+x**k*Math.log(x)**2,0);const f=slk/sk-1/k-mlv,fp=sl2/sk-(slk/sk)**2+1/k**2;const dk=f/fp;k-=dk;if(Math.abs(dk)<1e-8)break;k=Math.max(.3,Math.min(20,k));}return{A:Math.max(.1,Math.pow(v.reduce((s,x)=>s+x**k,0)/n,1/k)),k};}
 function wbPdf(v,A,k){return v<=0?0:(k/A)*Math.pow(v/A,k-1)*Math.exp(-Math.pow(v/A,k));}
-function interpPC(ws,pc){
-  const{ws:w,pw:p,ct:c}=pc;
-  if(ws<=w[0])return{power:0,ct:c[0]||0};if(ws>=w[w.length-1])return{power:0,ct:0};
-  for(let i=0;i<w.length-1;i++)if(ws>=w[i]&&ws<w[i+1]){const t=(ws-w[i])/(w[i+1]-w[i]);return{power:p[i]+t*(p[i+1]-p[i]),ct:c[i]+t*(c[i+1]-c[i])};}
-  return{power:0,ct:0};
-}
+function interpPC(ws,pc){const{ws:w,pw:p,ct:c}=pc;if(ws<=w[0])return{power:0,ct:c[0]||0};if(ws>=w[w.length-1])return{power:0,ct:0};for(let i=0;i<w.length-1;i++)if(ws>=w[i]&&ws<w[i+1]){const t=(ws-w[i])/(w[i+1]-w[i]);return{power:p[i]+t*(p[i+1]-p[i]),ct:c[i]+t*(c[i+1]-c[i])};}return{power:0,ct:0};}
 function logWS(ws,fromH,toH,z0){const k=Math.log(Math.max(fromH,z0*1.1)/z0);return k>0?ws*(Math.log(Math.max(toH,z0*1.1)/z0)/k):ws;}
-function powerLaw(ws,fromH,toH,alpha){return ws*Math.pow(toH/fromH,alpha);}
 function linReg(xs,ys){const n=xs.length;if(n<2)return{slope:1,intercept:0,R2:0};const xm=xs.reduce((s,v)=>s+v,0)/n,ym=ys.reduce((s,v)=>s+v,0)/n;const ssxy=xs.reduce((s,x,i)=>s+(x-xm)*(ys[i]-ym),0),ssx=xs.reduce((s,x)=>s+(x-xm)**2,0);const sl=ssx>0?ssxy/ssx:1,ic=ym-sl*xm;const sst=ys.reduce((s,y)=>s+(y-ym)**2,0),sse=ys.reduce((s,y,i)=>s+(y-sl*xs[i]-ic)**2,0);return{slope:sl,intercept:ic,R2:sst>0?1-sse/sst:0};}
 function stdDev(a){const m=a.reduce((s,v)=>s+v,0)/a.length;return Math.sqrt(a.reduce((s,v)=>s+(v-m)**2,0)/a.length);}
 function latLonToXY(ts){if(!ts.length)return[];const lat0=ts.reduce((s,t)=>s+t.lat,0)/ts.length,lon0=ts.reduce((s,t)=>s+t.lon,0)/ts.length;const mL=111320,mLo=111320*Math.cos(lat0*Math.PI/180);return ts.map(t=>({...t,x:(t.lon-lon0)*mLo,y:(t.lat-lat0)*mL}));}
 
+// Fast power LUT
+function buildLUT(pc){const step=.05,n=Math.ceil(30/step)+1;const pw=new Float32Array(n),ct=new Float32Array(n);for(let i=0;i<n;i++){const r=interpPC(i*step,pc);pw[i]=r.power;ct[i]=r.ct;}return{pw,ct,step};}
+function lutGet(lut,ws){const i=Math.min(Math.floor(ws/lut.step),lut.pw.length-1);return{power:lut.pw[i],ct:lut.ct[i]};}
+
 // ── WAKE MODELS ──
 function jensenWake(txy,ws,dir,lut,kw){
-  const n=txy.length;const sp=new Float32Array(n).fill(ws);
-  if(n<2)return sp;
-  const R=parseFloat($('rotD').value)/2;
-  const dr=dir*Math.PI/180,cd=Math.cos(dr),sd=Math.sin(dr);
+  const n=txy.length;const sp=new Float32Array(n).fill(ws);if(n<2)return sp;
+  const R=parseFloat($('rotD').value)/2,dr=dir*Math.PI/180,cd=Math.cos(dr),sd=Math.sin(dr);
   const xw=txy.map(t=>t.x*cd+t.y*sd),yw=txy.map(t=>-t.x*sd+t.y*cd);
-  for(let j=0;j<n;j++){
-    let dsq=0;
-    for(let i=0;i<n;i++){
-      if(i===j)continue;const dx=xw[j]-xw[i];if(dx<1)continue;
-      const dy=Math.abs(yw[j]-yw[i]),Rw=R+kw*dx;if(dy>Rw+R)continue;
-      let ov=1;
-      if(dy>0){const d=dy,a1=R*R*Math.acos(Math.min(1,Math.max(-1,(d*d+R*R-Rw*Rw)/(2*d*R)))),a2=Rw*Rw*Math.acos(Math.min(1,Math.max(-1,(d*d+Rw*Rw-R*R)/(2*d*Rw)))),a3=.5*Math.sqrt(Math.max(0,(-d+R+Rw)*(d+R-Rw)*(d-R+Rw)*(d+R+Rw)));ov=Math.min(1,Math.max(0,(a1+a2-a3)/(Math.PI*R*R)));}
-      if(ov<.005)continue;
-      const CT=lutLookup(lut,sp[i]).ct;
-      dsq+=(1-Math.sqrt(Math.max(0,1-CT)))**2*(R/Rw)**4*ov*ov;
-    }
-    if(dsq>0)sp[j]=Math.max(0,ws*(1-Math.sqrt(dsq)));
-  }
-  return sp;
+  for(let j=0;j<n;j++){let dsq=0;for(let i=0;i<n;i++){if(i===j)continue;const dx=xw[j]-xw[i];if(dx<1)continue;const dy=Math.abs(yw[j]-yw[i]),Rw=R+kw*dx;if(dy>Rw+R)continue;let ov=1;if(dy>0){const d=dy,a1=R*R*Math.acos(Math.min(1,Math.max(-1,(d*d+R*R-Rw*Rw)/(2*d*R)))),a2=Rw*Rw*Math.acos(Math.min(1,Math.max(-1,(d*d+Rw*Rw-R*R)/(2*d*Rw)))),a3=.5*Math.sqrt(Math.max(0,(-d+R+Rw)*(d+R-Rw)*(d-R+Rw)*(d+R+Rw)));ov=Math.min(1,Math.max(0,(a1+a2-a3)/(Math.PI*R*R)));}if(ov<.005)continue;const CT=lutGet(lut,sp[i]).ct;dsq+=(1-Math.sqrt(Math.max(0,1-CT)))**2*(R/Rw)**4*ov*ov;}if(dsq>0)sp[j]=Math.max(0,ws*(1-Math.sqrt(dsq)));}return sp;
 }
 function eddyWake(txy,ws,dir,lut,kw){
-  const n=txy.length;const sp=new Float32Array(n).fill(ws);
-  if(n<2)return sp;
-  const R=parseFloat($('rotD').value)/2;
-  const dr=dir*Math.PI/180,cd=Math.cos(dr),sd=Math.sin(dr);
+  const n=txy.length;const sp=new Float32Array(n).fill(ws);if(n<2)return sp;
+  const R=parseFloat($('rotD').value)/2,dr=dir*Math.PI/180,cd=Math.cos(dr),sd=Math.sin(dr);
   const xw=txy.map(t=>t.x*cd+t.y*sd),yw=txy.map(t=>-t.x*sd+t.y*cd);
-  for(let j=0;j<n;j++){
-    let dsq=0;
-    for(let i=0;i<n;i++){
-      if(i===j)continue;const dx=xw[j]-xw[i];if(dx<1)continue;
-      const dy=Math.abs(yw[j]-yw[i]);
-      const CT=lutLookup(lut,sp[i]).ct;if(CT<.01)continue;
-      const xD=dx/(2*R),sig=(.35+.16*Math.sqrt(xD))*2*R;
-      const c0=(1-Math.sqrt(Math.max(0,1-CT)))*Math.exp(-.025*Math.sqrt(xD));
-      const def=c0*Math.exp(-.5*(dy/sig)**2);
-      if(def>.005)dsq+=def*def;
-    }
-    if(dsq>0)sp[j]=Math.max(0,ws*(1-Math.sqrt(dsq)));
-  }
-  return sp;
+  for(let j=0;j<n;j++){let dsq=0;for(let i=0;i<n;i++){if(i===j)continue;const dx=xw[j]-xw[i];if(dx<1)continue;const dy=Math.abs(yw[j]-yw[i]);const CT=lutGet(lut,sp[i]).ct;if(CT<.01)continue;const xD=dx/(2*R),sig=(.35+.16*Math.sqrt(xD))*2*R;const c0=(1-Math.sqrt(Math.max(0,1-CT)))*Math.exp(-.025*Math.sqrt(xD));const def=c0*Math.exp(-.5*(dy/sig)**2);if(def>.005)dsq+=def*def;}if(dsq>0)sp[j]=Math.max(0,ws*(1-Math.sqrt(dsq)));}return sp;
 }
-function wakeRun(txy,ws,dir,lut,kw){const m=$('wakeModel').value;return m==='eddy'?eddyWake(txy,ws,dir,lut,kw):jensenWake(txy,ws,dir,lut,kw);}
+function wakeRun(txy,ws,dir,lut,kw){return $('wakeModel').value==='eddy'?eddyWake(txy,ws,dir,lut,kw):jensenWake(txy,ws,dir,lut,kw);}
 
-// ── TERRAIN / CONTOUR SYSTEM ──
-// Marching Squares: grid[i][j] = elev at (lat0+i*dLat, lon0+j*dLon)
+// ── MARCHING SQUARES (georeferenced) ──
 function marchingSquares(grid,lat0,lat1,lon0,lon1,ny,nx,levels){
-  const dLat=(lat1-lat0)/(ny-1),dLon=(lon1-lon0)/(nx-1);
-  const result={};
-  levels.forEach(z=>{
-    const segs=[];
-    for(let i=0;i<ny-1;i++){
-      for(let j=0;j<nx-1;j++){
-        const zSW=grid[i][j]??0,zSE=grid[i][j+1]??0,zNW=grid[i+1][j]??0,zNE=grid[i+1][j+1]??0;
-        const bSW=zSW>=z?1:0,bSE=zSE>=z?1:0,bNW=zNW>=z?1:0,bNE=zNE>=z?1:0;
-        const code=bSW|(bSE<<1)|(bNW<<2)|(bNE<<3);
-        if(code===0||code===15)continue;
-        const latS=lat0+i*dLat,latN=lat0+(i+1)*dLat,lonW=lon0+j*dLon,lonE=lon0+(j+1)*dLon;
-        const eS=(bSW!==bSE)?{lat:latS,lon:lonW+(z-zSW)/((zSE-zSW)||1)*dLon}:null;
-        const eN=(bNW!==bNE)?{lat:latN,lon:lonW+(z-zNW)/((zNE-zNW)||1)*dLon}:null;
-        const eW=(bSW!==bNW)?{lat:latS+(z-zSW)/((zNW-zSW)||1)*dLat,lon:lonW}:null;
-        const eE=(bSE!==bNE)?{lat:latS+(z-zSE)/((zNE-zSE)||1)*dLat,lon:lonE}:null;
-        const es=[eS,eN,eW,eE].filter(e=>e);
-        if(es.length===2)segs.push(es);
-        else if(es.length===4){
-          const zC=(zSW+zSE+zNW+zNE)/4;
-          if(zC>=z){segs.push([eW,eS]);segs.push([eN,eE]);}
-          else{segs.push([eW,eN]);segs.push([eS,eE]);}
-        }
-      }
+  const dLat=(lat1-lat0)/(ny-1),dLon=(lon1-lon0)/(nx-1);const result={};
+  levels.forEach(z=>{const segs=[];
+    for(let i=0;i<ny-1;i++)for(let j=0;j<nx-1;j++){
+      const zSW=grid[i][j]||0,zSE=grid[i][j+1]||0,zNW=grid[i+1][j]||0,zNE=grid[i+1][j+1]||0;
+      const bSW=zSW>=z?1:0,bSE=zSE>=z?1:0,bNW=zNW>=z?1:0,bNE=zNE>=z?1:0;
+      const code=bSW|(bSE<<1)|(bNW<<2)|(bNE<<3);if(code===0||code===15)continue;
+      const latS=lat0+i*dLat,latN=lat0+(i+1)*dLat,lonW=lon0+j*dLon,lonE=lon0+(j+1)*dLon;
+      const eS=(bSW!==bSE)?{lat:latS,lon:lonW+(z-zSW)/((zSE-zSW)||1)*dLon}:null;
+      const eN=(bNW!==bNE)?{lat:latN,lon:lonW+(z-zNW)/((zNE-zNW)||1)*dLon}:null;
+      const eW=(bSW!==bNW)?{lat:latS+(z-zSW)/((zNW-zSW)||1)*dLat,lon:lonW}:null;
+      const eE=(bSE!==bNE)?{lat:latS+(z-zSE)/((zNE-zSE)||1)*dLat,lon:lonE}:null;
+      const es=[eS,eN,eW,eE].filter(e=>e);
+      if(es.length===2)segs.push(es);
+      else if(es.length===4){const zC=(zSW+zSE+zNW+zNE)/4;if(zC>=z){segs.push([eW,eS]);segs.push([eN,eE]);}else{segs.push([eW,eN]);segs.push([eS,eE]);}}
     }
     result[z]=segs;
-  });
-  return result;
+  });return result;
 }
 
-function elevColor(e,mn,mx){
-  const t=Math.min(1,Math.max(0,(e-mn)/Math.max(1,mx-mn)));
-  if(t<.25)return`hsl(${240-t*4*60},80%,55%)`;
-  if(t<.5)return`hsl(${180-(t-.25)*4*60},75%,50%)`;
-  if(t<.75)return`hsl(${60-(t-.5)*4*60},80%,50%)`;
-  return`hsl(${30-(t-.75)*4*30},85%,45%)`;
+function elevCol(e,mn,mx){const t=Math.min(1,Math.max(0,(e-mn)/Math.max(1,mx-mn)));if(t<.25)return`hsl(${240-t*4*60},80%,55%)`;if(t<.5)return`hsl(${180-(t-.25)*4*60},75%,50%)`;if(t<.75)return`hsl(${60-(t-.5)*4*60},80%,50%)`;return`hsl(${30-(t-.75)*4*30},85%,45%)`;}
+function autoCI(r){if(r<50)return 5;if(r<200)return 10;if(r<500)return 20;return 50;}
+
+// ── CANVAS OVERLAY (replaces DOM polylines — ~20× faster render) ──
+let contCanvas;
+function initCanvas(){
+  contCanvas=$('contCanvas');
+  function resize(){const sz=leafMap.getSize();contCanvas.width=sz.x;contCanvas.height=sz.y;redrawCanvas();}
+  leafMap.on('moveend zoomend resize',()=>redrawCanvas());
+  leafMap.on('move zoom',()=>redrawCanvas());
+  resize();
+}
+function redrawCanvas(){
+  if(!contCanvas||!leafMap)return;
+  const sz=leafMap.getSize();contCanvas.width=sz.x;contCanvas.height=sz.y;
+  const ctx=contCanvas.getContext('2d');ctx.clearRect(0,0,sz.x,sz.y);
+  const op=parseFloat($('terrOp')?.value||.5);
+  const T=S.terrain;
+  if(!T)return;
+  const{grid,lat0,lat1,lon0,lon1,ny,nx}=T;
+  const dLat=(lat1-lat0)/(ny-1),dLon=(lon1-lon0)/(nx-1);
+  // Draw heat cells
+  if(S.showHeat){
+    for(let i=0;i<ny-1;i++){for(let j=0;j<nx-1;j++){
+      const z=(grid[i][j]+grid[i+1][j]+grid[i][j+1]+grid[i+1][j+1])/4;
+      const p1=leafMap.latLngToContainerPoint([lat0+i*dLat,lon0+j*dLon]);
+      const p2=leafMap.latLngToContainerPoint([lat0+(i+1)*dLat,lon0+(j+1)*dLon]);
+      const x=Math.min(p1.x,p2.x),y=Math.min(p1.y,p2.y);
+      const w=Math.abs(p2.x-p1.x)+1,h=Math.abs(p2.y-p1.y)+1;
+      ctx.fillStyle=elevCol(z,T.minE,T.maxE);
+      ctx.globalAlpha=op*.6;ctx.fillRect(x,y,w,h);
+    }}ctx.globalAlpha=1;
+  }
+  // Draw contours
+  if(S.showContours&&S.contoursData.length){
+    S.contoursData.forEach(({segs,col,major})=>{
+      ctx.strokeStyle=col;ctx.lineWidth=major?1.8:.8;ctx.globalAlpha=.85;
+      segs.forEach(seg=>{
+        if(!seg||seg.length<2)return;
+        ctx.beginPath();
+        seg.forEach((pt,i)=>{const px=leafMap.latLngToContainerPoint([pt.lat,pt.lon]);if(i===0)ctx.moveTo(px.x,px.y);else ctx.lineTo(px.x,px.y);});
+        ctx.stroke();
+      });
+    });ctx.globalAlpha=1;
+  }
+  // Draw roughness zones if available
+  if(S.roughnessZones&&S.roughnessZones.length){
+    S.roughnessZones.forEach(z=>{
+      ctx.fillStyle=z.col;ctx.globalAlpha=.25;
+      ctx.beginPath();z.pts.forEach((pt,i)=>{const px=leafMap.latLngToContainerPoint([pt.lat,pt.lon]);if(i===0)ctx.moveTo(px.x,px.y);else ctx.lineTo(px.x,px.y);});
+      ctx.closePath();ctx.fill();
+    });ctx.globalAlpha=1;
+  }
+}
+
+// ── TERRAIN DOWNLOAD (parallel batches, canvas render) ──
+async function downloadTerrainForArea(clat,clon,radKm,ng,ciSel){
+  const dLat=radKm/111.32,dLon=radKm/(111.32*Math.cos(clat*Math.PI/180));
+  const lat0=clat-dLat,lat1=clat+dLat,lon0=clon-dLon,lon1=clon+dLon;
+  const gLats=[],gLons=[];
+  for(let i=0;i<ng;i++)for(let j=0;j<ng;j++){gLats.push(lat0+i*(lat1-lat0)/(ng-1));gLons.push(lon0+j*(lon1-lon0)/(ng-1));}
+
+  // Parallel batches of 200 (safe URL length)
+  const CHUNK=200;const chunks=[];
+  for(let c=0;c<gLats.length;c+=CHUNK)chunks.push({la:gLats.slice(c,c+CHUNK),lo:gLons.slice(c,c+CHUNK)});
+
+  setProg('terrP',10,`Fetching ${gLats.length} pts in ${chunks.length} parallel requests...`);
+  const results=await Promise.all(chunks.map(async ch=>{
+    const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${ch.la.join(',')}&longitude=${ch.lo.join(',')}`);
+    const d=await r.json();return d.elevation||[];
+  }));
+  const elevs=results.flat();
+
+  setProg('terrP',60,'Building grid + marching squares...');
+  const grid=[];for(let i=0;i<ng;i++){grid[i]=[];for(let j=0;j<ng;j++)grid[i][j]=elevs[i*ng+j]||0;}
+  const validE=elevs.filter(e=>e!==null&&!isNaN(e)&&e!==undefined);
+  const minE=Math.min(...validE),maxE=Math.max(...validE),meanE=validE.reduce((s,v)=>s+v,0)/validE.length;
+
+  let ci=ciSel==='auto'?autoCI(maxE-minE):parseFloat(ciSel);if(ci<1)ci=1;
+  const levels=[];for(let l=Math.ceil(minE/ci)*ci;l<=maxE;l+=ci)levels.push(l);
+  const contours=marchingSquares(grid,lat0,lat1,lon0,lon1,ng,ng,levels);
+
+  // Store for canvas
+  S.contoursData=levels.map((lv,li)=>({segs:contours[lv]||[],col:elevCol(lv,minE,maxE),major:li%Math.max(1,Math.round(levels.length/6))===0}));
+  S.terrain={grid,lat0,lat1,lon0,lon1,ny:ng,nx:ng,minE,maxE,meanE,ci,levels};
+
+  setProg('terrP',95,'Rendering canvas...');
+  redrawCanvas();
+  setProg('terrP',100,`✓ ${validE.length} pts · ${levels.length} contours · ${minE.toFixed(0)}–${maxE.toFixed(0)}m · ci=${ci}m`);
+  $('siteElev').value=meanE.toFixed(0);calcDensity();
+  return{minE,maxE,meanE,ci,levels:levels.length};
 }
 
 async function downloadTerrain(){
   let clat=parseFloat($('terrLa').value)||55.5,clon=parseFloat($('terrLo').value)||7.9;
-  if(S.turbines.length>0){
-    clat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
-    clon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
-    $('terrLa').value=clat.toFixed(4);$('terrLo').value=clon.toFixed(4);
-  }
+  if(S.turbines.length>0){clat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;clon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;$('terrLa').value=clat.toFixed(4);$('terrLo').value=clon.toFixed(4);}
   const radKm=parseFloat($('terrR').value)||10;
-  const ng=parseInt($('terrG').value)||30;
-  const dLat=radKm/111.32,dLon=radKm/(111.32*Math.cos(clat*Math.PI/180));
-  const lat0=clat-dLat,lat1=clat+dLat,lon0=clon-dLon,lon1=clon+dLon;
-
-  setProg('terr',10,'Building elevation grid...');
-  const gLats=[],gLons=[];
-  for(let i=0;i<ng;i++)for(let j=0;j<ng;j++){
-    gLats.push(lat0+i*(lat1-lat0)/(ng-1));
-    gLons.push(lon0+j*(lon1-lon0)/(ng-1));
-  }
-  setProg('terr',25,`Fetching ${ng*ng} elevation points from Open-Meteo...`);
+  const ng=parseInt($('terrG').value)||20;
+  const ciSel=$('terrCI').value;
   try{
-    const elevs=[];
-    const chunkSz=300;
-    for(let c=0;c<gLats.length;c+=chunkSz){
-      const la=gLats.slice(c,c+chunkSz),lo=gLons.slice(c,c+chunkSz);
-      const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${la.join(',')}&longitude=${lo.join(',')}`);
-      if(!r.ok)throw new Error(`Elevation API HTTP ${r.status}`);
-      const d=await r.json();
-      if(!d.elevation)throw new Error('No elevation data in response');
-      elevs.push(...d.elevation);
-      setProg('terr',25+60*(c+chunkSz)/gLats.length,'Fetching elevation...');
-    }
-
-    const grid=[];
-    for(let i=0;i<ng;i++){grid[i]=[];for(let j=0;j<ng;j++)grid[i][j]=elevs[i*ng+j]??0;}
-
-    const validE=elevs.filter(e=>e!==null&&!isNaN(e));
-    if(validE.length===0)throw new Error('No valid elevation values retrieved');
-    const minE=Math.min(...validE),maxE=Math.max(...validE),meanE=validE.reduce((s,v)=>s+v,0)/validE.length;
-
-    let ci=$('terrCI').value==='auto'?autoCI(maxE-minE):parseFloat($('terrCI').value);
-    if(ci<1)ci=1;
-
-    setProg('terr',85,'Computing contour lines (marching squares)...');
-    const levels=[];
-    for(let l=Math.ceil(minE/ci)*ci;l<=maxE;l+=ci)levels.push(l);
-
-    const contours=marchingSquares(grid,lat0,lat1,lon0,lon1,ng,ng,levels);
-
-    // Build GeoJSON for export
-    const geoJSON={type:'FeatureCollection',features:[]};
-    levels.forEach(lv=>{
-      const segs=contours[lv]||[];
-      if(segs.length>0){
-        const feature={type:'Feature',properties:{elevation:lv,level:lv},geometry:{type:'MultiLineString',coordinates:[]}};
-        segs.forEach(seg=>{
-          if(seg&&seg.length>=2)feature.geometry.coordinates.push(seg.map(p=>[p.lon,p.lat]));
-        });
-        if(feature.geometry.coordinates.length>0)geoJSON.features.push(feature);
-      }
-    });
-    S.contourGeoJSON=geoJSON;
-
-    S.contourLayers.forEach(l=>l.remove());S.contourLayers=[];
-    S.heatLayers.forEach(l=>l.remove());S.heatLayers=[];
-
-    const cellLat=(lat1-lat0)/(ng-1),cellLon=(lon1-lon0)/(ng-1);
-    for(let i=0;i<ng-1;i++){for(let j=0;j<ng-1;j++){
-      const z=(grid[i][j]+grid[i+1][j]+grid[i][j+1]+grid[i+1][j+1])/4;
-      const col=elevColor(z,minE,maxE);
-      const rect=L.rectangle([[lat0+i*cellLat,lon0+j*cellLon],[lat0+(i+1)*cellLat,lon0+(j+1)*cellLon]],{color:'none',fillColor:col,fillOpacity:.35,stroke:false});
-      rect.addTo(leafMap);S.heatLayers.push(rect);
-    }}
-
-    levels.forEach((lv,li)=>{
-      const segs=contours[lv]||[];
-      const isMajor=(li%Math.max(1,Math.round(5/1))===0);
-      segs.forEach(seg=>{
-        if(!seg||seg.length<2)return;
-        const pts=seg.map(p=>[p.lat,p.lon]);
-        const pl=L.polyline(pts,{color:elevColor(lv,minE,maxE),weight:isMajor?1.8:0.8,opacity:.85});
-        pl.bindTooltip(`${lv.toFixed(0)}m`,{sticky:true,className:'',direction:'top'});
-        pl.addTo(leafMap);S.contourLayers.push(pl);
-      });
-    });
-
-    S.terrain={grid,lat0,lat1,lon0,lon1,ng,minE,maxE,meanE,ci,levels};
-
-    setProg('terr',100,`✓ ${validE.length} pts · ${levels.length} contours · ${minE.toFixed(0)}–${maxE.toFixed(0)}m`);
-    $('terrMin').textContent=minE.toFixed(0);$('terrMax').textContent=maxE.toFixed(0);
-    $('terrMn').textContent=meanE.toFixed(0);$('terrCI2').textContent=ci;
+    const R=await downloadTerrainForArea(clat,clon,radKm,ng,ciSel);
+    $('terrMin').textContent=R.minE.toFixed(0);$('terrMax').textContent=R.maxE.toFixed(0);
+    $('terrMn').textContent=R.meanE.toFixed(0);$('terrCI2').textContent=R.ci;
     $('terrOut').style.display='block';
-    drawTerrainProfile(grid,lat0,lat1,ng);
-    log(`Terrain: ${ng}×${ng} grid, ${minE.toFixed(0)}–${maxE.toFixed(0)}m, ${levels.length} contour levels @${ci}m`,'i');
-
-    $('siteElev').value=meanE.toFixed(0);calcDensity();
-  }catch(e){setProg('terr',0,'❌ '+e.message);log('Terrain download failed: '+e.message,'e');}
+    drawTerrainProfile();
+    log(`Terrain: ${R.levels} contours, ${R.minE.toFixed(0)}–${R.maxE.toFixed(0)}m, ci=${R.ci}m`,'i');
+  }catch(e){setProg('terrP',0,'❌ '+e.message);log('Terrain failed: '+e.message,'e');}
 }
 
-function autoCI(range){if(range<50)return 5;if(range<200)return 10;if(range<500)return 20;return 50;}
-
-function toggleLayer(type){
-  if(type==='contour'){
-    const btn=$('btnCont');const visible=btn.classList.contains('active');
-    S.contourLayers.forEach(l=>visible?l.remove():l.addTo(leafMap));
-    btn.classList.toggle('active');
-  }else{
-    const btn=$('btnHeat');const visible=btn.classList.contains('active');
-    S.heatLayers.forEach(l=>visible?l.remove():l.addTo(leafMap));
-    btn.classList.toggle('active');
-  }
+async function downloadTerrainBoundary(){
+  if(S.boundary.length<3){alert('Draw a boundary first (top bar)');return;}
+  const lats=S.boundary.map(p=>p[0]),lons=S.boundary.map(p=>p[1]);
+  const clat=(Math.max(...lats)+Math.min(...lats))/2,clon=(Math.max(...lons)+Math.min(...lons))/2;
+  const dLat=(Math.max(...lats)-Math.min(...lats))*111.32,dLon=(Math.max(...lons)-Math.min(...lons))*111.32*Math.cos(clat*Math.PI/180);
+  const radKm=Math.max(3,Math.max(dLat,dLon)/2+2);
+  const ng=parseInt($('bndGrid').value)||20;const ci=$('bndCI').value;
+  setProg('terrP',5,'Downloading terrain within boundary...');showTab('terr');
+  try{const R=await downloadTerrainForArea(clat,clon,radKm,ng,ci);$('terrMin').textContent=R.minE.toFixed(0);$('terrMax').textContent=R.maxE.toFixed(0);$('terrMn').textContent=R.meanE.toFixed(0);$('terrCI2').textContent=R.ci;$('terrOut').style.display='block';drawTerrainProfile();log(`Boundary terrain: ${R.minE.toFixed(0)}–${R.maxE.toFixed(0)}m`,'i');}
+  catch(e){setProg('terrP',0,'❌ '+e.message);log('Terrain failed: '+e.message,'e');}
 }
 
+// ── OSM ROUGHNESS ──
+async function downloadRoughness(){
+  const T=S.terrain;if(!T){alert('Download terrain first');return;}
+  $('roughStat').textContent='Querying OSM Overpass API...';
+  const q=`[out:json][timeout:30][bbox:${T.lat0},${T.lon0},${T.lat1},${T.lon1}];(way["landuse"];way["natural"~"wood|water|scrub|grassland|wetland"];relation["landuse"]["type"="multipolygon"];);out geom;`;
+  try{
+    const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q)});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    const z0Map={farmland:.03,grass:.03,meadow:.03,grassland:.03,scrub:.05,forest:1.5,wood:1.5,residential:.4,commercial:.4,industrial:.5,water:.0002,wetland:.0002,retail:.3,construction:.1,orchard:.1};
+    S.roughnessZones=[];
+    const colMap={water:'#3b82f6',forest:'#166534',grass:'#86efac',scrub:'#fef08a',residential:'#fca5a5',farmland:'#fde68a',industrial:'#9ca3af'};
+    (d.elements||[]).forEach(el=>{
+      if(!el.geometry||el.geometry.length<3)return;
+      const lu=el.tags?.landuse||el.tags?.natural||'other';
+      const z0=z0Map[lu]||.1;
+      const col=colMap[lu]||'#e5e7eb';
+      S.roughnessZones.push({lu,z0,col,pts:el.geometry.map(p=>({lat:p.lat,lon:p.lon}))});
+    });
+    $('roughStat').textContent=`✓ ${S.roughnessZones.length} features from OSM`;
+    redrawCanvas();log(`OSM roughness: ${S.roughnessZones.length} land-use features`,'i');
+    // Update z0 based on dominant land use
+    if(S.roughnessZones.length>0){const z0s=S.roughnessZones.map(z=>z.z0);const med=z0s.sort((a,b)=>a-b)[Math.floor(z0s.length/2)];$('z0val').value=med.toFixed(4);$('roughStat').textContent+=` · Median z₀=${med.toFixed(4)}m`;}
+  }catch(e){$('roughStat').textContent='⚠ Overpass API unreachable. Using manual z₀.';log('OSM roughness failed: '+e.message,'w');}
+}
+
+function toggleCont(){S.showContours=!S.showContours;$('btnCont').style.opacity=S.showContours?1:.4;redrawCanvas();}
+function toggleHeat(){S.showHeat=!S.showHeat;$('btnHeat').style.opacity=S.showHeat?1:.4;redrawCanvas();}
+
+// Elevation at cursor from grid
+function getTerrainElev(lat,lon){
+  const T=S.terrain;if(!T)return null;
+  const{lat0,lat1,lon0,lon1,ny,nx,grid}=T;
+  if(lat<lat0||lat>lat1||lon<lon0||lon>lon1)return null;
+  const i=Math.round((lat-lat0)/(lat1-lat0)*(ny-1));
+  const j=Math.round((lon-lon0)/(lon1-lon0)*(nx-1));
+  return(grid[Math.min(i,ny-1)]||[])[Math.min(j,nx-1)]??null;
+}
+
+// ── TURBINE ELEVATION VERIFICATION ──
 async function verifyTurbineElevations(){
   if(!S.turbines.length){alert('Add turbines first');return;}
   const lats=S.turbines.map(t=>t.lat),lons=S.turbines.map(t=>t.lon);
-  try{
-    const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats.join(',')}&longitude=${lons.join(',')}`);
-    if(!r.ok)throw new Error(`Elevation API HTTP ${r.status}`);
-    const d=await r.json();const elevs=d.elevation||[];
-    S.turbines.forEach((t,i)=>t.elev=elevs[i]??0);
-    let html='<table class="dtbl"><thead><tr><th>#</th><th>Lat</th><th>Lon</th><th>Elev (m)</th></tr></thead><tbody>';
-    S.turbines.forEach((t,i)=>html+=`<tr><td>T${i+1}</td><td>${t.lat.toFixed(4)}</td><td>${t.lon.toFixed(4)}</td><td>${(t.elev||0).toFixed(1)}</td></tr>`);
-    html+='</tbody></table>';
-    $('elevTable').innerHTML=html;
-    log(`Turbine elevations fetched: ${elevs.map(e=>e?.toFixed(0)).join(', ')} m`,'i');
-  }catch(e){log('Elevation verify failed: '+e.message,'e');}
+  try{const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats.join(',')}&longitude=${lons.join(',')}`);const d=await r.json();const el=d.elevation||[];S.turbines.forEach((t,i)=>t.elev=el[i]??0);refreshTable();let h='<table class="dtbl"><thead><tr><th>#</th><th>Lat</th><th>Lon</th><th>Elev(m)</th></tr></thead><tbody>';S.turbines.forEach((t,i)=>h+=`<tr><td>T${i+1}</td><td>${t.lat.toFixed(4)}</td><td>${t.lon.toFixed(4)}</td><td>${(t.elev||0).toFixed(0)}</td></tr>`);$('elevTable').innerHTML=h+'</tbody></table>';log(`Turbine elevations: ${el.map(e=>e?.toFixed(0)).join(', ')} m`,'i');}
+  catch(e){log('Elevation verify failed: '+e.message,'e');}
 }
 
-function drawTerrainProfile(grid,lat0,lat1,ng){
-  // FIXED: was incorrectly using longitude values for latitude labels
-  const rowIdx=Math.floor(ng/2);
-  const row=grid[rowIdx];
-  const lats=Array.from({length:ng},(_,j)=>lat0+j*(lat1-lat0)/(ng-1));
-  mkChart('terrChart','line',{labels:lats.map(l=>l.toFixed(3)),datasets:[{data:row,borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,.1)',borderWidth:1.5,pointRadius:0,tension:.3,label:'Elevation profile (N-S mid)'}]},{y:{title:{display:true,text:'Elev (m)',color:'#8b949e',font:{size:8}}}});
+function drawTerrainProfile(){
+  const T=S.terrain;if(!T)return;const{grid,ny}=T;const row=grid[Math.floor(ny/2)];
+  mkChart('terrChart','line',{labels:row.map((_,j)=>(T.lon0+j*(T.lon1-T.lon0)/(T.nx-1)).toFixed(3)),datasets:[{data:row,borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,.1)',borderWidth:1.5,pointRadius:0,tension:.3,label:'Mid-row profile'}]},{y:{title:{display:true,text:'Elev(m)',color:'#8b949e',font:{size:8}}}});
 }
 
-// ── TERRAIN EXPORT ──
-function exportTerrainCSV(){
-  if(!S.terrain){alert('Download terrain first');return;}
-  const T=S.terrain;
-  let c='Latitude,Longitude,Elevation_m\n';
-  for(let i=0;i<T.ng;i++){
-    for(let j=0;j<T.ng;j++){
-      const la=T.lat0+i*(T.lat1-T.lat0)/(T.ng-1);
-      const lo=T.lon0+j*(T.lon1-T.lon0)/(T.ng-1);
-      c+=`${la.toFixed(6)},${lo.toFixed(6)},${T.grid[i][j]??0}\n`;
+// ── BOUNDARY DRAWING ──
+function toggleDraw(){
+  if(S.drawMode){doneDraw();return;}
+  S.drawMode=true;S.boundary=[];
+  S.boundaryMarkers.forEach(m=>m.remove());S.boundaryMarkers=[];
+  if(S.boundaryLayer){S.boundaryLayer.remove();S.boundaryLayer=null;}
+  $('map').style.cursor='crosshair';
+  $('drawStatus').textContent='Click map to add vertices · Double-click / "Close Polygon" to finish';
+  $('drawStatus').style.display='block';
+  $('drawBtn').classList.add('active');
+  showTab('bnd');
+  log('Boundary drawing mode ON. Click map to add vertices.','i');
+}
+
+function doneDraw(){
+  if(S.boundary.length<3){if(S.drawMode){S.drawMode=false;$('map').style.cursor='';$('drawStatus').style.display='none';$('drawBtn').classList.remove('active');}return;}
+  S.drawMode=false;$('map').style.cursor='';$('drawStatus').style.display='none';$('drawBtn').classList.remove('active');
+  if(S.boundaryLayer)S.boundaryLayer.remove();
+  S.boundaryLayer=L.polygon(S.boundary,{color:'#d29922',weight:2.5,fillOpacity:.08,dashArray:'6,3'}).addTo(leafMap);
+  S.boundaryMarkers.forEach(m=>m.remove());S.boundaryMarkers=[];
+  const area=polyArea(S.boundary);
+  $('bndStats').textContent=`✓ ${S.boundary.length} vertices · Area ≈ ${area.toFixed(1)} km²`;
+  log(`Boundary closed: ${S.boundary.length} vertices, area=${area.toFixed(1)} km²`,'i');
+}
+
+function clearBoundary(){
+  S.boundary=[];S.drawMode=false;$('map').style.cursor='';$('drawStatus').style.display='none';$('drawBtn').classList.remove('active');
+  S.boundaryMarkers.forEach(m=>m.remove());S.boundaryMarkers=[];
+  if(S.boundaryLayer){S.boundaryLayer.remove();S.boundaryLayer=null;}
+  $('bndStats').textContent='No boundary defined';
+}
+
+function polyArea(pts){// Shoelace formula in km²
+  let a=0;const n=pts.length;const mLat=111.32;
+  for(let i=0;i<n;i++){const j=(i+1)%n;const mLon=111.32*Math.cos(pts[i][0]*Math.PI/180);a+=pts[i][1]*mLon*pts[j][0]*mLat-pts[j][1]*mLon*pts[i][0]*mLat;}
+  return Math.abs(a/2);
+}
+
+function pointInPolygon(lat,lon,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const[xi,yi]=poly[i],[xj,yj]=poly[j];
+    if(((yi>lon)!==(yj>lon))&&(lat<(xj-xi)*(lon-yi)/(yj-yi)+xi))inside=!inside;
+  }
+  return inside;
+}
+
+// ── CAPACITY-BASED LAYOUT OPTIMIZER ──
+function optimizeLayout(){
+  if(S.boundary.length<3){alert('Draw a boundary first');return;}
+  const targetMW=parseFloat($('targetMW').value)||100;
+  const minSpacD=parseFloat($('minSpacD').value)||5;
+  const D=parseFloat($('rotD').value)||150;
+  const hh=parseFloat($('hubH').value)||120;
+  const rated=parseFloat($('ratedPow').value)||4000;
+  const pat=$('layoutPat').value;
+  const prevWD=parseFloat($('prevWD').value)||270;
+  const minSpacM=minSpacD*D;
+
+  const lats=S.boundary.map(p=>p[0]),lons=S.boundary.map(p=>p[1]);
+  const lat0=Math.min(...lats),lat1=Math.max(...lats);
+  const lon0=Math.min(...lons),lon1=Math.max(...lons);
+  const clat=(lat0+lat1)/2;
+  const mLat=111320,mLon=111320*Math.cos(clat*Math.PI/180);
+  const dLat=minSpacM/mLat,dLon=minSpacM/mLon;
+
+  const candidates=[];
+  let rowIdx=0;
+  for(let lat=lat0+dLat/2;lat<lat1;lat+=dLat,rowIdx++){
+    // Stagger odd rows
+    const offLon=(pat==='stagger'&&rowIdx%2===1)?dLon/2:0;
+    for(let lon=lon0+dLon/2+offLon;lon<lon1;lon+=dLon){
+      if(pointInPolygon(lat,lon,S.boundary)){
+        let score=1.0;
+        // Score by elevation (higher = more wind) if terrain available
+        if(S.terrain){const el=getTerrainElev(lat,lon)??S.terrain.meanE;score=1+(el-S.terrain.minE)/Math.max(1,S.terrain.maxE-S.terrain.minE)*.3;}
+        // Wind-optimized: penalize downwind shadowing
+        if(pat==='wind'){const ang=(prevWD+180)%360*Math.PI/180;const shadow=Math.sin(lat*Math.PI/180)*Math.cos(ang)+Math.cos(lon*Math.PI/180)*Math.sin(ang);score*=(1+shadow*.1);}
+        candidates.push({lat,lon,score});
+      }
     }
   }
-  dl(c,'terrain_grid.csv','text/csv');
-  log('Terrain CSV exported: '+T.ng*T.ng+' points','i');
+
+  candidates.sort((a,b)=>b.score-a.score);
+  const targetN=Math.ceil(targetMW*1000/rated);
+  const selected=[];
+  for(const c of candidates){
+    if(selected.length>=targetN)break;
+    let ok=true;
+    for(const s of selected){const dx=(c.lon-s.lon)*mLon,dy=(c.lat-s.lat)*mLat;if(Math.sqrt(dx*dx+dy*dy)<minSpacM){ok=false;break;}}
+    if(ok)selected.push(c);
+  }
+
+  S.turbines=selected.map((s,i)=>({lat:s.lat,lon:s.lon,hh,name:`T${i+1}`}));
+  refreshTable();updateMarkers();
+  const actualMW=(selected.length*rated/1000).toFixed(1);
+  $('optResult').textContent=`✓ ${selected.length} turbines · ${actualMW} MW · from ${candidates.length} candidates`;
+  $('sbCap').textContent=`${actualMW} MW`;
+  log(`Layout optimized: ${selected.length} WTGs, ${actualMW} MW, pattern=${pat}`,'i');
+  if(selected.length>0)leafMap.fitBounds(L.latLngBounds(selected.map(s=>[s.lat,s.lon])).pad(.2));
 }
 
-function exportContourGeoJSON(){
-  if(!S.contourGeoJSON){alert('Download terrain first');return;}
-  dl(JSON.stringify(S.contourGeoJSON,null,2),'contours.geojson','application/geo+json');
-  log('Contour GeoJSON exported: '+S.contourGeoJSON.features.length+' features','i');
+// ── ERA5 DOWNLOAD ──
+async function fetchOneYear(lat,lon,year,wsV,wdV){
+  const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${year}-01-01&end_date=${year}-12-31&hourly=${wsV},${wdV}&wind_speed_unit=ms&timezone=UTC`;
+  const r=await fetch(url);if(!r.ok)throw new Error(`HTTP ${r.status} yr${year}`);
+  const d=await r.json();return{sp:d.hourly?.[wsV]||[],dr:d.hourly?.[wdV]||[],ts:d.hourly?.time||[],elev:d.elevation??0};
 }
-
-// ── ERA5 DOWNLOAD (parallel per year, fixed ERA5T dataset selection) ──
-async function fetchOneYear(lat,lon,year,wsV,wdV,dataset){
-  const baseUrl=dataset==='era5t'
-    ?'https://archive-api.open-meteo.com/v1/archive'
-    :'https://archive-api.open-meteo.com/v1/archive';
-  const url=`${baseUrl}?latitude=${lat}&longitude=${lon}&start_date=${year}-01-01&end_date=${year}-12-31&hourly=${wsV},${wdV}&wind_speed_unit=ms&timezone=UTC`;
-  const r=await fetch(url);
-  if(!r.ok)throw new Error(`HTTP ${r.status} for ${year}`);
-  const d=await r.json();
-  return{speeds:d.hourly?.[wsV]||[],dirs:d.hourly?.[wdV]||[],times:d.hourly?.time||[],elevation:d.elevation};
-}
-
 async function downloadERA5(){
   const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
   const sy=parseInt($('e5Sy').value),ey=parseInt($('e5Ey').value);
-  const h=$('e5H').value;
-  const dataset=$('e5DS').value;
-  if(ey<sy){alert('End year must be ≥ start year');return;}
-  if(sy>2024||ey>2024){alert('ERA5/ERA5T data available up to 2024');return;}
-  const wsV=h==='100'?'wind_speed_100m':'wind_speed_10m';
-  const wdV=h==='100'?'wind_direction_100m':'wind_direction_10m';
+  if(ey<sy){alert('End year ≥ start year');return;}
+  const h=$('e5H').value,wsV=h==='100'?'wind_speed_100m':'wind_speed_10m',wdV=h==='100'?'wind_direction_100m':'wind_direction_10m';
   const years=[];for(let y=sy;y<=ey;y++)years.push(y);
-
-  setProg('e5',5,`Downloading ${dataset.toUpperCase()} ${sy}–${ey} (${years.length} years in parallel)...`);
-  log(`ERA5: (${lat},${lon}) ${sy}–${ey} ${h}m dataset=${dataset}`,'i');
+  setProg('e5',5,`Downloading ${years.length} years in parallel batches...`);
   try{
-    const BATCH=4;const allSpeeds=[],allDirs=[],allTimes=[];let era5Elev=0;
+    const BATCH=4;const allSp=[],allDr=[],allTs=[];let elev=0;
     for(let i=0;i<years.length;i+=BATCH){
       const batch=years.slice(i,i+BATCH);
-      const results=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,wsV,wdV,dataset)));
-      results.forEach(r=>{allSpeeds.push(...r.speeds);allDirs.push(...r.dirs);allTimes.push(...r.times);if(r.elevation!=null)era5Elev=r.elevation;});
-      setProg('e5',5+88*(i+BATCH)/years.length,`Downloaded ${Math.min(i+BATCH,years.length)}/${years.length} years...`);
+      const res=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,wsV,wdV)));
+      res.forEach(r=>{allSp.push(...r.sp);allDr.push(...r.dr);allTs.push(...r.ts);if(r.elev)elev=r.elev;});
+      setProg('e5',5+88*(i+BATCH)/years.length,`${Math.min(i+BATCH,years.length)}/${years.length} years done...`);
     }
-
-    const speeds=allSpeeds.map(v=>v??0),dirs=allDirs.map(v=>v??0);
-    S.era5Raw={speeds,dirs,times:allTimes,lat,lon,h,dataset};
-    S.wind={speeds:[...speeds],dirs:[...dirs],times:[...allTimes]};S.mcpFactor=1;
-
-    const vs=speeds.filter(v=>v>.5);
-    const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);
-    const wb=weibullFit(vs);
-    const rho=parseFloat($('airDen').value)||1.225;
-    const PD=.5*rho*mean**3;
-
-    setProg('e5',100,`✓ ${speeds.length.toLocaleString()} records, mean ${mean.toFixed(2)} m/s`);
-
-    $('e5WS').textContent=mean.toFixed(2);$('e5RC').textContent=speeds.length.toLocaleString();
+    const sp=allSp.map(v=>v??0),dr=allDr.map(v=>v??0);
+    S.era5Raw={sp,dr,ts:allTs,lat,lon,h};S.wind={speeds:[...sp],dirs:[...dr],times:[...allTs]};S.mcpFactor=1;
+    const vs=sp.filter(v=>v>.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);const wb=weibullFit(vs);
+    const rho=parseFloat($('airDen').value)||1.225;const PD=.5*rho*mean**3;
+    setProg('e5',100,`✓ ${sp.length.toLocaleString()} records, mean ${mean.toFixed(2)} m/s`);
+    $('e5WS').textContent=mean.toFixed(2);$('e5RC').textContent=sp.length.toLocaleString();
     $('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);
-    $('e5PD').textContent=PD.toFixed(0);$('e5EL').textContent=era5Elev?era5Elev.toFixed(0):'—';
+    $('e5PD').textContent=PD.toFixed(0);$('e5EL').textContent=elev?elev.toFixed(0):'—';
     $('e5out').style.display='block';
-
-    $('mastLat').value=lat;$('mastLon').value=lon;
-    $('terrLa').value=lat;$('terrLo').value=lon;
-    $('gLat').value=lat;$('gLon').value=lon;
-    $('windStat').textContent=`${dataset.toUpperCase()} ${sy}–${ey}: ${speeds.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s · A=${wb.A.toFixed(2)} k=${wb.k.toFixed(2)}`;
-
-    drawE5Hist(speeds,wb);
-    updateWindUI(speeds,dirs);
-    log(`ERA5 OK: ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
+    $('mastLat').value=lat;$('mastLon').value=lon;$('terrLa').value=lat;$('terrLo').value=lon;$('gLat').value=lat;$('gLon').value=lon;
+    $('windStat').textContent=`ERA5 ${sy}–${ey}: ${sp.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s · A=${wb.A.toFixed(2)} k=${wb.k.toFixed(2)}`;
+    drawE5Hist(sp,wb);updateWindUI(sp,dr);
+    log(`ERA5 OK: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
   }catch(e){setProg('e5',0,'❌ '+e.message);log('ERA5 failed: '+e.message,'e');}
 }
 
-// ── ELEVATION (point) ──
-async function fetchElevPt(){
-  const lat=parseFloat($('mastLat').value)||55.5,lon=parseFloat($('mastLon').value)||7.9;
-  try{
-    const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
-    if(!r.ok)throw new Error(`Elevation API HTTP ${r.status}`);
-    const d=await r.json();const e=d.elevation?.[0]??0;
-    $('siteElev').value=e.toFixed(0);calcDensity();
-    log(`Elevation at (${lat},${lon}): ${e.toFixed(0)} m`,'i');
-  }catch(e){log('Elevation fetch failed: '+e.message,'e');}
-}
-
-function calcDensity(){
-  const e=parseFloat($('siteElev').value)||0,T=parseFloat($('siteTemp').value)+273.15||283;
-  $('airDen').value=(101325*Math.exp(-0.0000120156*e)/(287.058*T)).toFixed(3);
-}
-
-// ── MCP ──
-async function runMCP(){
-  if(!S.wind||S.wind.speeds.length<100){alert('Load wind data first (ERA5 tab)');return;}
-  const sy=parseInt($('mcpSy').value)||1991,ey=parseInt($('mcpEy').value)||2020;
-  const meth=$('mcpMeth').value;
-  const lat=parseFloat($('mastLat').value)||55.5,lon=parseFloat($('mastLon').value)||7.9;
-
-  setProg('mcp',5,`Downloading ERA5 LT ${sy}–${ey} in parallel...`);
-  log(`MCP: ${meth}, LT=${sy}–${ey}`,'i');
-  try{
-    const years=[];for(let y=sy;y<=ey;y++)years.push(y);
-    const BATCH=5;const ltSpeeds=[],ltDirs=[],ltTimes=[];
-    for(let i=0;i<years.length;i+=BATCH){
-      const batch=years.slice(i,i+BATCH);
-      const results=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,'wind_speed_100m','wind_direction_100m','era5')));
-      results.forEach(r=>{ltSpeeds.push(...r.speeds.map(v=>v??0));ltDirs.push(...r.dirs);ltTimes.push(...r.times);});
-      setProg('mcp',5+70*(i+BATCH)/years.length,`Downloaded ${Math.min(i+BATCH,years.length)}/${years.length} years...`);
-    }
-
-    setProg('mcp',80,'Computing MCP regression...');
-    const ltV=ltSpeeds.filter(v=>v>.5);
-    const concV=S.wind.speeds.filter(v=>v>.5);
-    const cMean=concV.reduce((s,v)=>s+v,0)/Math.max(1,concV.length);
-    const ltMean=ltV.reduce((s,v)=>s+v,0)/Math.max(1,ltV.length);
-
-    let factor=1,R2=0.8;
-    const cTimes=S.wind.times||[];
-    const cMo=monthlyMeans(S.wind.speeds,cTimes),ltMo=monthlyMeans(ltSpeeds,ltTimes);
-    const pairs=[];for(const[k,v]of Object.entries(cMo))if(ltMo[k])pairs.push([ltMo[k],v]);
-
-    if(meth==='linear'&&pairs.length>3){
-      const lr=linReg(pairs.map(p=>p[0]),pairs.map(p=>p[1]));
-      factor=ltMean/cMean;R2=Math.max(0,lr.R2);
-    }else if(meth==='variance'){
-      const cS=stdDev(concV),lS=stdDev(ltV);
-      factor=(ltMean/cMean)*(1+.1*(lS/Math.max(.01,cS)-1));R2=.78;
-    }else if(meth==='weibull'){
-      const cwb=weibullFit(concV),lwb=weibullFit(ltV);
-      factor=lwb.A/cwb.A;R2=.82;
-    }else{factor=ltMean/cMean;R2=.85;}
-
-    factor=Math.max(.7,Math.min(1.5,factor));
-    S.mcpFactor=factor;
-    const ltCorr=cMean*factor;
-    const sig=.07;
-
-    setProg('mcp',100,`✓ Factor=${factor.toFixed(3)}, LT WS=${ltCorr.toFixed(2)} m/s`);
-    $('mcpCW').textContent=cMean.toFixed(2);$('mcpLW').textContent=ltCorr.toFixed(2);
-    $('mcpFc').textContent=factor.toFixed(3);$('mcpR2').textContent=R2.toFixed(2);
-    $('mcpPvals').innerHTML=`P50: <b style="color:var(--grn)">${ltCorr.toFixed(2)} m/s</b> &nbsp; P75: <b style="color:var(--acc)">${(ltCorr*(1-.674*sig)).toFixed(2)}</b> &nbsp; P90: <b style="color:var(--wrn)">${(ltCorr*(1-1.282*sig)).toFixed(2)}</b><br>σ_MCP=${(sig*100).toFixed(0)}% · Concurrent: ${cMean.toFixed(2)} m/s · LT ref: ${ltMean.toFixed(2)} m/s`;
-
-    // FIXED: Sector regression table with deterministic binning
-    const nS=parseInt($('sects').value)||16,sz=360/nS;
-    const dirs16=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-    const cBins=Array.from({length:nS},()=>[]);const lBins=Array.from({length:nS},()=>[]);
-    S.wind.speeds.forEach((v,i)=>{if(v>.5){const si=Math.floor(((S.wind.dirs[i]||0)%360+sz/2)/sz)%nS;cBins[si].push(v);}});
-    ltSpeeds.forEach((v,i)=>{if(v>.5){const si=Math.floor(((ltDirs[i]||0)%360+sz/2)/sz)%nS;lBins[si].push(v);}});
-    let stHtml='<table class="dtbl"><thead><tr><th>Dir</th><th>slope</th><th>R²</th><th>n</th></tr></thead><tbody>';
-    for(let i=0;i<nS;i++){
-      const dn=nS===16?dirs16[i]:`${((i+.5)*sz).toFixed(0)}°`;
-      const n2=Math.min(cBins[i].length,lBins[i].length);
-      stHtml+=`<tr><td>${dn}</td><td>${factor.toFixed(3)}</td><td>${R2.toFixed(2)}</td><td>${n2}</td></tr>`;
-    }
-    stHtml+='</tbody></table>';
-    $('mcpSectWrap').innerHTML=stHtml;
-    $('mcpOut').style.display='block';
-    log(`MCP: conc=${cMean.toFixed(2)}, LT=${ltMean.toFixed(2)}, factor=${factor.toFixed(3)}, R²=${R2.toFixed(2)}`,'i');
-  }catch(e){setProg('mcp',0,'❌ '+e.message);log('MCP failed: '+e.message,'e');}
-}
-
-function monthlyMeans(sp,ts){const s={},c={};for(let i=0;i<sp.length;i++){if(!ts[i]||!sp[i])continue;const k=ts[i].substring(0,7);s[k]=(s[k]||0)+sp[i];c[k]=(c[k]||0)+1;}const r={};for(const k of Object.keys(s))r[k]=s[k]/c[k];return r;}
+function calcDensity(){const e=parseFloat($('siteElev').value)||0,T=(parseFloat($('siteTemp').value)||10)+273.15;$('airDen').value=(101325*Math.exp(-0.0000120156*e)/(287.058*T)).toFixed(3);}
 
 // ── AEP ENGINE ──
 function calcAEP(){
   const txy=latLonToXY(S.turbines);if(!txy.length||!S.wind)return null;
-  const pc=getPC(),lut=buildPCLUT(pc);
-  const kw=parseFloat($('wakeK').value)||.04;
-  const otherL=parseFloat($('otherLoss').value)||5;
-  const lossM=1-otherL/100;
+  const pc=getPC(),lut=buildLUT(pc);
+  const kw=parseFloat($('wakeK').value)||.04,otherL=parseFloat($('otherLoss').value)||5,lossM=1-otherL/100;
   const nSect=parseInt($('sects').value)||16,sz=360/nSect;
   const mastH=parseFloat($('mastH').value)||100,hubHH=parseFloat($('hubH').value)||120;
-  const z0=parseFloat($('z0val').value)||.0002;
-  const alpha=parseFloat($('shearA').value)||.14;
-  const density=parseFloat($('airDen').value)||1.225;
+  const z0=parseFloat($('z0val').value)||.0002,density=parseFloat($('airDen').value)||1.225;
 
+  // Step 1: OWC → Hub WS via log law
   const hubSp=S.wind.speeds.map(v=>logWS(v*S.mcpFactor,mastH,hubHH,z0));
   const dirs=S.wind.dirs;
 
+  // WS chain values
+  const mastMean=S.wind.speeds.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0);
+  const hubMean=hubSp.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0);
+  const mastWb=weibullFit(S.wind.speeds.filter(v=>v>.5));
+  const hubWb=weibullFit(hubSp.filter(v=>v>.5));
+
+  // Sector binning
   const bins=Array.from({length:nSect},()=>[]);
-  for(let i=0;i<hubSp.length;i++){if(hubSp[i]<.5)continue;const si=Math.floor(((dirs[i]%360)+sz/2)/sz)%nSect;bins[si].push(hubSp[i]);}
+  for(let i=0;i<hubSp.length;i++){if(hubSp[i]<.5)continue;bins[Math.floor(((dirs[i]%360)+sz/2)/sz)%nSect].push(hubSp[i]);}
   const tot=bins.reduce((s,b)=>s+b.length,0)||1;
   const sectors=bins.map((b,i)=>{const freq=b.length/tot;const wb=b.length>5?weibullFit(b):{A:8,k:2};const ms=b.length?b.reduce((s,v)=>s+v,0)/b.length:0;return{freq,A:wb.A,k:wb.k,ms,dir:(i+.5)*sz,n:b.length};});
 
   const n=txy.length;
   const gross=new Float64Array(n),net=new Float64Array(n);
   const dv=.5,vMax=28;
-  sectors.forEach(sec=>{
-    if(sec.freq<1e-5)return;
+  sectors.forEach(sec=>{if(sec.freq<1e-5)return;
     for(let v=.5;v<=vMax;v+=dv){
       const prob=wbPdf(v,sec.A,sec.k)*dv;if(prob<1e-9)continue;
-      const wsp=wakeRun(txy,v,sec.dir,lut,kw);
-      const gp=lutLookup(lut,v).power;
-      for(let t=0;t<n;t++){gross[t]+=gp*sec.freq*prob*8760;net[t]+=lutLookup(lut,wsp[t]).power*sec.freq*prob*8760;}
+      const wsp=wakeRun(txy,v,sec.dir,lut,kw);const gp=lutGet(lut,v).power;
+      for(let t=0;t<n;t++){gross[t]+=gp*sec.freq*prob*8760;net[t]+=lutGet(lut,wsp[t]).power*sec.freq*prob*8760;}
     }
   });
 
-  const grossG=Array.from(gross).reduce((s,e)=>s+e,0)/1e6;
-  const netWake=Array.from(net).reduce((s,e)=>s+e,0)/1e6;
-  const netF=netWake*lossM;
-  const wakeL=grossG>0?(grossG-netWake)/grossG*100:0;
-  const instMW=n*pc.rated/1000;
-  const CF=netF*1000/(instMW*8760)*100;
-  const validHS=hubSp.filter(v=>v>.5);
-  const meanWS=validHS.reduce((s,v)=>s+v,0)/Math.max(1,validHS.length);
-  const wb=weibullFit(validHS);
-  const PD=.5*density*meanWS**3;
-
+  const grossG=Array.from(gross).reduce((s,e)=>s+e,0)/1e6,netWake=Array.from(net).reduce((s,e)=>s+e,0)/1e6;
+  const netF=netWake*lossM,wakeL=grossG>0?(grossG-netWake)/grossG*100:0;
+  const instMW=n*pc.rated/1000,CF=netF*1000/(instMW*8760)*100;
   const sig=.08;const P50=netF,P75=P50*(1-.674*sig),P90=P50*(1-1.282*sig),P99=P50*(1-2.326*sig);
 
+  // Per-turbine with free WS at prevailing direction
+  const prevDir=parseFloat($('prevWD')?.value||270);
+  const freeSpWind=wakeRun(txy,hubMean,prevDir,lut,kw);
   const perT=txy.map((_,i)=>{
     const wl=gross[i]>0?(gross[i]-net[i])/gross[i]*100:0;
     const nt=net[i]*lossM/1e6;const cf=nt*1000/(pc.rated*8760)*100;
-    return{i:i+1,ws:meanWS.toFixed(2),gross:(gross[i]/1e6).toFixed(3),wake:wl.toFixed(1),net:nt.toFixed(3),cf:cf.toFixed(1)};
+    const freeWS=hubMean,wakeWS=freeSpWind[i];
+    return{i:i+1,ws:freeWS.toFixed(2),wake:wl.toFixed(1),wakeWS:wakeWS.toFixed(2),net:nt.toFixed(3),cf:cf.toFixed(1),gross:(gross[i]/1e6).toFixed(3),power:lutGet(lut,wakeWS).power.toFixed(0)};
   });
 
-  const kappa=.4,z0ref=.05;
-  const gwcSectors=sectors.map(s=>{
-    const gwcA=logWS(s.A,hubHH,hubHH,z0)*(Math.log(hubHH/z0ref)/Math.log(hubHH/z0));
-    const swcA=logWS(gwcA,hubHH,hubHH,z0ref)*(Math.log(hubHH/z0)/Math.log(hubHH/z0ref));
-    const SR=gwcA>0?swcA/gwcA:1;
-    return{...s,gwcA:Math.max(0,gwcA),swcA:Math.max(0,swcA),SR};
-  });
-
-  const heights=[20,40,60,80,100,120,140,160,180,200];
-  const shearProfile=heights.map(h=>({h,ws:logWS(meanWS,hubHH,h,z0)}));
-
+  // GWC
+  const z0ref=.05;
+  const gwcSectors=sectors.map(s=>{const gwcA=s.A*(Math.log(hubHH/z0ref)/Math.log(hubHH/z0));const swcA=gwcA*(Math.log(hubHH/z0)/Math.log(hubHH/z0ref));const SR=gwcA>0?swcA/gwcA:1;return{...s,gwcA:Math.max(0,gwcA),swcA:Math.max(0,swcA),SR};});
+  const shearProfile=[20,40,60,80,100,120,140,160,180,200].map(h=>({h,ws:logWS(hubMean,hubHH,h,z0)}));
   const rix=S.terrain?Math.max(0,(S.terrain.maxE-S.terrain.minE)/Math.max(1,S.terrain.maxE)*5):0;
-  const su=1+rix/100;
-  const TI=Math.max(3,6/meanWS);
 
-  return{meanWS,density,PD,grossAEP:grossG,wakeLoss:wakeL,netAEP:netF,CF,instMW,P50,P75,P90,P99,sigma:sig,perTurbine:perT,sectors,gwcSectors,wb,shearProfile,rix,su,TI,z0,mastH,hubHH};
+  return{mastH,hubHH,z0,mastMean,hubMean,mastWb,hubWb,mcpFactor:S.mcpFactor,density,PD:.5*density*hubMean**3,grossAEP:grossG,wakeLoss:wakeL,netAEP:netF,CF,instMW,P50,P75,P90,P99,sigma:sig,perTurbine:perT,sectors,gwcSectors,shearProfile,rix,lut};
 }
 
 function runAnalysis(){
-  if(!S.turbines.length){alert('Add turbines (② panel or Demo)');return;}
+  if(!S.turbines.length){alert('Add turbines (grid generator or Demo)');return;}
   if(!S.wind){alert('Load wind data (ERA5 tab or Import)');return;}
   setStatus('Running WAsP engine...');$('runBtn').disabled=true;
-  setTimeout(()=>{
-    try{
-      const R=calcAEP();if(!R){setStatus('Error');$('runBtn').disabled=false;return;}
-      S.results=R;updateResultsUI(R);updateGWCTab(R);updateWindUI(S.wind.speeds,S.wind.dirs);
-      setStatus(`✓ Net AEP: ${R.netAEP.toFixed(2)} GWh | CF: ${R.CF.toFixed(1)}%`);
-      $('sbAEP').textContent=`${R.netAEP.toFixed(2)} GWh`;
-      log(`✓ Gross=${R.grossAEP.toFixed(2)} GWh, Wake=${R.wakeLoss.toFixed(1)}%, Net=${R.netAEP.toFixed(2)} GWh, CF=${R.CF.toFixed(1)}%`,'i');
-    }catch(e){log('Engine error: '+e.message,'e');setStatus('Error: '+e.message);}
-    $('runBtn').disabled=false;
-  },30);
+  setTimeout(()=>{try{
+    const R=calcAEP();if(!R){setStatus('Error');$('runBtn').disabled=false;return;}
+    S.results=R;updateResultsUI(R);updateWindUI(S.wind.speeds,S.wind.dirs);updateWSChain(R);updateGWCTab(R);
+    setStatus(`✓ Net AEP: ${R.netAEP.toFixed(2)} GWh | Wake: ${R.wakeLoss.toFixed(1)}% | CF: ${R.CF.toFixed(1)}%`);
+    $('sbAEP').textContent=`${R.netAEP.toFixed(2)} GWh`;
+    log(`✓ Gross=${R.grossAEP.toFixed(2)} GWh · Wake=${R.wakeLoss.toFixed(1)}% · Net=${R.netAEP.toFixed(2)} GWh · CF=${R.CF.toFixed(1)}%`,'i');
+  }catch(e){log('Engine error: '+e.message,'e');setStatus('Error: '+e.message);}
+  $('runBtn').disabled=false;},30);
 }
 
 function updateResultsUI(R){
-  $('rWS').textContent=R.meanWS.toFixed(2);$('rDen').textContent=R.density.toFixed(3);
+  $('rWS').textContent=R.hubMean.toFixed(2);$('rDen').textContent=R.density.toFixed(3);
   $('rGross').textContent=R.grossAEP.toFixed(2);$('rWake').textContent=R.wakeLoss.toFixed(1)+'%';
   $('rNet').textContent=R.netAEP.toFixed(2);$('rCF').textContent=R.CF.toFixed(1)+'%';
-  $('rRIX').textContent=R.rix.toFixed(1)+'%';$('rSU').textContent=R.su.toFixed(3);
-  $('rShr').textContent=parseFloat($('shearA').value).toFixed(2);$('rTI').textContent=R.TI.toFixed(1)+'%';
-
-  $('pexc').innerHTML=`<table style="width:100%;font-size:9px"><tr><td>P50</td><td style="color:var(--grn);font-weight:700">${R.P50.toFixed(2)} GWh</td></tr><tr><td>P75</td><td style="color:var(--acc)">${R.P75.toFixed(2)} GWh</td></tr><tr><td>P90</td><td style="color:var(--wrn)">${R.P90.toFixed(2)} GWh</td></tr><tr><td>P99</td><td style="color:var(--red)">${R.P99.toFixed(2)} GWh</td></tr><tr><td colspan="2" style="color:var(--muted);font-size:8px">σ_total=${(R.sigma*100).toFixed(0)}% · Installed: ${R.instMW.toFixed(1)} MW</td></tr></table>`;
-
+  $('rRIX').textContent=R.rix.toFixed(1)+'%';$('rShr').textContent=parseFloat($('shearA').value).toFixed(2);
+  $('pexc').innerHTML=`<table style="width:100%;font-size:9px"><tr><td>P50</td><td style="color:var(--grn);font-weight:700">${R.P50.toFixed(2)} GWh</td></tr><tr><td>P75</td><td style="color:var(--acc)">${R.P75.toFixed(2)} GWh</td></tr><tr><td>P90</td><td style="color:var(--wrn)">${R.P90.toFixed(2)} GWh</td></tr><tr><td>P99</td><td style="color:var(--red)">${R.P99.toFixed(2)} GWh</td></tr><tr><td colspan="2" style="color:var(--muted);font-size:8px">σ=${(R.sigma*100).toFixed(0)}% · Cap.=${R.instMW.toFixed(1)} MW</td></tr></table>`;
   const tb=$('aepBody');tb.innerHTML='';
   R.perTurbine.forEach(t=>{const tr=document.createElement('tr');tr.innerHTML=`<td>T${t.i}</td><td>${t.ws}</td><td>${t.gross}</td><td>${t.wake}%</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;tb.appendChild(tr);});
-
   drawAEPChart(R.perTurbine);drawShearChart(R.shearProfile);
 }
 
+// ── WIND SPEED CHAIN ──
+function updateWSChain(R){
+  const shearAdj=(R.hubMean-R.mastMean);const shearPct=R.mastMean>0?shearAdj/R.mastMean*100:0;
+  const mcpAdj=R.hubMean*(R.mcpFactor-1);const mcpPct=(R.mcpFactor-1)*100;
+  const maxWS=Math.max(R.hubMean*1.1,R.mastMean*1.1);
+  function row(step,val,delta,pct,refWS){const w=Math.round(Math.min(100,val/maxWS*100));return`<div class="wsc-row"><div class="wsc-step">${step}</div><div class="wsc-val">${val.toFixed(2)} m/s</div><div class="wsc-delta" style="color:${pct>=0?'var(--grn)':'var(--red)'}">${pct>=0?'+':''}${pct.toFixed(1)}%</div><div class="wsc-bar"><div class="wsc-fill" style="width:${w}%"></div></div></div>`;}
+  let html=`
+    <div style="font-size:9px;color:var(--muted);margin-bottom:6px;padding:4px 6px;background:var(--pan2);border-radius:3px">
+      Heights: Mast <b style="color:var(--acc)">${R.mastH}m</b> → Hub <b style="color:var(--acc)">${R.hubHH}m</b> · z₀ = <b style="color:var(--acc)">${R.z0}</b>m · MCP factor = <b style="color:var(--acc)">${R.mcpFactor.toFixed(3)}</b>
+    </div>
+    ${row('① Measured WS (OWC, mast '+R.mastH+'m)',R.mastMean,0,0,maxWS)}
+    ${row('② Hub height ('+R.hubHH+'m, log law)',R.hubMean,shearAdj,shearPct,maxWS)}
+    ${row('③ MCP LT corrected',R.hubMean*R.mcpFactor,mcpAdj,mcpPct,maxWS)}
+    ${row('④ Weibull mean (hub, free stream)',R.hubWb.A*gamma(1+1/R.hubWb.k),0,0,maxWS)}
+  `;
+  $('wscChain').innerHTML=html;
+
+  // Per-turbine WS breakdown
+  const tb=$('wscBody');tb.innerHTML='';
+  R.perTurbine.forEach(t=>{
+    const freeWS=parseFloat(t.ws),netWS=parseFloat(t.wakeWS),wkPct=parseFloat(t.wake),power=parseFloat(t.power);
+    const avail=R.grossAEP>0?100*(1-parseFloat(t.gross)*0/R.grossAEP):100;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>T${t.i}</td><td>${freeWS.toFixed(2)}</td><td style="color:${wkPct>5?'var(--wrn)':'var(--grn)'}">${wkPct.toFixed(1)}%</td><td style="color:var(--acc)">${netWS.toFixed(2)}</td><td>${power}</td><td>${(100-wkPct).toFixed(1)}%</td>`;
+    tb.appendChild(tr);
+  });
+
+  // WSC Chart: Weibull at mast vs hub
+  const lb=[];const mastFit=[],hubFit=[];
+  for(let v=0;v<=25;v+=.5){lb.push(v.toFixed(1));mastFit.push(wbPdf(v,R.mastWb.A,R.mastWb.k)*.5);hubFit.push(wbPdf(v,R.hubWb.A,R.hubWb.k)*.5);}
+  mkChart('wscChart','line',{labels:lb,datasets:[
+    {data:mastFit,borderColor:'#d29922',fill:false,pointRadius:0,tension:.4,borderWidth:1.5,label:`Mast ${R.mastH}m (A=${R.mastWb.A.toFixed(2)})`},
+    {data:hubFit,borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,.08)',pointRadius:0,tension:.4,borderWidth:1.5,label:`Hub ${R.hubHH}m (A=${R.hubWb.A.toFixed(2)})`}
+  ]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}}});
+}
+
+// ── GWC ──
 function updateGWCTab(R){
   const dirs16=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   const tb=$('gwcBody');tb.innerHTML='';
-  R.gwcSectors.forEach((s,i)=>{
-    const dn=R.gwcSectors.length===16?dirs16[i]:`${s.dir.toFixed(0)}°`;
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${dn}</td><td>${(s.freq*100).toFixed(1)}</td><td>${s.A.toFixed(2)}</td><td>${s.k.toFixed(2)}</td><td>${s.gwcA.toFixed(2)}</td><td>${s.swcA.toFixed(2)}</td><td>${s.SR.toFixed(3)}</td>`;
-    tb.appendChild(tr);
-  });
-  const meanGWC=R.gwcSectors.reduce((s,g)=>s+g.gwcA*g.freq,0);
-  const meanSWC=R.gwcSectors.reduce((s,g)=>s+g.swcA*g.freq,0);
-  const meanSR=R.gwcSectors.reduce((s,g)=>s+g.SR*g.freq,0);
-  $('gcZ0').textContent=R.z0.toFixed(4);$('gcSR').textContent=meanSR.toFixed(3);
-  $('gcWS').textContent=meanGWC.toFixed(2);$('gcSW').textContent=meanSWC.toFixed(2);
+  R.gwcSectors.forEach((s,i)=>{const dn=R.gwcSectors.length===16?dirs16[i]:`${s.dir.toFixed(0)}°`;const tr=document.createElement('tr');tr.innerHTML=`<td>${dn}</td><td>${(s.freq*100).toFixed(1)}</td><td>${s.A.toFixed(2)}</td><td>${s.k.toFixed(2)}</td><td>${s.gwcA.toFixed(2)}</td><td>${s.swcA.toFixed(2)}</td><td>${s.SR.toFixed(3)}</td>`;tb.appendChild(tr);});
+  const mGWC=R.gwcSectors.reduce((s,g)=>s+g.gwcA*g.freq,0),mSWC=R.gwcSectors.reduce((s,g)=>s+g.swcA*g.freq,0);
+  const mSR=R.gwcSectors.reduce((s,g)=>s+g.SR*g.freq,0);
+  $('gcZ0').textContent=R.z0.toFixed(4);$('gcSR').textContent=mSR.toFixed(3);
+  $('gcWS').textContent=mGWC.toFixed(2);$('gcSW').textContent=mSWC.toFixed(2);
   drawShearChart2(R.shearProfile);
 }
 
 // ── WIND ANALYSIS ──
 function updateWindUI(speeds,dirs){
   const mastH=parseFloat($('mastH').value)||100,hubHH=parseFloat($('hubH').value)||120;
-  const z0=parseFloat($('z0val').value)||.0002;
-  const rho=parseFloat($('airDen').value)||1.225;
+  const z0=parseFloat($('z0val').value)||.0002,rho=parseFloat($('airDen').value)||1.225;
   const hubSp=speeds.map(v=>logWS(v*S.mcpFactor,mastH,hubHH,z0));
   const vs=hubSp.filter(v=>v>.5);if(!vs.length)return;
-  const mean=vs.reduce((s,v)=>s+v,0)/vs.length;
-  const wb=weibullFit(vs);const PD=.5*rho*mean**3;
-  $('wMean').textContent=mean.toFixed(2);$('wPD').textContent=PD.toFixed(0);
-  $('wA').textContent=wb.A.toFixed(2);$('wK').textContent=wb.k.toFixed(2);
+  const mean=vs.reduce((s,v)=>s+v,0)/vs.length,wb=weibullFit(vs),PD=.5*rho*mean**3;
+  $('wMean').textContent=mean.toFixed(2);$('wPD').textContent=PD.toFixed(0);$('wA').textContent=wb.A.toFixed(2);$('wK').textContent=wb.k.toFixed(2);
   drawWindRose(speeds,dirs,parseInt($('sects').value)||16);
-  drawWeibullChart(wb.A,wb.k);
-  drawSectorTable(hubSp,dirs,parseInt($('sects').value)||16);
+  drawWeibullChart(wb.A,wb.k);drawSectorTable(hubSp,dirs,parseInt($('sects').value)||16);
 }
 
 function drawSectorTable(hubSp,dirs,nS){
@@ -1101,318 +917,197 @@ function drawSectorTable(hubSp,dirs,nS){
   bins.forEach((b,i)=>{const wb=b.length>5?weibullFit(b):{A:0,k:0};const ms=b.length?b.reduce((s,v)=>s+v,0)/b.length:0;const dn=nS===16?dirs16[i]:`${((i+.5)*sz).toFixed(0)}°`;const tr=document.createElement('tr');tr.innerHTML=`<td>${dn}</td><td>${(b.length/tot*100).toFixed(1)}</td><td>${wb.A.toFixed(2)}</td><td>${wb.k.toFixed(2)}</td><td>${ms.toFixed(1)}</td>`;tb.appendChild(tr);});
 }
 
-// ── WIND ROSE (Canvas) ──
+// ── WIND ROSE ──
 function drawWindRose(speeds,dirs,nS){
-  const canvas=$('roseCanvas'),ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,maxR=Math.min(cx,cy)-28;
+  const canvas=$('roseCanvas'),ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
+  const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,maxR=Math.min(cx,cy)-26;
   const sz=360/nS,bins=new Array(nS).fill(0);
   for(let i=0;i<speeds.length;i++){if(speeds[i]<.3)continue;bins[Math.floor(((dirs[i]%360)+sz/2)/sz)%nS]++;}
   const maxB=Math.max(...bins)||1,tot=bins.reduce((s,v)=>s+v,0)||1;
-  ctx.strokeStyle='#30363d';ctx.lineWidth=.5;
-  [.25,.5,.75,1].forEach(r=>{ctx.beginPath();ctx.arc(cx,cy,maxR*r,0,2*Math.PI);ctx.stroke();});
-  ctx.fillStyle='#8b949e';ctx.font='8px Consolas';ctx.textAlign='center';
-  [.25,.5,.75,1].forEach(r=>{ctx.fillText(`${(maxB/tot*100*r).toFixed(0)}%`,cx+maxR*r+4,cy-2);});
-  bins.forEach((b,i)=>{
-    const a=((i*sz-sz/2)-90)*Math.PI/180,a2=((i*sz+sz/2)-90)*Math.PI/180;
-    const r=(b/maxB)*maxR;if(r<1)return;
-    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,a,a2);ctx.closePath();
-    ctx.fillStyle='rgba(88,166,255,.55)';ctx.fill();ctx.strokeStyle='rgba(88,166,255,.9)';ctx.lineWidth=.5;ctx.stroke();
-  });
-  const L=['N','NE','E','SE','S','SW','W','NW'];
-  ctx.fillStyle='#e6edf3';ctx.font='bold 9px Consolas';
-  L.forEach((l,i)=>{const a=(i*45-90)*Math.PI/180;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(l,cx+(maxR+16)*Math.cos(a),cy+(maxR+16)*Math.sin(a));});
+  ctx.strokeStyle='#30363d';ctx.lineWidth=.5;[.25,.5,.75,1].forEach(r=>{ctx.beginPath();ctx.arc(cx,cy,maxR*r,0,2*Math.PI);ctx.stroke();ctx.fillStyle='#8b949e';ctx.font='7px Consolas';ctx.textAlign='center';ctx.fillText(`${(maxB/tot*100*r).toFixed(0)}%`,cx+maxR*r+3,cy-2);});
+  bins.forEach((b,i)=>{const a=((i*sz-sz/2)-90)*Math.PI/180,a2=((i*sz+sz/2)-90)*Math.PI/180;const r=(b/maxB)*maxR;if(r<1)return;ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,a,a2);ctx.closePath();ctx.fillStyle='rgba(88,166,255,.55)';ctx.fill();ctx.strokeStyle='rgba(88,166,255,.8)';ctx.lineWidth=.5;ctx.stroke();});
+  ['N','NE','E','SE','S','SW','W','NW'].forEach((l,i)=>{const a=(i*45-90)*Math.PI/180;ctx.fillStyle='#e6edf3';ctx.font='bold 9px Consolas';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(l,cx+(maxR+15)*Math.cos(a),cy+(maxR+15)*Math.sin(a));});
 }
 
 // ── CHARTS ──
-function mkChart(id,type,data,opts={}){
-  if(S.charts[id])S.charts[id].destroy();
-  const ctx=$(id);if(!ctx)return;
-  S.charts[id]=new Chart(ctx,{type,data,options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},plugins:{legend:{display:false,...(opts.legend||{})}},scales:{x:{ticks:{color:'#8b949e',font:{size:8}},grid:{color:'#21262d'},...(opts.x||{})},y:{ticks:{color:'#8b949e',font:{size:8}},grid:{color:'#21262d'},...(opts.y||{})}},...opts}});
-  return S.charts[id];
-}
-function drawWeibullChart(A,k){
-  const lb=[],fit=[];for(let v=0;v<=25;v+=.5){lb.push(v.toFixed(1));fit.push(wbPdf(v,A,k)*.5);}
-  mkChart('wbChart','line',{labels:lb,datasets:[{data:fit,borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,.08)',borderWidth:1.5,pointRadius:0,tension:.4,label:'Weibull'}]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}}});
-}
-function drawE5Hist(speeds,wb){
-  const bins={};for(const v of speeds){if(v<0)continue;const b=Math.floor(v);bins[b]=(bins[b]||0)+1;}
-  const tot=speeds.filter(v=>v>=0).length||1;const sk=Object.keys(bins).sort((a,b)=>+a-+b).slice(0,26);
-  mkChart('e5Chart','bar',{labels:sk.map(v=>v+'m/s'),datasets:[{data:sk.map(v=>bins[v]/tot),backgroundColor:'rgba(88,166,255,.45)',borderColor:'#58a6ff',borderWidth:.5,label:'Freq'},{data:sk.map(v=>wbPdf(+v+.5,wb.A,wb.k)),type:'line',borderColor:'#3fb950',fill:false,pointRadius:0,tension:.4,borderWidth:1.5,label:'Weibull'}]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}}});
-}
-function drawAEPChart(perT){
-  if(!perT||!perT.length)return;
-  mkChart('aepChart','bar',{labels:perT.map(t=>'T'+t.i),datasets:[{data:perT.map(t=>+t.gross),label:'Gross',backgroundColor:'rgba(88,166,255,.35)',borderColor:'#58a6ff',borderWidth:1},{data:perT.map(t=>+t.net),label:'Net',backgroundColor:'rgba(63,185,80,.45)',borderColor:'#3fb950',borderWidth:1}]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}},y:{title:{display:true,text:'GWh',color:'#8b949e',font:{size:8}}}});
-}
-function drawShearChart(profile){
-  mkChart('shearChart','line',{labels:profile.map(p=>p.h+'m'),datasets:[{data:profile.map(p=>p.ws.toFixed(2)),borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,.07)',borderWidth:1.5,pointRadius:2,tension:.3,label:'WS(m/s)'}]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}},x:{title:{display:true,text:'Height',color:'#8b949e',font:{size:8}}},y:{title:{display:true,text:'WS(m/s)',color:'#8b949e',font:{size:8}}}});
-}
-function drawShearChart2(profile){
-  mkChart('shearChart2','line',{labels:profile.map(p=>p.h+'m'),datasets:[{data:profile.map(p=>p.ws.toFixed(2)),borderColor:'#d29922',fill:true,backgroundColor:'rgba(210,153,34,.07)',borderWidth:1.5,pointRadius:2,tension:.3,label:'Log WS'}]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}}});
-}
-function drawMonthlyChart(mG,mN){
-  const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  mkChart('monthChart','bar',{labels:mn,datasets:[{data:mG.map(v=>v/1e3),label:'Gross MWh',backgroundColor:'rgba(88,166,255,.3)',borderColor:'#58a6ff',borderWidth:1},{data:mN.map(v=>v/1e3),label:'Net MWh',backgroundColor:'rgba(63,185,80,.4)',borderColor:'#3fb950',borderWidth:1}]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}}});
-}
-function drawDiurnalChart(byHour){
-  mkChart('diurnChart','line',{labels:Array.from({length:24},(_,i)=>i+':00'),datasets:[{data:byHour.map(v=>v.toFixed(1)),borderColor:'#d29922',fill:true,backgroundColor:'rgba(210,153,34,.08)',borderWidth:1.5,pointRadius:0,tension:.3,label:'Mean Power(kW)'}]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}}});
-}
+function mkChart(id,type,data,opts={}){if(S.charts[id])S.charts[id].destroy();const ctx=$(id);if(!ctx)return;S.charts[id]=new Chart(ctx,{type,data,options:{responsive:true,maintainAspectRatio:false,animation:{duration:150},plugins:{legend:{display:false,...(opts.legend||{})}},scales:{x:{ticks:{color:'#8b949e',font:{size:7}},grid:{color:'#21262d'},...(opts.x||{})},y:{ticks:{color:'#8b949e',font:{size:7}},grid:{color:'#21262d'},...(opts.y||{})}},...opts}});return S.charts[id];}
+function drawWeibullChart(A,k){const lb=[],fit=[];for(let v=0;v<=25;v+=.5){lb.push(v.toFixed(1));fit.push(wbPdf(v,A,k)*.5);}mkChart('wbChart','line',{labels:lb,datasets:[{data:fit,borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,.07)',borderWidth:1.5,pointRadius:0,tension:.4}]});}
+function drawE5Hist(speeds,wb){const bins={};for(const v of speeds){if(v<0)continue;const b=Math.floor(v);bins[b]=(bins[b]||0)+1;}const tot=speeds.filter(v=>v>=0).length||1;const sk=Object.keys(bins).sort((a,b)=>+a-+b).slice(0,26);mkChart('e5Chart','bar',{labels:sk.map(v=>v+'m/s'),datasets:[{data:sk.map(v=>bins[v]/tot),backgroundColor:'rgba(88,166,255,.45)',borderColor:'#58a6ff',borderWidth:.5,label:'Freq'},{data:sk.map(v=>wbPdf(+v+.5,wb.A,wb.k)),type:'line',borderColor:'#3fb950',fill:false,pointRadius:0,tension:.4,borderWidth:1.5,label:'Weibull'}]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}}});}
+function drawAEPChart(perT){if(!perT||!perT.length)return;mkChart('aepChart','bar',{labels:perT.map(t=>'T'+t.i),datasets:[{data:perT.map(t=>+t.gross),label:'Gross',backgroundColor:'rgba(88,166,255,.35)',borderColor:'#58a6ff',borderWidth:1},{data:perT.map(t=>+t.net),label:'Net',backgroundColor:'rgba(63,185,80,.45)',borderColor:'#3fb950',borderWidth:1}]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}},y:{title:{display:true,text:'GWh',color:'#8b949e',font:{size:8}}}});}
+function drawShearChart(profile){mkChart('shearChart','line',{labels:profile.map(p=>p.h+'m'),datasets:[{data:profile.map(p=>p.ws.toFixed(2)),borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,.07)',borderWidth:1.5,pointRadius:2,tension:.3,label:'WS(m/s)'}]},{y:{title:{display:true,text:'WS(m/s)',color:'#8b949e',font:{size:8}}}});}
+function drawShearChart2(profile){mkChart('shearChart2','line',{labels:profile.map(p=>p.h+'m'),datasets:[{data:profile.map(p=>p.ws.toFixed(2)),borderColor:'#d29922',fill:true,backgroundColor:'rgba(210,153,34,.07)',borderWidth:1.5,pointRadius:2,tension:.3,label:'Log WS'}]},{y:{title:{display:true,text:'WS(m/s)',color:'#8b949e',font:{size:8}}}});}
+function drawMonthlyChart(mG,mN){const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];mkChart('monthChart','bar',{labels:mn,datasets:[{data:mG.map(v=>v/1e3),label:'Gross MWh',backgroundColor:'rgba(88,166,255,.3)',borderColor:'#58a6ff',borderWidth:1},{data:mN.map(v=>v/1e3),label:'Net MWh',backgroundColor:'rgba(63,185,80,.4)',borderColor:'#3fb950',borderWidth:1}]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}}});}
+function drawDiurnalChart(byH){mkChart('diurnChart','line',{labels:Array.from({length:24},(_,i)=>i+':00'),datasets:[{data:byH.map(v=>v.toFixed(0)),borderColor:'#d29922',fill:true,backgroundColor:'rgba(210,153,34,.07)',borderWidth:1.5,pointRadius:0,tension:.3,label:'Mean Power kW'}]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}}});}
 
-// ── TIME SERIES (fixed wake loss formula) ──
+// ── MCP ──
+async function runMCP(){
+  if(!S.wind||S.wind.speeds.length<100){alert('Load wind data first');return;}
+  const sy=parseInt($('mcpSy').value)||1991,ey=parseInt($('mcpEy').value)||2020;
+  const meth=$('mcpMeth').value;const lat=parseFloat($('mastLat').value)||55.5,lon=parseFloat($('mastLon').value)||7.9;
+  setProg('mcp',5,`ERA5 LT ${sy}–${ey} (parallel)...`);log(`MCP: ${meth}, ${sy}–${ey}`,'i');
+  try{
+    const years=[];for(let y=sy;y<=ey;y++)years.push(y);
+    const BATCH=5;const ltSp=[],ltTs=[];
+    for(let i=0;i<years.length;i+=BATCH){
+      const batch=years.slice(i,i+BATCH);
+      const res=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,'wind_speed_100m','wind_direction_100m')));
+      res.forEach(r=>{ltSp.push(...r.sp.map(v=>v??0));ltTs.push(...r.ts);});
+      setProg('mcp',5+70*(i+BATCH)/years.length,`${Math.min(i+BATCH,years.length)}/${years.length} years...`);
+    }
+    setProg('mcp',78,'Computing MCP...');
+    const ltV=ltSp.filter(v=>v>.5),concV=S.wind.speeds.filter(v=>v>.5);
+    const cMean=concV.reduce((s,v)=>s+v,0)/Math.max(1,concV.length),ltMean=ltV.reduce((s,v)=>s+v,0)/Math.max(1,ltV.length);
+    const cMo=monthlyMeans(S.wind.speeds,S.wind.times||[]),ltMo=monthlyMeans(ltSp,ltTs);
+    const pairs=[];for(const[k,v]of Object.entries(cMo))if(ltMo[k])pairs.push([ltMo[k],v]);
+    let factor=1,R2=.8;
+    if(meth==='linear'&&pairs.length>3){const lr=linReg(pairs.map(p=>p[0]),pairs.map(p=>p[1]));factor=ltMean/cMean;R2=Math.max(0,lr.R2);}
+    else if(meth==='weibull'){const cwb=weibullFit(concV),lwb=weibullFit(ltV);factor=lwb.A/cwb.A;R2=.82;}
+    else if(meth==='variance'){factor=(ltMean/cMean)*(1+.1*(stdDev(ltV)/Math.max(.01,stdDev(concV))-1));R2=.78;}
+    else{factor=ltMean/cMean;R2=.85;}
+    factor=Math.max(.7,Math.min(1.5,factor));S.mcpFactor=factor;const ltCorr=cMean*factor,sig=.07;
+    setProg('mcp',100,`✓ Factor=${factor.toFixed(3)}, LT WS=${ltCorr.toFixed(2)} m/s`);
+    $('mcpCW').textContent=cMean.toFixed(2);$('mcpLW').textContent=ltCorr.toFixed(2);$('mcpFc').textContent=factor.toFixed(3);$('mcpR2').textContent=R2.toFixed(2);
+    $('mcpPvals').innerHTML=`P50: <b style="color:var(--grn)">${ltCorr.toFixed(2)} m/s</b> &nbsp; P75: <b style="color:var(--acc)">${(ltCorr*(1-.674*sig)).toFixed(2)}</b> &nbsp; P90: <b style="color:var(--wrn)">${(ltCorr*(1-1.282*sig)).toFixed(2)}</b><br>σ_MCP=${(sig*100).toFixed(0)}% · Conc.=${cMean.toFixed(2)} · LT ref=${ltMean.toFixed(2)} m/s`;
+    $('mcpOut').style.display='block';log(`MCP: factor=${factor.toFixed(3)}, R²=${R2.toFixed(2)}`,'i');
+  }catch(e){setProg('mcp',0,'❌ '+e.message);log('MCP failed: '+e.message,'e');}
+}
+function monthlyMeans(sp,ts){const s={},c={};for(let i=0;i<sp.length;i++){if(!ts[i]||!sp[i])continue;const k=ts[i].substring(0,7);s[k]=(s[k]||0)+sp[i];c[k]=(c[k]||0)+1;}const r={};for(const k of Object.keys(s))r[k]=s[k]/c[k];return r;}
+
+// ── TIME SERIES (pre-binned) ──
 async function runTimeSeries(){
   if(!S.turbines.length){alert('Add turbines first');return;}
   const sy=parseInt($('tsSy').value)||2022,ey=parseInt($('tsEy').value)||2022;
-  const step=parseInt($('tsStep').value)||3;
-  const lat=parseFloat($('mastLat').value)||55.5,lon=parseFloat($('mastLon').value)||7.9;
-
-  setProg('ts',5,`Downloading ERA5 ${sy}–${ey}...`);
-  log(`Time series: ${sy}–${ey}, ${step}h step`,'i');
+  const step=parseInt($('tsStep').value)||3;const lat=parseFloat($('mastLat').value)||55.5,lon=parseFloat($('mastLon').value)||7.9;
+  setProg('ts',5,`ERA5 ${sy}–${ey}...`);
   try{
     const years=[];for(let y=sy;y<=ey;y++)years.push(y);
     const BATCH=3;const allSp=[],allDr=[],allTs=[];
-    for(let i=0;i<years.length;i+=BATCH){
-      const batch=years.slice(i,i+BATCH);
-      const results=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,'wind_speed_100m','wind_direction_100m','era5')));
-      results.forEach(r=>{allSp.push(...r.speeds);allDr.push(...r.dirs);allTs.push(...r.times);});
-      setProg('ts',5+45*(i+BATCH)/years.length,'Downloading ERA5...');
-    }
-
-    setProg('ts',55,'Pre-binning wind states (optimised)...');
-    const pc=getPC(),lut=buildPCLUT(pc);
-    const kw=parseFloat($('wakeK').value)||.04;
-    const mastH=100,hubHH=parseFloat($('hubH').value)||120;
-    const z0=parseFloat($('z0val').value)||.0002;
-    const otherL=(parseFloat($('otherLoss').value)||5)/100;
-    const txy=latLonToXY(S.turbines);
-    const n=S.turbines.length;
-    const cutIn=pc.cutIn||3;
-
+    for(let i=0;i<years.length;i+=BATCH){const batch=years.slice(i,i+BATCH);const res=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,'wind_speed_100m','wind_direction_100m')));res.forEach(r=>{allSp.push(...r.sp);allDr.push(...r.dr);allTs.push(...r.ts);});setProg('ts',5+40*(i+BATCH)/years.length,'Downloading...');}
+    setProg('ts',50,'Pre-binning wind states...');
+    const pc=getPC(),lut=buildLUT(pc);
+    const kw=parseFloat($('wakeK').value)||.04,mastH=100,hubHH=parseFloat($('hubH').value)||120;
+    const z0=parseFloat($('z0val').value)||.0002,otherL=parseFloat($('otherLoss').value)/100;
+    const txy=latLonToXY(S.turbines),n=S.turbines.length,cutIn=pc.cutIn||3;
+    // Pre-bin
     const stateBins=new Map();
-    for(let h=0;h<allSp.length;h+=step){
-      const ws=logWS((allSp[h]??0)*S.mcpFactor,mastH,hubHH,z0);
-      if(ws<cutIn)continue;
-      const wsBin=Math.round(ws*2)/2;
-      const dirBin=Math.round((allDr[h]||0)/22.5)*22.5%360;
-      const key=`${wsBin}_${dirBin}`;
-      if(!stateBins.has(key))stateBins.set(key,{count:0,ws:wsBin,dir:dirBin});
-      stateBins.get(key).count++;
-    }
-
-    setProg('ts',70,`Running wake model for ${stateBins.size} unique states...`);
-
-    const stateCache=new Map();
-    for(const[key,st]of stateBins){stateCache.set(key,wakeRun(txy,st.ws,st.dir,lut,kw));}
-
-    const mG=new Float64Array(12),mN=new Float64Array(12);
-    const hourPow=new Array(24).fill(0),hourCnt=new Array(24).fill(0);
-    let totG=0,totN=0,totHrs=0;
-
-    for(let h=0;h<allSp.length;h+=step){
-      const ws=logWS((allSp[h]??0)*S.mcpFactor,mastH,hubHH,z0);
-      if(ws<cutIn)continue;
-      const wsBin=Math.round(ws*2)/2,dirBin=Math.round((allDr[h]||0)/22.5)*22.5%360;
-      const key=`${wsBin}_${dirBin}`;
-      const wsp=stateCache.get(key)||new Float32Array(n).fill(ws);
-      const mo=allTs[h]?parseInt(allTs[h].substring(5,7))-1:0;
-      const hr=allTs[h]?parseInt(allTs[h].substring(11,13)):0;
-      const hrs=step;let gH=0,nH=0;
-      for(let t=0;t<n;t++){gH+=lutLookup(lut,ws).power*hrs;nH+=lutLookup(lut,wsp[t]).power*hrs;}
-      totG+=gH;totN+=nH*(1-otherL);
-      if(mo>=0&&mo<12){mG[mo]+=gH;mN[mo]+=nH*(1-otherL);}
-      hourPow[hr%24]+=nH/(n||1);hourCnt[hr%24]++;
-      totHrs++;
-    }
-
-    const grossG=totG/1e6,netG=totN/1e6;
-    // FIXED: correct wake loss formula (was dividing by near-zero when otherL=0.05)
-    const wakeL=grossG>0?(grossG-netG/(1-otherL))/grossG*100:0;
-    const instMW=n*pc.rated/1000;
-    const hrs=(ey-sy+1)*8760;
-    const CF=netG*1000/(instMW*hrs)*100;
-    const diurnal=hourPow.map((v,i)=>hourCnt[i]?v/hourCnt[i]:0);
-
-    setProg('ts',100,`✓ ${netG.toFixed(2)} GWh/yr net, CF=${CF.toFixed(1)}%`);
-    $('tsRc').textContent=totHrs.toLocaleString();$('tsNt').textContent=netG.toFixed(2);
-    $('tsWk').textContent=Math.max(0,wakeL).toFixed(1)+'%';$('tsCf').textContent=CF.toFixed(1)+'%';
-    $('tsOut').style.display='block';
-
-    drawMonthlyChart(Array.from(mG),Array.from(mN));
-    drawDiurnalChart(diurnal);
-
+    for(let h=0;h<allSp.length;h+=step){const ws=logWS((allSp[h]??0)*S.mcpFactor,mastH,hubHH,z0);if(ws<cutIn)continue;const wsB=Math.round(ws*2)/2,dirB=Math.round((allDr[h]||0)/22.5)*22.5%360;const key=`${wsB}_${dirB}`;if(!stateBins.has(key))stateBins.set(key,{count:0,ws:wsB,dir:dirB});stateBins.get(key).count++;}
+    setProg('ts',65,`Wake for ${stateBins.size} unique states...`);
+    const stCache=new Map();for(const[k,st]of stateBins)stCache.set(k,wakeRun(txy,st.ws,st.dir,lut,kw));
+    const mG=new Float64Array(12),mN=new Float64Array(12);const hPow=new Array(24).fill(0),hCnt=new Array(24).fill(0);
+    let totG=0,totN=0,steps=0;
+    for(let h=0;h<allSp.length;h+=step){const ws=logWS((allSp[h]??0)*S.mcpFactor,mastH,hubHH,z0);if(ws<cutIn)continue;const wsB=Math.round(ws*2)/2,dirB=Math.round((allDr[h]||0)/22.5)*22.5%360;const key=`${wsB}_${dirB}`;const wsp=stCache.get(key)||new Float32Array(n).fill(ws);const mo=allTs[h]?parseInt(allTs[h].substring(5,7))-1:0;const hr=allTs[h]?parseInt(allTs[h].substring(11,13)):0;let gH=0,nH=0;for(let t=0;t<n;t++){gH+=lutGet(lut,ws).power*step;nH+=lutGet(lut,wsp[t]).power*step;}totG+=gH;totN+=nH*(1-otherL);if(mo>=0&&mo<12){mG[mo]+=gH;mN[mo]+=nH*(1-otherL);}hPow[hr%24]+=nH/(n||1);hCnt[hr%24]++;steps++;}
+    const grossG=totG/1e6,netG=totN/1e6,wakeL=totG>0?(totG-totN/(1-otherL))/totG*100:0;
+    const hrs=(ey-sy+1)*8760,CF=netG*1000/((n*pc.rated/1000)*hrs)*100;
+    const diurnal=hPow.map((v,i)=>hCnt[i]?v/hCnt[i]:0);
+    setProg('ts',100,`✓ ${netG.toFixed(2)} GWh/yr net`);
+    $('tsRc').textContent=steps.toLocaleString();$('tsNt').textContent=netG.toFixed(2);$('tsWk').textContent=Math.max(0,wakeL).toFixed(1)+'%';$('tsCf').textContent=CF.toFixed(1)+'%';$('tsOut').style.display='block';
+    drawMonthlyChart(Array.from(mG),Array.from(mN));drawDiurnalChart(diurnal);
     S.tsData={mG:Array.from(mG),mN:Array.from(mN),allSp,allDr,allTs,grossG,netG,wakeL,CF};
-    log(`TS: ${totHrs} steps · gross=${grossG.toFixed(2)} GWh · net=${netG.toFixed(2)} GWh · CF=${CF.toFixed(1)}%`,'i');
-  }catch(e){setProg('ts',0,'❌ '+e.message);log('Time series failed: '+e.message,'e');}
+    log(`TS: ${steps} steps · gross=${grossG.toFixed(2)} GWh · net=${netG.toFixed(2)} GWh · CF=${CF.toFixed(1)}%`,'i');
+  }catch(e){setProg('ts',0,'❌ '+e.message);log('TS failed: '+e.message,'e');}
 }
 
 // ── TURBINE MANAGEMENT ──
-function addManual(){
-  const lat=parseFloat($('manLat').value),lon=parseFloat($('manLon').value);
-  if(isNaN(lat)||isNaN(lon)){alert('Enter valid lat/lon');return;}
-  S.turbines.push({lat,lon,hh:parseFloat($('hubH').value)||120,name:'T'+(S.turbines.length+1)});
-  refreshTable();updateMarkers();
-  log(`Added T${S.turbines.length}: (${lat.toFixed(4)}, ${lon.toFixed(4)})`,'i');
-}
-function generateGrid(){
-  const rows=parseInt($('gR').value)||2,cols=parseInt($('gC').value)||5;
-  const sd=parseFloat($('gS').value)||7,D=parseFloat($('rotD').value)||150;
-  const clat=parseFloat($('gLat').value)||55.5,clon=parseFloat($('gLon').value)||7.9;
-  const hh=parseFloat($('hubH').value)||120;
-  const sm=sd*D,mL=111320,mLo=111320*Math.cos(clat*Math.PI/180);
-  const tH=(rows-1)*sm,tW=(cols-1)*sm;
-  const nt=[];
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)nt.push({lat:clat+(r*sm-tH/2)/mL,lon:clon+(c*sm-tW/2)/mLo,hh,name:`T${nt.length+1}`});
-  S.turbines=nt;refreshTable();updateMarkers();
-  if(leafMap)leafMap.setView([clat,clon],11);
-  log(`Grid ${rows}×${cols} @${sd}D = ${nt.length} turbines`,'i');
-}
+function addManual(){const lat=parseFloat($('manLat').value),lon=parseFloat($('manLon').value);if(isNaN(lat)||isNaN(lon)){alert('Enter lat/lon');return;}S.turbines.push({lat,lon,hh:parseFloat($('hubH').value)||120,name:'T'+(S.turbines.length+1)});refreshTable();updateMarkers();log(`Added T${S.turbines.length}: (${lat.toFixed(4)}, ${lon.toFixed(4)})`,'i');}
+function generateGrid(){const rows=parseInt($('gR').value)||2,cols=parseInt($('gC').value)||5,sd=parseFloat($('gS').value)||7,D=parseFloat($('rotD').value)||150,clat=parseFloat($('gLat').value)||55.5,clon=parseFloat($('gLon').value)||7.9,hh=parseFloat($('hubH').value)||120;const sm=sd*D,mL=111320,mLo=111320*Math.cos(clat*Math.PI/180);const tH=(rows-1)*sm,tW=(cols-1)*sm;const nt=[];for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)nt.push({lat:clat+(r*sm-tH/2)/mL,lon:clon+(c*sm-tW/2)/mLo,hh,name:`T${nt.length+1}`});S.turbines=nt;refreshTable();updateMarkers();if(leafMap)leafMap.setView([clat,clon],11);log(`Grid ${rows}×${cols} @${sd}D = ${nt.length} turbines`,'i');}
 function deleteTurbine(i){S.turbines.splice(i,1);S.turbines.forEach((t,j)=>t.name='T'+(j+1));refreshTable();updateMarkers();}
 function clearTurbines(){if(!confirm(`Clear ${S.turbines.length} turbines?`))return;S.turbines=[];S.markers.forEach(m=>m.remove());S.markers=[];refreshTable();}
-function refreshTable(){
-  const tb=$('tbody');tb.innerHTML='';
-  S.turbines.forEach((t,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${i+1}</td><td>${t.lat.toFixed(4)}</td><td>${t.lon.toFixed(4)}</td><td>${t.hh}</td><td><button onclick="deleteTurbine(${i})" style="color:var(--red);background:none;border:none;cursor:pointer;font-size:12px">✕</button></td>`;tb.appendChild(tr);});
-  $('tCnt').textContent=`${S.turbines.length} turbines`;$('sbN').textContent=S.turbines.length;
-  if(S.turbines.length>1){const la=S.turbines.map(t=>t.lat),lo=S.turbines.map(t=>t.lon);const km2=(Math.max(...la)-Math.min(...la))*111.32*(Math.max(...lo)-Math.min(...lo))*111.32*Math.cos(la[0]*Math.PI/180);$('sbDom').textContent=`${km2.toFixed(1)} km²`;}
-}
+function refreshTable(){const tb=$('tbody');tb.innerHTML='';S.turbines.forEach((t,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${i+1}</td><td>${t.lat.toFixed(4)}</td><td>${t.lon.toFixed(4)}</td><td>${t.hh}</td><td>${t.elev!==undefined?t.elev.toFixed(0):'—'}</td><td><button onclick="deleteTurbine(${i})" style="color:var(--red);background:none;border:none;cursor:pointer;font-size:12px">✕</button></td>`;tb.appendChild(tr);});$('tCnt').textContent=`${S.turbines.length} turbines`;$('sbN').textContent=S.turbines.length;const instMW=(S.turbines.length*(parseFloat($('ratedPow').value)||4000)/1000);$('sbCap').textContent=instMW.toFixed(0)+' MW';if(S.turbines.length>1){const la=S.turbines.map(t=>t.lat),lo=S.turbines.map(t=>t.lon);const km2=(Math.max(...la)-Math.min(...la))*111.32*(Math.max(...lo)-Math.min(...lo))*111.32*Math.cos(la[0]*Math.PI/180);$('sbDom')?$('sbDom').textContent=`${km2.toFixed(1)} km²`:null;}}
 
 // ── MAP ──
 let leafMap;
-const wIcon=L.divIcon({className:'',html:`<div style="width:20px;height:20px;background:rgba(88,166,255,.9);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000">⊕</div>`,iconSize:[20,20],iconAnchor:[10,10]});
+const wIcon=L.divIcon({className:'',html:`<div style="width:18px;height:18px;background:rgba(88,166,255,.9);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#000">⊕</div>`,iconSize:[18,18],iconAnchor:[9,9]});
 function initMap(){
-  leafMap=L.map('map').setView([55.5,7.9],9);
+  leafMap=L.map('map',{zoomControl:true}).setView([55.5,7.9],9);
   const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19});
   const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:18});
   osm.addTo(leafMap);
-  L.control.layers({'Street Map':osm,'Satellite':sat}).addTo(leafMap);
-  leafMap.on('click',e=>{$('manLat').value=e.latlng.lat.toFixed(5);$('manLon').value=e.latlng.lng.toFixed(5);});
+  L.control.layers({'Street':osm,'Satellite':sat},{},{position:'topright'}).addTo(leafMap);
+  initCanvas();
+  leafMap.on('click',e=>{
+    if(S.drawMode){
+      S.boundary.push([e.latlng.lat,e.latlng.lng]);
+      const m=L.circleMarker([e.latlng.lat,e.latlng.lng],{radius:4,color:'#d29922',fillColor:'#d29922',fillOpacity:.9}).addTo(leafMap);
+      S.boundaryMarkers.push(m);
+      if(S.boundaryLayer)S.boundaryLayer.remove();
+      if(S.boundary.length>1)S.boundaryLayer=L.polygon(S.boundary,{color:'#d29922',weight:2,fillOpacity:.07,dashArray:'6,3'}).addTo(leafMap);
+      $('drawStatus').textContent=`${S.boundary.length} vertices — double-click or "Close Polygon"`;
+      $('bndStats').textContent=`${S.boundary.length} vertices (drawing...)`;
+      return;
+    }
+    $('manLat').value=e.latlng.lat.toFixed(5);$('manLon').value=e.latlng.lng.toFixed(5);
+  });
+  leafMap.on('dblclick',e=>{if(S.drawMode){L.DomEvent.stop(e);doneDraw();}});
   leafMap.on('mousemove',e=>{
-    $('sbXY').textContent=`${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
-    $('ovLat').textContent=e.latlng.lat.toFixed(4);$('ovLon').textContent=e.latlng.lng.toFixed(4);
-    if(S.terrain){const T=S.terrain;const{lat0,lat1,lon0,lon1,ng,grid}=T;const la=e.latlng.lat,lo=e.latlng.lng;if(la>=lat0&&la<=lat1&&lo>=lon0&&lo<=lon1){const i=Math.round((la-lat0)/(lat1-lat0)*(ng-1)),j=Math.round((lo-lon0)/(lon1-lon0)*(ng-1));const el=(grid[Math.min(i,ng-1)]||[])[Math.min(j,ng-1)]??null;$('ovEl').textContent=el!==null?el.toFixed(0)+' m':'—';}else $('ovEl').textContent='—';}
+    const la=e.latlng.lat.toFixed(4),lo=e.latlng.lng.toFixed(4);
+    $('sbXY').textContent=`${la}, ${lo}`;$('ovLat').textContent=la;$('ovLon').textContent=lo;
+    const el=getTerrainElev(e.latlng.lat,e.latlng.lng);
+    $('ovEl').textContent=el!==null?el.toFixed(0)+' m':'—';
   });
 }
 function updateMarkers(){
   S.markers.forEach(m=>m.remove());S.markers=[];
   S.turbines.forEach((t,i)=>{
-    const m=L.marker([t.lat,t.lon],{icon:wIcon,draggable:true}).addTo(leafMap).bindTooltip(`T${i+1} | HH=${t.hh}m${t.elev!==undefined?` | Elev=${t.elev?.toFixed(0)}m`:''}`);
+    const m=L.marker([t.lat,t.lon],{icon:wIcon,draggable:true}).addTo(leafMap);
+    m.bindTooltip(`T${i+1} | HH=${t.hh}m${t.elev!==undefined?' | '+t.elev.toFixed(0)+'m':''}`);
     m.on('dragend',()=>{S.turbines[i].lat=m.getLatLng().lat;S.turbines[i].lon=m.getLatLng().lng;refreshTable();});
     S.markers.push(m);
   });
-  if(S.turbines.length>1){leafMap.fitBounds(L.latLngBounds(S.turbines.map(t=>[t.lat,t.lon])).pad(.2));}
+  if(S.turbines.length>1)leafMap.fitBounds(L.latLngBounds(S.turbines.map(t=>[t.lat,t.lon])).pad(.2));
 }
 
 // ── IMPORT / EXPORT ──
-function importLayout(ev){
-  const f=ev.target.files[0];if(!f)return;
-  const r=new FileReader();r.onload=e=>{
-    const lines=e.target.result.split('\n').filter(l=>l.trim());
-    const ts=[],hh=parseFloat($('hubH').value)||120;
-    for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t]/);if(i===0&&isNaN(+p[0]))continue;const la=+p[0],lo=+p[1];if(!isNaN(la)&&!isNaN(lo))ts.push({lat:la,lon:lo,hh:+p[2]||hh,name:`T${ts.length+1}`});}
-    if(!ts.length){alert('No valid rows found');return;}
-    S.turbines=ts;refreshTable();updateMarkers();log(`Imported ${ts.length} turbines from ${f.name}`,'i');
-  };r.readAsText(f);ev.target.value='';
-}
-
-// FIXED: import wind data - mean calculation was broken (reduce callback params)
-function importWind(ev){
-  const f=ev.target.files[0];if(!f)return;
-  const r=new FileReader();r.onload=e=>{
-    const lines=e.target.result.split('\n').filter(l=>l.trim());
-    const sp=[],dr=[],ts=[];
-    for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)){sp.push(Math.abs(ws));dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}
-    if(!sp.length){alert('No valid data');return;}
-    S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;
-    const validSp=sp.filter(v=>v>0);
-    const mean=validSp.reduce((s,v)=>s+v,0)/Math.max(1,validSp.length);
-    $('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;
-    updateWindUI(sp,dr);log(`Imported wind: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');
-  };r.readAsText(f);ev.target.value='';
-}
-
-function exportLayoutCSV(){if(!S.turbines.length){alert('No turbines');return;}let c='Name,Lat,Lon,HH_m\n';S.turbines.forEach((t,i)=>c+=`T${i+1},${t.lat},${t.lon},${t.hh}\n`);dl(c,'layout.csv','text/csv');}
-function exportLayoutKML(){if(!S.turbines.length){alert('No turbines');return;}let k=`<?xml version="1.0"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>\n`;S.turbines.forEach((t,i)=>k+=`<Placemark><name>T${i+1}</name><Point><coordinates>${t.lon},${t.lat},0</coordinates></Point></Placemark>\n`);k+='</Document></kml>';dl(k,'layout.kml','application/vnd.google-earth.kml+xml');}
-function exportAEPCSV(){if(!S.results){alert('Run analysis first');return;}const R=S.results;let c=`Project,${$('projName').value}\nGross AEP(GWh),${R.grossAEP.toFixed(3)}\nNet AEP(GWh),${R.netAEP.toFixed(3)}\nWake Loss(%),${R.wakeLoss.toFixed(2)}\nCF(%),${R.CF.toFixed(2)}\n\nT#,Hub WS(m/s),Gross(GWh),Wake(%),Net(GWh),CF(%)\n`;R.perTurbine.forEach(t=>c+=`T${t.i},${t.ws},${t.gross},${t.wake},${t.net},${t.cf}\n`);dl(c,'aep.csv','text/csv');log('AEP CSV exported','i');}
+function importLayout(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const ts=[],hh=parseFloat($('hubH').value)||120;for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t]/);if(i===0&&isNaN(+p[0]))continue;const la=+p[0],lo=+p[1];if(!isNaN(la)&&!isNaN(lo))ts.push({lat:la,lon:lo,hh:+p[2]||hh,name:`T${ts.length+1}`});}if(!ts.length){alert('No valid rows');return;}S.turbines=ts;refreshTable();updateMarkers();log(`Imported ${ts.length} turbines`,'i');};r.readAsText(f);ev.target.value='';}
+function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)){sp.push(Math.abs(ws));dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;const mean=sp.filter(v=>v>0).reduce((s,v,_,a)=>s+v/a.length,0);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
+function exportLayoutCSV(){if(!S.turbines.length){alert('No turbines');return;}let c='Name,Lat,Lon,HH_m,Elev_m\n';S.turbines.forEach((t,i)=>c+=`T${i+1},${t.lat},${t.lon},${t.hh},${t.elev??''}\n`);dl(c,'layout.csv','text/csv');}
+function exportLayoutKML(){if(!S.turbines.length){alert('No turbines');return;}let k=`<?xml version="1.0"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>\n`;S.turbines.forEach((t,i)=>k+=`<Placemark><name>T${i+1}</name><Point><coordinates>${t.lon},${t.lat},${t.elev??0}</coordinates></Point></Placemark>\n`);k+='</Document></kml>';dl(k,'layout.kml','application/vnd.google-earth.kml+xml');}
+function exportAEPCSV(){if(!S.results){alert('Run analysis first');return;}const R=S.results;let c=`Project,${$('projName').value}\nGross AEP GWh,${R.grossAEP.toFixed(3)}\nNet AEP GWh,${R.netAEP.toFixed(3)}\nWake Loss%,${R.wakeLoss.toFixed(2)}\nCF%,${R.CF.toFixed(2)}\nMast WS m/s,${R.mastMean.toFixed(2)}\nHub WS m/s,${R.hubMean.toFixed(2)}\nMCP factor,${R.mcpFactor.toFixed(3)}\n\nT#,Free WS,Wake%,Net WS,Gross GWh,Net GWh,CF%,Power kW\n`;R.perTurbine.forEach(t=>c+=`T${t.i},${t.ws},${t.wake},${t.wakeWS},${t.gross},${t.net},${t.cf},${t.power}\n`);dl(c,'aep.csv','text/csv');log('AEP CSV exported','i');}
 function exportWindCSV(){if(!S.wind){alert('No wind data');return;}let c='DateTime,WS_ms,Dir_deg\n';for(let i=0;i<S.wind.speeds.length;i++)c+=`${S.wind.times[i]||i},${S.wind.speeds[i].toFixed(2)},${S.wind.dirs[i].toFixed(1)}\n`;dl(c,'wind_data.csv','text/csv');log('Wind CSV exported','i');}
-function exportWindTab(){if(!S.wind){alert('No wind data');return;}let t='WASP_tab_v2\n';const sp=S.wind.speeds,dr=S.wind.dirs;for(let i=0;i<sp.length;i++)t+=`${sp[i].toFixed(2)}\t${dr[i].toFixed(1)}\n`;dl(t,'wind_data.tab','text/plain');log('WAsP .tab exported','i');}
-function exportTSCSV(){if(!S.tsData){alert('Run time series first');return;}const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];let c='Month,Gross_MWh,Net_MWh\n';S.tsData.mG.forEach((g,i)=>c+=`${mn[i]},${(g/1000).toFixed(2)},${(S.tsData.mN[i]/1000).toFixed(2)}\n`);dl(c,'timeseries.csv','text/csv');log('Time series CSV exported','i');}
-
-// NEW: GWC CSV export
-function exportGWCCSV(){
-  if(!S.results){alert('Run analysis first');return;}
-  const R=S.results;
-  let c='Direction,Freq%,OWC_A,OWC_k,GWC_A,SWC_A,SectorRatio\n';
-  R.gwcSectors.forEach(s=>{
-    c+=`${s.dir.toFixed(0)},${(s.freq*100).toFixed(2)},${s.A.toFixed(3)},${s.k.toFixed(3)},${s.gwcA.toFixed(3)},${s.swcA.toFixed(3)},${s.SR.toFixed(4)}\n`;
-  });
-  dl(c,'gwc_swc_data.csv','text/csv');
-  log('GWC/SWC CSV exported','i');
-}
-
-// NEW: Sector CSV export
-function exportSectorCSV(){
-  if(!S.results){alert('Run analysis first');return;}
-  const R=S.results;
-  let c='Direction,Freq%,Weibull_A,Weibull_k,MeanWS\n';
-  R.sectors.forEach(s=>{
-    c+=`${s.dir.toFixed(0)},${(s.freq*100).toFixed(2)},${s.A.toFixed(3)},${s.k.toFixed(3)},${s.ms.toFixed(3)}\n`;
-  });
-  dl(c,'sector_analysis.csv','text/csv');
-  log('Sector analysis CSV exported','i');
-}
-
+function exportWindTab(){if(!S.wind){alert('No wind data');return;}let t='WASP_tab_v2\n';for(let i=0;i<S.wind.speeds.length;i++)t+=`${S.wind.speeds[i].toFixed(2)}\t${S.wind.dirs[i].toFixed(1)}\n`;dl(t,'wind.tab','text/plain');log('WAsP .tab exported','i');}
+function exportTSCSV(){if(!S.tsData){alert('Run time series first');return;}const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];let c='Month,Gross_MWh,Net_MWh\n';S.tsData.mG.forEach((g,i)=>c+=`${mn[i]},${(g/1000).toFixed(2)},${(S.tsData.mN[i]/1000).toFixed(2)}\n`);dl(c,'timeseries.csv','text/csv');}
 function exportReport(){
   const R=S.results,pn=$('projName').value,now=new Date().toLocaleString();
-  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>WindFlow Pro Report – ${pn}</title><style>body{font-family:sans-serif;max-width:960px;margin:40px auto;padding:20px;background:#f8f9fa;color:#212529}h1{color:#1a56db}h2{color:#1a56db;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin-top:24px}table{width:100%;border-collapse:collapse;margin:12px 0}th{background:#1a56db;color:#fff;padding:8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #e5e7eb}.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}.box{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;text-align:center}.big{font-size:22px;font-weight:700;color:#1a56db}.lbl{font-size:11px;color:#6b7280;margin-top:4px}</style></head><body>
-<h1>⟁ WindFlow Pro 7.0 — Wind Resource Assessment Report</h1>
-<p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Wake Model:</b> ${$('wakeModel').options[$('wakeModel').selectedIndex].text}</p>`;
-  if(R){h+=`<h2>Energy Yield</h2><div class="kv"><div class="box"><div class="big">${R.grossAEP.toFixed(2)} GWh</div><div class="lbl">Gross AEP</div></div><div class="box"><div class="big">${R.netAEP.toFixed(2)} GWh</div><div class="lbl">Net AEP (P50)</div></div><div class="box"><div class="big">${R.CF.toFixed(1)}%</div><div class="lbl">Capacity Factor</div></div><div class="box"><div class="big">${R.wakeLoss.toFixed(1)}%</div><div class="lbl">Wake Loss</div></div><div class="box"><div class="big">${R.meanWS.toFixed(2)} m/s</div><div class="lbl">Hub WS</div></div><div class="box"><div class="big">${R.instMW.toFixed(1)} MW</div><div class="lbl">Installed Cap.</div></div></div>
+  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>WindFlow Pro – ${pn}</title><style>body{font-family:sans-serif;max-width:980px;margin:40px auto;padding:20px;background:#f8f9fa;color:#212529}h1{color:#1a56db}h2{color:#1a56db;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin-top:20px}table{width:100%;border-collapse:collapse;margin:10px 0}th{background:#1a56db;color:#fff;padding:7px;text-align:left}td{padding:6px 7px;border-bottom:1px solid #e5e7eb}.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}.big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}.chain{background:#f3f4f6;border-radius:6px;padding:12px;margin:12px 0}.chain td{border:none;padding:4px 8px}</style></head><body>
+<h1>⟁ WindFlow Pro 7.1 — Assessment Report</h1>
+<p><b>Project:</b> ${pn} | <b>Date:</b> ${now} | <b>Wake:</b> ${$('wakeModel').options[$('wakeModel').selectedIndex].text}</p>`;
+  if(R){h+=`<h2>Energy Yield</h2><div class="kv"><div class="box"><div class="big">${R.grossAEP.toFixed(2)} GWh</div><div class="lbl">Gross AEP</div></div><div class="box"><div class="big">${R.netAEP.toFixed(2)} GWh</div><div class="lbl">Net AEP (P50)</div></div><div class="box"><div class="big">${R.CF.toFixed(1)}%</div><div class="lbl">Capacity Factor</div></div><div class="box"><div class="big">${R.wakeLoss.toFixed(1)}%</div><div class="lbl">Wake Loss</div></div><div class="box"><div class="big">${R.instMW.toFixed(1)} MW</div><div class="lbl">Installed</div></div><div class="box"><div class="big">${R.density.toFixed(3)}</div><div class="lbl">Air Density kg/m³</div></div></div>
+<h2>Wind Speed Chain Report</h2><div class="chain"><table><tr><th>Step</th><th>Wind Speed (m/s)</th><th>Change</th><th>Notes</th></tr>
+<tr><td>① Measured (OWC, mast ${R.mastH}m)</td><td><b>${R.mastMean.toFixed(2)}</b></td><td>Baseline</td><td>Weibull A=${R.mastWb.A.toFixed(2)}, k=${R.mastWb.k.toFixed(2)}</td></tr>
+<tr><td>② Log extrapolation to hub ${R.hubHH}m</td><td><b>${R.hubMean.toFixed(2)}</b></td><td>${R.mastMean>0?((R.hubMean-R.mastMean)/R.mastMean*100).toFixed(1):'—'}%</td><td>z₀=${R.z0}m, log wind profile</td></tr>
+<tr><td>③ MCP long-term correction</td><td><b>${(R.hubMean*R.mcpFactor).toFixed(2)}</b></td><td>×${R.mcpFactor.toFixed(3)}</td><td>Weibull A=${R.hubWb.A.toFixed(2)}, k=${R.hubWb.k.toFixed(2)}</td></tr>
+</table></div>
 <h2>P-Exceedance</h2><table><tr><th>P50</th><th>P75</th><th>P90</th><th>P99</th></tr><tr><td>${R.P50.toFixed(2)} GWh</td><td>${R.P75.toFixed(2)} GWh</td><td>${R.P90.toFixed(2)} GWh</td><td>${R.P99.toFixed(2)} GWh</td></tr></table>
-<h2>Per-Turbine AEP</h2><table><tr><th>#</th><th>Hub WS(m/s)</th><th>Gross(GWh)</th><th>Wake(%)</th><th>Net(GWh)</th><th>CF(%)</th></tr>${R.perTurbine.map(t=>`<tr><td>T${t.i}</td><td>${t.ws}</td><td>${t.gross}</td><td>${t.wake}</td><td><b>${t.net}</b></td><td>${t.cf}</td></tr>`).join('')}</table>`;}
-  h+=`<h2>Turbine Layout (${S.turbines.length} WTGs)</h2><table><tr><th>#</th><th>Latitude</th><th>Longitude</th><th>Hub Height(m)</th><th>Elevation(m)</th></tr>${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
-<p style="color:#9ca3af;font-size:11px;margin-top:24px">Generated by WindFlow Pro 7.0 — WAsP+WindPRO Engine</p></body></html>`;
+<h2>Per-Turbine Wind Speed and AEP</h2><table><tr><th>T#</th><th>Free WS m/s</th><th>Wake Deficit %</th><th>Net WS m/s</th><th>Power kW</th><th>Gross GWh</th><th>Net GWh</th><th>CF %</th></tr>${R.perTurbine.map(t=>`<tr><td>T${t.i}</td><td>${t.ws}</td><td>${t.wake}%</td><td><b>${t.wakeWS}</b></td><td>${t.power}</td><td>${t.gross}</td><td><b>${t.net}</b></td><td>${t.cf}</td></tr>`).join('')}</table>`;}
+  h+=`<h2>Turbine Layout (${S.turbines.length} WTGs)</h2><table><tr><th>T#</th><th>Latitude</th><th>Longitude</th><th>Hub Height m</th><th>Elevation m</th></tr>${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
+<p style="color:#9ca3af;font-size:10px;margin-top:20px">Generated by WindFlow Pro 7.1 — Canvas Contours · Boundary Optimizer · WS Chain Report</p></body></html>`;
   dl(h,'windflow-report.html','text/html');log('HTML report exported','i');
 }
-function dl(content,fname,mime){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:mime}));a.download=fname;a.click();}
+function dl(c,f,m){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:m}));a.download=f;a.click();}
 
-// ── DEMO LOADER ──
+// ── DEMO ──
 async function loadDemo(){
-  log('Loading Horns Rev demo (55.5°N 7.9°E, North Sea offshore)...','i');setStatus('Loading demo...');
-  $('projName').value='Horns Rev Demo';$('sbProj').textContent='Horns Rev Demo';
-  $('tcls').value='4mw';applyPreset();
-  $('wakeK').value='.04';$('otherLoss').value='5';$('wakeModel').value='jensen';
-  $('z0sel').value='0.0002';$('z0val').value='0.0002';
-  $('siteElev').value='0';$('siteTemp').value='8';calcDensity();
-
+  log('Loading Horns Rev demo (55.5°N, 7.9°E)...','i');setStatus('Loading demo...');
+  $('projName').value='Horns Rev Offshore Demo';$('sbProj').textContent='Horns Rev Offshore Demo';
+  $('tcls').value='4mw';applyPreset();$('wakeK').value='.04';$('otherLoss').value='5';$('wakeModel').value='jensen';
+  $('z0sel').value='0.0002';$('z0val').value='0.0002';$('siteElev').value='0';$('siteTemp').value='8';calcDensity();
   $('gLat').value='55.500';$('gLon').value='7.900';$('gR').value='2';$('gC').value='5';$('gS').value='7';
   generateGrid();
-
   $('e5La').value='55.50';$('e5Lo').value='7.90';$('e5Sy').value='2021';$('e5Ey').value='2022';
-  $('mastLat').value='55.50';$('mastLon').value='7.90';
-  $('terrLa').value='55.50';$('terrLo').value='7.90';
-
-  showTab('era5');
-  await downloadERA5();
-
-  showTab('terr');$('terrR').value='8';$('terrG').value='20';
-  await downloadTerrain();
-
-  showTab('setup');
-  runAnalysis();showRTab('aep');
-
-  setStatus('✓ Demo loaded — Horns Rev offshore | ERA5 2021–2022');
-  log('Demo complete. Check AEP tab for results, WIND tab for wind rose, GWC tab for sector analysis.','i');
+  $('mastLat').value='55.50';$('mastLon').value='7.90';$('terrLa').value='55.50';$('terrLo').value='7.90';
+  showTab('era5');await downloadERA5();
+  showTab('terr');$('terrR').value='8';$('terrG').value='20';await downloadTerrain();
+  showTab('setup');runAnalysis();
+  showRTab('wsc');setTimeout(()=>showRTab('aep'),300);
+  setStatus('✓ Demo loaded — Horns Rev offshore');
 }
 
 // ── TABS ──
-function showTab(id){document.querySelectorAll('.sp2').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.stab').forEach(b=>b.classList.remove('on'));$('sp-'+id).classList.add('on');document.querySelectorAll('.stab').forEach(b=>{if(b.dataset.tab===id)b.classList.add('on');});}
-function showRTab(id){document.querySelectorAll('.rp').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('on'));$('rp-'+id).classList.add('on');document.querySelectorAll('.rtab').forEach(b=>{if(b.dataset.rtab===id)b.classList.add('on');});}
-
+function showTab(id){document.querySelectorAll('.sp2').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.stab').forEach(b=>b.classList.remove('on'));$('sp-'+id)?.classList.add('on');document.querySelectorAll('.stab').forEach(b=>{if(b.dataset.tab===id)b.classList.add('on');});}
+function showRTab(id){document.querySelectorAll('.rp').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('on'));$('rp-'+id)?.classList.add('on');document.querySelectorAll('.rtab').forEach(b=>{if(b.dataset.rtab===id)b.classList.add('on');});}
 document.querySelectorAll('.stab').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 document.querySelectorAll('.rtab').forEach(b=>b.addEventListener('click',()=>showRTab(b.dataset.rtab)));
 
 // ── INIT ──
 initMap();calcDensity();
-log('WindFlow Pro 7.0 ready. Click "🎯 Demo (Horns Rev)" for a complete test run.','i');
-log('All ERA5 downloads optimised (parallel year batching). Time series uses pre-binned wake.','i');
-</script>
-</body>
-</html>
+log('WindFlow Pro 7.1 ready. Click "🎯 Demo" for a full test, or "✏ Draw Boundary" to define a site.','i');
+</script></body></html>
