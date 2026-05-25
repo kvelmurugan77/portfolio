@@ -1,0 +1,36 @@
+name: Remove broken submodule links
+
+on:
+  push:
+    paths:
+      - ".github/workflows/remove-broken-submodules.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  remove-submodules:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository without submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 0
+
+      - name: Remove broken submodule links
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git rm -f portfolio repo_push || true
+          rm -f .gitmodules || true
+
+          if git diff --cached --quiet; then
+            echo "No broken submodule links to remove."
+          else
+            git commit -m "Remove broken submodule links"
+            git push origin main
+          fi
