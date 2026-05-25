@@ -3,7 +3,7 @@ function hoursBetween(t1,t2){const a=new Date(t1),b=new Date(t2);if(isNaN(a)||is
 export function runTimeSeries(step=1){
   const src=activeTimeSeries();if(!src)throw Error('Import mast time series or download ERA5 first');if(!S.turbines.length)throw Error('No turbines');
   const p=S.project,N=S.turbines.length,loss=1-p.lossPct/100;const recs=src.records||src.sp?.map((ws,i)=>({time:src.time?.[i]||String(i),ws,wd:src.dir?.[i]||0}))||[];
-  const fromH=src.height||(src.height==='10m'?10:100)||p.mastHeight||100;
+  const fromH=Number(src.height)||((src.height==='10m'||src.height===10)?10:100)||p.mastHeight||100;
   const per=Array.from({length:N},(_,i)=>({id:S.turbines[i].id,name:S.turbines[i].name,grossKWh:0,wakeKWh:0,netKWh:0,wsSum:0,n:0,monthly:new Array(12).fill(0)}));
   const farmMonthly=new Array(12).fill(0),farmRows=[],detailRows=[];let gross=0,wake=0,net=0,processed=0;
   for(let i=0;i<recs.length;i+=step){const r=recs[i];if(r.ws==null||r.ws<0.1)continue;const dtH=step*Math.max(1,hoursBetween(recs[i]?.time,recs[Math.min(i+step,recs.length-1)]?.time));const dir=r.wd??0;const wsHub=logLaw(r.ws,fromH,p.hubHeight,p.z0);const free=S.turbines.map(t=>wsHub*siteRatio(t,dir));const wsp=wakeRun(free,dir);let gFarm=0,nFarm=0,wFarm=0;const mo=r.time?new Date(r.time).getUTCMonth():0;

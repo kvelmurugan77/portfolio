@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>WindFlow Studio v1.6.1 — WAsP/WindPRO-like Open Workflow</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="src/css/styles.css" />
 </head>
 <body>
@@ -46,13 +47,15 @@
   </aside>
   <section class="workspace">
     <div class="tabs"><button class="tab active" data-tab="map">Map</button><button class="tab" data-tab="wind">Wind Climate</button><button class="tab" data-tab="aep">AEP</button><button class="tab" data-tab="ts">Time Series</button><button class="tab" data-tab="log">Log</button></div>
-    <div class="tabbody active" id="tab-map"><canvas id="mapCanvas" width="1000" height="650"></canvas></div>
+    <div class="tabbody active" id="tab-map"><div id="leafletMap"></div><canvas id="mapCanvas" width="1000" height="650"></canvas></div>
     <div class="tabbody" id="tab-wind"><div id="windSummary" class="cards"></div><table id="sectorTable"></table></div>
     <div class="tabbody" id="tab-aep"><div id="aepSummary" class="cards"></div><table id="turbineTable"></table></div>
     <div class="tabbody" id="tab-ts"><div class="row"><button id="btnTS">Run WindPRO-like Time Series</button><button id="btnCSV">Export TS CSV</button></div><div id="tsSummary" class="cards"></div><table id="tsTable"></table><canvas id="tsCanvas" width="1000" height="240"></canvas></div>
     <div class="tabbody" id="tab-log"><pre id="log"></pre></div>
   </section>
 </main>
+<script>window.addEventListener("error",e=>{const el=document.getElementById("dataStatus");if(el)el.textContent="Script error: "+e.message});</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module" src="src/js/main.js"></script>
 </body>
 </html>
