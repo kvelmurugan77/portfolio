@@ -75,7 +75,8 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
   <button class="btn" onclick="doneDraw()">✓ Close Poly</button>
   <button class="btn" onclick="clearBoundary()">✕ Bnd</button>
   <div class="vsep"></div>
-  <button class="btn" onclick="loadDemo()">🎯 Demo</button>
+  <button class="btn" onclick="loadDemo('horns')">🎯 Horns Rev</button>
+  <button class="btn" onclick="loadDemo('portugal')">🎯 Portugal</button>
   <button class="btn pri" id="runBtn" onclick="runAnalysis()">▶▶ RUN ANALYSIS</button>
   <button class="btn grn" onclick="exportReport()">↓ Report</button>
   <button class="btn" onclick="exportAEPCSV()">↓ AEP CSV</button>
@@ -137,7 +138,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 </div>
   <div class="r2"><div class="fld"><label>Mast Height (m)</label><input id="mastH" type="number" value="100"></div>
     <div class="fld"><label>Roughness z₀ (m)</label>
-      <select id="z0sel" onchange="$('z0val').value=this.value;calcDensity()"><option value="0.0002" selected>0.0002 Offshore</option><option value="0.03">0.03 Open flat</option><option value="0.10">0.10 Agricultural</option><option value="0.40">0.40 Obstacles</option><option value="1.50">1.50 Urban</option></select>
+      <select id="z0sel" onchange="$('z0val').value=this.value;calcDensity();autoShear()"><option value="0.0002" selected>0.0002 Offshore</option><option value="0.03">0.03 Open flat</option><option value="0.10">0.10 Agricultural</option><option value="0.40">0.40 Obstacles</option><option value="1.50">1.50 Urban</option></select>
     </div>
   </div>
   <div class="r2"><div class="fld"><label>Mast Lat</label><input id="mastLat" type="number" value="55.500" step="0.001"></div><div class="fld"><label>Mast Lon</label><input id="mastLon" type="number" value="7.900" step="0.001"></div></div>
@@ -272,7 +273,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
   <div id="map"></div>
   <canvas id="contCanvas"></canvas>
   <div id="drawStatus"></div>
-  <div id="mapInfo">Lat: <span id="ovLat">—</span> Lon: <span id="ovLon">—</span><br>Elev: <span id="ovEl">—</span> | Hub WS: <span id="ovWS">—</span></div>
+  <div id="mapInfo">Lat: <span id="ovLat">—</span> Lon: <span id="ovLon">—</span><br>Elev: <span id="ovEl">—</span> | Hub WS: <span id="ovWS">—</span> | SpeedUp: <span id="ovSU">—</span></div>
 </div>
 <div id="rside">
 <div id="rtabs">
@@ -401,16 +402,138 @@ function applyPreset(){const p=getPC();$('hubH').value=p.hh;$('rotD').value=p.D;
 
 // ── MATH ──
 function gamma(n){if(n<.5)return Math.PI/(Math.sin(Math.PI*n)*gamma(1-n));n-=1;const c=[.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];let x=c[0];for(let i=1;i<9;i++)x+=c[i]/(n+i);const t=n+7.5;return Math.sqrt(2*Math.PI)*Math.pow(t,n+.5)*Math.exp(-t)*x;}
-function weibullFit(vs){const v=vs.filter(x=>x>.5);if(v.length<10)return{A:8,k:2};const n=v.length,mlv=v.reduce((s,x)=>s+Math.log(x),0)/n;let k=2;for(let it=0;it<100;it++){const sk=v.reduce((s,x)=>s+x**k,0),slk=v.reduce((s,x)=>s+x**k*Math.log(x),0),sl2=v.reduce((s,x)=>s+x**k*Math.log(x)**2,0);const f=slk/sk-1/k-mlv,fp=sl2/sk-(slk/sk)**2+1/k**2;const dk=f/fp;k-=dk;if(Math.abs(dk)<1e-8)break;k=Math.max(.3,Math.min(20,k));}return{A:Math.max(.1,Math.pow(v.reduce((s,x)=>s+x**k,0)/n,1/k)),k};}
+function weibullFit(vs,minCount=10){
+  // Filter: remove calms (<0.5), outliers (>40 m/s), nulls
+  const v=vs.filter(x=>x!==null&&x!==undefined&&!isNaN(x)&&x>0.5&&x<40);
+  const calms=vs.filter(x=>x!==null&&x>=0&&x<=0.5).length;
+  const calmsF=vs.length>0?calms/vs.length:0;
+  if(v.length<minCount){
+    // Fallback: moment-based estimate
+    if(v.length<3)return{A:7,k:2,calms:calmsF,n:v.length,method:'fallback'};
+    const mean=v.reduce((s,x)=>s+x,0)/v.length;
+    const variance=v.reduce((s,x)=>s+(x-mean)**2,0)/v.length;
+    const cv=Math.sqrt(variance)/mean;
+    const k_est=Math.max(0.8,Math.min(4,(0.9874-0.1478*cv)/cv**0.0764));
+    const A_est=mean/((1+1/k_est<50?gamma(1+1/k_est):0.9));
+    return{A:Math.max(0.5,A_est),k:k_est,calms:calmsF,n:v.length,method:'moments'};
+  }
+  const n=v.length,mlv=v.reduce((s,x)=>s+Math.log(x),0)/n;
+  let k=2,prevK=0;
+  for(let it=0;it<150;it++){
+    const sk=v.reduce((s,x)=>s+x**k,0);
+    const slk=v.reduce((s,x)=>s+x**k*Math.log(x),0);
+    const sl2=v.reduce((s,x)=>s+x**k*Math.log(x)**2,0);
+    const f=slk/sk-1/k-mlv;
+    const fp=sl2/sk-(slk/sk)**2+1/k**2;
+    if(Math.abs(fp)<1e-12)break;
+    const dk=f/fp;
+    k=Math.max(0.3,Math.min(20,k-dk));
+    if(Math.abs(k-prevK)<1e-9)break;
+    prevK=k;
+  }
+  const A=Math.max(0.1,Math.pow(v.reduce((s,x)=>s+x**k,0)/n,1/k));
+  return{A,k,calms:calmsF,n,method:'mle'};
+}
 function wbPdf(v,A,k){return v<=0?0:(k/A)*Math.pow(v/A,k-1)*Math.exp(-Math.pow(v/A,k));}
+// ── GLOBAL SITE VALIDATOR ──
+function validateSite(lat,lon){
+  const issues=[];
+  if(isNaN(lat)||isNaN(lon))return{ok:false,issues:['Invalid lat/lon']};
+  if(lat<-90||lat>90)issues.push('Latitude out of range (-90 to 90)');
+  if(lon<-180||lon>180)issues.push('Longitude out of range (-180 to 180)');
+  if(Math.abs(lat)>75)issues.push(`High latitude site (${lat.toFixed(1)}°): ERA5 may have coarser resolution`);
+  if(Math.abs(lat)<5&&Math.abs(lat)>-5)issues.push('Equatorial site: low wind speeds expected, verify data quality');
+  return{ok:issues.length===0||issues.every(i=>i.includes('may')||i.includes('expected')),issues};
+}
+// ── UNCERTAINTY MODEL (component RSS) ──
+function calcUncertainty(R){
+  const rho=R.density||1.225;
+  // Component uncertainties (k=1, 68% confidence)
+  const u_wind = R.wind_u || (R.sectors.reduce((s,sec)=>s+(sec.n<100?0.08:sec.n<500?0.05:0.03)*sec.freq,0)); // wind resource
+  const u_wake = R.wakeLoss>15?0.035:0.025;       // wake model
+  const u_pc   = 0.015;                             // power curve
+  const u_den  = Math.abs(rho-1.225)/1.225*0.5;   // density
+  const u_elec = 0.01;                              // electrical losses
+  const u_avail= 0.01;                              // availability
+  const u_total_k1=Math.sqrt(u_wind**2+u_wake**2+u_pc**2+u_den**2+u_elec**2+u_avail**2);
+  // k=1.645 for P90 (one-sided), k=1.282 for P90 (normal)
+  return{u_wind,u_wake,u_pc,u_den,u_total_k1,
+    P50_mult:1,P75_mult:1-0.674*u_total_k1,
+    P90_mult:1-1.282*u_total_k1,P99_mult:1-2.326*u_total_k1,
+    sigma_pct:(u_total_k1*100).toFixed(1)};
+}
+// ── IEC WIND CLASS CHECKER ──
+function checkIECClass(meanWS,pc){
+  const classes={I:{vref:50,vave:10},II:{vref:42.5,vave:8.5},III:{vref:37.5,vave:7.5}};
+  const clsName=$('tcls').value;
+  if(clsName==='4mw')return{cls:'IEC-IIA',ok:meanWS<=8.5,meanWS,limit:8.5};
+  if(clsName==='2mw')return{cls:'IEC-IIA',ok:meanWS<=8.5,meanWS,limit:8.5};
+  if(clsName==='6mw')return{cls:'IEC-IIIA',ok:meanWS<=7.5,meanWS,limit:7.5};
+  return{cls:'Custom',ok:true,meanWS,limit:null};
+}
+// ── SHEAR EXPONENT GUIDANCE ──
+function recommendAlpha(z0,stability){
+  const alphaMap={
+    N:{water:0.06,open:0.12,agri:0.16,forest:0.22,urban:0.26},
+    O:{water:0.04,open:0.09,agri:0.12,forest:0.18,urban:0.22},
+    S:{water:0.10,open:0.18,agri:0.22,forest:0.28,urban:0.32}
+  };
+  const st=stability||'N';
+  if(z0<=0.001)return alphaMap[st].water;
+  if(z0<=0.05)return alphaMap[st].open;
+  if(z0<=0.15)return alphaMap[st].agri;
+  if(z0<=0.8)return alphaMap[st].forest;
+  return alphaMap[st].urban;
+}
 function interpPC(ws,pc){const{ws:w,pw:p,ct:c}=pc;if(ws<=w[0])return{power:0,ct:c[0]||0};if(ws>=w[w.length-1])return{power:0,ct:0};for(let i=0;i<w.length-1;i++)if(ws>=w[i]&&ws<w[i+1]){const t=(ws-w[i])/(w[i+1]-w[i]);return{power:p[i]+t*(p[i+1]-p[i]),ct:c[i]+t*(c[i+1]-c[i])};}return{power:0,ct:0};}
 function logWS(ws,fromH,toH,z0){const k=Math.log(Math.max(fromH,z0*1.1)/z0);return k>0?ws*(Math.log(Math.max(toH,z0*1.1)/z0)/k):ws;}
+// Terrain-based horizontal speedup: accounts for elevation difference between mast and turbine/cursor
+function terrainSpeedup(turbElev,mastElev,hubH,z0){
+  const dE=(turbElev||0)-(mastElev||0);
+  if(Math.abs(dE)<0.5)return 1.0;
+  // ~50% of terrain height difference adds to effective hub height (WAsP approximation)
+  const effH=Math.max(5,hubH+dE*0.5);
+  const su=Math.log(effH/Math.max(z0,0.00001))/Math.log(Math.max(hubH,z0*1.1)/Math.max(z0,0.00001));
+  return Math.max(0.7,Math.min(1.5,su)); // clamp to ±30%
+}
+// Get spatially-extrapolated hub WS at any lat/lon (horizontal extrapolation)
+function getSpatialHubWS(lat,lon){
+  if(!S.wind||!S.wind.speeds.length)return null;
+  const mastH=parseFloat($('mastH').value)||100,hubHH=parseFloat($('hubH').value)||120;
+  const z0=parseFloat($('z0val').value)||0.0002;
+  const vs=S.wind.speeds.filter(v=>v>0.5);if(!vs.length)return null;
+  const meanWS=vs.reduce((s,v)=>s+v,0)/vs.length;
+  const hubWS=logWS(meanWS*S.mcpFactor,mastH,hubHH,z0);
+  const mLat=parseFloat($('mastLat').value)||lat,mLon=parseFloat($('mastLon').value)||lon;
+  const mastElev=S.terrain?getTerrainElev(mLat,mLon)||0:0;
+  const curElev=getTerrainElev(lat,lon);
+  if(curElev===null)return{ws:hubWS,su:1.0,elev:null};
+  const su=terrainSpeedup(curElev,mastElev,hubHH,z0);
+  return{ws:hubWS*su,su,elev:curElev};
+}
 function linReg(xs,ys){const n=xs.length;if(n<2)return{slope:1,intercept:0,R2:0};const xm=xs.reduce((s,v)=>s+v,0)/n,ym=ys.reduce((s,v)=>s+v,0)/n;const ssxy=xs.reduce((s,x,i)=>s+(x-xm)*(ys[i]-ym),0),ssx=xs.reduce((s,x)=>s+(x-xm)**2,0);const sl=ssx>0?ssxy/ssx:1,ic=ym-sl*xm;const sst=ys.reduce((s,y)=>s+(y-ym)**2,0),sse=ys.reduce((s,y,i)=>s+(y-sl*xs[i]-ic)**2,0);return{slope:sl,intercept:ic,R2:sst>0?1-sse/sst:0};}
 function stdDev(a){const m=a.reduce((s,v)=>s+v,0)/a.length;return Math.sqrt(a.reduce((s,v)=>s+(v-m)**2,0)/a.length);}
 function latLonToXY(ts){if(!ts.length)return[];const lat0=ts.reduce((s,t)=>s+t.lat,0)/ts.length,lon0=ts.reduce((s,t)=>s+t.lon,0)/ts.length;const mL=111320,mLo=111320*Math.cos(lat0*Math.PI/180);return ts.map(t=>({...t,x:(t.lon-lon0)*mLo,y:(t.lat-lat0)*mL}));}
 
 // Fast power LUT
-function buildLUT(pc){const step=.05,n=Math.ceil(30/step)+1;const pw=new Float32Array(n),ct=new Float32Array(n);for(let i=0;i<n;i++){const r=interpPC(i*step,pc);pw[i]=r.power;ct[i]=r.ct;}return{pw,ct,step};}
+// IEC 61400-12-1 Method 2: density-corrected power curve
+// ws_eff = ws*(rho/rho0)^(1/3) → look up P(ws_eff) → scale by rho ratio below rated
+function buildLUT(pc,rho){
+  rho=rho||parseFloat($('airDen').value)||1.225;
+  const rho0=1.225,step=0.05,n=Math.ceil(33/step)+2;
+  const pw=new Float32Array(n),ct=new Float32Array(n);
+  const rhoR=rho/rho0;
+  for(let i=0;i<n;i++){
+    const ws=i*step;
+    // Effective wind speed at reference density
+    const wsE=ws*Math.pow(rhoR,1/3);
+    const r=interpPC(wsE,pc);
+    // Below rated: scale by rho ratio; above rated: capped by pitch control
+    pw[i]=Math.min(r.power*rhoR,pc.rated);
+    ct[i]=r.ct;
+  }
+  return{pw,ct,step,rho};
+}
 function lutGet(lut,ws){const i=Math.min(Math.floor(ws/lut.step),lut.pw.length-1);return{power:lut.pw[i],ct:lut.ct[i]};}
 
 // ── WAKE MODELS ──
@@ -734,6 +857,10 @@ async function downloadERA5(){
   const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
   const sy=parseInt($('e5Sy').value),ey=parseInt($('e5Ey').value);
   if(ey<sy){alert('End year ≥ start year');return;}
+  const siteCheck=validateSite(lat,lon);
+  if(!siteCheck.ok){alert('Site validation failed:\n'+siteCheck.issues.join('\n'));return;}
+  siteCheck.issues.forEach(w=>log('Site warning: '+w,'w'));
+  if(ey-sy>15){if(!confirm(`Downloading ${ey-sy+1} years — this may take 30+ seconds. Continue?`))return;}
   const h=$('e5H').value,wsV=h==='100'?'wind_speed_100m':'wind_speed_10m',wdV=h==='100'?'wind_direction_100m':'wind_direction_10m';
   const years=[];for(let y=sy;y<=ey;y++)years.push(y);
   setProg('e5',5,`Downloading ${years.length} years in parallel batches...`);
@@ -754,7 +881,14 @@ async function downloadERA5(){
     $('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);
     $('e5PD').textContent=PD.toFixed(0);$('e5EL').textContent=elev?elev.toFixed(0):'—';
     $('e5out').style.display='block';
-    $('mastLat').value=lat;$('mastLon').value=lon;$('terrLa').value=lat;$('terrLo').value=lon;$('gLat').value=lat;$('gLon').value=lon;
+    $('mastLat').value=lat;$('mastLon').value=lon;
+    $('terrLa').value=lat;$('terrLo').value=lon;
+    $('gLat').value=lat;$('gLon').value=lon;
+    $('tsSy').value=sy;$('tsEy').value=sy; // default TS to first year of ERA5
+    // Auto-shear based on z0 and stability
+    autoShear();
+    // ERA5 elevation → update site elevation → update density
+    if(elev&&Math.abs(elev)<5000){$('siteElev').value=Math.max(0,elev.toFixed(0));calcDensity();}
     $('windStat').textContent=`ERA5 ${sy}–${ey}: ${sp.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s · A=${wb.A.toFixed(2)} k=${wb.k.toFixed(2)}`;
     drawE5Hist(sp,wb);updateWindUI(sp,dr);
     log(`ERA5 OK: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
@@ -766,7 +900,9 @@ function calcDensity(){const e=parseFloat($('siteElev').value)||0,T=(parseFloat(
 // ── AEP ENGINE ──
 function calcAEP(){
   const txy=latLonToXY(S.turbines);if(!txy.length||!S.wind)return null;
-  const pc=getPC(),lut=buildLUT(pc);
+  const pc=getPC();
+  const density_aep=parseFloat($('airDen').value)||1.225;
+  const lut=buildLUT(pc,density_aep); // IEC 61400-12-1 Method 2 density correction
   const kw=parseFloat($('wakeK').value)||.04,otherL=parseFloat($('otherLoss').value)||5,lossM=1-otherL/100;
   const nSect=parseInt($('sects').value)||16,sz=360/nSect;
   const mastH=parseFloat($('mastH').value)||100,hubHH=parseFloat($('hubH').value)||120;
@@ -802,11 +938,20 @@ function calcAEP(){
   const grossG=Array.from(gross).reduce((s,e)=>s+e,0)/1e6,netWake=Array.from(net).reduce((s,e)=>s+e,0)/1e6;
   const netF=netWake*lossM,wakeL=grossG>0?(grossG-netWake)/grossG*100:0;
   const instMW=n*pc.rated/1000,CF=netF*1000/(instMW*8760)*100;
-  const sig=.08;const P50=netF,P75=P50*(1-.674*sig),P90=P50*(1-1.282*sig),P99=P50*(1-2.326*sig);
+  // Component uncertainty model (RSS)
+  const u_wind_r=sectors.reduce((s,sec)=>s+(sec.n<200?0.08:sec.n<1000?0.05:0.03)*sec.freq,0);
+  const u_wake_r=wakeL>15?0.035:0.020;
+  const u_pc_r=0.015;const u_den_r=Math.abs(density-1.225)/1.225*0.5;
+  const u_other_r=0.015;
+  const sig=Math.sqrt(u_wind_r**2+u_wake_r**2+u_pc_r**2+u_den_r**2+u_other_r**2);
+  const P50=netF,P75=P50*(1-0.674*sig),P90=P50*(1-1.282*sig),P99=P50*(1-2.326*sig);
 
-  // Per-turbine with free WS at prevailing direction
+  // Per-turbine with free WS at prevailing direction + horizontal speedup
   const prevDir=parseFloat($('prevWD')?.value||270);
   const freeSpWind=wakeRun(txy,hubMean,prevDir,lut,kw);
+  // Per-turbine terrain speedup
+  const mastElev2=S.terrain?getTerrainElev(parseFloat($('mastLat').value)||0,parseFloat($('mastLon').value)||0)||0:0;
+  const tSpeedups=txy.map(t=>{const te=S.turbines[txy.indexOf(t)]?.elev;return terrainSpeedup(te!==undefined?te:mastElev2,mastElev2,hubHH,z0);});
   const perT=txy.map((_,i)=>{
     const wl=gross[i]>0?(gross[i]-net[i])/gross[i]*100:0;
     const nt=net[i]*lossM/1e6;const cf=nt*1000/(pc.rated*8760)*100;
@@ -820,7 +965,8 @@ function calcAEP(){
   const shearProfile=[20,40,60,80,100,120,140,160,180,200].map(h=>({h,ws:logWS(hubMean,hubHH,h,z0)}));
   const rix=S.terrain?Math.max(0,(S.terrain.maxE-S.terrain.minE)/Math.max(1,S.terrain.maxE)*5):0;
 
-  return{mastH,hubHH,z0,mastMean,hubMean,mastWb,hubWb,mcpFactor:S.mcpFactor,density,PD:.5*density*hubMean**3,grossAEP:grossG,wakeLoss:wakeL,netAEP:netF,CF,instMW,P50,P75,P90,P99,sigma:sig,perTurbine:perT,sectors,gwcSectors,shearProfile,rix,lut};
+  const iec=checkIECClass(hubMean,pc);if(!iec.ok)log(`⚠ IEC class warning: hub WS ${hubMean.toFixed(2)} m/s exceeds ${iec.cls} limit (${iec.limit} m/s)!`,'w');
+  return{mastH,hubHH,z0,mastMean,hubMean,mastWb,hubWb,mcpFactor:S.mcpFactor,density,PD:.5*density*hubMean**3,grossAEP:grossG,wakeLoss:wakeL,netAEP:netF,CF,instMW,P50,P75,P90,P99,sigma:sig,u_wind_r,u_wake_r,u_pc_r,u_den_r:Math.abs(density-1.225)/1.225*0.5,perTurbine:perT,sectors,gwcSectors,shearProfile,rix,lut,iec};
 }
 
 function runAnalysis(){
@@ -842,7 +988,17 @@ function updateResultsUI(R){
   $('rGross').textContent=R.grossAEP.toFixed(2);$('rWake').textContent=R.wakeLoss.toFixed(1)+'%';
   $('rNet').textContent=R.netAEP.toFixed(2);$('rCF').textContent=R.CF.toFixed(1)+'%';
   $('rRIX').textContent=R.rix.toFixed(1)+'%';$('rShr').textContent=parseFloat($('shearA').value).toFixed(2);
-  $('pexc').innerHTML=`<table style="width:100%;font-size:9px"><tr><td>P50</td><td style="color:var(--grn);font-weight:700">${R.P50.toFixed(2)} GWh</td></tr><tr><td>P75</td><td style="color:var(--acc)">${R.P75.toFixed(2)} GWh</td></tr><tr><td>P90</td><td style="color:var(--wrn)">${R.P90.toFixed(2)} GWh</td></tr><tr><td>P99</td><td style="color:var(--red)">${R.P99.toFixed(2)} GWh</td></tr><tr><td colspan="2" style="color:var(--muted);font-size:8px">σ=${(R.sigma*100).toFixed(0)}% · Cap.=${R.instMW.toFixed(1)} MW</td></tr></table>`;
+  const sigPct=(R.sigma*100).toFixed(1);
+  $('pexc').innerHTML=`<table style="width:100%;font-size:9px">
+    <tr><td style="color:var(--muted)">P50</td><td style="color:var(--grn);font-weight:700">${R.P50.toFixed(2)} GWh</td></tr>
+    <tr><td style="color:var(--muted)">P75</td><td style="color:var(--acc)">${R.P75.toFixed(2)} GWh</td></tr>
+    <tr><td style="color:var(--muted)">P90</td><td style="color:var(--wrn)">${R.P90.toFixed(2)} GWh</td></tr>
+    <tr><td style="color:var(--muted)">P99</td><td style="color:var(--red)">${R.P99.toFixed(2)} GWh</td></tr>
+    <tr><td colspan="2" style="color:var(--muted);font-size:8px;padding-top:3px">
+      σ_total=${sigPct}% (1σ) · Wind+${(R.u_wind_r*100).toFixed(1)}% Wake+${(R.u_wake_r*100).toFixed(1)}% PC+${(R.u_pc_r*100).toFixed(1)}%<br>
+      Installed: ${R.instMW.toFixed(1)} MW · ρ=${R.density.toFixed(3)} kg/m³
+    </td></tr>
+  </table>`;
   const tb=$('aepBody');tb.innerHTML='';
   R.perTurbine.forEach(t=>{const tr=document.createElement('tr');tr.innerHTML=`<td>T${t.i}</td><td>${t.ws}</td><td>${t.gross}</td><td>${t.wake}%</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;tb.appendChild(tr);});
   drawAEPChart(R.perTurbine);drawShearChart(R.shearProfile);
@@ -941,7 +1097,10 @@ function drawDiurnalChart(byH){mkChart('diurnChart','line',{labels:Array.from({l
 
 // ── MCP ──
 async function runMCP(){
-  if(!S.wind||S.wind.speeds.length<100){alert('Load wind data first');return;}
+  if(!S.wind||S.wind.speeds.length<100){alert('Load wind data first (ERA5 tab or Import)');return;}
+  const concMonths=new Set((S.wind.times||[]).map(t=>t?t.substring(0,7):null).filter(Boolean)).size;
+  if(concMonths<3)log(`MCP warning: only ${concMonths} month(s) of concurrent data — MCP accuracy may be low (recommend ≥12 months)`,'w');
+  if(concMonths>=3&&concMonths<12)log(`MCP note: ${concMonths} months concurrent. Longer periods give better regression.`,'i');
   const sy=parseInt($('mcpSy').value)||1991,ey=parseInt($('mcpEy').value)||2020;
   const meth=$('mcpMeth').value;const lat=parseFloat($('mastLat').value)||55.5,lon=parseFloat($('mastLon').value)||7.9;
   setProg('mcp',5,`ERA5 LT ${sy}–${ey} (parallel)...`);log(`MCP: ${meth}, ${sy}–${ey}`,'i');
@@ -977,137 +1136,218 @@ function monthlyMeans(sp,ts){const s={},c={};for(let i=0;i<sp.length;i++){if(!ts
 async function runTimeSeries(){
   if(!S.turbines.length){alert('Add turbines first');return;}
   const sy=parseInt($('tsSy').value)||2022,ey=parseInt($('tsEy').value)||2022;
-  const step=parseInt($('tsStep').value)||3;const lat=parseFloat($('mastLat').value)||55.5,lon=parseFloat($('mastLon').value)||7.9;
-  setProg('ts',5,`ERA5 ${sy}–${ey}...`);
+  const step=parseInt($('tsStep').value)||3;
+  const lat=parseFloat($('mastLat').value)||55.5,lon=parseFloat($('mastLon').value)||7.9;
+  // ── READ ALL PARAMS FROM FORM ──
+  const mastH=parseFloat($('mastH').value)||100;      // FIX: was hardcoded 100
+  const hubHH=parseFloat($('hubH').value)||120;
+  const z0=parseFloat($('z0val').value)||0.0002;
+  const otherL=parseFloat($('otherLoss').value)/100;
+  const kw=parseFloat($('wakeK').value)||0.04;
+  const mcpF=Math.max(0.5,Math.min(2.0,S.mcpFactor||1.0));
+  const pc=getPC();
+  const rhoTS=parseFloat($('airDen').value)||1.225;
+  const lut=buildLUT(pc,rhoTS); // density-corrected
+  const cutIn=pc.cutIn||3,cutOut=pc.cutOut||25;
+  const txy=latLonToXY(S.turbines),n=S.turbines.length;
+  // ── PER-TURBINE HORIZONTAL SPEEDUP (elevation-based) ──
+  const mastElev=S.terrain?getTerrainElev(lat,lon)||0:0;
+  const speedups=S.turbines.map(t=>{
+    const te=t.elev!==undefined?t.elev:(S.terrain?getTerrainElev(t.lat,t.lon)??mastElev:mastElev);
+    return terrainSpeedup(te,mastElev,hubHH,z0);
+  });
+  setProg('ts',5,`ERA5 ${sy}\u2013${ey} (parallel)...`);
+  log(`TS start: mastH=${mastH}m, hub=${hubHH}m, z0=${z0}, MCP\u00d7${mcpF.toFixed(3)}, ${n} WTGs, speedups=[${speedups.map(s=>s.toFixed(3)).join(',')}]`,'i');
   try{
     const years=[];for(let y=sy;y<=ey;y++)years.push(y);
     const BATCH=3;const allSp=[],allDr=[],allTs=[];
-    for(let i=0;i<years.length;i+=BATCH){const batch=years.slice(i,i+BATCH);const res=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,'wind_speed_100m','wind_direction_100m')));res.forEach(r=>{allSp.push(...r.sp);allDr.push(...r.dr);allTs.push(...r.ts);});setProg('ts',5+40*(i+BATCH)/years.length,'Downloading...');}
-    setProg('ts',50,'Pre-binning wind states...');
-    const pc=getPC(),lut=buildLUT(pc);
-    const kw=parseFloat($('wakeK').value)||.04,mastH=100,hubHH=parseFloat($('hubH').value)||120;
-    const z0=parseFloat($('z0val').value)||.0002,otherL=parseFloat($('otherLoss').value)/100;
-    const txy=latLonToXY(S.turbines),n=S.turbines.length,cutIn=pc.cutIn||3;
-    // Pre-bin
+    for(let i=0;i<years.length;i+=BATCH){
+      const batch=years.slice(i,i+BATCH);
+      const res=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,'wind_speed_100m','wind_direction_100m')));
+      res.forEach(r=>{allSp.push(...r.sp);allDr.push(...r.dr);allTs.push(...r.ts);});
+      setProg('ts',5+38*(i+BATCH)/years.length,`${Math.min(i+BATCH,years.length)}/${years.length} yrs...`);
+    }
+    // ── DIAGNOSTICS ──
+    const validSp=allSp.filter(v=>v!==null&&v!==undefined&&v>0.5);
+    const rawMean=validSp.length?validSp.reduce((s,v)=>s+v,0)/validSp.length:0;
+    const hubMean=logWS(rawMean*mcpF,mastH,hubHH,z0);
+    log(`TS data: ${allSp.length.toLocaleString()} records, ${validSp.length.toLocaleString()} valid, raw mean=${rawMean.toFixed(2)} m/s, hub mean=${hubMean.toFixed(2)} m/s`,'i');
+    if(validSp.length<50){setProg('ts',0,'\u274c Not enough valid wind data');return;}
+    if(hubMean<0.1){setProg('ts',0,'\u274c Hub WS ~0 \u2014 check mast height/z0');log('TS: hub WS too low. Mast height or z0 may be wrong.','e');return;}
+    // ── PRE-BIN wind states ──
+    setProg('ts',46,'Pre-binning wind states...');
     const stateBins=new Map();
-    for(let h=0;h<allSp.length;h+=step){const ws=logWS((allSp[h]??0)*S.mcpFactor,mastH,hubHH,z0);if(ws<cutIn)continue;const wsB=Math.round(ws*2)/2,dirB=Math.round((allDr[h]||0)/22.5)*22.5%360;const key=`${wsB}_${dirB}`;if(!stateBins.has(key))stateBins.set(key,{count:0,ws:wsB,dir:dirB});stateBins.get(key).count++;}
-    setProg('ts',65,`Wake for ${stateBins.size} unique states...`);
-    const stCache=new Map();for(const[k,st]of stateBins)stCache.set(k,wakeRun(txy,st.ws,st.dir,lut,kw));
-    const mG=new Float64Array(12),mN=new Float64Array(12);const hPow=new Array(24).fill(0),hCnt=new Array(24).fill(0);
-    let totG=0,totN=0,steps=0;
-    for(let h=0;h<allSp.length;h+=step){const ws=logWS((allSp[h]??0)*S.mcpFactor,mastH,hubHH,z0);if(ws<cutIn)continue;const wsB=Math.round(ws*2)/2,dirB=Math.round((allDr[h]||0)/22.5)*22.5%360;const key=`${wsB}_${dirB}`;const wsp=stCache.get(key)||new Float32Array(n).fill(ws);const mo=allTs[h]?parseInt(allTs[h].substring(5,7))-1:0;const hr=allTs[h]?parseInt(allTs[h].substring(11,13)):0;let gH=0,nH=0;for(let t=0;t<n;t++){gH+=lutGet(lut,ws).power*step;nH+=lutGet(lut,wsp[t]).power*step;}totG+=gH;totN+=nH*(1-otherL);if(mo>=0&&mo<12){mG[mo]+=gH;mN[mo]+=nH*(1-otherL);}hPow[hr%24]+=nH/(n||1);hCnt[hr%24]++;steps++;}
-    const grossG=totG/1e6,netG=totN/1e6,wakeL=totG>0?(totG-totN/(1-otherL))/totG*100:0;
-    const hrs=(ey-sy+1)*8760,CF=netG*1000/((n*pc.rated/1000)*hrs)*100;
-    const diurnal=hPow.map((v,i)=>hCnt[i]?v/hCnt[i]:0);
-    setProg('ts',100,`✓ ${netG.toFixed(2)} GWh/yr net`);
-    $('tsRc').textContent=steps.toLocaleString();$('tsNt').textContent=netG.toFixed(2);$('tsWk').textContent=Math.max(0,wakeL).toFixed(1)+'%';$('tsCf').textContent=CF.toFixed(1)+'%';$('tsOut').style.display='block';
-    drawMonthlyChart(Array.from(mG),Array.from(mN));drawDiurnalChart(diurnal);
-    S.tsData={mG:Array.from(mG),mN:Array.from(mN),allSp,allDr,allTs,grossG,netG,wakeL,CF};
-    log(`TS: ${steps} steps · gross=${grossG.toFixed(2)} GWh · net=${netG.toFixed(2)} GWh · CF=${CF.toFixed(1)}%`,'i');
-  }catch(e){setProg('ts',0,'❌ '+e.message);log('TS failed: '+e.message,'e');}
-}
-
-// ── TURBINE MANAGEMENT ──
-function addManual(){const lat=parseFloat($('manLat').value),lon=parseFloat($('manLon').value);if(isNaN(lat)||isNaN(lon)){alert('Enter lat/lon');return;}S.turbines.push({lat,lon,hh:parseFloat($('hubH').value)||120,name:'T'+(S.turbines.length+1)});refreshTable();updateMarkers();log(`Added T${S.turbines.length}: (${lat.toFixed(4)}, ${lon.toFixed(4)})`,'i');}
-function generateGrid(){const rows=parseInt($('gR').value)||2,cols=parseInt($('gC').value)||5,sd=parseFloat($('gS').value)||7,D=parseFloat($('rotD').value)||150,clat=parseFloat($('gLat').value)||55.5,clon=parseFloat($('gLon').value)||7.9,hh=parseFloat($('hubH').value)||120;const sm=sd*D,mL=111320,mLo=111320*Math.cos(clat*Math.PI/180);const tH=(rows-1)*sm,tW=(cols-1)*sm;const nt=[];for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)nt.push({lat:clat+(r*sm-tH/2)/mL,lon:clon+(c*sm-tW/2)/mLo,hh,name:`T${nt.length+1}`});S.turbines=nt;refreshTable();updateMarkers();if(leafMap)leafMap.setView([clat,clon],11);log(`Grid ${rows}×${cols} @${sd}D = ${nt.length} turbines`,'i');}
-function deleteTurbine(i){S.turbines.splice(i,1);S.turbines.forEach((t,j)=>t.name='T'+(j+1));refreshTable();updateMarkers();}
-function clearTurbines(){if(!confirm(`Clear ${S.turbines.length} turbines?`))return;S.turbines=[];S.markers.forEach(m=>m.remove());S.markers=[];refreshTable();}
-function refreshTable(){const tb=$('tbody');tb.innerHTML='';S.turbines.forEach((t,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${i+1}</td><td>${t.lat.toFixed(4)}</td><td>${t.lon.toFixed(4)}</td><td>${t.hh}</td><td>${t.elev!==undefined?t.elev.toFixed(0):'—'}</td><td><button onclick="deleteTurbine(${i})" style="color:var(--red);background:none;border:none;cursor:pointer;font-size:12px">✕</button></td>`;tb.appendChild(tr);});$('tCnt').textContent=`${S.turbines.length} turbines`;$('sbN').textContent=S.turbines.length;const instMW=(S.turbines.length*(parseFloat($('ratedPow').value)||4000)/1000);$('sbCap').textContent=instMW.toFixed(0)+' MW';if(S.turbines.length>1){const la=S.turbines.map(t=>t.lat),lo=S.turbines.map(t=>t.lon);const km2=(Math.max(...la)-Math.min(...la))*111.32*(Math.max(...lo)-Math.min(...lo))*111.32*Math.cos(la[0]*Math.PI/180);$('sbDom')?$('sbDom').textContent=`${km2.toFixed(1)} km²`:null;}}
-
-// ── MAP ──
-let leafMap;
-const wIcon=L.divIcon({className:'',html:`<div style="width:18px;height:18px;background:rgba(88,166,255,.9);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#000">⊕</div>`,iconSize:[18,18],iconAnchor:[9,9]});
-function initMap(){
-  leafMap=L.map('map',{zoomControl:true}).setView([55.5,7.9],9);
-  const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19});
-  const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri',maxZoom:18});
-  osm.addTo(leafMap);
-  L.control.layers({'Street':osm,'Satellite':sat},{},{position:'topright'}).addTo(leafMap);
-  initCanvas();
-  leafMap.on('click',e=>{
-    if(S.drawMode){
-      S.boundary.push([e.latlng.lat,e.latlng.lng]);
-      const m=L.circleMarker([e.latlng.lat,e.latlng.lng],{radius:4,color:'#d29922',fillColor:'#d29922',fillOpacity:.9}).addTo(leafMap);
-      S.boundaryMarkers.push(m);
-      if(S.boundaryLayer)S.boundaryLayer.remove();
-      if(S.boundary.length>1)S.boundaryLayer=L.polygon(S.boundary,{color:'#d29922',weight:2,fillOpacity:.07,dashArray:'6,3'}).addTo(leafMap);
-      $('drawStatus').textContent=`${S.boundary.length} vertices — double-click or "Close Polygon"`;
-      $('bndStats').textContent=`${S.boundary.length} vertices (drawing...)`;
+    for(let h=0;h<allSp.length;h+=step){
+      const raw=allSp[h]??0;if(raw<0.1)continue;
+      const ws=logWS(raw*mcpF,mastH,hubHH,z0);
+      if(ws<cutIn||ws>cutOut+2)continue;
+      const wsB=Math.round(ws*2)/2;
+      const dirB=Math.round((allDr[h]||0)/22.5)*22.5%360;
+      const key=wsB+'_'+dirB;
+      if(!stateBins.has(key))stateBins.set(key,{count:0,ws:wsB,dir:dirB});
+      stateBins.get(key).count++;
+    }
+    log(`TS: ${stateBins.size} unique wind states`,'i');
+    if(stateBins.size===0){setProg('ts',0,'\u274c All wind speeds below cut-in (${cutIn} m/s)');return;}
+    setProg('ts',60,`Wake for ${stateBins.size} states...`);
+    const stCache=new Map();
+    for(const[k,st]of stateBins)stCache.set(k,wakeRun(txy,st.ws,st.dir,lut,kw));
+    // ── ENERGY ACCUMULATION ──
+    const mG=new Float64Array(12),mN=new Float64Array(12);
+    const hPow=new Array(24).fill(0),hCnt=new Array(24).fill(0);
+    let totG=0,totN=0,processed=0;
+    for(let h=0;h<allSp.length;h+=step){
+      const raw=allSp[h]??0;if(raw<0.1)continue;
+      const ws0=logWS(raw*mcpF,mastH,hubHH,z0);
+      if(ws0<cutIn||ws0>cutOut+2)continue;
+      const wsB=Math.round(ws0*2)/2,dirB=Math.round((allDr[h]||0)/22.5)*22.5%360;
+      const key=wsB+'_'+dirB;
+      const wsp=stCache.get(key)||new Float32Array(n).fill(ws0);
+      const mo=allTs[h]?parseInt(allTs[h].substring(5,7))-1:0;
+      const hr=allTs[h]?parseInt(allTs[h].substring(11,13)):0;
+      let gH=0,nH=0;
+      for(let t=0;t<n;t++){
+        const su=speedups[t];
+        const wsG=Math.min(ws0*su,cutOut+1);      // gross: terrain speedup applied
+        const wsN=Math.min(wsp[t]*su,cutOut+1);   // net: wake + terrain speedup
+        gH+=lutGet(lut,wsG).power*step;           // kW * hours = kWh
+        nH+=lutGet(lut,wsN).power*step;
+      }
+      totG+=gH;
+      totN+=nH*(1-otherL);
+      if(mo>=0&&mo<12){mG[mo]+=gH;mN[mo]+=nH*(1-otherL);}
+      hPow[hr%24]+=nH/Math.max(1,n);hCnt[hr%24]++;
+      processed++;
+    }
+    log(`TS accumulated: ${processed} steps, gross=${(totG/1e3).toFixed(1)} MWh (${(totG/1e6).toFixed(3)} GWh)`,'i');
+    if(totG<1){
+      setProg('ts',0,'\u274c Zero energy \u2014 power curve may not match wind speeds');
+      log(`TS zero energy debug: hubMean=${hubMean.toFixed(2)}, cutIn=${cutIn}, PC rated=${pc.rated}kW`,'e');
+      // Sample check
+      const sampleWS=[cutIn+0.5,hubMean,hubMean+2];
+      sampleWS.forEach(ws=>{const p=lutGet(lut,ws).power;log(`  WS=${ws.toFixed(1)} -> ${p.toFixed(0)} kW`,'w');});
       return;
     }
-    $('manLat').value=e.latlng.lat.toFixed(5);$('manLon').value=e.latlng.lng.toFixed(5);
-  });
-  leafMap.on('dblclick',e=>{if(S.drawMode){L.DomEvent.stop(e);doneDraw();}});
-  leafMap.on('mousemove',e=>{
-    const la=e.latlng.lat.toFixed(4),lo=e.latlng.lng.toFixed(4);
-    $('sbXY').textContent=`${la}, ${lo}`;$('ovLat').textContent=la;$('ovLon').textContent=lo;
-    const el=getTerrainElev(e.latlng.lat,e.latlng.lng);
-    $('ovEl').textContent=el!==null?el.toFixed(0)+' m':'—';
-  });
+    const grossG=totG/1e6,netG=totN/1e6;
+    const wakeL=totG>0?(totG-totN/Math.max(0.01,1-otherL))/totG*100:0;
+    const instMW=n*pc.rated/1000,hrs=(ey-sy+1)*8760;
+    const CF=netG*1000/(instMW*Math.max(1,hrs))*100;
+    const diurnal=hPow.map((v,i)=>hCnt[i]?v/hCnt[i]:0);
+    setProg('ts',100,`\u2713 Gross=${grossG.toFixed(2)} GWh \u00b7 Net=${netG.toFixed(2)} GWh \u00b7 CF=${CF.toFixed(1)}%`);
+    $('tsRc').textContent=processed.toLocaleString();
+    $('tsNt').textContent=netG.toFixed(2);
+    $('tsWk').textContent=Math.max(0,wakeL).toFixed(1)+'%';
+    $('tsCf').textContent=CF.toFixed(1)+'%';
+    $('tsOut').style.display='block';
+    drawMonthlyChart(Array.from(mG),Array.from(mN));drawDiurnalChart(diurnal);
+    S.tsData={mG:Array.from(mG),mN:Array.from(mN),allSp,allDr,allTs,grossG,netG,wakeL,CF};
+    log(`\u2713 TS complete: gross=${grossG.toFixed(2)} GWh \u00b7 net=${netG.toFixed(2)} GWh \u00b7 CF=${CF.toFixed(1)}%`,'i');
+  }catch(e){setProg('ts',0,'\u274c '+e.message);log('TS failed: '+e.message,'e');}
 }
-function updateMarkers(){
-  S.markers.forEach(m=>m.remove());S.markers=[];
-  S.turbines.forEach((t,i)=>{
-    const m=L.marker([t.lat,t.lon],{icon:wIcon,draggable:true}).addTo(leafMap);
-    m.bindTooltip(`T${i+1} | HH=${t.hh}m${t.elev!==undefined?' | '+t.elev.toFixed(0)+'m':''}`);
-    m.on('dragend',()=>{S.turbines[i].lat=m.getLatLng().lat;S.turbines[i].lon=m.getLatLng().lng;refreshTable();});
-    S.markers.push(m);
-  });
-  if(S.turbines.length>1)leafMap.fitBounds(L.latLngBounds(S.turbines.map(t=>[t.lat,t.lon])).pad(.2));
-}
-
-// ── IMPORT / EXPORT ──
-function importLayout(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const ts=[],hh=parseFloat($('hubH').value)||120;for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t]/);if(i===0&&isNaN(+p[0]))continue;const la=+p[0],lo=+p[1];if(!isNaN(la)&&!isNaN(lo))ts.push({lat:la,lon:lo,hh:+p[2]||hh,name:`T${ts.length+1}`});}if(!ts.length){alert('No valid rows');return;}S.turbines=ts;refreshTable();updateMarkers();log(`Imported ${ts.length} turbines`,'i');};r.readAsText(f);ev.target.value='';}
-function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)){sp.push(Math.abs(ws));dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;const mean=sp.filter(v=>v>0).reduce((s,v,_,a)=>s+v/a.length,0);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
-function exportLayoutCSV(){if(!S.turbines.length){alert('No turbines');return;}let c='Name,Lat,Lon,HH_m,Elev_m\n';S.turbines.forEach((t,i)=>c+=`T${i+1},${t.lat},${t.lon},${t.hh},${t.elev??''}\n`);dl(c,'layout.csv','text/csv');}
-function exportLayoutKML(){if(!S.turbines.length){alert('No turbines');return;}let k=`<?xml version="1.0"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>\n`;S.turbines.forEach((t,i)=>k+=`<Placemark><name>T${i+1}</name><Point><coordinates>${t.lon},${t.lat},${t.elev??0}</coordinates></Point></Placemark>\n`);k+='</Document></kml>';dl(k,'layout.kml','application/vnd.google-earth.kml+xml');}
-function exportAEPCSV(){if(!S.results){alert('Run analysis first');return;}const R=S.results;let c=`Project,${$('projName').value}\nGross AEP GWh,${R.grossAEP.toFixed(3)}\nNet AEP GWh,${R.netAEP.toFixed(3)}\nWake Loss%,${R.wakeLoss.toFixed(2)}\nCF%,${R.CF.toFixed(2)}\nMast WS m/s,${R.mastMean.toFixed(2)}\nHub WS m/s,${R.hubMean.toFixed(2)}\nMCP factor,${R.mcpFactor.toFixed(3)}\n\nT#,Free WS,Wake%,Net WS,Gross GWh,Net GWh,CF%,Power kW\n`;R.perTurbine.forEach(t=>c+=`T${t.i},${t.ws},${t.wake},${t.wakeWS},${t.gross},${t.net},${t.cf},${t.power}\n`);dl(c,'aep.csv','text/csv');log('AEP CSV exported','i');}
-function exportWindCSV(){if(!S.wind){alert('No wind data');return;}let c='DateTime,WS_ms,Dir_deg\n';for(let i=0;i<S.wind.speeds.length;i++)c+=`${S.wind.times[i]||i},${S.wind.speeds[i].toFixed(2)},${S.wind.dirs[i].toFixed(1)}\n`;dl(c,'wind_data.csv','text/csv');log('Wind CSV exported','i');}
-function exportWindTab(){if(!S.wind){alert('No wind data');return;}let t='WASP_tab_v2\n';for(let i=0;i<S.wind.speeds.length;i++)t+=`${S.wind.speeds[i].toFixed(2)}\t${S.wind.dirs[i].toFixed(1)}\n`;dl(t,'wind.tab','text/plain');log('WAsP .tab exported','i');}
-function exportTSCSV(){if(!S.tsData){alert('Run time series first');return;}const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];let c='Month,Gross_MWh,Net_MWh\n';S.tsData.mG.forEach((g,i)=>c+=`${mn[i]},${(g/1000).toFixed(2)},${(S.tsData.mN[i]/1000).toFixed(2)}\n`);dl(c,'timeseries.csv','text/csv');}
-function exportReport(){
-  const R=S.results,pn=$('projName').value,now=new Date().toLocaleString();
-  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>WindFlow Pro – ${pn}</title><style>body{font-family:sans-serif;max-width:980px;margin:40px auto;padding:20px;background:#f8f9fa;color:#212529}h1{color:#1a56db}h2{color:#1a56db;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin-top:20px}table{width:100%;border-collapse:collapse;margin:10px 0}th{background:#1a56db;color:#fff;padding:7px;text-align:left}td{padding:6px 7px;border-bottom:1px solid #e5e7eb}.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}.big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}.chain{background:#f3f4f6;border-radius:6px;padding:12px;margin:12px 0}.chain td{border:none;padding:4px 8px}</style></head><body>
-<h1>⟁ WindFlow Pro 7.1 — Assessment Report</h1>
-<p><b>Project:</b> ${pn} | <b>Date:</b> ${now} | <b>Wake:</b> ${$('wakeModel').options[$('wakeModel').selectedIndex].text}</p>`;
-  if(R){h+=`<h2>Energy Yield</h2><div class="kv"><div class="box"><div class="big">${R.grossAEP.toFixed(2)} GWh</div><div class="lbl">Gross AEP</div></div><div class="box"><div class="big">${R.netAEP.toFixed(2)} GWh</div><div class="lbl">Net AEP (P50)</div></div><div class="box"><div class="big">${R.CF.toFixed(1)}%</div><div class="lbl">Capacity Factor</div></div><div class="box"><div class="big">${R.wakeLoss.toFixed(1)}%</div><div class="lbl">Wake Loss</div></div><div class="box"><div class="big">${R.instMW.toFixed(1)} MW</div><div class="lbl">Installed</div></div><div class="box"><div class="big">${R.density.toFixed(3)}</div><div class="lbl">Air Density kg/m³</div></div></div>
-<h2>Wind Speed Chain Report</h2><div class="chain"><table><tr><th>Step</th><th>Wind Speed (m/s)</th><th>Change</th><th>Notes</th></tr>
-<tr><td>① Measured (OWC, mast ${R.mastH}m)</td><td><b>${R.mastMean.toFixed(2)}</b></td><td>Baseline</td><td>Weibull A=${R.mastWb.A.toFixed(2)}, k=${R.mastWb.k.toFixed(2)}</td></tr>
-<tr><td>② Log extrapolation to hub ${R.hubHH}m</td><td><b>${R.hubMean.toFixed(2)}</b></td><td>${R.mastMean>0?((R.hubMean-R.mastMean)/R.mastMean*100).toFixed(1):'—'}%</td><td>z₀=${R.z0}m, log wind profile</td></tr>
-<tr><td>③ MCP long-term correction</td><td><b>${(R.hubMean*R.mcpFactor).toFixed(2)}</b></td><td>×${R.mcpFactor.toFixed(3)}</td><td>Weibull A=${R.hubWb.A.toFixed(2)}, k=${R.hubWb.k.toFixed(2)}</td></tr>
-</table></div>
-<h2>P-Exceedance</h2><table><tr><th>P50</th><th>P75</th><th>P90</th><th>P99</th></tr><tr><td>${R.P50.toFixed(2)} GWh</td><td>${R.P75.toFixed(2)} GWh</td><td>${R.P90.toFixed(2)} GWh</td><td>${R.P99.toFixed(2)} GWh</td></tr></table>
-<h2>Per-Turbine Wind Speed and AEP</h2><table><tr><th>T#</th><th>Free WS m/s</th><th>Wake Deficit %</th><th>Net WS m/s</th><th>Power kW</th><th>Gross GWh</th><th>Net GWh</th><th>CF %</th></tr>${R.perTurbine.map(t=>`<tr><td>T${t.i}</td><td>${t.ws}</td><td>${t.wake}%</td><td><b>${t.wakeWS}</b></td><td>${t.power}</td><td>${t.gross}</td><td><b>${t.net}</b></td><td>${t.cf}</td></tr>`).join('')}</table>`;}
-  h+=`<h2>Turbine Layout (${S.turbines.length} WTGs)</h2><table><tr><th>T#</th><th>Latitude</th><th>Longitude</th><th>Hub Height m</th><th>Elevation m</th></tr>${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
-<p style="color:#9ca3af;font-size:10px;margin-top:20px">Generated by WindFlow Pro 7.1 — Canvas Contours · Boundary Optimizer · WS Chain Report</p></body></html>`;
-  dl(h,'windflow-report.html','text/html');log('HTML report exported','i');
-}
-function dl(c,f,m){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:m}));a.download=f;a.click();}
-
-// ── DEMO ──
-async function loadDemo(){
-  log('Loading Horns Rev demo (55.5°N, 7.9°E)...','i');setStatus('Loading demo...');
-  $('projName').value='Horns Rev Offshore Demo';$('sbProj').textContent='Horns Rev Offshore Demo';
-  $('tcls').value='4mw';applyPreset();$('wakeK').value='.04';$('otherLoss').value='5';$('wakeModel').value='jensen';
-  $('z0sel').value='0.0002';$('z0val').value='0.0002';$('siteElev').value='0';$('siteTemp').value='8';calcDensity();
-  $('gLat').value='55.500';$('gLon').value='7.900';$('gR').value='2';$('gC').value='5';$('gS').value='7';
+async function loadDemo(site='horns'){
+  const sites={
+    horns:{name:'Horns Rev Offshore',lat:55.50,lon:7.90,z0:'0.0002',z0sel:'0.0002',elev:0,temp:8,turbines:'4mw',gy:2,gc:5,gs:7,e5sy:2021,e5ey:2022,mastH:100},
+    portugal:{name:'Constância Wind Farm',lat:39.55,lon:-8.38,z0:'0.03',z0sel:'0.03',elev:80,temp:15,turbines:'2mw',gy:2,gc:5,gs:6,e5sy:2021,e5ey:2022,mastH:80}
+  };
+  const cfg=sites[site]||sites.horns;
+  log(`Loading ${cfg.name} demo...`,'i');setStatus('Loading demo...');
+  $('projName').value=cfg.name;$('sbProj').textContent=cfg.name;
+  $('tcls').value=cfg.turbines;applyPreset();$('wakeK').value='.04';$('otherLoss').value='5';$('wakeModel').value='jensen';
+  $('z0sel').value=cfg.z0sel;$('z0val').value=cfg.z0;
+  $('siteElev').value=cfg.elev;$('siteTemp').value=cfg.temp;calcDensity();
+  $('mastH').value=cfg.mastH;
+  $('gLat').value=cfg.lat.toFixed(3);$('gLon').value=cfg.lon.toFixed(3);
+  $('gR').value=cfg.gy;$('gC').value=cfg.gc;$('gS').value=cfg.gs;
   generateGrid();
-  $('e5La').value='55.50';$('e5Lo').value='7.90';$('e5Sy').value='2021';$('e5Ey').value='2022';
-  $('mastLat').value='55.50';$('mastLon').value='7.90';$('terrLa').value='55.50';$('terrLo').value='7.90';
+  $('e5La').value=cfg.lat.toFixed(2);$('e5Lo').value=cfg.lon.toFixed(2);
+  $('e5Sy').value=cfg.e5sy;$('e5Ey').value=cfg.e5ey;
+  $('mastLat').value=cfg.lat.toFixed(3);$('mastLon').value=cfg.lon.toFixed(3);
+  $('terrLa').value=cfg.lat.toFixed(3);$('terrLo').value=cfg.lon.toFixed(3);
+  $('tsSy').value=cfg.e5sy;$('tsEy').value=cfg.e5sy;
   showTab('era5');await downloadERA5();
   showTab('terr');$('terrR').value='8';$('terrG').value='20';await downloadTerrain();
   showTab('setup');runAnalysis();
   showRTab('wsc');setTimeout(()=>showRTab('aep'),300);
-  setStatus('✓ Demo loaded — Horns Rev offshore');
+  setStatus(`✓ Demo: ${cfg.name} | ${cfg.gy*cfg.gc} WTGs | ERA5 ${cfg.e5sy}–${cfg.e5ey}`);
 }
 
 // ── TABS ──
+function exportLayoutCSV(){if(!S.turbines.length){alert('No turbines');return;}let c='Name,Lat,Lon,HH_m,Elev_m\n';S.turbines.forEach((t,i)=>c+=`T${i+1},${t.lat},${t.lon},${t.hh},${t.elev??''}\n`);dlFile(c,'layout.csv','text/csv');}
+function exportLayoutKML(){if(!S.turbines.length){alert('No turbines');return;}let k='<?xml version="1.0"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>\n';S.turbines.forEach((t,i)=>k+=`<Placemark><name>T${i+1}</name><Point><coordinates>${t.lon},${t.lat},${t.elev??0}</coordinates></Point></Placemark>\n`);k+='</Document></kml>';dlFile(k,'layout.kml','application/vnd.google-earth.kml+xml');}
+function exportAEPCSV(){if(!S.results){alert('Run analysis first');return;}const R=S.results;let c=`Project,${$('projName').value}\nSite Lat,${$('mastLat').value}\nSite Lon,${$('mastLon').value}\nMast HH (m),${$('mastH').value}\nHub HH (m),${$('hubH').value}\nRoughness z0 (m),${$('z0val').value}\nShear alpha,${$('shearA').value}\nAir Density (kg/m3),${R.density.toFixed(3)}\nMCP Factor,${R.mcpFactor.toFixed(3)}\nMast Mean WS (m/s),${R.mastMean.toFixed(2)}\nHub Mean WS (m/s),${R.hubMean.toFixed(2)}\nWeibull A (hub),${R.hubWb.A.toFixed(3)}\nWeibull k (hub),${R.hubWb.k.toFixed(3)}\nGross AEP (GWh),${R.grossAEP.toFixed(3)}\nNet AEP (GWh),${R.netAEP.toFixed(3)}\nWake Loss (%),${R.wakeLoss.toFixed(2)}\nCF (%),${R.CF.toFixed(2)}\nP50 (GWh),${R.P50.toFixed(3)}\nP75 (GWh),${R.P75.toFixed(3)}\nP90 (GWh),${R.P90.toFixed(3)}\nP99 (GWh),${R.P99.toFixed(3)}\nUncertainty sigma (%),${(R.sigma*100).toFixed(1)}\nIEC Class,${R.iec?R.iec.cls:'—'}\n\nT#,Lat,Lon,Elev_m,Free_WS_ms,Wake_pct,Net_WS_ms,Gross_GWh,Net_GWh,CF_pct,Power_kW\n`;R.perTurbine.forEach((t,i)=>{const tb=S.turbines[i]||{};c+=`T${t.i},${tb.lat?.toFixed(5)||''},${tb.lon?.toFixed(5)||''},${tb.elev?.toFixed(0)||''},${t.ws},${t.wake},${t.wakeWS},${t.gross},${t.net},${t.cf},${t.power}\n`;});dlFile(c,'aep_results.csv','text/csv');log('AEP CSV exported','i');}
+function exportWindCSV(){if(!S.wind){alert('No wind data');return;}let c='DateTime,WS_ms,Dir_deg\n';for(let i=0;i<S.wind.speeds.length;i++)c+=`${S.wind.times[i]||i},${S.wind.speeds[i].toFixed(2)},${S.wind.dirs[i].toFixed(1)}\n`;dlFile(c,'wind_data.csv','text/csv');log('Wind CSV exported','i');}
+function exportWindTab(){if(!S.wind){alert('No wind data');return;}let t='WASP_tab_v2\n';for(let i=0;i<S.wind.speeds.length;i++)t+=`${S.wind.speeds[i].toFixed(2)}\t${S.wind.dirs[i].toFixed(1)}\n`;dlFile(t,'wind.tab','text/plain');log('WAsP .tab exported','i');}
+function exportTSCSV(){if(!S.tsData){alert('Run time series first');return;}const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];let c='Month,Gross_MWh,Net_MWh\n';S.tsData.mG.forEach((g,i)=>c+=`${mn[i]},${(g/1000).toFixed(2)},${(S.tsData.mN[i]/1000).toFixed(2)}\n`);dlFile(c,'timeseries.csv','text/csv');log('TS CSV exported','i');}
+function exportReport(){
+  const R=S.results,pn=$('projName').value,now=new Date().toLocaleString();
+  const wakeModelName=$('wakeModel').options[$('wakeModel').selectedIndex].text;
+  const resRows=R?`
+    <tr><td>Mast Mean WS</td><td><b>${R.mastMean.toFixed(2)} m/s</b></td><td>Observed at mast ${R.mastH}m</td></tr>
+    <tr><td>Hub Mean WS (free stream)</td><td><b>${R.hubMean.toFixed(2)} m/s</b></td><td>Log-law to ${R.hubHH}m, z₀=${R.z0}m, α=${$('shearA').value}</td></tr>
+    <tr><td>MCP Factor</td><td>${R.mcpFactor.toFixed(3)}</td><td>Long-term ERA5 correction</td></tr>
+    <tr><td>Weibull (hub, MLE)</td><td>A=${R.hubWb.A.toFixed(2)}, k=${R.hubWb.k.toFixed(2)}</td><td>${R.hubWb.n||'—'} samples, ${R.hubWb.method||'mle'}</td></tr>
+    <tr><td>Uncertainty σ (1σ)</td><td>${(R.sigma*100).toFixed(1)}%</td><td>Wind ${(R.u_wind_r*100).toFixed(1)}% + Wake ${(R.u_wake_r*100).toFixed(1)}% + PC ${(R.u_pc_r*100).toFixed(1)}% (RSS)</td></tr>
+    <tr><td>IEC Class Compliance</td><td>${R.iec?R.iec.cls:'—'}</td><td>${R.iec?(R.iec.ok?'✓ Within limits':'⚠ EXCEEDS '+R.iec.limit+' m/s limit'):'—'}</td></tr>`:'';
+  const tRows=R?R.perTurbine.map(t=>{const tb=S.turbines[t.i-1]||{};return`<tr><td>T${t.i}</td><td>${tb.lat?.toFixed(4)||''}</td><td>${tb.lon?.toFixed(4)||''}</td><td>${tb.elev?.toFixed(0)||'—'}</td><td>${t.ws}</td><td>${t.wake}%</td><td><b>${t.wakeWS}</b></td><td>${t.gross}</td><td><b>${t.net}</b></td><td>${t.cf}%</td><td>${t.power}</td></tr>`;}).join(''):'';
+  const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>WindFlow Pro – ${pn}</title>
+  <style>body{font-family:sans-serif;max-width:1050px;margin:40px auto;padding:20px;background:#f8f9fa;color:#212529}
+  h1{color:#1a56db}h2{color:#1a56db;border-bottom:2px solid #e5e7eb;padding-bottom:5px;margin-top:20px}
+  table{width:100%;border-collapse:collapse;margin:10px 0}th{background:#1a56db;color:#fff;padding:7px;text-align:left}
+  td{padding:6px 7px;border-bottom:1px solid #e5e7eb}.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+  .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
+  .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
+  .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}</style></head><body>
+  <h1>△ WindFlow Pro 7.1 — Wind Resource Assessment Report</h1>
+  <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}</p>
+  <h2>Site &amp; Wind Resource Chain</h2>
+  <table><tr><th>Step</th><th>Value</th><th>Method / Notes</th></tr>
+  <tr><td>Mast location</td><td>${$('mastLat').value}°, ${$('mastLon').value}°</td><td>ERA5 / measurement point</td></tr>
+  <tr><td>Mast height → Hub height</td><td>${$('mastH').value}m → ${$('hubH').value}m</td><td>Log wind profile</td></tr>
+  <tr><td>Roughness z₀</td><td>${$('z0val').value} m</td><td>Shear α=${$('shearA').value} (auto-recommended)</td></tr>
+  <tr><td>Air density</td><td>${$('airDen').value} kg/m³</td><td>Elev ${$('siteElev').value}m ASL, T=${$('siteTemp').value}°C (ISA)</td></tr>
+  <tr><td>Density correction method</td><td>IEC 61400-12-1 Method 2</td><td>ws_eff = ws×(ρ/ρ₀)^⅓ applied to LUT</td></tr>
+  ${resRows}</table>
+  ${R?`<h2>Energy Yield Summary</h2>
+  <div class="kv">
+    <div class="box"><div class="big">${R.grossAEP.toFixed(2)} GWh</div><div class="lbl">Gross AEP</div></div>
+    <div class="box"><div class="big">${R.netAEP.toFixed(2)} GWh</div><div class="lbl">Net AEP (P50)</div></div>
+    <div class="box"><div class="big">${R.CF.toFixed(1)}%</div><div class="lbl">Capacity Factor</div></div>
+    <div class="box"><div class="big">${R.wakeLoss.toFixed(1)}%</div><div class="lbl">Wake Loss</div></div>
+    <div class="box"><div class="big">${R.instMW.toFixed(1)} MW</div><div class="lbl">Installed Capacity</div></div>
+    <div class="box"><div class="big">${R.density.toFixed(3)}</div><div class="lbl">Air Density kg/m³</div></div>
+  </div>
+  <h2>P-Exceedance (${(R.sigma*100).toFixed(1)}% uncertainty)</h2>
+  <table><tr><th>Exceedance</th><th>AEP (GWh)</th><th>vs P50</th></tr>
+  <tr><td>P50</td><td><b>${R.P50.toFixed(2)}</b></td><td>baseline</td></tr>
+  <tr><td>P75</td><td>${R.P75.toFixed(2)}</td><td>${((R.P75/R.P50-1)*100).toFixed(1)}%</td></tr>
+  <tr><td>P90</td><td>${R.P90.toFixed(2)}</td><td>${((R.P90/R.P50-1)*100).toFixed(1)}%</td></tr>
+  <tr><td>P99</td><td>${R.P99.toFixed(2)}</td><td>${((R.P99/R.P50-1)*100).toFixed(1)}%</td></tr></table>`:''}
+  <h2>Per-Turbine Wind Speed Chain &amp; AEP</h2>
+  <table><tr><th>T#</th><th>Lat</th><th>Lon</th><th>Elev(m)</th><th>Free WS(m/s)</th><th>Wake%</th><th>Net WS(m/s)</th><th>Gross(GWh)</th><th>Net(GWh)</th><th>CF%</th><th>Power(kW)</th></tr>
+  ${tRows}</table>
+  <h2>Turbine Layout (${S.turbines.length} WTGs)</h2>
+  <table><tr><th>T#</th><th>Latitude</th><th>Longitude</th><th>Hub Height(m)</th><th>Elevation(m)</th></tr>
+  ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 7.1 — IEC 61400-12-1 density correction · Component uncertainty model · Log wind profile · Horizontal terrain speedup</p>
+  </body></html>`;
+  dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain)','i');
+}
+function importLayout(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const ts=[],hh=parseFloat($('hubH').value)||120;for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t]/);if(i===0&&isNaN(+p[0]))continue;const la=+p[0],lo=+p[1];if(!isNaN(la)&&!isNaN(lo))ts.push({lat:la,lon:lo,hh:+p[2]||hh,name:`T${ts.length+1}`});}if(!ts.length){alert('No valid rows');return;}S.turbines=ts;refreshTable();updateMarkers();log(`Imported ${ts.length} turbines from ${f.name}`,'i');};r.readAsText(f);ev.target.value='';}
+function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)&&ws>=0&&ws<80){sp.push(ws);dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;const vs=sp.filter(v=>v>0.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
+function dlFile(c,f,m){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:m}));a.download=f;a.click();}
 function showTab(id){document.querySelectorAll('.sp2').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.stab').forEach(b=>b.classList.remove('on'));$('sp-'+id)?.classList.add('on');document.querySelectorAll('.stab').forEach(b=>{if(b.dataset.tab===id)b.classList.add('on');});}
 function showRTab(id){document.querySelectorAll('.rp').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('on'));$('rp-'+id)?.classList.add('on');document.querySelectorAll('.rtab').forEach(b=>{if(b.dataset.rtab===id)b.classList.add('on');});}
 document.querySelectorAll('.stab').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
 document.querySelectorAll('.rtab').forEach(b=>b.addEventListener('click',()=>showRTab(b.dataset.rtab)));
 
 // ── INIT ──
+function autoShear(){
+  const z0=parseFloat($('z0val').value)||0.0002;
+  const stab=$('stab')?.value||'N';
+  const alpha=recommendAlpha(z0,stab);
+  $('shearA').value=alpha.toFixed(2);
+  log(`Auto shear: z0=${z0} → α=${alpha.toFixed(2)} (${stab} stability)`,'i');
+}
 initMap();calcDensity();
 log('WindFlow Pro 7.1 ready. Click "🎯 Demo" for a full test, or "✏ Draw Boundary" to define a site.','i');
 </script></body></html>
