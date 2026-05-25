@@ -376,7 +376,7 @@ function setStatus(s){$('tbst').textContent=s}
 const S={
   turbines:[],wind:null,era5Raw:null,mcpFactor:1.0,
   tsData:null,results:null,markers:[],
-  terrain:null,contoursData:[],
+  terrain:null,contoursData:[],terrainCache:{},
   showContours:true,showHeat:true,
   boundary:[],boundaryLayer:null,boundaryMarkers:[],
   drawMode:false,charts:{}
@@ -522,14 +522,15 @@ function buildLUT(pc,rho){
   rho=rho||parseFloat($('airDen').value)||1.225;
   const rho0=1.225,step=0.05,n=Math.ceil(33/step)+2;
   const pw=new Float32Array(n),ct=new Float32Array(n);
-  const rhoR=rho/rho0;
+  const rhoR=Math.max(0.75,Math.min(1.25,rho/rho0));
   for(let i=0;i<n;i++){
     const ws=i*step;
-    // Effective wind speed at reference density
+    // IEC-style density correction for a standard-density power curve:
+    // use equivalent wind speed Ueq = U*(rho/rho0)^(1/3).
+    // Do NOT additionally multiply power by rhoR, otherwise below-rated power is double-counted.
     const wsE=ws*Math.pow(rhoR,1/3);
     const r=interpPC(wsE,pc);
-    // Below rated: scale by rho ratio; above rated: capped by pitch control
-    pw[i]=Math.min(r.power*rhoR,pc.rated);
+    pw[i]=Math.min(r.power,pc.rated);
     ct[i]=r.ct;
   }
   return{pw,ct,step,rho};
@@ -579,9 +580,11 @@ function autoCI(r){if(r<50)return 5;if(r<200)return 10;if(r<500)return 20;return
 let contCanvas;
 function initCanvas(){
   contCanvas=$('contCanvas');
-  function resize(){const sz=leafMap.getSize();contCanvas.width=sz.x;contCanvas.height=sz.y;redrawCanvas();}
-  leafMap.on('moveend zoomend resize',()=>redrawCanvas());
-  leafMap.on('move zoom',()=>redrawCanvas());
+  let raf=null;
+  function schedule(){if(raf)return;raf=requestAnimationFrame(()=>{raf=null;redrawCanvas();});}
+  function resize(){const sz=leafMap.getSize();contCanvas.width=sz.x;contCanvas.height=sz.y;schedule();}
+  // Redraw after interaction finishes. Continuous redraw during pan/zoom was the main UI slowdown.
+  leafMap.on('moveend zoomend resize',schedule);
   resize();
 }
 function redrawCanvas(){
@@ -605,16 +608,17 @@ function redrawCanvas(){
       ctx.globalAlpha=op*.6;ctx.fillRect(x,y,w,h);
     }}ctx.globalAlpha=1;
   }
-  // Draw contours
+  // Draw contours — batch each level into one canvas path (much faster than one stroke per cell segment)
   if(S.showContours&&S.contoursData.length){
     S.contoursData.forEach(({segs,col,major})=>{
-      ctx.strokeStyle=col;ctx.lineWidth=major?1.8:.8;ctx.globalAlpha=.85;
-      segs.forEach(seg=>{
-        if(!seg||seg.length<2)return;
-        ctx.beginPath();
-        seg.forEach((pt,i)=>{const px=leafMap.latLngToContainerPoint([pt.lat,pt.lon]);if(i===0)ctx.moveTo(px.x,px.y);else ctx.lineTo(px.x,px.y);});
-        ctx.stroke();
-      });
+      if(!segs||!segs.length)return;
+      ctx.strokeStyle=col;ctx.lineWidth=major?1.6:.7;ctx.globalAlpha=.85;ctx.beginPath();
+      for(let si=0;si<segs.length;si++){
+        const seg=segs[si];if(!seg||seg.length<2)continue;
+        const p0=leafMap.latLngToContainerPoint([seg[0].lat,seg[0].lon]);ctx.moveTo(p0.x,p0.y);
+        for(let pi=1;pi<seg.length;pi++){const px=leafMap.latLngToContainerPoint([seg[pi].lat,seg[pi].lon]);ctx.lineTo(px.x,px.y);}
+      }
+      ctx.stroke();
     });ctx.globalAlpha=1;
   }
   // Draw roughness zones if available
@@ -629,40 +633,78 @@ function redrawCanvas(){
 
 // ── TERRAIN DOWNLOAD (parallel batches, canvas render) ──
 async function downloadTerrainForArea(clat,clon,radKm,ng,ciSel){
+  // Optimised terrain pipeline:
+  // 1) cache repeated requests, 2) bounded concurrent elevation calls with progress,
+  // 3) cap excessive contour levels, 4) yield before canvas render to keep UI responsive.
+  if(!S.terrainCache)S.terrainCache={};
+  const key=[clat.toFixed(5),clon.toFixed(5),(+radKm).toFixed(2),ng,ciSel].join('|');
+  if(S.terrainCache[key]){
+    const C=S.terrainCache[key];
+    S.terrain=JSON.parse(JSON.stringify(C.terrain));
+    S.contoursData=JSON.parse(JSON.stringify(C.contoursData));
+    setProg('terrP',100,`✓ loaded from cache · ${S.terrain.nx}×${S.terrain.ny} · ${S.terrain.levels.length} contours`);
+    redrawCanvas();$('siteElev').value=S.terrain.meanE.toFixed(0);calcDensity();
+    return{minE:S.terrain.minE,maxE:S.terrain.maxE,meanE:S.terrain.meanE,ci:S.terrain.ci,levels:S.terrain.levels.length,cached:true};
+  }
+
   const dLat=radKm/111.32,dLon=radKm/(111.32*Math.cos(clat*Math.PI/180));
   const lat0=clat-dLat,lat1=clat+dLat,lon0=clon-dLon,lon1=clon+dLon;
   const gLats=[],gLons=[];
-  for(let i=0;i<ng;i++)for(let j=0;j<ng;j++){gLats.push(lat0+i*(lat1-lat0)/(ng-1));gLons.push(lon0+j*(lon1-lon0)/(ng-1));}
+  for(let i=0;i<ng;i++)for(let j=0;j<ng;j++){gLats.push(+(lat0+i*(lat1-lat0)/(ng-1)).toFixed(6));gLons.push(+(lon0+j*(lon1-lon0)/(ng-1)).toFixed(6));}
 
-  // Parallel batches of 200 (safe URL length)
-  const CHUNK=200;const chunks=[];
-  for(let c=0;c<gLats.length;c+=CHUNK)chunks.push({la:gLats.slice(c,c+CHUNK),lo:gLons.slice(c,c+CHUNK)});
+  // Open-Meteo elevation accepts coordinate arrays; 100 points keeps URLs safe and retryable.
+  const CHUNK=100,MAX_PAR=6;const chunks=[];
+  for(let c=0;c<gLats.length;c+=CHUNK)chunks.push({la:gLats.slice(c,c+CHUNK),lo:gLons.slice(c,c+CHUNK),idx:c});
+  setProg('terrP',8,`Fetching ${gLats.length} elevation points (${chunks.length} batches)...`);
 
-  setProg('terrP',10,`Fetching ${gLats.length} pts in ${chunks.length} parallel requests...`);
-  const results=await Promise.all(chunks.map(async ch=>{
-    const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${ch.la.join(',')}&longitude=${ch.lo.join(',')}`);
-    const d=await r.json();return d.elevation||[];
-  }));
-  const elevs=results.flat();
+  const elevs=new Array(gLats.length);let done=0;
+  async function fetchChunk(ch){
+    const url=`https://api.open-meteo.com/v1/elevation?latitude=${ch.la.join(',')}&longitude=${ch.lo.join(',')}`;
+    for(let a=0;a<3;a++){
+      try{const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();return d.elevation||[];}
+      catch(e){if(a===2)throw e;await new Promise(res=>setTimeout(res,300*(a+1)));}
+    }
+  }
+  let next=0;
+  async function worker(){
+    while(next<chunks.length){
+      const ch=chunks[next++];
+      const arr=await fetchChunk(ch);
+      for(let k=0;k<arr.length;k++)elevs[ch.idx+k]=arr[k];
+      done++;setProg('terrP',8+45*done/chunks.length,`Elevation ${done}/${chunks.length} batches...`);
+      await new Promise(r=>setTimeout(r,0));
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(MAX_PAR,chunks.length)},worker));
 
-  setProg('terrP',60,'Building grid + marching squares...');
-  const grid=[];for(let i=0;i<ng;i++){grid[i]=[];for(let j=0;j<ng;j++)grid[i][j]=elevs[i*ng+j]||0;}
+  setProg('terrP',58,'Building terrain grid...');
+  const grid=[];for(let i=0;i<ng;i++){grid[i]=[];for(let j=0;j<ng;j++){const v=elevs[i*ng+j];grid[i][j]=(v===null||v===undefined||isNaN(v))?0:v;}}
   const validE=elevs.filter(e=>e!==null&&!isNaN(e)&&e!==undefined);
+  if(!validE.length)throw new Error('No valid elevation data returned');
   const minE=Math.min(...validE),maxE=Math.max(...validE),meanE=validE.reduce((s,v)=>s+v,0)/validE.length;
 
-  let ci=ciSel==='auto'?autoCI(maxE-minE):parseFloat(ciSel);if(ci<1)ci=1;
-  const levels=[];for(let l=Math.ceil(minE/ci)*ci;l<=maxE;l+=ci)levels.push(l);
+  let ci=ciSel==='auto'?autoCI(maxE-minE):parseFloat(ciSel);if(!isFinite(ci)||ci<1)ci=1;
+  // Too many contour levels causes slow generation and slow canvas redraw. Cap to ~35 levels.
+  const maxLevels=35,range=Math.max(1,maxE-minE);
+  if(range/ci>maxLevels){ci=Math.ceil((range/maxLevels)/5)*5;if(ci<1)ci=1;}
+  const levels=[];for(let l=Math.ceil(minE/ci)*ci;l<=maxE;l+=ci)levels.push(+l.toFixed(3));
+
+  setProg('terrP',68,`Generating ${levels.length} contour levels...`);
+  await new Promise(r=>setTimeout(r,0));
   const contours=marchingSquares(grid,lat0,lat1,lon0,lon1,ng,ng,levels);
 
-  // Store for canvas
   S.contoursData=levels.map((lv,li)=>({segs:contours[lv]||[],col:elevCol(lv,minE,maxE),major:li%Math.max(1,Math.round(levels.length/6))===0}));
   S.terrain={grid,lat0,lat1,lon0,lon1,ny:ng,nx:ng,minE,maxE,meanE,ci,levels};
+  S.terrainCache[key]={terrain:S.terrain,contoursData:S.contoursData};
+  // Keep only the latest 5 terrain downloads in memory.
+  const keys=Object.keys(S.terrainCache);if(keys.length>5)delete S.terrainCache[keys[0]];
 
-  setProg('terrP',95,'Rendering canvas...');
+  setProg('terrP',92,'Rendering terrain canvas...');
+  await new Promise(r=>requestAnimationFrame(r));
   redrawCanvas();
   setProg('terrP',100,`✓ ${validE.length} pts · ${levels.length} contours · ${minE.toFixed(0)}–${maxE.toFixed(0)}m · ci=${ci}m`);
   $('siteElev').value=meanE.toFixed(0);calcDensity();
-  return{minE,maxE,meanE,ci,levels:levels.length};
+  return{minE,maxE,meanE,ci,levels:levels.length,cached:false};
 }
 
 async function downloadTerrain(){
@@ -731,6 +773,73 @@ function getTerrainElev(lat,lon){
   const j=Math.round((lon-lon0)/(lon1-lon0)*(nx-1));
   return(grid[Math.min(i,ny-1)]||[])[Math.min(j,nx-1)]??null;
 }
+
+// Bilinear terrain interpolation for WAsP-style site effects (smoother than nearest-cell lookup)
+function getTerrainElevBilinear(lat,lon){
+  const T=S.terrain;if(!T)return null;
+  const{lat0,lat1,lon0,lon1,ny,nx,grid}=T;
+  if(lat<lat0||lat>lat1||lon<lon0||lon>lon1)return null;
+  const y=(lat-lat0)/(lat1-lat0)*(ny-1),x=(lon-lon0)/(lon1-lon0)*(nx-1);
+  const i0=Math.max(0,Math.min(ny-2,Math.floor(y))),j0=Math.max(0,Math.min(nx-2,Math.floor(x)));
+  const fy=y-i0,fx=x-j0;
+  const z00=grid[i0]?.[j0],z10=grid[i0]?.[j0+1],z01=grid[i0+1]?.[j0],z11=grid[i0+1]?.[j0+1];
+  if([z00,z10,z01,z11].some(v=>v===null||v===undefined||!isFinite(v)))return getTerrainElev(lat,lon);
+  return z00*(1-fx)*(1-fy)+z10*fx*(1-fy)+z01*(1-fx)*fy+z11*fx*fy;
+}
+function pointInPoly(pt,poly){
+  let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const yi=poly[i].lat,yj=poly[j].lat,xi=poly[i].lon,xj=poly[j].lon;
+    if(((yi>pt.lat)!==(yj>pt.lat))&&(pt.lon<(xj-xi)*(pt.lat-yi)/((yj-yi)||1e-12)+xi))c=!c;
+  }return c;
+}
+function getLocalZ0(lat,lon,defZ0){
+  let z=defZ0||parseFloat($('z0val').value)||0.03;
+  if(S.roughnessZones&&S.roughnessZones.length){
+    // Prefer the first polygon containing the point; fall back to nearest polygon vertex within ~2 km.
+    for(const rz of S.roughnessZones){if(rz.pts&&rz.pts.length>=3&&pointInPoly({lat,lon},rz.pts))return Math.max(0.0002,Math.min(3,rz.z0||z));}
+    let best=Infinity,bz=z;
+    const mLat=111320,mLon=111320*Math.cos(lat*Math.PI/180);
+    for(const rz of S.roughnessZones){for(const p of (rz.pts||[])){const d2=((p.lat-lat)*mLat)**2+((p.lon-lon)*mLon)**2;if(d2<best){best=d2;bz=rz.z0||z;}}}
+    if(Math.sqrt(best)<2000)z=bz;
+  }
+  return Math.max(0.0002,Math.min(3,z));
+}
+function directionalTerrainSpeedupAt(lat,lon,dir,hubH,z0,mastLat,mastLon){
+  if(!S.terrain)return 1;
+  const zC=getTerrainElevBilinear(lat,lon);if(zC===null)return 1;
+  const latR=dir*Math.PI/180;
+  const fetch=1500; // short WAsP-like linearised slope scale
+  const dLat=(Math.cos(latR)*fetch)/111320;
+  const dLon=(Math.sin(latR)*fetch)/(111320*Math.cos(lat*Math.PI/180)||1);
+  const zU=getTerrainElevBilinear(lat-dLat,lon-dLon);
+  const zD=getTerrainElevBilinear(lat+dLat,lon+dLon);
+  let slope=0;
+  if(zU!==null&&zD!==null)slope=(zD-zU)/(2*fetch);
+  const slopeSU=Math.exp(Math.max(-0.20,Math.min(0.20,1.8*slope))); // linearised Jackson-Hunt style response
+  const mastElev=getTerrainElevBilinear(mastLat,mastLon)??zC;
+  const elevSU=terrainSpeedup(zC,mastElev,hubH,z0);
+  return Math.max(0.70,Math.min(1.35,elevSU*slopeSU));
+}
+function waspSiteRatio(lat,lon,dir,hubH,mastZ0,mastLat,mastLon){
+  // Practical WAsP-like site ratio: roughness-change + linearised terrain speed-up.
+  const z0t=getLocalZ0(lat,lon,mastZ0);
+  const z0m=Math.max(0.0002,mastZ0||0.03);
+  const roughSR=Math.log(hubH/z0t)/Math.log(hubH/z0m);
+  const oroSR=directionalTerrainSpeedupAt(lat,lon,dir,hubH,z0t,mastLat,mastLon);
+  return Math.max(0.55,Math.min(1.65,roughSR*oroSR));
+}
+function estimateRIX(){
+  if(!S.terrain)return 0;
+  const T=S.terrain,{grid,ny,nx}=T;let steep=0,total=0;
+  const dx=(((T.lon1-T.lon0)/(nx-1))*111320*Math.cos(((T.lat0+T.lat1)/2)*Math.PI/180))||1;
+  const dy=(((T.lat1-T.lat0)/(ny-1))*111320)||1;
+  for(let i=1;i<ny-1;i++)for(let j=1;j<nx-1;j++){
+    const dzdx=((grid[i][j+1]||0)-(grid[i][j-1]||0))/(2*dx),dzdy=((grid[i+1][j]||0)-(grid[i-1][j]||0))/(2*dy);
+    const slope=Math.sqrt(dzdx*dzdx+dzdy*dzdy);if(slope>0.30)steep++;total++;
+  }
+  return total?100*steep/total:0;
+}
+
 
 // ── TURBINE ELEVATION VERIFICATION ──
 async function verifyTurbineElevations(){
@@ -902,71 +1011,88 @@ function calcAEP(){
   const txy=latLonToXY(S.turbines);if(!txy.length||!S.wind)return null;
   const pc=getPC();
   const density_aep=parseFloat($('airDen').value)||1.225;
-  const lut=buildLUT(pc,density_aep); // IEC 61400-12-1 Method 2 density correction
+  const lut=buildLUT(pc,density_aep);
   const kw=parseFloat($('wakeK').value)||.04,otherL=parseFloat($('otherLoss').value)||5,lossM=1-otherL/100;
   const nSect=parseInt($('sects').value)||16,sz=360/nSect;
   const mastH=parseFloat($('mastH').value)||100,hubHH=parseFloat($('hubH').value)||120;
-  const z0=parseFloat($('z0val').value)||.0002,density=parseFloat($('airDen').value)||1.225;
+  const mastZ0=parseFloat($('z0val').value)||.03,density=parseFloat($('airDen').value)||1.225;
+  const mastLat=parseFloat($('mastLat').value)||S.turbines[0].lat,mastLon=parseFloat($('mastLon').value)||S.turbines[0].lon;
+  const mcpF=Math.max(0.5,Math.min(2.0,S.mcpFactor||1.0));
 
-  // Step 1: OWC → Hub WS via log law
-  const hubSp=S.wind.speeds.map(v=>logWS(v*S.mcpFactor,mastH,hubHH,z0));
+  // OWC at mast → hub height at mast using log-law.  Horizontal extrapolation is applied later per WTG/sector.
+  const hubSp=S.wind.speeds.map(v=>logWS((v||0)*mcpF,mastH,hubHH,mastZ0));
   const dirs=S.wind.dirs;
-
-  // WS chain values
   const mastMean=S.wind.speeds.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0);
   const hubMean=hubSp.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0);
   const mastWb=weibullFit(S.wind.speeds.filter(v=>v>.5));
   const hubWb=weibullFit(hubSp.filter(v=>v>.5));
 
-  // Sector binning
+  // Sector-wise OWC. Frequency is retained from observed climate; Weibull A is transformed by site ratios.
   const bins=Array.from({length:nSect},()=>[]);
-  for(let i=0;i<hubSp.length;i++){if(hubSp[i]<.5)continue;bins[Math.floor(((dirs[i]%360)+sz/2)/sz)%nSect].push(hubSp[i]);}
+  for(let i=0;i<hubSp.length;i++){if(hubSp[i]<.5)continue;bins[Math.floor((((dirs[i]||0)%360)+sz/2)/sz)%nSect].push(hubSp[i]);}
   const tot=bins.reduce((s,b)=>s+b.length,0)||1;
-  const sectors=bins.map((b,i)=>{const freq=b.length/tot;const wb=b.length>5?weibullFit(b):{A:8,k:2};const ms=b.length?b.reduce((s,v)=>s+v,0)/b.length:0;return{freq,A:wb.A,k:wb.k,ms,dir:(i+.5)*sz,n:b.length};});
+  const sectors=bins.map((b,i)=>{const freq=b.length/tot;const wb=b.length>5?weibullFit(b):{A:Math.max(0.5,hubWb.A),k:hubWb.k||2};const ms=b.length?b.reduce((s,v)=>s+v,0)/b.length:0;return{freq,A:wb.A,k:wb.k,ms,dir:(i+.5)*sz,n:b.length};});
 
   const n=txy.length;
-  const gross=new Float64Array(n),net=new Float64Array(n);
+  const gross=new Float64Array(n),net=new Float64Array(n),freeMean=new Float64Array(n),wakeMean=new Float64Array(n),freqSum=new Float64Array(n);
+  const siteSR=Array.from({length:nSect},()=>new Float64Array(n));
+  const gwcSectors=[];
+  const z0ref=.05;
+  for(let si=0;si<nSect;si++){
+    const sec=sectors[si];
+    let srSum=0;
+    for(let t=0;t<n;t++){
+      const tb=S.turbines[t];
+      siteSR[si][t]=waspSiteRatio(tb.lat,tb.lon,sec.dir,hubHH,mastZ0,mastLat,mastLon);
+      srSum+=siteSR[si][t];
+    }
+    const avgSR=srSum/Math.max(1,n);
+    // Approximate Generalised Wind Climate at a standard roughness; then Site Wind Climate by avg site ratio.
+    const mastToRef=Math.log(hubHH/z0ref)/Math.log(hubHH/mastZ0);
+    const gwcA=sec.A*mastToRef;
+    gwcSectors.push({...sec,gwcA:Math.max(0,gwcA),swcA:Math.max(0,gwcA*avgSR/mastToRef),SR:avgSR});
+  }
+
   const dv=.5,vMax=28;
-  sectors.forEach(sec=>{if(sec.freq<1e-5)return;
+  sectors.forEach((sec,si)=>{if(sec.freq<1e-5)return;
+    const meanFactor=gamma(1+1/(sec.k||2));
+    for(let t=0;t<n;t++){freeMean[t]+=sec.freq*sec.A*siteSR[si][t]*meanFactor;freqSum[t]+=sec.freq;}
     for(let v=.5;v<=vMax;v+=dv){
       const prob=wbPdf(v,sec.A,sec.k)*dv;if(prob<1e-9)continue;
-      const wsp=wakeRun(txy,v,sec.dir,lut,kw);const gp=lutGet(lut,v).power;
-      for(let t=0;t<n;t++){gross[t]+=gp*sec.freq*prob*8760;net[t]+=lutGet(lut,wsp[t]).power*sec.freq*prob*8760;}
+      const wsp=wakeRun(txy,v,sec.dir,lut,kw); // wake solved in the sector free-stream, site SR applied to each WTG
+      for(let t=0;t<n;t++){
+        const sr=siteSR[si][t];
+        const vFree=v*sr,vWake=wsp[t]*sr;
+        gross[t]+=lutGet(lut,vFree).power*sec.freq*prob*8760;
+        net[t]+=lutGet(lut,vWake).power*sec.freq*prob*8760;
+        wakeMean[t]+=vWake*sec.freq*prob;
+      }
     }
   });
 
   const grossG=Array.from(gross).reduce((s,e)=>s+e,0)/1e6,netWake=Array.from(net).reduce((s,e)=>s+e,0)/1e6;
   const netF=netWake*lossM,wakeL=grossG>0?(grossG-netWake)/grossG*100:0;
   const instMW=n*pc.rated/1000,CF=netF*1000/(instMW*8760)*100;
-  // Component uncertainty model (RSS)
-  const u_wind_r=sectors.reduce((s,sec)=>s+(sec.n<200?0.08:sec.n<1000?0.05:0.03)*sec.freq,0);
-  const u_wake_r=wakeL>15?0.035:0.020;
-  const u_pc_r=0.015;const u_den_r=Math.abs(density-1.225)/1.225*0.5;
-  const u_other_r=0.015;
+
+  const u_wind_r=sectors.reduce((s,sec)=>s+(sec.n<200?0.08:sec.n<1000?0.05:0.03)*sec.freq,0)+(S.terrain?0.015:0.035)+(S.roughnessZones?.length?0.01:0.025);
+  const u_wake_r=wakeL>15?0.04:0.025;
+  const u_pc_r=0.015,u_den_r=Math.abs(density-1.225)/1.225*0.5,u_other_r=0.015;
   const sig=Math.sqrt(u_wind_r**2+u_wake_r**2+u_pc_r**2+u_den_r**2+u_other_r**2);
   const P50=netF,P75=P50*(1-0.674*sig),P90=P50*(1-1.282*sig),P99=P50*(1-2.326*sig);
 
-  // Per-turbine with free WS at prevailing direction + horizontal speedup
-  const prevDir=parseFloat($('prevWD')?.value||270);
-  const freeSpWind=wakeRun(txy,hubMean,prevDir,lut,kw);
-  // Per-turbine terrain speedup
-  const mastElev2=S.terrain?getTerrainElev(parseFloat($('mastLat').value)||0,parseFloat($('mastLon').value)||0)||0:0;
-  const tSpeedups=txy.map(t=>{const te=S.turbines[txy.indexOf(t)]?.elev;return terrainSpeedup(te!==undefined?te:mastElev2,mastElev2,hubHH,z0);});
   const perT=txy.map((_,i)=>{
     const wl=gross[i]>0?(gross[i]-net[i])/gross[i]*100:0;
-    const nt=net[i]*lossM/1e6;const cf=nt*1000/(pc.rated*8760)*100;
-    const freeWS=hubMean,wakeWS=freeSpWind[i];
-    return{i:i+1,ws:freeWS.toFixed(2),wake:wl.toFixed(1),wakeWS:wakeWS.toFixed(2),net:nt.toFixed(3),cf:cf.toFixed(1),gross:(gross[i]/1e6).toFixed(3),power:lutGet(lut,wakeWS).power.toFixed(0)};
+    const nt=net[i]*lossM/1e6,cf=nt*1000/(pc.rated*8760)*100;
+    const fws=freqSum[i]>0?freeMean[i]/freqSum[i]:hubMean;
+    const wws=fws*(1-Math.max(0,wl)/100);
+    return{i:i+1,ws:fws.toFixed(2),wake:wl.toFixed(1),wakeWS:wws.toFixed(2),net:nt.toFixed(3),cf:cf.toFixed(1),gross:(gross[i]/1e6).toFixed(3),power:lutGet(lut,wws).power.toFixed(0)};
   });
 
-  // GWC
-  const z0ref=.05;
-  const gwcSectors=sectors.map(s=>{const gwcA=s.A*(Math.log(hubHH/z0ref)/Math.log(hubHH/z0));const swcA=gwcA*(Math.log(hubHH/z0)/Math.log(hubHH/z0ref));const SR=gwcA>0?swcA/gwcA:1;return{...s,gwcA:Math.max(0,gwcA),swcA:Math.max(0,swcA),SR};});
-  const shearProfile=[20,40,60,80,100,120,140,160,180,200].map(h=>({h,ws:logWS(hubMean,hubHH,h,z0)}));
-  const rix=S.terrain?Math.max(0,(S.terrain.maxE-S.terrain.minE)/Math.max(1,S.terrain.maxE)*5):0;
-
+  const shearProfile=[20,40,60,80,100,120,140,160,180,200].map(h=>({h,ws:logWS(hubMean,hubHH,h,mastZ0)}));
+  const rix=estimateRIX();
+  if(rix>5)log(`⚠ RIX ${rix.toFixed(1)}%: complex terrain; WAsP linear-flow assumptions may be invalid.`,'w');
   const iec=checkIECClass(hubMean,pc);if(!iec.ok)log(`⚠ IEC class warning: hub WS ${hubMean.toFixed(2)} m/s exceeds ${iec.cls} limit (${iec.limit} m/s)!`,'w');
-  return{mastH,hubHH,z0,mastMean,hubMean,mastWb,hubWb,mcpFactor:S.mcpFactor,density,PD:.5*density*hubMean**3,grossAEP:grossG,wakeLoss:wakeL,netAEP:netF,CF,instMW,P50,P75,P90,P99,sigma:sig,u_wind_r,u_wake_r,u_pc_r,u_den_r:Math.abs(density-1.225)/1.225*0.5,perTurbine:perT,sectors,gwcSectors,shearProfile,rix,lut,iec};
+  return{mastH,hubHH,z0:mastZ0,mastMean,hubMean,mastWb,hubWb,mcpFactor:mcpF,density,PD:.5*density*hubMean**3,grossAEP:grossG,wakeLoss:wakeL,netAEP:netF,CF,instMW,P50,P75,P90,P99,sigma:sig,u_wind_r,u_wake_r,u_pc_r,u_den_r,perTurbine:perT,sectors,gwcSectors,shearProfile,rix,lut,iec,siteSR};
 }
 
 function runAnalysis(){
@@ -1150,14 +1276,16 @@ async function runTimeSeries(){
   const lut=buildLUT(pc,rhoTS); // density-corrected
   const cutIn=pc.cutIn||3,cutOut=pc.cutOut||25;
   const txy=latLonToXY(S.turbines),n=S.turbines.length;
-  // ── PER-TURBINE HORIZONTAL SPEEDUP (elevation-based) ──
-  const mastElev=S.terrain?getTerrainElev(lat,lon)||0:0;
-  const speedups=S.turbines.map(t=>{
-    const te=t.elev!==undefined?t.elev:(S.terrain?getTerrainElev(t.lat,t.lon)??mastElev:mastElev);
-    return terrainSpeedup(te,mastElev,hubHH,z0);
-  });
+  // ── PER-TURBINE/PER-DIRECTION WAsP-like site ratios (roughness + terrain) ──
+  const srCache=new Map();
+  function tsSiteRatios(dir){
+    const d=Math.round(dir/22.5)*22.5%360;
+    if(!srCache.has(d))srCache.set(d,S.turbines.map(t=>waspSiteRatio(t.lat,t.lon,d,hubHH,z0,lat,lon)));
+    return srCache.get(d);
+  }
+  const avgSR=S.turbines.map((t,ti)=>{let s=0;for(let d=0;d<360;d+=22.5)s+=tsSiteRatios(d)[ti];return s/16;});
   setProg('ts',5,`ERA5 ${sy}\u2013${ey} (parallel)...`);
-  log(`TS start: mastH=${mastH}m, hub=${hubHH}m, z0=${z0}, MCP\u00d7${mcpF.toFixed(3)}, ${n} WTGs, speedups=[${speedups.map(s=>s.toFixed(3)).join(',')}]`,'i');
+  log(`TS start: mastH=${mastH}m, hub=${hubHH}m, z0=${z0}, MCP\u00d7${mcpF.toFixed(3)}, ${n} WTGs, avg site ratios=[${avgSR.map(s=>s.toFixed(3)).join(',')}]`,'i');
   try{
     const years=[];for(let y=sy;y<=ey;y++)years.push(y);
     const BATCH=3;const allSp=[],allDr=[],allTs=[];
@@ -1206,10 +1334,11 @@ async function runTimeSeries(){
       const mo=allTs[h]?parseInt(allTs[h].substring(5,7))-1:0;
       const hr=allTs[h]?parseInt(allTs[h].substring(11,13)):0;
       let gH=0,nH=0;
+      const srs=tsSiteRatios(dirB);
       for(let t=0;t<n;t++){
-        const su=speedups[t];
-        const wsG=Math.min(ws0*su,cutOut+1);      // gross: terrain speedup applied
-        const wsN=Math.min(wsp[t]*su,cutOut+1);   // net: wake + terrain speedup
+        const su=srs[t];
+        const wsG=Math.min(ws0*su,cutOut+1);      // gross: WAsP-like site ratio applied
+        const wsN=Math.min(wsp[t]*su,cutOut+1);   // net: wake + WAsP-like site ratio
         gH+=lutGet(lut,wsG).power*step;           // kW * hours = kWh
         nH+=lutGet(lut,wsN).power*step;
       }
