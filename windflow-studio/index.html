@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>WindFlow Studio v1.6.1 — WAsP/WindPRO-like Open Workflow</title>
+  <title>WindFlow Studio v1.6.3 — WAsP/WindPRO-like Open Workflow</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="src/css/styles.css" />
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><span class="logo">⟁</span><div><b>WindFlow Studio</b><small>v1.6.1 · WAsP-like flow · WindPRO-like TS</small></div></div>
+  <div class="brand"><span class="logo">⟁</span><div><b>WindFlow Studio</b><small>v1.6.3 · WAsP-like flow · WindPRO-like TS</small></div></div>
   <div class="actions">
     <button id="btnDemo">Demo Site</button>
     <button id="btnRun" class="primary">Run Flow + AEP</button>
@@ -28,7 +28,7 @@
     </section>
     <section>
       <h2>2 · Layout</h2>
-      <div class="row"><input id="layoutFile" type="file" accept=".csv,.txt,.kml"/><button id="btnLoadLayout">Load</button></div>
+      <div class="row"><input id="layoutFile" type="file" accept=".csv,.txt,.kml,.kmz"/><button id="btnLoadLayout">Load</button></div>
       <p class="hint">CSV columns: name,lat,lon[,hh]. KML text files with Point coordinates are also accepted.</p>
       <div class="grid3"><input id="gridRows" type="number" value="3"><input id="gridCols" type="number" value="4"><input id="gridSpacingD" type="number" value="7"></div>
       <button id="btnGrid">Generate Grid Around Site</button>
@@ -36,7 +36,7 @@
     </section>
     <section>
       <h2>3 · Data Download</h2>
-      <div class="grid2"><label>Terrain radius km<input id="terrainRadius" type="number" value="8"></label><label>Grid<input id="terrainGrid" type="number" value="40"></label></div>
+      <div class="grid2"><label>Terrain radius km<input id="terrainRadius" type="number" value="8"></label><label>Grid<input id="terrainGrid" type="number" value="20"></label></div>
       <div class="grid2"><label>Contour interval<input id="contourInt" value="auto"></label><label>ERA5 years<input id="eraYears" value="2021-2023"></label></div>
       <button id="btnTerrain">Download Terrain + Contours</button>
       <button id="btnRoughness">Download OSM Roughness</button>
@@ -56,6 +56,7 @@
 </main>
 <script>window.addEventListener("error",e=>{const el=document.getElementById("dataStatus");if(el)el.textContent="Script error: "+e.message});</script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script type="module" src="src/js/main.js"></script>
 </body>
 </html>
