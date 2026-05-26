@@ -45,9 +45,3 @@ export function interpGwc(gwc,h,z0){
   const mean=f.reduce((s,fi,i)=>s+fi*A[i]*gamma(1+1/k[i]),0);const pd=f.reduce((s,fi,i)=>s+fi*powerDensity(A[i],k[i]),0);
   return{roughness:r,height:h,A,k,freq:f,mean,powerDensity:pd,sectors:gwc.sector};
 }
-export function setGWAFromTimeSeries(sp,dir,height=S.project.hubHeight,z0=S.project.z0,fromHeight=100){
-  const sectors=Array.from({length:12},()=>[]);const ratio=Math.log(height/Math.max(.0002,z0))/Math.log(fromHeight/Math.max(.0002,z0));
-  for(let i=0;i<sp.length;i++){const v=sp[i];if(v==null||v<.1)continue;const d=dir[i]??0;const s=Math.floor((((d%360)+360)%360+15)/30)%12;sectors[s].push(v*ratio)}
-  const total=sectors.reduce((a,b)=>a+b.length,0)||1;const A=[],k=[],freq=[],secDirs=[];
-  for(let s=0;s<12;s++){const arr=sectors[s];freq[s]=arr.length/total;secDirs[s]=s*30;if(arr.length<3){A[s]=7;k[s]=2;continue}const mean=arr.reduce((a,b)=>a+b,0)/arr.length;const sd=Math.sqrt(arr.reduce((a,b)=>a+(b-mean)*(b-mean),0)/arr.length);const cv=Math.max(.05,sd/Math.max(.1,mean));k[s]=Math.max(1.1,Math.min(5,Math.pow(cv,-1.086)));A[s]=mean/gamma(1+1/k[s])}
-  const mean=freq.reduce((a,f,i)=>a+f*A[i]*gamma(1+1/k[i]),0);const pd=freq.reduce((a,f,i)=>a+f*powerDensity(A[i],k[i]),0);S.gwa={raw:null,lat:S.project.lat,lon:S.project.lon,height,z0,climate:{roughness:z0,height,A,k,freq,mean,powerDensity:pd,sectors:secDirs},fallback:true};log(`Fallback wind climate from ERA5/time-series: ${mean.toFixed(2)} m/s @ ${height}m`,'w');return S.gwa}
