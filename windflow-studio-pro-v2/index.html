@@ -1,10 +1,10 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WindFlow Studio Pro v2 — WAsP-like Flow + WindPRO-like Time Series</title>
+<title>WindFlow Studio Pro v2.1 — WAsP-like Flow + WindPRO-like Time Series</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="src/styles.css">
 </head><body>
-<header class="top"><div class="brand">⟁ <b>WindFlow Studio Pro</b><span>v2 · WAsP-like Flow · WindPRO-like TS</span></div><div class="top-actions"><button id="demoBtn">Demo</button><button id="runBtn" class="primary">Run Flow + AEP</button><button id="tsBtn">Run Time Series</button><button id="reportBtn">Export Report</button></div></header>
+<header class="top"><div class="brand">⟁ <b>WindFlow Studio Pro</b><span>v2.1 · WAsP-like Flow · WindPRO-like TS</span></div><div class="top-actions"><button id="newBtn">New</button><button id="saveBtn">Save Project</button><label class="top-file">Load Project<input id="loadProjectFile" type="file" accept=".json"></label><button id="demoBtn">Demo</button><button id="runBtn" class="primary">Run Flow + AEP</button><button id="tsBtn">Run Time Series</button><button id="reportBtn">Export Report</button></div></header>
 <main>
 <aside>
 <section><h2>1 Project / Reference</h2>
@@ -16,6 +16,7 @@
 <div class="g2"><label>Wake model<select id="wakeModel"><option value="jensen">Jensen/PARK</option><option value="eddy">Eddy viscosity</option><option value="park2">PARK2-style</option></select></label><label>Wake k<input id="wakeK" type="number" step="0.005" value="0.04"></label></div>
 </section>
 <section><h2>2 Map / Boundary / Constraints</h2>
+<div class="btnrow"><button id="fitMap">Fit Map</button><button id="toggleSidebar">Toggle Sidebar</button><button id="fullMap">Full Map</button></div>
 <div class="btnrow"><button id="drawBoundary">Draw Boundary</button><button id="drawConstraint">Draw Constraint</button><button id="addWtgMode">Add WTG</button></div>
 <div class="btnrow"><button id="closePoly">Close Polygon</button><button id="clearDraw">Clear Drawings</button></div>
 <label>Import boundary / constraints / layout<input id="geoFile" type="file" accept=".csv,.txt,.kml,.kmz,.json,.geojson"></label><button id="importGeo">Import File</button>
@@ -33,6 +34,8 @@
 <section><h2>4 Terrain / Roughness / Wind Map</h2>
 <div class="g2"><label>Radius km<input id="terrR" type="number" value="8"></label><label>Grid<input id="terrN" type="number" value="20"></label></div>
 <div class="btnrow"><button id="terrBtn">Download Terrain</button><button id="roughBtn">Download OSM Roughness</button></div>
+<div class="g2"><label>Contour interval m<input id="contourInt" type="number" value="10"></label><label>Max contour lines<input id="maxContours" type="number" value="1500"></label></div>
+<label><input id="showContours" type="checkbox" checked> Show contours</label>
 <label>Terrain opacity<input id="terrainOp" type="range" min="0" max="1" step="0.05" value="0.45"></label>
 <label>Roughness opacity<input id="roughOp" type="range" min="0" max="1" step="0.05" value="0.25"></label>
 <label>Wind map opacity<input id="windOp" type="range" min="0" max="1" step="0.05" value="0.35"></label>
@@ -49,7 +52,7 @@
 </section>
 <section><h2>Status</h2><pre id="log">Ready.</pre></section>
 </aside>
-<section class="work"><div id="map"></div><div class="panel"><div class="tabs"><button class="tab on" data-tab="summary">Summary</button><button class="tab" data-tab="chain">WS Chain</button><button class="tab" data-tab="wtg">WTG Results</button><button class="tab" data-tab="ts">Time Series</button></div><div id="tab-summary" class="tabbody on"></div><div id="tab-chain" class="tabbody"></div><div id="tab-wtg" class="tabbody"></div><div id="tab-ts" class="tabbody"></div></div></section>
+<section class="work"><div id="map"></div><div class="panel"><div class="tabs"><button class="tab on" data-tab="summary">Summary</button><button class="tab" data-tab="data">Data View</button><button class="tab" data-tab="chain">WS Chain</button><button class="tab" data-tab="wtg">WTG Results</button><button class="tab" data-tab="ts">Time Series</button></div><div id="tab-summary" class="tabbody on"></div><div id="tab-data" class="tabbody"></div><div id="tab-chain" class="tabbody"></div><div id="tab-wtg" class="tabbody"></div><div id="tab-ts" class="tabbody"></div></div></section>
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script type="module" src="src/app.js"></script>
