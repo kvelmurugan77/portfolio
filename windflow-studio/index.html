@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>WindFlow Studio v1.6.1 — WAsP/WindPRO-like Open Workflow</title>
+  <title>WindFlow Studio v1.7.0 — WAsP/WindPRO-like Open Workflow</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="src/css/styles.css" />
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><span class="logo">⟁</span><div><b>WindFlow Studio</b><small>v1.6.1 · WAsP-like flow · WindPRO-like TS</small></div></div>
+  <div class="brand"><span class="logo">⟁</span><div><b>WindFlow Studio</b><small>v1.7.0 · WAsP-like flow · WindPRO-like TS</small></div></div>
   <div class="actions">
     <button id="btnDemo">Demo Site</button>
     <button id="btnRun" class="primary">Run Flow + AEP</button>
@@ -36,12 +36,17 @@
     </section>
     <section>
       <h2>3 · Data Download</h2>
-      <div class="grid2"><label>Terrain radius km<input id="terrainRadius" type="number" value="8"></label><label>Grid<input id="terrainGrid" type="number" value="40"></label></div>
+      <div class="grid2"><label>Terrain radius km<input id="terrainRadius" type="number" value="8"></label><label>Grid<input id="terrainGrid" type="number" value="30"></label></div>
       <div class="grid2"><label>Contour interval<input id="contourInt" value="auto"></label><label>ERA5 years<input id="eraYears" value="2021-2023"></label></div>
       <button id="btnTerrain">Download Terrain + Contours</button>
       <button id="btnRoughness">Download OSM Roughness</button>
-      <button id="btnGWA">Download GWA Point Climate</button><div class="row"><input id="gwaFile" type="file" accept=".lib,.gwc,.txt"><button id="btnGWAFile">Import GWA .lib</button></div>
-      <button id="btnERA5">Download ERA5 Time Series</button><div class="row"><input id="mastClimateFile" type="file" accept=".csv,.txt"><button id="btnMastClimate">Import LT Mast Climate</button></div><div class="row"><input id="mastTsFile" type="file" accept=".csv,.txt"><button id="btnMastTS">Import Mast/Windographer TS</button></div><div class="row"><input id="obstacleFile" type="file" accept=".csv,.txt"><button id="btnObstacles">Import Obstacles</button></div><div class="row"><input id="pcFile" type="file" accept=".csv,.txt"><button id="btnPowerCurve">Import Power/CT Curve</button></div>
+      <button id="btnGWA">Download GWA Point Climate</button>
+      <div class="row"><input id="gwaFile" type="file" accept=".lib,.gwc,.txt"><button id="btnGWAFile">Import GWA .lib</button></div>
+      <div class="row">
+        <button id="btnERA5">Download ERA5 / ERA5T</button>
+        <label class="checkbox-label"><input type="checkbox" id="era5tToggle"> ERA5T (near-real-time)</label>
+      </div>
+      <div class="row"><input id="mastClimateFile" type="file" accept=".csv,.txt"><button id="btnMastClimate">Import LT Mast Climate</button></div><div class="row"><input id="mastTsFile" type="file" accept=".csv,.txt"><button id="btnMastTS">Import Mast/Windographer TS</button></div><div class="row"><input id="obstacleFile" type="file" accept=".csv,.txt"><button id="btnObstacles">Import Obstacles</button></div><div class="row"><input id="pcFile" type="file" accept=".csv,.txt"><button id="btnPowerCurve">Import Power/CT Curve</button></div>
       <div id="dataStatus" class="log small">Ready.</div>
     </section>
   </aside>
