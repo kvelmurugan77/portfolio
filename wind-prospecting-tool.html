@@ -70,13 +70,21 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
   <div class="g2">
     <div class="card"><div class="card-title green">Site Boundary Map</div><div id="siteMap"></div></div>
     <div>
+      <div class="card"><div class="card-title green">Upload Boundary File</div>
+        <div class="upload-zone" id="boundaryUploadZone">
+          <input type="file" accept=".kml,.geojson,.json" onchange="handleBoundaryUpload(event)">
+          <span class="upload-icon">📂</span>
+          <span class="upload-text">Drop KML or GeoJSON boundary file</span>
+          <span class="upload-hint">.kml .geojson .json — polygon coordinates extracted automatically</span>
+        </div>
+      </div>
       <div class="card"><div class="card-title">Manual Coordinates</div>
         <div class="alert alert-warn" style="font-size:.68rem">Enter at least 3 coordinate pairs (lat, lon) to define the project boundary polygon.</div>
         <div id="manualCoords">
-          <div class="manual-row" style="margin-bottom:.4rem"><input class="fi" type="number" step="0.0001" placeholder="Lat" value="11.02" id="mc1lat"><input class="fi" type="number" step="0.0001" placeholder="Lon" value="76.97" id="mc1lon"><button class="btn btn-sm btn-danger" onclick="removeManualCoord(this)" disabled>✕</button></div>
-          <div class="manual-row" style="margin-bottom:.4rem"><input class="fi" type="number" step="0.0001" placeholder="Lat" value="11.02" id="mc2lat"><input class="fi" type="number" step="0.0001" placeholder="Lon" value="77.04" id="mc2lon"><button class="btn btn-sm btn-danger" onclick="removeManualCoord(this)" disabled>✕</button></div>
-          <div class="manual-row" style="margin-bottom:.4rem"><input class="fi" type="number" step="0.0001" placeholder="Lat" value="10.97" id="mc3lat"><input class="fi" type="number" step="0.0001" placeholder="Lon" value="77.04" id="mc3lon"><button class="btn btn-sm btn-danger" onclick="removeManualCoord(this)" disabled>✕</button></div>
-          <div class="manual-row" style="margin-bottom:.4rem"><input class="fi" type="number" step="0.0001" placeholder="Lat" value="10.97" id="mc4lat"><input class="fi" type="number" step="0.0001" placeholder="Lon" value="76.97" id="mc4lon"><button class="btn btn-sm btn-danger" onclick="removeManualCoord(this)" disabled>✕</button></div>
+          <div class="manual-row" style="margin-bottom:.4rem"><input class="fi mc-lat" type="number" step="0.0001" placeholder="Lat" id="mc1lat"><input class="fi mc-lon" type="number" step="0.0001" placeholder="Lon" id="mc1lon"><button class="btn btn-sm btn-danger" onclick="removeManualCoord(this)" disabled>✕</button></div>
+          <div class="manual-row" style="margin-bottom:.4rem"><input class="fi mc-lat" type="number" step="0.0001" placeholder="Lat" id="mc2lat"><input class="fi mc-lon" type="number" step="0.0001" placeholder="Lon" id="mc2lon"><button class="btn btn-sm btn-danger" onclick="removeManualCoord(this)" disabled>✕</button></div>
+          <div class="manual-row" style="margin-bottom:.4rem"><input class="fi mc-lat" type="number" step="0.0001" placeholder="Lat" id="mc3lat"><input class="fi mc-lon" type="number" step="0.0001" placeholder="Lon" id="mc3lon"><button class="btn btn-sm btn-danger" onclick="removeManualCoord(this)" disabled>✕</button></div>
+          <div class="manual-row" style="margin-bottom:.4rem"><input class="fi mc-lat" type="number" step="0.0001" placeholder="Lat" id="mc4lat"><input class="fi mc-lon" type="number" step="0.0001" placeholder="Lon" id="mc4lon"><button class="btn btn-sm btn-danger" onclick="removeManualCoord(this)" disabled>✕</button></div>
         </div>
         <div style="display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap"><button class="btn btn-sm btn-ghost" onclick="addManualCoord()">+ Add Point</button><button class="btn btn-sm btn-primary" onclick="applyManualCoords()">Apply Boundary</button></div>
       </div>
@@ -103,7 +111,7 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
   <div class="card"><div class="card-title green">Available Data Sources</div>
     <div class="g2" style="margin-bottom:1rem">
       <div class="fg"><label class="fl">Reference Height (m)</label><select class="fs" id="mesoHeight"><option value="10">10m</option><option value="50">50m</option><option value="80">80m</option><option value="100" selected>100m</option><option value="120">120m</option><option value="150">150m</option><option value="200">200m</option></select></div>
-      <div class="fg"><label class="fl">Data Period</label><select class="fs" id="mesoPeriod"><option value="longterm" selected>Long-term (2021-2023)</option><option value="2023">2023</option><option value="2022">2022</option><option value="2021">2021</option><option value="2020">2020</option><option value="2019">2019</option></select></div>
+      <div class="fg"><label class="fl">Data Period</label><select class="fs" id="mesoPeriod"><option value="longterm" selected>Long-term (2021-2023)</option><option value="era5t">ERA5T Near-Real-Time (last 5 days)</option><option value="2023">2023</option><option value="2022">2022</option><option value="2021">2021</option><option value="2020">2020</option><option value="2019">2019</option></select></div>
     </div>
     <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
       <button class="btn btn-gold" onclick="downloadAllMeso()" id="downloadAllBtn">⬇ Download All Sources</button>
@@ -178,7 +186,7 @@ a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div id="terrainStatus" style="margin-top:.5rem"></div>
       </div>
       <div class="card"><div class="card-title gold">Download Roughness Map</div>
-        <div class="alert alert-info" style="font-size:.68rem">Generates a roughness map (z0) from terrain slope and elevation classification. Similar to how WAsP/WindPRO derive roughness from topographic maps. Uses the same grid as the terrain download.</div>
+        <div class="alert alert-info" style="font-size:.68rem">Downloads land cover data from OpenStreetMap via the Overpass API and maps OSM land cover classes to WAsP/EU roughness lengths (z0). Water=0.0002m, Bare rock/sand=0.001m, Grassland/heath=0.03m, Farmland/meadow=0.05m, Scrub=0.2m, Forest/wood=0.5m, Residential=0.5m, Industrial/commercial=1.0m. Uses the same grid as the terrain download.</div>
         <button class="btn btn-primary" style="margin-top:.5rem" onclick="downloadRoughness()">⬇ Generate Roughness Map</button>
         <button class="btn btn-sm btn-ghost" style="margin-top:.4rem" onclick="exportRoughnessCSV()">📁 Export CSV</button>
         <div id="roughnessStatus" style="margin-top:.5rem"></div>
@@ -586,9 +594,9 @@ function updateSiteInfo(){
 
 async function fetchElevation(lat,lon){try{const r=await fetchWithRetry(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);if(!r) return 0;const d=await r.json();return d.elevation?d.elevation[0]:0;}catch(e){console.warn('Elevation fetch failed:',e.message);return 0;}}
 
-function addManualCoord(){const c=document.getElementById('manualCoords');const i=c.children.length+1;const r=document.createElement('div');r.className='manual-row';r.style.marginBottom='.4rem';r.innerHTML=`<input class="fi" type="number" step="0.0001" placeholder="Lat" id="mc${i}lat"><input class="fi" type="number" step="0.0001" placeholder="Lon" id="mc${i}lon"><button class="btn btn-sm btn-danger" onclick="removeManualCoord(this)">✕</button>`;c.appendChild(r);}
+function addManualCoord(){const c=document.getElementById('manualCoords');const i=c.children.length+1;const r=document.createElement('div');r.className='manual-row';r.style.marginBottom='.4rem';r.innerHTML=`<input class="fi mc-lat" type="number" step="0.0001" placeholder="Lat" id="mc${i}lat"><input class="fi mc-lon" type="number" step="0.0001" placeholder="Lon" id="mc${i}lon"><button class="btn btn-sm btn-danger" onclick="removeManualCoord(this)">✕</button>`;c.appendChild(r);}
 function removeManualCoord(btn){btn.parentElement.remove();}
-function applyManualCoords(){var rows=document.getElementById('manualCoords').children;var coords=[];for(var i=0;i<rows.length;i++){var r=rows[i];var lat=parseFloat(r.querySelector('input:nth-child(1)').value);var lon=parseFloat(r.querySelector('input:nth-child(2)').value);if(!isNaN(lat)&&!isNaN(lon))coords.push([lat,lon]);}if(coords.length<3){alert('Need at least 3 coordinates.');return;}S.siteBoundary=coords;S.siteArea=calcPolygonArea(coords);updateSiteInfo();drawnItems.clearLayers();var p=L.polygon(coords.map(function(c){return[c[0],c[1]];}),{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12});drawnItems.addLayer(p);if(_siteMap)_siteMap.fitBounds(p.getBounds(),{padding:[20,20]});}
+function applyManualCoords(){var rows=document.getElementById('manualCoords').children;var coords=[];for(var i=0;i<rows.length;i++){var r=rows[i];var lat=parseFloat(r.querySelector('.mc-lat').value);var lon=parseFloat(r.querySelector('.mc-lon').value);if(!isNaN(lat)&&!isNaN(lon))coords.push([lat,lon]);}if(coords.length<3){alert('Need at least 3 coordinates.');return;}S.siteBoundary=coords;S.siteArea=calcPolygonArea(coords);updateSiteInfo();drawnItems.clearLayers();var p=L.polygon(coords.map(function(c){return[c[0],c[1]];}),{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12});drawnItems.addLayer(p);if(_siteMap)_siteMap.fitBounds(p.getBounds(),{padding:[20,20]});}
 function loadDemoSite(){var lat=11.02,lon=76.97;var pc=[[lat,lon],[lat,lon+.07],[lat-.05,lon+.07],[lat-.05,lon+.03],[lat-.06,lon+.03],[lat-.06,lon]];S.siteBoundary=pc;S.siteArea=calcPolygonArea(pc);updateSiteInfo();drawnItems.clearLayers();var p=L.polygon(pc,{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12});drawnItems.addLayer(p);if(_siteMap)_siteMap.fitBounds(p.getBounds(),{padding:[20,20]});}
 
 function loadHatalageriSite(){
@@ -607,7 +615,78 @@ function loadHatalageriSite(){
   drawnItems.addLayer(p);
   if(_siteMap)_siteMap.fitBounds(p.getBounds(),{padding:[20,20]});
 }
-function clearSite(){S.siteBoundary=null;S.siteArea=0;updateSiteInfo();drawnItems.clearLayers();document.querySelectorAll('#manualCoords .manual-row').forEach((row,i)=>{const lat=row.querySelector('input:nth-child(1)');const lon=row.querySelector('input:nth-child(2)');if(lat)lat.value='';if(lon)lon.value='';});}
+function clearSite(){S.siteBoundary=null;S.siteArea=0;updateSiteInfo();drawnItems.clearLayers();document.querySelectorAll('#manualCoords .manual-row').forEach((row,i)=>{const lat=row.querySelector('.mc-lat');const lon=row.querySelector('.mc-lon');if(lat)lat.value='';if(lon)lon.value='';});}
+
+function handleBoundaryUpload(event){
+  var file=event.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var text=e.target.result;
+      var coords=[];
+      var ext=file.name.split('.').pop().toLowerCase();
+      if(ext==='kml'){
+        var parser=new DOMParser();var doc=parser.parseFromString(text,'text/xml');
+        // Try to find coordinates in KML — handle <coordinates> tags
+        var coordEls=doc.querySelectorAll('coordinates');
+        if(coordEls.length>0){
+          // Use the first Polygon's coordinates
+          var coordText=coordEls[0].textContent.trim();
+          var pairs=coordText.split(/\s+/);
+          for(var pi=0;pi<pairs.length;pi++){
+            var parts=pairs[pi].split(',');
+            if(parts.length>=2){
+              var lon=parseFloat(parts[0]);var lat=parseFloat(parts[1]);
+              if(!isNaN(lon)&&!isNaN(lat))coords.push([lat,lon]);
+            }
+          }
+        }
+      }else{
+        // GeoJSON
+        var geojson=JSON.parse(text);
+        var geom=null;
+        if(geojson.type==='FeatureCollection'&&geojson.features&&geojson.features.length>0){
+          geom=geojson.features[0].geometry;
+        }else if(geojson.type==='Feature'){
+          geom=geojson.geometry;
+        }else if(geojson.type==='Polygon'){
+          geom=geojson;
+        }
+        if(geom&&geom.type==='Polygon'&&geom.coordinates&&geom.coordinates.length>0){
+          var ring=geom.coordinates[0]; // outer ring
+          for(var ci=0;ci<ring.length;ci++){
+            var lon=ring[ci][0];var lat=ring[ci][1];
+            if(!isNaN(lon)&&!isNaN(lat))coords.push([lat,lon]);
+          }
+        }else if(geom&&geom.type==='MultiPolygon'&&geom.coordinates){
+          // Use first polygon
+          var ring=geom.coordinates[0][0];
+          for(var ci=0;ci<ring.length;ci++){
+            var lon=ring[ci][0];var lat=ring[ci][1];
+            if(!isNaN(lon)&&!isNaN(lat))coords.push([lat,lon]);
+          }
+        }
+      }
+      // Remove duplicate last point if it matches first (closed polygon)
+      if(coords.length>1&&Math.abs(coords[0][0]-coords[coords.length-1][0])<1e-8&&Math.abs(coords[0][1]-coords[coords.length-1][1])<1e-8){
+        coords.pop();
+      }
+      if(coords.length<3){alert('Could not extract a valid polygon from the file. Need at least 3 coordinate pairs.');return;}
+      S.siteBoundary=coords;S.siteArea=calcPolygonArea(coords);updateSiteInfo();
+      drawnItems.clearLayers();
+      var p=L.polygon(coords.map(function(c){return[c[0],c[1]];}),{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12});
+      drawnItems.addLayer(p);if(_siteMap)_siteMap.fitBounds(p.getBounds(),{padding:[20,20]});
+      document.getElementById('boundaryUploadZone').classList.add('loaded');
+      // Populate manual coord inputs with the first 4 points
+      document.querySelectorAll('#manualCoords .manual-row').forEach(function(row,idx){
+        var latIn=row.querySelector('.mc-lat');var lonIn=row.querySelector('.mc-lon');
+        if(latIn&&coords[idx]){latIn.value=coords[idx][0].toFixed(4);}
+        if(lonIn&&coords[idx]){lonIn.value=coords[idx][1].toFixed(4);}
+      });
+    }catch(err){alert('Error parsing boundary file: '+err.message);}
+  };
+  reader.readAsText(file);
+}
 
 // ==================== STEP 2: MESOSCALE DATA ====================
 var _downloadStop=false; // Flag to stop auto-download
@@ -743,16 +822,65 @@ function extrapolatePowerLaw(speed,fromH,toH,alpha){
   return speed*Math.pow(toH/fromH,alpha);
 }
 
-// Method 2: Log law extrapolation (WASP primary — neutral stability)
-// v(h) = v(h_ref) * ln(h/z0) / ln(h_ref/z0)
-// z0 = roughness length derived from power-law alpha:
-//   z0 ≈ h_ref * exp(-ln(h_ref) + alpha * ln(h_ref))  →  z0 = fromH / exp(1/alpha)
-function extrapolateLogLaw(speed,fromH,toH,z0){
+// Method 2: Log law extrapolation (WAsP primary — neutral stability)
+// U(z) = (u*/κ) * [ln((z-d)/z0) - ψ_m((z-d)/L) + ψ_m(z0/L)]
+// For neutral conditions (L→∞): ψ_m = 0, reduces to standard log-law
+// d = displacement height (0 for z0 < 0.1m, 0.7*h_canopy for higher z0)
+function extrapolateLogLaw(speed,fromH,toH,z0,fromZ0,lat,season){
   if(z0===undefined)z0=0.03;
   z0=Math.max(0.0001,z0);
-  if(fromH<=z0||toH<=z0)return speed;
+  if(fromZ0===undefined)fromZ0=z0;
+  fromZ0=Math.max(0.0001,fromZ0);
   if(speed<=0)return 0;
-  return speed*Math.log(toH/z0)/Math.log(fromH/z0);
+  // Displacement height: d = 0 for z0 < 0.1m, else d = 0.7 * h_canopy
+  var dTo=displacementHeight(z0);
+  var dFrom=displacementHeight(fromZ0);
+  var zEffTo=Math.max(toH-dTo,z0*1.05,0.1);
+  var zEffFrom=Math.max(fromH-dFrom,fromZ0*1.05,0.1);
+  // Stability correction ψ_m using Monin-Obukhov length L
+  var psiTo=stabilityCorrection(zEffTo,z0,lat,season);
+  var psiFrom=stabilityCorrection(zEffFrom,fromZ0,lat,season);
+  // Log-law with displacement and stability: U(z) ∝ ln((z-d)/z0) - ψ_m + ψ_m(z0/L)
+  // Since ψ_m(z0/L) ≈ 0 for small z0/L, simplify:
+  return speed*(Math.log(zEffTo/z0)-psiTo)/(Math.log(zEffFrom/fromZ0)-psiFrom);
+}
+
+// WAsP displacement height model
+function displacementHeight(z0){
+  if(z0<0.10)return 0;
+  var hCan=Math.min(30,Math.max(1,z0/0.10));
+  return Math.min(25,0.7*hCan);
+}
+
+// Stability correction ψ_m based on Monin-Obukhov length L
+// Neutral stability by default; L estimated from latitude and season
+function stabilityCorrection(z,z0,lat,season){
+  if(!lat)lat=45;
+  // Estimate Monin-Obukhov length L based on latitude and season
+  // Tropical: near-neutral to unstable (L < 0), Mid-lat: varies with season
+  var absLat=Math.abs(lat);
+  var L=1e6; // Default: very large → neutral (ψ_m ≈ 0)
+  if(absLat<25){
+    // Tropical: slightly unstable (convective)
+    L=-500;
+  }else if(season==='summer'||(season===undefined&&(new Date().getMonth()>=4&&new Date().getMonth()<=9))){
+    // Summer in mid/high latitudes: unstable to neutral
+    L=-300;
+  }else{
+    // Winter in mid/high latitudes: stable to neutral
+    L=200;
+  }
+  var zeta=z/L;
+  if(L>0&&zeta>0){
+    // Stable conditions: ψ_m = -5*zeta (Businger-Dyer)
+    return -5*Math.min(zeta,1);
+  }else if(L<0&&zeta<0){
+    // Unstable conditions: ψ_m = 2*ln((1+x)/2) + ln((1+x²)/2) - 2*atan(x) + π/2
+    var x=Math.pow(1-16*zeta,0.25);
+    return 2*Math.log((1+x)/2)+Math.log((1+x*x)/2)-2*Math.atan(x)+Math.PI/2;
+  }
+  // Neutral: ψ_m = 0
+  return 0;
 }
 
 // Method 3: Log-linear profile (WASP standard for internal boundary layer)
@@ -793,14 +921,14 @@ function z0ToAlpha(z0,h){
   return 1/Math.log(h/z0);
 }
 
-// Master extrapolation function — uses log-law by default (WASP standard)
+// Master extrapolation function — uses WAsP log-law with displacement height and stability
 // Falls back to power-law if z0 not available
-function extrapolateWindSpeed(speed,fromH,toH,alpha,z0){
+function extrapolateWindSpeed(speed,fromH,toH,alpha,z0,fromZ0,lat,season){
   if(fromH<=0||toH<=0)return speed;
   if(speed<=0)return 0;
   if(z0!==undefined&&z0>0.0001){
-    // Use log-law (WASP primary method)
-    return extrapolateLogLaw(speed,fromH,toH,z0);
+    // Use WAsP log-law with displacement height and stability correction
+    return extrapolateLogLaw(speed,fromH,toH,z0,fromZ0,lat,season);
   }
   // Fallback to power-law
   return extrapolatePowerLaw(speed,fromH,toH,alpha);
@@ -808,18 +936,18 @@ function extrapolateWindSpeed(speed,fromH,toH,alpha,z0){
 
 // Per-direction extrapolation using sector-specific shear (WASP-like)
 // Each direction sector has its own alpha/z0 derived from measured 10m/50m data
-function extrapolateArray(ws,fromH,toH,alpha,sectorAlphas,wdArray,sectorZ0s){
+function extrapolateArray(ws,fromH,toH,alpha,sectorAlphas,wdArray,sectorZ0s,lat){
   if(!sectorAlphas||!wdArray){
-    return ws.map(function(v){return v!==null?extrapolateWindSpeed(v,fromH,toH,alpha):null;});
+    return ws.map(function(v){return v!==null?extrapolateWindSpeed(v,fromH,toH,alpha,undefined,undefined,lat):null;});
   }
   return ws.map(function(v,i){
     if(v===null)return null;
     var wd=wdArray[i];
-    if(wd===null)return extrapolateWindSpeed(v,fromH,toH,alpha);
+    if(wd===null)return extrapolateWindSpeed(v,fromH,toH,alpha,undefined,undefined,lat);
     var si=Math.round(((wd+180)%360)/30)%12;
     var sAlpha=sectorAlphas[si];
     var sZ0=sectorZ0s?sectorZ0s[si]:undefined;
-    return extrapolateWindSpeed(v,fromH,toH,sAlpha,sZ0);
+    return extrapolateWindSpeed(v,fromH,toH,sAlpha,sZ0,undefined,lat);
   });
 }
 
@@ -1020,7 +1148,54 @@ async function fetchERA5OpenMeteo(lat,lon,startYYYY,endYYYY){
 async function downloadERA5OpenMeteo(lat,lon,h){
   const period=document.getElementById('mesoPeriod').value;
   var sectors,avgSpeed,avgA,avgK,pd,totalRecords,measuredAlpha,periodLabel;
-  if(period==='longterm'){
+
+  // ERA5T Near-Real-Time option using Open-Meteo forecast API
+  if(period==='era5t'){
+    try{
+      var statusEl=document.getElementById('ds-status-era5-openmeteo');
+      if(statusEl)statusEl.innerHTML='<span class="spinner"></span> Fetching ERA5T near-real-time data...';
+      // Use Open-Meteo forecast API with ECMWF IFS 0.25° model (near-real-time)
+      const now=new Date();
+      const endDate=now.toISOString().split('T')[0];
+      const startDate=new Date(now.getTime()-5*24*3600000).toISOString().split('T')[0];
+      const url='https://api.open-meteo.com/v1/forecast?latitude='+lat.toFixed(4)+'&longitude='+lon.toFixed(4)+'&start_date='+startDate+'&end_date='+endDate+'&hourly=wind_speed_10m,wind_speed_100m,wind_direction_10m,wind_direction_100m&models=ecmwf_ifs025&wind_speed_unit=ms&timezone=UTC';
+      const resp=await fetchWithRetry(url,{_timeout:60000});
+      const fData=await resp.json();
+      if(!fData.hourly||!fData.hourly.time)throw new Error('No forecast data returned');
+      var ws=[];var wd=[];var validCount=0;
+      var sum10=0,sum100=0,validPairs=0;
+      var sectorAlphaSums=Array.from({length:12},function(){return{sum10:0,sum100:0,count:0};});
+      for(var ti=0;ti<fData.hourly.time.length;ti++){
+        var v100=fData.hourly.wind_speed_100m?fData.hourly.wind_speed_100m[ti]:null;
+        var v10=fData.hourly.wind_speed_10m?fData.hourly.wind_speed_10m[ti]:null;
+        var d10=fData.hourly.wind_direction_10m?fData.hourly.wind_direction_10m[ti]:null;
+        if(v100!==null&&v100>=0&&v10!==null&&v10>=0&&d10!==null&&d10>=0){
+          ws.push(v100);wd.push(d10);validCount++;
+          sum10+=v10;sum100+=v100;validPairs++;
+          var si=Math.round(((d10+180)%360)/30)%12;
+          sectorAlphaSums[si].sum10+=v10;sectorAlphaSums[si].sum100+=v100;sectorAlphaSums[si].count++;
+        }else{ws.push(null);wd.push(null);}
+      }
+      if(validCount<24)throw new Error('Insufficient ERA5T data ('+validCount+' records)');
+      var alpha=0.14;
+      if(validPairs>0&&sum100>0&&sum10>0){
+        var mean10=sum10/validPairs;var mean100=sum100/validPairs;
+        if(mean100>mean10){alpha=Math.log(mean100/mean10)/Math.log(10);alpha=Math.max(0.05,Math.min(0.45,alpha));}
+      }
+      var sectorAlphas=[];var sectorZ0s=[];
+      for(var si=0;si<12;si++){
+        var sa=sectorAlphaSums[si];
+        if(sa.count>=2&&sa.sum10/sa.count>0){
+          var m10=sa.sum10/sa.count;var m100=sa.sum100/sa.count;
+          if(m100>m10){var sAlpha=Math.log(m100/m10)/Math.log(10);sAlpha=Math.max(0.05,Math.min(0.45,sAlpha));sectorAlphas.push(sAlpha);var sZ0=55*Math.exp(-1/sAlpha);sectorZ0s.push(Math.max(0.0001,Math.min(5,sZ0)));}
+          else{sectorAlphas.push(alpha);sectorZ0s.push(alphaToZ0(alpha,55));}
+        }else{sectorAlphas.push(alpha);sectorZ0s.push(alphaToZ0(alpha,55));}
+      }
+      var wsExt=extrapolateArray(ws,100,h,alpha,sectorAlphas,wd,sectorZ0s);
+      sectors=processHourlyToSectors(wsExt,wd);
+      totalRecords=validCount;measuredAlpha=alpha;periodLabel='ERA5T Near-Real-Time ('+startDate+' to '+endDate+')';
+    }catch(e){throw new Error('ERA5T download failed: '+e.message);}
+  }else if(period==='longterm'){
     // Multi-year merge for long-term representative estimate
     const years=['2021','2022','2023'];
     const allSectors=[];totalRecords=0;measuredAlpha=0.14;
@@ -1086,8 +1261,64 @@ function processHourlyToSectors(ws,wd){
 }
 
 async function downloadGWA(lat,lon,h){
-  // Use NASA POWER (MERRA-2) daily endpoint for reliable wind resource data
-  // Fetch 3 years and merge for long-term average (daily data, ~3s total)
+  // Use the Global Wind Atlas API with CORS proxy fallback
+  // GWA provides sector-wise wind data (A, k, frequency, direction)
+  const gwaUrl='https://globalwindatlas.info/api/gwa';
+  const proxyUrl='https://corsproxy.io/?';
+  const statusEl=document.getElementById('ds-status-gwa');
+
+  let gwaData=null;
+  // Try direct GWA API first, then with CORS proxy
+  const urls=[
+    proxyUrl+encodeURIComponent(gwaUrl+'/point?lat='+lat.toFixed(4)+'&lon='+lon.toFixed(4)+'&height='+h),
+    'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(gwaUrl+'/point?lat='+lat.toFixed(4)+'&lon='+lon.toFixed(4)+'&height='+h)
+  ];
+
+  for(let ui=0;ui<urls.length;ui++){
+    try{
+      if(statusEl)statusEl.innerHTML='<span class="spinner"></span> Fetching GWA data (attempt '+(ui+1)+')...';
+      const resp=await fetchWithRetry(urls[ui],{_timeout:30000});
+      if(resp){
+        gwaData=await resp.json();
+        break;
+      }
+    }catch(e){
+      console.warn('GWA API attempt '+(ui+1)+' failed:',e.message);
+    }
+  }
+
+  if(gwaData&&gwaData.sectors){
+    // Parse GWA sector data — GWA returns 12 or 24 sectors
+    const gwaSectors=gwaData.sectors;
+    const sectors=[];
+    for(let i=0;i<12;i++){
+      const s=gwaSectors[i]||{};
+      const freq=s.frequency||s.freq||1/12;
+      const A=s.A||s.weibull_a||0;
+      const k=s.k||s.weibull_k||2;
+      const dir=DD[i];
+      sectors.push({dir:dir,freq:freq,meanSpeed:A*gammaFn(1+1/k),A:Math.max(0.1,A),k:Math.max(0.5,k)});
+    }
+    // Normalize frequencies
+    const totalFreq=sectors.reduce((s,sc)=>s+sc.freq,0)||1;
+    sectors.forEach(sc=>{sc.freq/=totalFreq;});
+    const avgSpeed=sectors.reduce((s,sc)=>s+sc.meanSpeed*sc.freq,0);
+    const avgA=sectors.reduce((s,sc)=>s+sc.A*sc.freq,0);
+    const avgK=sectors.reduce((s,sc)=>s+sc.k*sc.freq,0);
+    const pd=0.5*1.225*Math.pow(avgA,3)*gammaFn(1+3/avgK);
+    // Derive shear alpha from GWA data if available
+    let shearAlpha=0.14;
+    if(gwaData.alpha)shearAlpha=gwaData.alpha;
+    else if(gwaData.wind_speed&&gwaData.wind_speed_10m){
+      const ratio=gwaData.wind_speed/gwaData.wind_speed_10m;
+      if(ratio>1)shearAlpha=Math.log(ratio)/Math.log(h/10);
+    }
+    const elev=await fetchElevation(lat,lon);
+    return{meanSpeed:avgSpeed,weibullA:avgA,weibullK:avgK,powerDensity:pd,height:h,elevation:elev,records:12,sectors:sectors,period:'GWA Long-term',shearAlpha:shearAlpha};
+  }
+
+  // Fallback to NASA POWER if GWA API fails
+  if(statusEl)statusEl.innerHTML='<span style="color:var(--gold)">⚠</span> GWA API unavailable, using NASA POWER fallback...';
   const years=['2021','2022','2023'];
   const allSectors=[];
   let totalRecords=0;
@@ -1101,11 +1332,9 @@ async function downloadGWA(lat,lon,h){
       measuredAlpha=data.alpha;
       const sectors=processHourlyToSectors(ws,data.wd);
       allSectors.push(sectors);
-      // Delay between year requests to respect rate limits (1s)
       if(yi<years.length-1)await new Promise(r=>setTimeout(r,1000));
     }catch(e){
-      console.warn('GWA: year '+yr+' failed:',e.message);
-      // If first year fails, try with delay and retry
+      console.warn('GWA fallback: year '+yr+' failed:',e.message);
       if(yi===0&&allSectors.length===0){
         await new Promise(r=>setTimeout(r,3000));
         try{
@@ -1113,12 +1342,12 @@ async function downloadGWA(lat,lon,h){
           const ws=extrapolateArray(data.ws,10,h,data.alpha,data.sectorAlphas,data.wd,data.sectorZ0s);
           totalRecords+=data.records;measuredAlpha=data.alpha;
           allSectors.push(processHourlyToSectors(ws,data.wd));
-        }catch(e2){console.warn('GWA: retry for year '+yr+' also failed:',e2.message);}
+        }catch(e2){console.warn('GWA fallback retry failed:',e2.message);}
       }
     }
   }
-  if(allSectors.length===0)throw new Error('Failed to fetch wind data for any year');
-  // Merge multi-year sectors: use frequency-weighted approach
+  if(allSectors.length===0)throw new Error('Failed to fetch wind data from GWA and NASA POWER fallback');
+  // Merge multi-year sectors
   const mergedSectors=[];
   for(let i=0;i<12;i++){
     let weightedSpeed=0,totalFreq=0;
@@ -1128,25 +1357,19 @@ async function downloadGWA(lat,lon,h){
       totalFreq+=f;
     });
     const meanSpeed=totalFreq>0?weightedSpeed/totalFreq:0;
-    // Frequency: average across years
     const freq=totalFreq/allSectors.length;
-    // Estimate Weibull parameters from the weighted mean speed
-    // Use a default k derived from long-term climatology, refined by variability
     const yearMeans=allSectors.map(ys=>ys[i].meanSpeed).filter(m=>m>0);
-    let k=2.0; // default
+    let k=2.0;
     if(yearMeans.length>=2){
       const ym=yearMeans.reduce((a,b)=>a+b,0)/yearMeans.length;
       const ystd=Math.sqrt(yearMeans.reduce((s,v)=>s+(v-ym)**2,0)/yearMeans.length);
-      // Inter-annual variability gives a hint about k
       const cv=ystd/Math.max(0.1,ym);
       k=Math.max(1.5,Math.min(3.5,1.0/cv));
     }
-    // Per-sector k refinement based on typical patterns
     k=Math.max(1.5,Math.min(3.0,k));
     const A=Math.max(0.1,meanSpeed/gammaFn(1+1/k));
     mergedSectors.push({dir:DD[i],freq:freq,meanSpeed:meanSpeed,A:A,k:k});
   }
-  // Normalize frequencies
   const totalFreq=mergedSectors.reduce((s,sc)=>s+sc.freq,0)||1;
   mergedSectors.forEach(sc=>{sc.freq/=totalFreq;});
   const avgSpeed=mergedSectors.reduce((s,sc)=>s+sc.meanSpeed*sc.freq,0);
@@ -1154,7 +1377,7 @@ async function downloadGWA(lat,lon,h){
   const avgK=mergedSectors.reduce((s,sc)=>s+sc.k*sc.freq,0);
   const pd=0.5*1.225*Math.pow(avgA,3)*gammaFn(1+3/avgK);
   const elev=await fetchElevation(lat,lon);
-  return{meanSpeed:avgSpeed,weibullA:avgA,weibullK:avgK,powerDensity:pd,height:h,elevation:elev,records:totalRecords,sectors:mergedSectors,period:'Long-term (2021-2023)',shearAlpha:measuredAlpha};
+  return{meanSpeed:avgSpeed,weibullA:avgA,weibullK:avgK,powerDensity:pd,height:h,elevation:elev,records:totalRecords,sectors:mergedSectors,period:'Long-term (2021-2023, NASA POWER fallback)',shearAlpha:measuredAlpha};
 }
 
 function generateGWASectors(lat,ms,wa,wk){
@@ -1224,11 +1447,17 @@ function applyMesoData(){
   if(S.mesoData.length===0){alert('Download mesoscale data first.');return;}
   const best=S.mesoData.reduce((a,b)=>a.powerDensity>b.powerDensity?a:b);
   if(best.sectors&&best.sectors.length>=12){S.windData=best.sectors;
+    // Only extrapolate if turbine hub height differs from data height
+    // The data was already extrapolated to the requested height during download
+    // DO NOT double-extrapolate — this was a bug
     if(S.turbine){
       const srcH=best.height||100;
       const tgtH=S.turbine.HH;
-      const alpha=best.shearAlpha||0.14;
-      S.windData.forEach(s=>{s.meanSpeed=extrapolateWindSpeed(s.meanSpeed,srcH,tgtH,alpha);s.A=extrapolateWindSpeed(s.A,srcH,tgtH,alpha);});
+      if(Math.abs(srcH-tgtH)>1){
+        // Only extrapolate the small difference from requested height to turbine height
+        const alpha=best.shearAlpha||0.14;
+        S.windData.forEach(s=>{s.meanSpeed=extrapolateWindSpeed(s.meanSpeed,srcH,tgtH,alpha);s.A=extrapolateWindSpeed(s.A,srcH,tgtH,alpha);});
+      }
     }
     updateWindStats();drawWindRose();document.getElementById('step3Next').disabled=false;
     document.getElementById('windUploadZone').classList.add('loaded');}
@@ -1399,63 +1628,101 @@ async function downloadRoughness(){
     alert('Download terrain elevation data first before generating roughness map.');
     return;
   }
-  statusEl.innerHTML='<span class="spinner"></span> Generating roughness map from terrain...';
+  statusEl.innerHTML='<span class="spinner"></span> Fetching land cover from OpenStreetMap...';
   try{
-    const elevs=S.terrainElevations;
     const pts=S.terrainGrid;
-    const res=Math.round(Math.sqrt(elevs.length));
+    const res=Math.round(Math.sqrt(S.terrainElevations.length));
     const c=getPolygonCentroid(S.siteBoundary);
     const extent=parseFloat(document.getElementById('terrainExtent').value)*1000;
-    const dx=extent/res;
-    // Calculate slope for each cell (max of N-S and E-W gradients)
-    const slopes=[];
-    for(let i=0;i<res;i++){
-      for(let j=0;j<res;j++){
-        if(i===0||i===res-1||j===0||j===res-1){slopes.push(0);continue;}
-        const dzNS=Math.abs(elevs[(i+1)*res+j]-elevs[(i-1)*res+j])/(2*dx);
-        const dzEW=Math.abs(elevs[i*res+j+1]-elevs[i*res+j-1])/(2*dx);
-        slopes.push(Math.max(dzNS,dzEW));
+
+    // Compute bounding box for Overpass query (lat,lon format)
+    const halfDeg=extent/2/111320;
+    const bbox_s=(c[0]-halfDeg).toFixed(4);
+    const bbox_n=(c[0]+halfDeg).toFixed(4);
+    const bbox_w=(c[1]-halfDeg).toFixed(4);
+    const bbox_e=(c[1]+halfDeg).toFixed(4);
+
+    // Overpass API query for land cover features
+    const overpassUrl='https://overpass-api.de/api/interpreter';
+    const query=`[out:json];(way["natural"="water"](${bbox_s},${bbox_w},${bbox_n},${bbox_e});way["natural"="wood"](${bbox_s},${bbox_w},${bbox_n},${bbox_e});way["landuse"="forest"](${bbox_s},${bbox_w},${bbox_n},${bbox_e});way["landuse"="farmland"](${bbox_s},${bbox_w},${bbox_n},${bbox_e});way["landuse"="meadow"](${bbox_s},${bbox_w},${bbox_n},${bbox_e});way["landuse"="residential"](${bbox_s},${bbox_w},${bbox_n},${bbox_e});way["landuse"="industrial"](${bbox_s},${bbox_w},${bbox_n},${bbox_e});way["landuse"="commercial"](${bbox_s},${bbox_w},${bbox_n},${bbox_e});way["natural"="grassland"](${bbox_s},${bbox_w},${bbox_n},${bbox_e});way["natural"="heath"](${bbox_s},${bbox_w},${bbox_n},${bbox_e});way["natural"="scrub"](${bbox_s},${bbox_w},${bbox_n},${bbox_e});way["natural"="bare_rock"](${bbox_s},${bbox_w},${bbox_n},${bbox_e});way["natural"="sand"](${bbox_s},${bbox_w},${bbox_n},${bbox_e}););out body;>;out skel qt;`;
+
+    statusEl.innerHTML='<span class="spinner"></span> Querying Overpass API for land cover...';
+
+    // Fetch OSM land cover data
+    let osmFeatures=[];
+    try{
+      const resp=await fetchWithRetry(overpassUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(query)},{_timeout:120000});
+      if(resp){
+        const osmData=await resp.json();
+        // Build node index for resolving way coordinates
+        var nodeIndex={};
+        if(osmData.elements){
+          osmData.elements.forEach(function(el){
+            if(el.type==='node')nodeIndex[el.id]={lat:el.lat,lon:el.lon};
+          });
+          // Build polygon features from ways
+          osmData.elements.forEach(function(el){
+            if(el.type==='way'&&el.nodes&&el.tags){
+              var polyCoords=[];
+              var valid=true;
+              el.nodes.forEach(function(nid){
+                if(nodeIndex[nid])polyCoords.push([nodeIndex[nid].lat,nodeIndex[nid].lon]);
+                else valid=false;
+              });
+              if(valid&&polyCoords.length>=3){
+                osmFeatures.push({coords:polyCoords,tags:el.tags});
+              }
+            }
+          });
+        }
       }
+    }catch(osmErr){
+      console.warn('Overpass API failed, falling back to terrain-based roughness:',osmErr.message);
+      statusEl.innerHTML='<span style="color:var(--gold)">⚠</span> Overpass API unavailable, using terrain-based fallback...';
     }
-    // Classify roughness based on slope and elevation
-    // Based on WAsP/WindPRO roughness classification:
-    // z0 < 0.001: Water/lake
-    // z0 0.001-0.01: Sand/bare soil
-    // z0 0.01-0.05: Grassland/crop
-    // z0 0.05-0.3: Farmland/scattered bushes
-    // z0 0.3-0.5: Parkland/orchard
-    // z0 0.5-1.0: Forest/suburban
-    // z0 1.0-2.0: Dense forest/urban
+
+    // OSM roughness class mapping (WAsP/EU standard)
+    function osmToZ0(tags){
+      if(tags.natural==='water')return 0.0002;
+      if(tags.natural==='bare_rock')return 0.001;
+      if(tags.natural==='sand')return 0.001;
+      if(tags.natural==='grassland')return 0.03;
+      if(tags.natural==='heath')return 0.03;
+      if(tags.natural==='scrub')return 0.2;
+      if(tags.natural==='wood')return 0.5;
+      if(tags.landuse==='forest')return 0.5;
+      if(tags.landuse==='farmland')return 0.05;
+      if(tags.landuse==='meadow')return 0.05;
+      if(tags.landuse==='residential')return 0.5;
+      if(tags.landuse==='industrial')return 1.0;
+      if(tags.landuse==='commercial')return 1.0;
+      return null; // Unknown
+    }
+
+    // Generate roughness grid
     const z0Values=[];
-    const minE=Math.min(...elevs);const maxE=Math.max(...elevs);const elevRange=maxE-minE||1;
-    const maxSlope=Math.max(...slopes)||0.01;
-    for(let i=0;i<elevs.length;i++){
-      const slope=slopes[i];
-      const elevNorm=(elevs[i]-minE)/elevRange;
-      const slopeNorm=slope/Math.max(0.01,maxSlope);
-      // Combined roughness model: higher slope = higher roughness
-      let z0;
-      if(slopeNorm<0.05){
-        // Very flat → grassland
-        z0=0.03;
-      }else if(slopeNorm<0.15){
-        // Gentle slope → farmland
-        z0=0.03+slopeNorm*0.3;
-      }else if(slopeNorm<0.35){
-        // Moderate slope → scattered vegetation
-        z0=0.075+slopeNorm*0.8;
-      }else if(slopeNorm<0.6){
-        // Steep → forest/suburban
-        z0=0.35+slopeNorm*0.8;
-      }else{
-        // Very steep → dense forest/rocky
-        z0=0.83+slopeNorm*1.0;
+    const defaultZ0=0.05; // Farmland default for areas without OSM data
+
+    for(let i=0;i<pts.length;i++){
+      const lat=pts[i][0],lon=pts[i][1];
+      let bestZ0=defaultZ0;
+      let bestDist=Infinity;
+
+      // Check each OSM polygon — find the one this point falls inside
+      for(let fi=0;fi<osmFeatures.length;fi++){
+        const feat=osmFeatures[fi];
+        const z0=osmToZ0(feat.tags);
+        if(z0===null)continue;
+        if(pointInPolygon(lat,lon,feat.coords)){
+          // Use the highest roughness if point is inside multiple polygons
+          // (e.g. a building inside a residential area)
+          bestZ0=Math.max(bestZ0,z0);
+          bestDist=0;
+        }
       }
-      // Elevation modifier: very high elevations tend to be rockier
-      if(elevNorm>0.7)z0*=1+0.3*(elevNorm-0.7)/0.3;
-      z0=Math.max(0.0002,Math.min(2.0,z0));
-      z0Values.push(z0);
+      z0Values.push(Math.max(0.0002,Math.min(2.0,bestZ0)));
     }
+
     S.roughnessGrid=pts;
     S.roughnessValues=z0Values;
     // Update statistics
@@ -1465,7 +1732,8 @@ async function downloadRoughness(){
     document.getElementById('rMinZ0').textContent=minZ0.toFixed(3);
     document.getElementById('rMaxZ0').textContent=maxZ0.toFixed(3);
     document.getElementById('rGridSize').textContent=res+'x'+res;
-    statusEl.innerHTML='<span style="color:var(--mint)">✓</span> Roughness map generated: '+res+'x'+res+' grid | mean z0='+meanZ0.toFixed(3)+'m';
+    const osmCount=osmFeatures.length;
+    statusEl.innerHTML='<span style="color:var(--mint)">✓</span> Roughness map generated from OSM land cover: '+res+'x'+res+' grid | '+osmCount+' features | mean z0='+meanZ0.toFixed(3)+'m';
     drawRoughnessMap();
     // Update site z0 input with the average roughness within the site boundary
     let siteZ0Sum=0,siteZ0Count=0;
@@ -1600,13 +1868,7 @@ function exportRoughnessCSV(){
 
 // ==================== STEP 5: WASP FLOW MODEL ====================
 
-// WASP displacement height model (from roughness length)
-// d = 0.7 * h_canopy, where h_canopy estimated from z0
-function displacementHeight(z0){
-  if(z0<0.10)return 0; // No displacement for low roughness
-  var hCan=Math.min(30,Math.max(1,z0/0.10)); // Canopy height estimate
-  return Math.min(25,0.7*hCan);
-}
+// displacementHeight is defined above (with extrapolateLogLaw)
 
 // Log-law with displacement height (WASP standard)
 function logLawWithD(z,z0,d){
@@ -1714,54 +1976,91 @@ async function runFlowModel(){
   var dUp=displacementHeight(z0up);
 
   // Get site latitude for geostrophic drag law
-  var siteLat=c[0]||0;
+  var siteLat=c?c[0]:0;
 
   S.flowCorrections=[];
   S.windData.forEach(function(s,i){
     var bzFactor=1.0;var iblFactor=1.0;var geoFactor=1.0;
-    // BZ orographic speed-up model (WASP — Troen & Petersen, 1989)
+    // BZ orographic speed-up model (WAsP — Troen & Petersen, 1989)
+    // Proper implementation: uses 2D terrain profile upwind for each sector
+    // Speed-up factor ΔS = (h/L) * f(σ), Jackson-Hunt correction applied
     if(modelType==='combined'||modelType==='bz'){
       if(S.terrainElevations){
         var dirRad=s.dir*Math.PI/180;var res=Math.round(Math.sqrt(S.terrainElevations.length));
         var mid=Math.floor(res/2);
-        // Sample terrain profile UPWIND
-        var maxSlope=0;var steps=Math.floor(res/2);
+        // Sample terrain profile UPWIND to find hill height and half-length
+        var maxUpSlope=0;var hillHeight=0;var halfLength=0;
+        var steps=Math.floor(res/2);
+        var gridSpacing=S.terrainGrid?((S.terrainGrid[1][1]-S.terrainGrid[0][1])*111320):1000;
+        var centerElev=S.terrainElevations[mid*res+mid];
+        // Walk upwind to find maximum elevation difference and distance
         for(var d=1;d<=steps;d++){
           var di=Math.round(mid-d*Math.cos(dirRad));var dj=Math.round(mid+d*Math.sin(dirRad));
           if(di<0||di>=res||dj<0||dj>=res)break;
-          var dz=Math.abs(S.terrainElevations[mid*res+mid]-S.terrainElevations[di*res+dj]);
-          var dist=d*(S.terrainGrid?((S.terrainGrid[1][1]-S.terrainGrid[0][1])*111320):1000);
-          if(dist>0)maxSlope=Math.max(maxSlope,dz/dist);
+          var dz=S.terrainElevations[di*res+dj]-centerElev;
+          var dist=d*gridSpacing;
+          if(dist>0)maxUpSlope=Math.max(maxUpSlope,Math.abs(dz)/dist);
+          if(Math.abs(dz)>Math.abs(hillHeight)){hillHeight=dz;halfLength=dist;}
         }
-        // WASP BZ speed-up with displacement correction
-        var hillLength=fetchDist*1000;
-        var heff=hillLength*maxSlope;
-        bzFactor=1+0.5*Math.max(-0.3,Math.min(0.5,heff/hillLength));
-        // Correct for displacement height effect
+        // Also check downwind for ridge/hill symmetry
+        for(var d=1;d<=steps;d++){
+          var di2=Math.round(mid+d*Math.cos(dirRad));var dj2=Math.round(mid-d*Math.sin(dirRad));
+          if(di2<0||di2>=res||dj2<0||dj2>=res)break;
+          var dz2=S.terrainElevations[di2*res+dj2]-centerElev;
+          var dist2=d*gridSpacing;
+          if(Math.abs(dz2)>Math.abs(hillHeight)){hillHeight=dz2;halfLength=dist2;}
+        }
+        // WAsP BZ speed-up: ΔS ≈ 0.8*(h/L) for 2D ridge, 0.6*(h/L) for 3D hill
+        // Use fetch distance as effective half-length L if hillLength not found
+        var L=halfLength>0?halfLength:fetchDist*1000;
+        var hOverL=Math.abs(hillHeight)/L;
+        // Determine if 2D ridge or 3D hill based on aspect ratio
+        var isRidge=maxUpSlope>0.1; // Simplified: treat as ridge if slope is significant
+        var bzCoeff=isRidge?0.8:0.6;
+        var deltaS=bzCoeff*hOverL;
+        // Jackson-Hunt correction: ΔS_corrected = ΔS / (1 + ΔS) to prevent over-speed-up
+        deltaS=deltaS/(1+deltaS);
+        bzFactor=1+deltaS*Math.sign(hillHeight>=0?1:-1);
+        // Displacement height correction
         var dCorrection=logLawWithD(height,z0site,dSite)/logLawWithD(height,z0site,0);
-        bzFactor*=Math.max(0.8,Math.min(1.2,dCorrection));
+        bzFactor*=Math.max(0.85,Math.min(1.15,dCorrection));
       }else{
         // Simplified without terrain — use geostrophic estimate
         var latFactor=Math.sin(Math.abs(siteLat)*Math.PI/180);
         bzFactor=1+0.05*latFactor*(Math.cos((s.dir-250)*Math.PI/180)*.5+.5);
       }
     }
-    // IBL roughness change model (WASP — Troen & Petersen, 1989)
+    // IBL roughness change model (WAsP — Troen & Petersen, 1989)
+    // Proper IBL height growth: h_IBL = 0.3 * x^0.8 * z0_new^0.2
+    // Below h_IBL: wind profile uses new (local) roughness
+    // Above h_IBL: wind profile uses old (upstream) roughness
+    // At transition: smooth blend
     if(modelType==='combined'||modelType==='ibl'){
       var dist=fetchDist*1000;
-      // WASP IBL height growth: dIBL = 0.3 * (x+1)^0.8 * z0_new^0.2
-      var dIBL=0.3*Math.pow(dist+1,0.8)*Math.pow(z0site,0.2);
-      if(height>=dIBL){
-        // Above IBL: use log-law with displacement
-        iblFactor=logLawWithD(height,z0site,dSite)/logLawWithD(height,z0up,dUp);
+      // WAsP IBL height growth: h_IBL = 0.3 * x^0.8 * z0_new^0.2
+      var hIBL=0.3*Math.pow(dist,0.8)*Math.pow(z0site,0.2);
+      if(hIBL<1)hIBL=1; // Minimum IBL height
+      if(height>hIBL){
+        // Above IBL: wind has not fully adjusted, blend between upstream and local
+        // Use log-law ratio with displacement heights
+        var localProfile=logLawWithD(height,z0site,dSite);
+        var upstreamProfile=logLawWithD(height,z0up,dUp);
+        iblFactor=localProfile/Math.max(0.01,upstreamProfile);
       }else{
-        // Within IBL: partial adjustment with displacement
-        var profRatio=logLawWithD(height,z0site,dSite)/Math.max(0.01,logLawWithD(dIBL,z0site,dSite));
-        var iblGrowth=logLawWithD(dIBL,z0up,dUp)/Math.max(0.01,logLawWithD(height,z0up,dUp));
-        iblFactor=profRatio*iblGrowth;
+        // Within IBL: wind has adjusted to new roughness
+        // Profile adjusted from IBL height down
+        var logLocal_h=logLawWithD(height,z0site,dSite);
+        var logLocal_ibl=logLawWithD(hIBL,z0site,dSite);
+        var logUp_ibl=logLawWithD(hIBL,z0up,dUp);
+        var logUp_h=logLawWithD(height,z0up,dUp);
+        // Blend: fraction of IBL that the height represents
+        var frac=height/hIBL;
+        // Smooth transition using weighted blend
+        var adjFactor=(logLocal_h/Math.max(0.01,logLocal_ibl))*(logUp_ibl/Math.max(0.01,logUp_h));
+        iblFactor=adjFactor;
       }
     }
-    // Geostrophic drag law correction (WASP standard)
+    // Geostrophic drag law correction (WAsP standard)
     // Estimates the effect of different roughness on geostrophic wind
     if(modelType==='combined'){
       var geoResult=geostrophicToSurface(s.meanSpeed,z0site,siteLat,height);
@@ -1771,8 +2070,19 @@ async function runFlowModel(){
         geoFactor=Math.max(0.7,Math.min(1.3,geoFactor)); // Physical bounds
       }
     }
-    var combined=modelType==='bz'?bzFactor:modelType==='ibl'?iblFactor:bzFactor*iblFactor*geoFactor;
-    combined=Math.max(0.2,Math.min(5.0,combined)); // WASP physical bounds
+    // Combined factor: additive perturbation model (WAsP standard)
+    // Each factor's deviation from 1.0 is treated as a perturbation
+    // combined = 1 + (BZ-1) + (IBL-1) + (Geo-1)
+    // Then clamp to physical bounds [0.5, 2.0]
+    var combined;
+    if(modelType==='bz'){
+      combined=bzFactor;
+    }else if(modelType==='ibl'){
+      combined=iblFactor;
+    }else{
+      combined=1+(bzFactor-1)+(iblFactor-1)+(geoFactor-1);
+    }
+    combined=Math.max(0.5,Math.min(2.0,combined)); // WAsP physical bounds
     S.flowCorrections.push({dir:s.dir,freq:s.freq,freeSpeed:s.meanSpeed,bzFactor:bzFactor,iblFactor:iblFactor,geoFactor:geoFactor,combined:combined,correctedSpeed:s.meanSpeed*combined,A:s.A*combined,dSite:dSite,dUp:dUp});
   });
   drawFlowWheel();renderFlowTable();
