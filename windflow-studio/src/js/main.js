@@ -32,7 +32,15 @@ window.addEventListener('load',()=>{
 
   // Layout
   $('btnGrid').onclick=()=>{readProject();generateGrid(+$('gridRows').value,+$('gridCols').value,+$('gridSpacingD').value);refresh()};
-  $('btnLoadLayout').onclick=async()=>{const f=$('layoutFile').files[0];if(!f)return alert('Choose CSV/TXT/KML');parseLayout(await f.text());refresh(true)};
+  $('btnLoadLayout').onclick=async()=>{const f=$('layoutFile').files[0];if(!f)return alert('Choose CSV/TXT/KML');parseLayout(await f.text());
+    // Update site coords to layout centroid so terrain/data downloads center on the layout
+    if(S.turbines.length){
+      const cLat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
+      const cLon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
+      $('siteLat').value=cLat.toFixed(5);$('siteLon').value=cLon.toFixed(5);
+      log(`Layout centroid: ${cLat.toFixed(5)}, ${cLon.toFixed(5)}`);
+    }
+    refresh(true);};
 
   // After grid generation, also update project center to layout centroid
   $('btnGrid').onclick=()=>{
