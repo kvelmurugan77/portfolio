@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 13.0</title>
+<title>WindFlow Pro 13.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 13.0</span></div><div class="brand-sub">WAsP-Aligned · OWC→GWC→SWC · IBL Roughness · Wake Dir Var · Mixed HH · BZ</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 13.1</span></div><div class="brand-sub">WAsP-Aligned · OWC→GWC→SWC · IBL Roughness · Wake Dir Var · Mixed HH · Terrain SU · BZ</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -393,7 +393,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 12.0 — Step-Based Wizard · WAsP-Aligned · Auto-Calibration · 2nd-Order BZ · Deep-Array Wake
+// WINDFLOW PRO 13.1 — Step-Based Wizard · WAsP-Aligned · OWC→GWC→SWC · IBL Roughness · Wake Dir Var · Terrain SU
 // ═══════════════════════════════════════════════════════════════════
 const $=id=>document.getElementById(id);
 function log(m,t='i'){const d=$('elog');if(!d)return;const s=document.createElement('span');s.className={i:'li',w:'lw',e:'le'}[t]||'li';s.textContent=`[${new Date().toLocaleTimeString()}] ${m}\n`;d.appendChild(s);d.scrollTop=1e6}
@@ -1338,27 +1338,40 @@ function calcAEP(){
   const n=txy.length;
   const gross=new Float64Array(n),net=new Float64Array(n);
   const dv=.5,vMax=28;
+  // v13.1: Pre-compute per-turbine terrain speedup (elevation-based horizontal speedup)
+  // This is applied to each turbine's wind speed in the non-BZ path
+  const mastElev_forSU=S.terrain?getTerrainElev(parseFloat($('mastLat').value)||0,parseFloat($('mastLon').value)||0)||0:0;
+  const tSpeedups=txy.map((t,ti)=>{const te=S.turbines[ti]?.elev;return terrainSpeedup(te!==undefined?te:mastElev_forSU,mastElev_forSU,hubHH,z0);});
+  // Pre-compute the global-z0 vertical extrapolation ratio (used to "undo" it in OWC→GWC→SWC chain)
+  const logRatioGlobal = logWS_stab(1.0, mastH, hubHH, z0, L);
+
   sectors.forEach((sec,si)=>{if(sec.freq<1e-5)return;
+    // v13.1: Per-sector roughness rose values (computed once per sector, not per wind speed)
+    const z0_mast_sec = getSectorEffectiveZ0('mast', si, hubHH, nSect);
+    const z0_site_sec = getSectorEffectiveZ0('site', si, hubHH, nSect);
+    const roughRatioIBL = getSectorRoughnessRatio(si, hubHH, nSect);
+    // v13.1: Compute the full OWC→GWC→SWC chain ratio for this sector
+    // This properly converts from OWC (at mast with mast roughness) through
+    // GWC (standard reference z0=0.03) to SWC (at site with site roughness + IBL)
+    const owcGwcR = owcToGWC(1.0, mastH, z0_mast_sec, hubHH, 0.03, L);
+    const gwcSwcR = gwcToSWC(1.0, hubHH, 0.03, hubHH, z0_site_sec, L);
+    const chainRatio = (owcGwcR * gwcSwcR * roughRatioIBL * gdlFactor) / logRatioGlobal;
+
     for(let v=.5;v<=vMax;v+=dv){
       const prob=wbPdf(v,sec.A,sec.k)*dv;if(prob<1e-9)continue;
       // Apply obstacle shelter at mast (reduces OWC)
       const shelterRC = sectorShelterFactor(sec.dir, hubHH);
       const shelteredV = v * shelterRC;
-      // v10.0: Apply rotor-averaged factor (multiplicative, shear-dependent)
+      // Apply rotor-averaged factor (multiplicative, shear-dependent)
       const rotorV = shelteredV * rotAvgFactor;
-      // BZ integration: apply per-sector per-turbine orographic + roughness corrections
-      // to the free-stream WS BEFORE computing wake
+      // Flow model: convert OWC to SWC
       let correctedV=rotorV;
-      // v10.0: Flow turning — adjust effective wind direction
+      // Flow turning — adjust effective wind direction
       let effectiveDir=sec.dir;
       if(BZ.enabled&&BZ.sectorTurning&&BZ.sectorTurning[si]){
         const meanTurn=BZ.sectorTurning[si].reduce((s,val)=>s+val,0)/Math.max(1,BZ.sectorTurning[si].length);
-        effectiveDir=sec.dir+meanTurn; // terrain turns the flow
+        effectiveDir=sec.dir+meanTurn;
       }
-      // v13.0: OWC→GWC→SWC roughness change per sector (IBL growth)
-      const z0_mast_sec = getSectorEffectiveZ0('mast', si, hubHH, nSect);
-      const z0_site_sec = getSectorEffectiveZ0('site', si, hubHH, nSect);
-      const roughRatioIBL = getSectorRoughnessRatio(si, hubHH, nSect);
       if(BZ.enabled&&BZ.sectorSpeedups&&BZ.sectorSpeedups[si]){
         // Per-turbine BZ-corrected free stream
         const meanTurbSU=BZ.sectorSpeedups[si].reduce((s,val)=>s+val,0)/Math.max(1,BZ.sectorSpeedups[si].length);
@@ -1367,41 +1380,40 @@ function calcAEP(){
         // OWC → GWC → SWC: remove mast SU, apply turbine SU + roughness (IBL-corrected)
         correctedV=rotorV/mastOrSU*meanTurbSU*roughRatioIBL*gdlFactor;
       } else {
-        // v13.0: Non-BZ path — proper OWC→GWC→SWC wind atlas chain
-        // Use per-sector roughness rose with IBL growth
-        // This replaces the old approach where correctedV=rotorV (no roughness change!)
-        correctedV = rotorV * roughRatioIBL * gdlFactor;
+        // v13.1: Non-BZ path — proper OWC→GWC→SWC wind atlas chain
+        // Undo the global-z0 extrapolation, apply per-sector chain through GWC:
+        //   OWC(mastH, z0_global) → GWC(hubH, z0_ref=0.03) → SWC(hubH, z0_site + IBL)
+        // The chainRatio captures the full conversion including IBL growth and GDL
+        correctedV = rotorV * chainRatio;
       }
-      // v13.0: Wake with direction variability (Gaussian cone spreading)
+      // Wake with direction variability (Gaussian cone spreading)
       const wsp=wakeRunWithDirVar(txy,correctedV,effectiveDir,lut,kw);const gp=lutGet(lut,correctedV).power;
-      // Per-turbine adjustment: if BZ enabled, adjust individual turbine power by SU ratio
+      // Per-turbine energy accumulation
       if(BZ.enabled&&BZ.sectorSpeedups&&BZ.sectorSpeedups[si]){
         for(let t=0;t<n;t++){
           const turbSU=BZ.sectorSpeedups[si][t]||1;
           const turbRC=BZ.turbRoughRC?BZ.turbRoughRC[t]:1;
           const mastOrSU=BZ.mastSectorSU?BZ.mastSectorSU[si]:BZ.mastSU;
-          // Scale the free-stream WS for this turbine (obstacle shelter at mast removed in SWC)
           let turbV=rotorV/mastOrSU*turbSU*turbRC*gdlFactor;
-          // v12.1: Apply per-turbine HH scaling for mixed hub heights
           turbV*=hhScaleFactors[t];
-          // v11.0: Flow inclination correction
           const inclFactor = (BZ.sectorInclination && BZ.sectorInclination[si]) ? (BZ.sectorInclination[si][t] || 1) : 1;
           const turbV_adj = turbV * inclFactor;
           const turbGp=lutGet(lut,turbV_adj).power;
-          // Wake deficit ratio from the uniform-flow wake run
           const wakeRatio=correctedV>0.5?wsp[t]/correctedV:1;
           const turbWsp=turbV_adj*wakeRatio;
           gross[t]+=turbGp*sec.freq*prob*8760;
           net[t]+=lutGet(lut,turbWsp).power*sec.freq*prob*8760;
         }
       } else {
-        // v13.0: Non-BZ path — per-turbine with OWC→SWC per-sector roughness + HH scaling
+        // v13.1: Non-BZ path — per-turbine with OWC→GWC→SWC chain + terrain speedup + HH scaling
         for(let t=0;t<n;t++){
           const tHH=turbineHHs[t];
-          // Per-turbine roughness ratio: project from reference HH to turbine HH using site z0
+          const su=tSpeedups[t]; // terrain speedup for this turbine
+          // Per-turbine HH scaling: project from reference HH to turbine HH using site z0
           const hhRoughScale = tHH !== hubHH ?
             owcToSWC_sector(1.0, hubHH, z0_site_sec, tHH, z0_site_sec, L) : 1.0;
-          const turbV=correctedV*hhRoughScale;
+          // Gross wind speed: SWC × terrain speedup × HH scaling
+          const turbV=correctedV*su*hhRoughScale;
           const turbGp=lutGet(lut,turbV).power;
           const wakeRatio=correctedV>0.5?wsp[t]/correctedV:1;
           const turbWsp=turbV*wakeRatio;
@@ -1451,15 +1463,13 @@ function calcAEP(){
   // Per-turbine with free WS at prevailing direction + horizontal speedup
   const prevDir=parseFloat($('prevWD')?.value||270);
   const freeSpWind=wakeRun(txy,rotorMeanWS,prevDir,lut,kw);
-  // Per-turbine terrain speedup
-  const mastElev2=S.terrain?getTerrainElev(parseFloat($('mastLat').value)||0,parseFloat($('mastLon').value)||0)||0:0;
-  const tSpeedups=txy.map(t=>{const te=S.turbines[txy.indexOf(t)]?.elev;return terrainSpeedup(te!==undefined?te:mastElev2,mastElev2,hubHH,z0);});
+  // tSpeedups already computed above (v13.1) — reuse it for display
   const perT=txy.map((_,i)=>{
     const wl=gross[i]>0?(gross[i]-net[i])/gross[i]*100:0;
     const nt=net[i]*lossM/1e6;const cf=nt*1000/(pc.rated*8760)*100;
-    // Per-turbine free-stream WS at its own hub height
-    const freeWS=rotorMeanWS*hhScaleFactors[i],wakeWS=freeSpWind[i]*hhScaleFactors[i];
-    return{i:i+1,ws:freeWS.toFixed(2),hubWS:(hubMean*hhScaleFactors[i]).toFixed(2),rotorWS:(rotorMeanWS*hhScaleFactors[i]).toFixed(2),wake:wl.toFixed(1),wakeWS:wakeWS.toFixed(2),net:nt.toFixed(3),cf:cf.toFixed(1),gross:(gross[i]/1e6).toFixed(3),power:lutGet(lut,wakeWS).power.toFixed(0),hh:turbineHHs[i]};
+    // Per-turbine free-stream WS at its own hub height (including terrain speedup)
+    const freeWS=rotorMeanWS*tSpeedups[i]*hhScaleFactors[i],wakeWS=freeSpWind[i]*tSpeedups[i]*hhScaleFactors[i];
+    return{i:i+1,ws:freeWS.toFixed(2),hubWS:(hubMean*hhScaleFactors[i]).toFixed(2),rotorWS:(rotorMeanWS*tSpeedups[i]*hhScaleFactors[i]).toFixed(2),wake:wl.toFixed(1),wakeWS:wakeWS.toFixed(2),net:nt.toFixed(3),cf:cf.toFixed(1),gross:(gross[i]/1e6).toFixed(3),power:lutGet(lut,wakeWS).power.toFixed(0),hh:turbineHHs[i],speedup:tSpeedups[i].toFixed(4)};
   });
 
   // GWC — WAsP-aligned OWC→GWC→SWC per sector
@@ -1473,16 +1483,16 @@ function calcAEP(){
       swcA=Math.max(0,gwcA*meanTurbSU*roughRC);
       SR=gwcA>0?swcA/gwcA:1;
     } else {
-      // v13.0: Proper OWC→GWC→SWC with per-sector roughness rose + IBL growth
+      // v13.1: Proper OWC→GWC→SWC with per-sector roughness rose + IBL growth
       const z0_mast_sec = getSectorEffectiveZ0('mast', si, hubHH, nSect);
       const z0_site_sec = getSectorEffectiveZ0('site', si, hubHH, nSect);
       const roughRatio = getSectorRoughnessRatio(si, hubHH, nSect);
       // OWC → GWC: remove mast roughness, project to standard reference
       const owcToGwcRatio = owcToGWC(1.0, mastH, z0_mast_sec, hubHH, 0.03, L);
-      // GWC → SWC: apply site roughness from standard reference
+      // GWC → SWC: apply site roughness from standard reference (with IBL + GDL)
       const gwcToSwcRatio = gwcToSWC(1.0, hubHH, 0.03, hubHH, z0_site_sec, L);
       gwcA = Math.max(0, s.A * owcToGwcRatio);
-      swcA = Math.max(0, gwcA * gwcToSwcRatio * roughRatio);
+      swcA = Math.max(0, gwcA * gwcToSwcRatio * roughRatio * gdlFactor);
       SR = gwcA > 0 ? swcA / gwcA : 1;
     }
     return{...s,gwcA:Math.max(0,gwcA),swcA:Math.max(0,swcA),SR};
@@ -1492,6 +1502,15 @@ function calcAEP(){
 
   const iec=checkIECClass(rotorMeanWS,pc);if(!iec.ok)log(`⚠ IEC class warning: rotor-avg WS ${rotorMeanWS.toFixed(2)} m/s exceeds ${iec.cls} limit (${iec.limit} m/s)!`,'w');
   if(useRotorAvg&&Math.abs(rotAvgFactor-1)>0.001)log(`Rotor-averaged WS: factor=${rotAvgFactor.toFixed(4)}, hub=${hubMean.toFixed(2)} m/s → rotor-avg=${rotorMeanWS.toFixed(2)} m/s (${((rotAvgFactor-1)*100).toFixed(1)}%)`,'i');
+  // v13.1: Log chain diagnostics for verification
+  if(S.roughnessRose&&S.roughnessRose.length){
+    const sampleChainR = (owcToGWC(1.0, mastH, getSectorEffectiveZ0('mast',0,hubHH,nSect), hubHH, 0.03, L) *
+                         gwcToSWC(1.0, hubHH, 0.03, hubHH, getSectorEffectiveZ0('site',0,hubHH,nSect), L) *
+                         getSectorRoughnessRatio(0, hubHH, nSect) * gdlFactor) / logRatioGlobal;
+    log(`OWC→GWC→SWC chain: Sector 0 ratio=${sampleChainR.toFixed(4)} (roughRose z0_mast=${getSectorEffectiveZ0('mast',0,hubHH,nSect).toFixed(4)} z0_site=${getSectorEffectiveZ0('site',0,hubHH,nSect).toFixed(4)} IBL=${getSectorRoughnessRatio(0,hubHH,nSect).toFixed(4)} GDL=${gdlFactor.toFixed(4)})`,'i');
+  } else {
+    log(`OWC→GWC→SWC chain: No roughness rose — using global z0=${z0} (GDL=${gdlFactor.toFixed(4)})`,'i');
+  }
   return{mastH,hubHH,z0,mastMean,hubMean,rotorMeanWS,rotAvgFactor,mastWb,hubWb,mcpFactor:S.mcpFactor,density,PD:.5*density*hubMean**3,grossAEP:grossG,wakeLoss:wakeL,netAEP:netF,CF,instMW,P50,P75,P90,P99,sigma:sig,u_wind_r,u_wake_r,u_pc_r,u_den_r:Math.abs(density-1.225)/1.225*0.5,perTurbine:perT,sectors,gwcSectors,shearProfile,rix,lut,iec,bzEnabled:BZ.enabled,rotorAvgUsed:useRotorAvg,isMixedHH,turbineHHs,hhScaleFactors};
 }
 
@@ -1721,21 +1740,28 @@ async function runTimeSeries(){
     if(hubMean<0.1){setProg('ts',0,'\u274c Hub WS ~0 \u2014 check mast height/z0');log('TS: hub WS too low. Mast height or z0 may be wrong.','e');return;}
     // ── PRE-BIN wind states ──
     setProg('ts',46,'Pre-binning wind states...');
-    // v13.0: Compute per-sector roughness ratios for OWC→SWC chain
+    // v13.1: Compute per-sector OWC→GWC→SWC chain ratios for proper wind atlas conversion
     const nSectTS = parseInt($('sects').value) || 16;
     const szTS = 360 / nSectTS;
+    const tsL = getStabilityL();
+    const tsLogRatioGlobal = logWS_stab(1.0, mastH, hubHH, z0, tsL);
+    const tsGdlFactor = gdlCorrectionFactor(tsL, z0, hubHH);
     const tsRoughRatios = [];
     for (let si = 0; si < nSectTS; si++) {
+      const z0_mast_s = getSectorEffectiveZ0('mast', si, hubHH, nSectTS);
+      const z0_site_s = getSectorEffectiveZ0('site', si, hubHH, nSectTS);
       const roughR = getSectorRoughnessRatio(si, hubHH, nSectTS);
-      const gdlR = gdlCorrectionFactor(getStabilityL(), z0, hubHH);
-      tsRoughRatios.push(roughR * gdlR);
+      const owcGwcR = owcToGWC(1.0, mastH, z0_mast_s, hubHH, 0.03, tsL);
+      const gwcSwcR = gwcToSWC(1.0, hubHH, 0.03, hubHH, z0_site_s, tsL);
+      const chainR = (owcGwcR * gwcSwcR * roughR * tsGdlFactor) / tsLogRatioGlobal;
+      tsRoughRatios.push(chainR);
     }
     const stateBins=new Map();
     for(let h=0;h<allSp.length;h+=step){
       const raw=allSp[h]??0;if(raw<0.1)continue;
       const ws=logWS(raw*mcpF,mastH,hubHH,z0);
       if(ws<cutIn||ws>cutOut+2)continue;
-      // v13.0: Apply per-sector roughness change (OWC→SWC)
+      // v13.1: Apply per-sector OWC→GWC→SWC chain correction
       const dirDeg = allDr[h] || 0;
       const secIdx = Math.floor(((dirDeg % 360 + szTS / 2) / szTS)) % nSectTS;
       const wsAdj = ws * (tsRoughRatios[secIdx] || 1.0);
@@ -1749,7 +1775,7 @@ async function runTimeSeries(){
     if(stateBins.size===0){setProg('ts',0,'\u274c All wind speeds below cut-in (${cutIn} m/s)');return;}
     setProg('ts',60,`Wake for ${stateBins.size} states...`);
     const stCache=new Map();
-    // v13.0: Use wake with direction variability for WAsP-aligned results
+    // v13.1: Use wake with direction variability for WAsP-aligned results
     for(const[k,st]of stateBins)stCache.set(k,wakeRunWithDirVar(txy,st.ws,st.dir,lut,kw));
     // ── ENERGY ACCUMULATION ──
     const mG=new Float64Array(12),mN=new Float64Array(12);
@@ -1761,7 +1787,7 @@ async function runTimeSeries(){
       const raw=allSp[h]??0;if(raw<0.1)continue;
       let ws0=logWS(raw*mcpF,mastH,hubHH,z0);
       if(ws0<cutIn||ws0>cutOut+2)continue;
-      // v13.0: Apply per-sector roughness change (OWC→SWC) to match calcAEP
+      // v13.1: Apply per-sector OWC→GWC→SWC chain to match calcAEP
       const dirDeg = allDr[h] || 0;
       const secIdxH = Math.floor(((dirDeg % 360 + szTS / 2) / szTS)) % nSectTS;
       ws0 *= (tsRoughRatios[secIdxH] || 1.0);
@@ -1961,7 +1987,7 @@ function exportReport(){
   <h2>Turbine Layout (${S.turbines.length} WTGs)</h2>
   <table><tr><th>T#</th><th>Latitude</th><th>Longitude</th><th>Hub Height(m)</th><th>Elevation(m)</th></tr>
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 13.0 — WAsP-Aligned · OWC→GWC→SWC Wind Atlas Chain · IBL Roughness Growth · Wake Direction Variability · Auto-Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · IEC 61400-12-1</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 13.1 — WAsP-Aligned · OWC→GWC→SWC Wind Atlas Chain · IBL Roughness Growth · Wake Direction Variability · Terrain Speedup · Auto-Calibration · BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · IEC 61400-12-1</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -2165,10 +2191,10 @@ function autoShear(){
   log(`Auto shear: z0=${z0} → α=${alpha.toFixed(2)} (${stab} stability)`,'i');
 }
 initMap();calcDensity();
-log('WindFlow Pro 11.6 ready. Auto-Calibration ON · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · WAsP Proxies.','i');
+log('WindFlow Pro 13.1 ready. OWC→GWC→SWC · IBL Roughness · Wake Dir Var · Terrain SU · Auto-Calibration · BZ · Deep-Array Wake · GDL Stability.','i');
 
 // ══════════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 11.6  — WAsP-Aligned · Auto-Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · WAsP Proxies
+// WINDFLOW PRO 13.1  — WAsP-Aligned · OWC→GWC→SWC · IBL Roughness · Wake Dir Var · Terrain SU · Auto-Calibration · BZ · Deep-Array Wake · GDL Stability
 // ══════════════════════════════════════════════════════════════════════
 
 // ── ROUGHNESS ROSE ──────────────────────────────────────────────
@@ -4413,7 +4439,7 @@ function updateReportingDashboard(){
 
 // ── SAVE/LOAD PROJECT ──
 function saveProject(){
-  const data={version:'12.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds.slice(0,1000),dirs:S.wind.dirs.slice(0,1000)}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value}};
+  const data={version:'13.1',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds.slice(0,1000),dirs:S.wind.dirs.slice(0,1000)}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value}};
   const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved','i');
 }
 
@@ -4429,6 +4455,7 @@ function loadProject(event){
       if(data.obstacles)S.obstacles=data.obstacles;
       if(data.masts)S.masts=data.masts;
       if(data.waspCalibration)S.waspCalibration=data.waspCalibration;
+      if(data.roughnessRose){S.roughnessRose=data.roughnessRose;if(typeof renderRoughnessRoseTable==='function')renderRoughnessRoseTable();log('Roughness rose loaded ('+data.roughnessRose.length+' sectors)','i');}
       if(data.settings){const s=data.settings;Object.keys(s).forEach(k=>{const el=$(k);if(el)el.value=s[k];});}
       log('Project loaded: '+f.name,'i');goToStep(1);
     }catch(err){log('Project load failed: '+err.message,'e');}
