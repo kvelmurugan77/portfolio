@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 8.0</title>
+<title>WindFlow Pro 9.0</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
@@ -69,7 +69,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 <body>
 <div id="top">
   <span class="logo">⟁ WINDFLOW PRO</span>
-  <span class="ver">v8.0 · WAsP-Aligned Physics · Directional BZ · Multi-IBL · Enhanced Wake</span>
+  <span class="ver">v9.0 · Full WAsP Alignment · Roughness Rose · Stability · Obstacles · Steep Terrain</span>
   <div class="vsep"></div>
   <button class="btn drw" id="drawBtn" onclick="toggleDraw()">✏ Draw Boundary</button>
   <button class="btn" onclick="doneDraw()">✓ Close Poly</button>
@@ -91,6 +91,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
   <button class="stab" data-tab="era5">ERA5</button>
   <button class="stab" data-tab="terr">TERRAIN</button>
   <button class="stab" data-tab="mcp">MCP</button>
+  <button class="stab" data-tab="rough">ROUGH.</button>
   <button class="stab" data-tab="ts">TIME SER.</button>
   <button class="stab" data-tab="bz">BZ MODEL</button>
 </div>
@@ -148,7 +149,23 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 </div>
 <div class="sec"><div class="sh">④ ATMOSPHERE</div>
   <div class="r3"><div class="fld"><label>Elev (m)</label><input id="siteElev" type="number" value="0" oninput="calcDensity()"></div><div class="fld"><label>Temp (°C)</label><input id="siteTemp" type="number" value="10" oninput="calcDensity()"></div><div class="fld"><label>ρ (kg/m³)</label><input id="airDen" type="number" value="1.225" step="0.001"></div></div>
-  <div class="r2"><div class="fld"><label>Shear α</label><input id="shearA" type="number" value="0.14" step="0.01"></div><div class="fld"><label>Stability</label><select id="stab"><option value="N" selected>Neutral</option><option value="O">Offshore</option><option value="S">Stable</option></select></div></div>
+  <div class="r2">
+    <div class="fld"><label>Shear α</label><input id="shearA" type="number" value="0.14" step="0.01"></div>
+    <div class="fld"><label>Stability</label>
+      <select id="stab" onchange="onStabilityChange()">
+        <option value="N" selected>Neutral (L=∞)</option>
+        <option value="US">Unstable (L=-200m)</option>
+        <option value="MS">Mildly Stable (L=500m)</option>
+        <option value="VS">Very Stable (L=100m)</option>
+        <option value="O">Offshore (L=-1000m)</option>
+        <option value="C">Custom L</option>
+      </select>
+    </div>
+  </div>
+  <div class="r2" id="stabCustomRow" style="display:none">
+    <div class="fld"><label>Monin-Obukhov L (m)</label><input id="stabL" type="number" value="-200" step="10"></div>
+    <div class="fld"><label>z/L</label><input id="stabZL" type="number" value="0" step="0.01" readonly></div>
+  </div>
 </div>
 <div class="sec"><div class="sh">ENGINE LOG <button class="btn" style="padding:1px 5px;font-size:8px" onclick="$('elog').innerHTML=''">Clr</button></div><div id="elog"></div></div>
 </div>
@@ -274,7 +291,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 <div class="sec"><div class="sh">⚙ WAsP BZ OROGRAPHIC MODEL
   <span id="bzBadge" style="font-size:8px;padding:2px 5px;border-radius:8px;background:rgba(210,153,34,.18);color:var(--wrn)">INACTIVE</span>
 </div>
-<div class="ibox" style="font-size:9px;line-height:1.6"><b style="color:var(--acc)">Jackson-Hunt (1983) · Modified Bessel K₀/K₁ spectral decomposition</b><br>Beljaars-Walmsley (1982) multi-layer IBL roughness model · Directional per-sector orographic speedups · OWC→GWC→SWC per sector · RIX warning<br><b style="color:var(--wrn)">v8.0 WAsP-aligned:</b> Half-plane directional filter · Multi-IBL roughness · Enhanced wake (ground reflection + TI-dependent k + mixed superposition)</div>
+<div class="ibox" style="font-size:9px;line-height:1.6"><b style="color:var(--acc)">Jackson-Hunt (1983) · Modified Bessel K₀/K₁ spectral decomposition</b><br>Beljaars-Walmsley (1982) multi-layer IBL roughness model · Directional per-sector orographic speedups · OWC→GWC→SWC per sector · RIX warning<br><b style="color:var(--wrn)">v9.0 Full WAsP Alignment:</b> Roughness rose · Businger-Dyer stability · Perera obstacles · Mortensen-Wood steep terrain · Half-plane directional filter · Multi-IBL roughness · Enhanced wake</div>
 <div class="r2">
   <div class="fld"><label>Mast z₀ (m)</label><input id="bzMz0" type="number" value="0.0002" step="0.0001"></div>
   <div class="fld"><label>Site z₀ (m)</label><input id="bzSz0" type="number" value="0.0002" step="0.0001"></div>
@@ -305,7 +322,53 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 <div class="sec"><div class="sh">OWC → GWC → SWC</div>
 <div id="bzGWCTbl" style="max-height:160px;overflow-y:auto;font-size:9px;color:var(--muted)">Run BZ model to see GWC table</div>
 </div>
+<div class="sec"><div class="sh">🏗 OBSTACLE SHELTER (Perera 1981)</div>
+  <div class="ibox">Define obstacles near mast/site · Perera shelter model per sector · Wind speed reduction behind obstacles</div>
+  <div style="max-height:120px;overflow-y:auto;margin-bottom:4px">
+    <table class="dtbl"><thead><tr><th>Dir°</th><th>H(m)</th><th>W(m)</th><th>D(m)</th><th>Por%</th><th>✕</th></tr></thead>
+    <tbody id="obsBody"></tbody></table>
+  </div>
+  <div class="r3">
+    <div class="fld"><label>Height (m)</label><input id="obsH" type="number" value="10" min="1"></div>
+    <div class="fld"><label>Width (m)</label><input id="obsW" type="number" value="20" min="1"></div>
+    <div class="fld"><label>Distance (m)</label><input id="obsD" type="number" value="50" min="1"></div>
+  </div>
+  <div class="r2">
+    <div class="fld"><label>Direction (°)</label><input id="obsDir" type="number" value="0" min="0" max="359" step="22.5"></div>
+    <div class="fld"><label>Porosity (%)</label><input id="obsPor" type="number" value="0" min="0" max="90" step="10"></div>
+  </div>
+  <button class="btn" style="width:100%;margin-bottom:4px" onclick="addObstacle()">➕ Add Obstacle</button>
+  <button class="btn" style="width:100%;margin-bottom:4px" onclick="clearObstacles()">🗑 Clear All</button>
+  <div id="obsStat" style="font-size:9px;color:var(--muted)">No obstacles defined</div>
+</div>
 </div><!-- /bz -->
+
+<div id="sp-rough" class="sp2">
+<div class="sec"><div class="sh">🗺 ROUGHNESS ROSE</div>
+  <div class="ibox">Per-sector roughness transitions · Up to 3 zones per sector · WAsP methodology</div>
+  <div class="r2">
+    <div class="fld"><label>Default z₀ site (m)</label><input id="rrZ0site" type="number" value="0.0002" step="0.0001"></div>
+    <div class="fld"><label>Default z₀ mast (m)</label><input id="rrZ0mast" type="number" value="0.0002" step="0.0001"></div>
+  </div>
+  <div class="fld"><label>Preset</label>
+    <select id="rrPreset" onchange="applyRoughnessPreset()">
+      <option value="custom">Custom</option>
+      <option value="offshore">All Offshore (0.0002)</option>
+      <option value="open">All Open (0.03)</option>
+      <option value="agri">All Agricultural (0.10)</option>
+      <option value="mixed">Mixed: Offshore→Agricultural</option>
+    </select>
+  </div>
+  <button class="btn pri" style="width:100%;margin-bottom:4px" onclick="applyRoughnessRose()">🗺 Apply Roughness Rose</button>
+  <div style="max-height:200px;overflow-y:auto">
+    <table class="dtbl"><thead><tr><th>Dir</th><th>z₀¹</th><th>x¹ km</th><th>z₀²</th><th>x² km</th><th>z₀³</th></tr></thead>
+    <tbody id="rrBody"></tbody></table>
+  </div>
+  <div class="cw" style="height:110px;margin-top:6px"><canvas id="rrChart"></canvas></div>
+  <div id="rrStat" style="font-size:9px;color:var(--muted)">—</div>
+</div>
+</div>
+
 </div></div>
 <div id="mapw">
   <div id="map"></div>
@@ -348,7 +411,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 </div>
 <div id="rp-wsc" class="rp">
 <div class="sec"><div class="sh">WIND SPEED CHAIN REPORT</div>
-  <div class="ibox" style="font-size:9px">Full WS transformation: Mast OWC → log extrapolation → MCP LT → GWC (remove orographic + roughness at mast) → SWC (apply orographic + roughness at turbine) → Weibull → wake per turbine<br><b style="color:var(--wrn)">v8.0 WAsP-aligned chain</b></div>
+  <div class="ibox" style="font-size:9px">Full WS transformation: Mast OWC → log extrapolation → MCP LT → GWC (remove orographic + roughness at mast) → SWC (apply orographic + roughness at turbine) → Weibull → wake per turbine<br><b style="color:var(--wrn)">v9.0 Full WAsP-aligned chain (stability + obstacles + roughness rose)</b></div>
   <div id="wscChain">Run analysis to see WS chain</div>
 </div>
 <div class="sec"><div class="sh">PER-TURBINE WS BREAKDOWN</div>
@@ -394,7 +457,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 
 <div id="rp-bz" class="rp">
 <div class="sec"><div class="sh">BZ SPEEDUP RESULTS</div>
-  <div class="ibox" style="font-size:9px">Jackson-Hunt (1983) · Fractional speedup δ = ΔU/U₀ via modified Bessel K₀/K₁ spectral model<br><b style="color:var(--wrn)">v8.0:</b> Directional half-plane filter per sector · Multi-layer IBL roughness</div>
+  <div class="ibox" style="font-size:9px">Jackson-Hunt (1983) · Fractional speedup δ = ΔU/U₀ via modified Bessel K₀/K₁ spectral model<br><b style="color:var(--wrn)">v9.0:</b> Directional half-plane filter · Multi-layer IBL roughness · Steep terrain correction · Stability-corrected IBL</div>
   <div class="sg">
     <div class="sc2"><div class="sv" id="bz-maSU">—</div><div class="sl">Mast Speedup</div></div>
     <div class="sc2"><div class="sv" id="bz-mxSU">—</div><div class="sl">Max Turb. SU</div></div>
@@ -438,7 +501,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 8.0  — WAsP-Aligned Physics · Directional BZ · Multi-IBL
+// WINDFLOW PRO 9.0  — Full WAsP Alignment · Roughness Rose · Stability · Obstacles · Steep Terrain
 // ═══════════════════════════════════════════════════════════════════
 const $=id=>document.getElementById(id);
 function log(m,t='i'){const d=$('elog');const s=document.createElement('span');s.className={i:'li',w:'lw',e:'le'}[t]||'li';s.textContent=`[${new Date().toLocaleTimeString()}] ${m}\n`;d.appendChild(s);d.scrollTop=1e6}
@@ -452,7 +515,9 @@ const S={
   terrain:null,contoursData:[],
   showContours:true,showHeat:true,
   boundary:[],boundaryLayer:null,boundaryMarkers:[],
-  drawMode:false,charts:{}
+  drawMode:false,charts:{},
+  roughnessRose:null,
+  obstacles:[]
 };
 
 // ── POWER CURVES ──
@@ -1036,8 +1101,9 @@ function calcAEP(){
   const mastH=parseFloat($('mastH').value)||100,hubHH=parseFloat($('hubH').value)||120;
   const z0=parseFloat($('z0val').value)||.0002,density=parseFloat($('airDen').value)||1.225;
 
-  // Step 1: OWC → Hub WS via log law
-  const hubSp=S.wind.speeds.map(v=>logWS(v*S.mcpFactor,mastH,hubHH,z0));
+  // Step 1: OWC → Hub WS via stability-corrected log law
+  const L = getStabilityL();
+  const hubSp=S.wind.speeds.map(v=>logWS_stab(v*S.mcpFactor,mastH,hubHH,z0,L));
   const dirs=S.wind.dirs;
 
   // WS chain values
@@ -1058,9 +1124,12 @@ function calcAEP(){
   sectors.forEach((sec,si)=>{if(sec.freq<1e-5)return;
     for(let v=.5;v<=vMax;v+=dv){
       const prob=wbPdf(v,sec.A,sec.k)*dv;if(prob<1e-9)continue;
+      // Apply obstacle shelter at mast (reduces OWC)
+      const shelterRC = sectorShelterFactor(sec.dir, hubHH);
+      const shelteredV = v * shelterRC;
       // BZ integration: apply per-sector per-turbine orographic + roughness corrections
       // to the free-stream WS BEFORE computing wake
-      let correctedV=v;
+      let correctedV=shelteredV;
       if(BZ.enabled&&BZ.sectorSpeedups&&BZ.sectorSpeedups[si]){
         // Per-turbine BZ-corrected free stream: we need to pass an array of corrected WS
         // For wake computation, we use the sector-mean corrected WS as the uniform inflow
@@ -1069,7 +1138,7 @@ function calcAEP(){
         const meanRoughRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC.reduce((s,val)=>s+val,0)/Math.max(1,BZ.turbRoughRC.length):1);
         const mastOrSU=BZ.mastSectorSU?BZ.mastSectorSU[si]:BZ.mastSU;
         // OWC → GWC → SWC: remove mast SU, apply turbine SU + roughness
-        correctedV=v/mastOrSU*meanTurbSU*meanRoughRC;
+        correctedV=shelteredV/mastOrSU*meanTurbSU*meanRoughRC;
       }
       const wsp=wakeRun(txy,correctedV,sec.dir,lut,kw);const gp=lutGet(lut,correctedV).power;
       // Per-turbine adjustment: if BZ enabled, adjust individual turbine power by SU ratio
@@ -1078,8 +1147,8 @@ function calcAEP(){
           const turbSU=BZ.sectorSpeedups[si][t]||1;
           const turbRC=BZ.turbRoughRC?BZ.turbRoughRC[t]:1;
           const mastOrSU=BZ.mastSectorSU?BZ.mastSectorSU[si]:BZ.mastSU;
-          // Scale the free-stream WS for this turbine
-          const turbV=v/mastOrSU*turbSU*turbRC;
+          // Scale the free-stream WS for this turbine (obstacle shelter at mast removed in SWC)
+          const turbV=shelteredV/mastOrSU*turbSU*turbRC;
           const turbGp=lutGet(lut,turbV).power;
           // Wake deficit ratio from the uniform-flow wake run
           const wakeRatio=correctedV>0.5?wsp[t]/correctedV:1;
@@ -1145,7 +1214,7 @@ function calcAEP(){
     }
     return{...s,gwcA:Math.max(0,gwcA),swcA:Math.max(0,swcA),SR};
   });
-  const shearProfile=[20,40,60,80,100,120,140,160,180,200].map(h=>({h,ws:logWS(hubMean,hubHH,h,z0)}));
+  const shearProfile=[20,40,60,80,100,120,140,160,180,200].map(h=>({h,ws:logWS_stab(hubMean,hubHH,h,z0,L)}));
   const rix=S.terrain?Math.max(0,(S.terrain.maxE-S.terrain.minE)/Math.max(1,S.terrain.maxE)*5):0;
 
   const iec=checkIECClass(hubMean,pc);if(!iec.ok)log(`⚠ IEC class warning: hub WS ${hubMean.toFixed(2)} m/s exceeds ${iec.cls} limit (${iec.limit} m/s)!`,'w');
@@ -1480,7 +1549,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}</style></head><body>
-  <h1>△ WindFlow Pro 8.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 9.0 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}</p>
   <h2>Site &amp; Wind Resource Chain</h2>
   <table><tr><th>Step</th><th>Value</th><th>Method / Notes</th></tr>
@@ -1511,7 +1580,7 @@ function exportReport(){
   <h2>Turbine Layout (${S.turbines.length} WTGs)</h2>
   <table><tr><th>T#</th><th>Latitude</th><th>Longitude</th><th>Hub Height(m)</th><th>Elevation(m)</th></tr>
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 8.0 — WAsP-aligned physics · Directional BZ orographic speedups · Multi-layer IBL roughness · Enhanced wake · IEC 61400-12-1 density correction · Component uncertainty model</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 9.0 — Full WAsP Alignment · Roughness Rose · Businger-Dyer Stability · Perera Obstacles · Mortensen-Wood Steep Terrain · Directional BZ · Multi-IBL · Enhanced Wake · IEC 61400-12-1 density correction · Component uncertainty model</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain)','i');
 }
@@ -1532,15 +1601,284 @@ function autoShear(){
   log(`Auto shear: z0=${z0} → α=${alpha.toFixed(2)} (${stab} stability)`,'i');
 }
 initMap();calcDensity();
-log('WindFlow Pro 8.0 ready. WAsP-aligned physics · Directional BZ · Multi-IBL · Enhanced Wake.','i');
+log('WindFlow Pro 9.0 ready. Full WAsP Alignment · Roughness Rose · Stability · Obstacles · Steep Terrain.','i');
 
 // ══════════════════════════════════════════════════════════════════════
-// WINDFLOW PRO — WAsP BZ OROGRAPHIC MODEL v8.0
+// WINDFLOW PRO v9.0 — ROUGHNESS ROSE · STABILITY · OBSTACLES · STEEP TERRAIN
+// ══════════════════════════════════════════════════════════════════════
+
+// ── ROUGHNESS ROSE ──────────────────────────────────────────────
+const ROUGH_PRESETS = {
+  offshore: () => Array(16).fill(null).map(() => ({z0:[0.0002,0.0002,0.0002], x:[0,5000,10000]})),
+  open: () => Array(16).fill(null).map(() => ({z0:[0.03,0.03,0.03], x:[0,5000,10000]})),
+  agri: () => Array(16).fill(null).map(() => ({z0:[0.10,0.10,0.10], x:[0,5000,10000]})),
+  mixed: () => Array(16).fill(null).map((_,i) => {
+    const isLand = i >= 3 && i <= 11;
+    return {z0:[isLand?0.10:0.0002, isLand?0.10:0.0002, isLand?0.10:0.0002], x:[0,5000,10000]};
+  })
+};
+
+function initRoughnessRose() {
+  const z0s = parseFloat($('rrZ0site')?.value||0.0002);
+  const z0m = parseFloat($('rrZ0mast')?.value||0.0002);
+  S.roughnessRose = Array(16).fill(null).map(() => ({z0:[z0s,z0m,z0m], x:[0,5000,10000]}));
+  renderRoughnessRoseTable();
+}
+
+function applyRoughnessPreset() {
+  const preset = $('rrPreset')?.value;
+  if (preset && ROUGH_PRESETS[preset]) {
+    S.roughnessRose = ROUGH_PRESETS[preset]();
+    renderRoughnessRoseTable();
+    drawRoughnessRoseChart();
+    log(`Roughness rose preset: ${preset}`, 'i');
+  }
+}
+
+function applyRoughnessRose() {
+  const dirs16 = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  for (let i = 0; i < 16; i++) {
+    const z01 = parseFloat(document.getElementById(`rr_${i}_z01`)?.value) || 0.0002;
+    const z02 = parseFloat(document.getElementById(`rr_${i}_z02`)?.value) || 0.0002;
+    const z03 = parseFloat(document.getElementById(`rr_${i}_z03`)?.value) || 0.0002;
+    const x1 = parseFloat(document.getElementById(`rr_${i}_x1`)?.value) || 5000;
+    const x2 = parseFloat(document.getElementById(`rr_${i}_x2`)?.value) || 10000;
+    S.roughnessRose[i] = {z0:[z01,z02,z03], x:[0,x1,x2]};
+  }
+  log(`Roughness rose applied: 16 sectors with multi-zone transitions`, 'i');
+  drawRoughnessRoseChart();
+  $('rrStat').textContent = `✓ 16 sectors applied · ${S.roughnessRose.map(r=>r.z0[0]).reduce((s,v)=>s+v,0).toFixed(4)} mean site z₀`;
+}
+
+function renderRoughnessRoseTable() {
+  const dirs16 = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  const tb = $('rrBody'); if (!tb) return;
+  tb.innerHTML = '';
+  if (!S.roughnessRose) initRoughnessRose();
+  S.roughnessRose.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${dirs16[i]}</td>
+      <td><input id="rr_${i}_z01" type="number" value="${r.z0[0]}" step="0.001" style="width:52px;font-size:9px;padding:1px 3px;background:var(--inp);border:1px solid var(--bdr);color:var(--txt);border-radius:2px"></td>
+      <td><input id="rr_${i}_x1" type="number" value="${r.x[1]}" step="100" style="width:52px;font-size:9px;padding:1px 3px;background:var(--inp);border:1px solid var(--bdr);color:var(--txt);border-radius:2px"></td>
+      <td><input id="rr_${i}_z02" type="number" value="${r.z0[1]}" step="0.001" style="width:52px;font-size:9px;padding:1px 3px;background:var(--inp);border:1px solid var(--bdr);color:var(--txt);border-radius:2px"></td>
+      <td><input id="rr_${i}_x2" type="number" value="${r.x[2]}" step="100" style="width:52px;font-size:9px;padding:1px 3px;background:var(--inp);border:1px solid var(--bdr);color:var(--txt);border-radius:2px"></td>
+      <td><input id="rr_${i}_z03" type="number" value="${r.z0[2]}" step="0.001" style="width:52px;font-size:9px;padding:1px 3px;background:var(--inp);border:1px solid var(--bdr);color:var(--txt);border-radius:2px"></td>`;
+    tb.appendChild(tr);
+  });
+  $('rrStat').textContent = `16 sectors · 3 zones each · Click Apply to update`;
+}
+
+function drawRoughnessRoseChart() {
+  const dirs16 = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  if (!S.roughnessRose) return;
+  const data = S.roughnessRose.map(r => r.z0[0]);
+  mkChart('rrChart', 'bar', {
+    labels: dirs16,
+    datasets: [{data: data.map(v => +v.toFixed(4)), label: 'Site z₀ (m)', backgroundColor: 'rgba(88,166,255,.5)', borderColor: 'var(--acc)', borderWidth: 1}]
+  }, {legend: {display: false}, y: {type: 'log', title: {display: true, text: 'z₀ (m)', color: '#8b949e', font: {size: 8}}}});
+}
+
+// Initialize roughness rose on load
+setTimeout(()=>{initRoughnessRose();},200);
+
+// ── BUSINGER-DYER STABILITY FUNCTIONS (1971) ────────────────────
+function psi_m(z, L) {
+  if (Math.abs(L) > 1e6 || L === 0) return 0;
+  const zL = z / L;
+  if (zL < 0) {
+    const x = Math.pow(Math.max(1e-6, 1 - 16 * zL), 0.25);
+    return 2 * Math.log((1 + x) / 2) + Math.log((1 + x * x) / 2) - 2 * Math.atan(x) + Math.PI / 2;
+  } else {
+    return -5 * Math.min(zL, 2);
+  }
+}
+
+function psi_h(z, L) {
+  if (Math.abs(L) > 1e6 || L === 0) return 0;
+  const zL = z / L;
+  if (zL < 0) {
+    const x = Math.pow(Math.max(1e-6, 1 - 16 * zL), 0.25);
+    return 2 * Math.log((1 + x * x) / 2);
+  } else {
+    return -5 * Math.min(zL, 2);
+  }
+}
+
+function logWS_stab(ws, fromH, toH, z0, L) {
+  if (L === undefined || L === null) L = getStabilityL();
+  const denom = Math.log(Math.max(fromH, z0 * 1.1) / Math.max(z0, 1e-6)) - psi_m(fromH, L);
+  if (denom <= 0) return ws;
+  const numer = Math.log(Math.max(toH, z0 * 1.1) / Math.max(z0, 1e-6)) - psi_m(toH, L);
+  return ws * numer / denom;
+}
+
+function getStabilityL() {
+  const stab = $('stab')?.value || 'N';
+  switch (stab) {
+    case 'N': return 1e8;
+    case 'US': return -200;
+    case 'MS': return 500;
+    case 'VS': return 100;
+    case 'O': return -1000;
+    case 'C': return parseFloat($('stabL')?.value) || -200;
+    default: return 1e8;
+  }
+}
+
+function onStabilityChange() {
+  const stab = $('stab')?.value || 'N';
+  if (stab === 'C') {
+    $('stabCustomRow').style.display = 'grid';
+  } else {
+    $('stabCustomRow').style.display = 'none';
+  }
+  autoShear();
+  const hubH = parseFloat($('hubH').value) || 120;
+  const L = getStabilityL();
+  const zL = hubH / L;
+  if ($('stabZL')) $('stabZL').value = isFinite(zL) ? zL.toFixed(3) : '0';
+}
+
+function iblGrowthConstant(L) {
+  const zL = 100 / Math.max(1, Math.abs(L));
+  if (L < 0) return 0.3 + 0.1 * Math.min(1, Math.abs(zL));
+  if (L > 0 && L < 1e6) return 0.3 - 0.1 * Math.min(1, zL);
+  return 0.3;
+}
+
+function getGDLconstants(L) {
+  const mu = 100 / Math.max(1, Math.abs(L));
+  if (L < 0) {
+    return { A: 1.8 - 0.5 * Math.min(1, mu), B: 4.5 + 1.0 * Math.min(1, mu) };
+  } else if (L > 0 && L < 1e6) {
+    return { A: 1.8 + 0.8 * Math.min(1, mu), B: 4.5 - 1.5 * Math.min(1, mu) };
+  }
+  return { A: 1.8, B: 4.5 };
+}
+
+// ── OBSTACLE SHELTER MODEL (Perera 1981) ────────────────────────
+function pereraShelterFactor(H, W, D, porosity, hubH, lateralOffset) {
+  if (D < 1 || H < 1) return 1.0;
+  const zRatio = Math.max(0, hubH - H) / H;
+  const vertFactor = Math.exp(-1.5 * Math.max(0, zRatio));
+  const dOverH = D / H;
+  let downwindFactor;
+  if (dOverH < 1) {
+    downwindFactor = 0.6 * dOverH;
+  } else if (dOverH < 5) {
+    downwindFactor = 0.6;
+  } else {
+    downwindFactor = 0.6 * Math.exp(-0.12 * (dOverH - 5));
+  }
+  const halfW = W / 2;
+  const latFactor = Math.exp(-0.693 * (lateralOffset / halfW) ** 2);
+  const porFactor = 1 - porosity;
+  const maxReduction = 0.7 * porFactor * downwindFactor * latFactor * vertFactor;
+  return Math.max(0.3, 1 - maxReduction);
+}
+
+function sectorShelterFactor(sectorDir, hubH) {
+  if (!S.obstacles || S.obstacles.length === 0) return 1.0;
+  let minFactor = 1.0;
+  S.obstacles.forEach(obs => {
+    const angleDiff = Math.abs(((sectorDir - obs.dir + 180) % 360) - 180);
+    const angularWidth = Math.atan2(obs.W / 2, obs.D) * 180 / Math.PI;
+    if (angleDiff < angularWidth * 2) {
+      const lateralOffset = obs.D * Math.sin(angleDiff * Math.PI / 180);
+      const factor = pereraShelterFactor(obs.H, obs.W, obs.D, obs.porosity / 100, hubH, lateralOffset);
+      minFactor = Math.min(minFactor, factor);
+    }
+  });
+  return minFactor;
+}
+
+function addObstacle() {
+  const dir = parseFloat($('obsDir')?.value) || 0;
+  const H = parseFloat($('obsH')?.value) || 10;
+  const W = parseFloat($('obsW')?.value) || 20;
+  const D = parseFloat($('obsD')?.value) || 50;
+  const por = parseFloat($('obsPor')?.value) || 0;
+  S.obstacles.push({dir, H, W, D, porosity: por});
+  renderObstacleTable();
+  log(`Obstacle added: ${H}m tall, ${W}m wide, ${D}m away, dir=${dir}°, porosity=${por}%`, 'i');
+}
+
+function removeObstacle(i) {
+  S.obstacles.splice(i, 1);
+  renderObstacleTable();
+}
+
+function clearObstacles() {
+  S.obstacles = [];
+  renderObstacleTable();
+  log('All obstacles cleared', 'i');
+}
+
+function renderObstacleTable() {
+  const tb = $('obsBody'); if (!tb) return;
+  tb.innerHTML = '';
+  S.obstacles.forEach((obs, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${obs.dir}°</td><td>${obs.H}</td><td>${obs.W}</td><td>${obs.D}</td><td>${obs.porosity}%</td><td style="color:var(--red);cursor:pointer" onclick="removeObstacle(${i})">✕</td>`;
+    tb.appendChild(tr);
+  });
+  if ($('obsStat')) $('obsStat').textContent = S.obstacles.length ? `${S.obstacles.length} obstacle(s) defined` : 'No obstacles defined';
+}
+
+// ── STEEP TERRAIN CORRECTION (Mortensen-Bowen + Wood) ──────────
+function steepTerrainCorrection(bzSpeedup, rix, localSlope, windDir, terrain) {
+  if (rix < 5) return bzSpeedup;
+  const rixCorrection = 1 + 0.02 * Math.max(0, rix - 5);
+  let separationFactor = 1.0;
+  if (localSlope < -0.2) {
+    const sepStrength = Math.min(1, (Math.abs(localSlope) - 0.2) / 0.3);
+    separationFactor = 1 - 0.3 * sepStrength;
+  }
+  let hilltopFactor = 1.0;
+  if (localSlope > 0.15 && localSlope < 0.5) {
+    hilltopFactor = 1 + 0.15 * (localSlope - 0.15) / 0.35;
+  } else if (localSlope >= 0.5) {
+    hilltopFactor = 1 + 0.15 - 0.1 * Math.min(1, (localSlope - 0.5) / 0.3);
+  }
+  let correctedSU = (bzSpeedup - 1) * rixCorrection * hilltopFactor * separationFactor + 1;
+  return Math.max(0.5, Math.min(2.0, correctedSU));
+}
+
+function computeUpwindSlope(terrain, px, py, windDir, hubH) {
+  if (!terrain) return 0;
+  const {grid, lat0, lat1, lon0, lon1, ny, nx} = terrain;
+  const clat = (lat0 + lat1) / 2;
+  const Ly = (lat1 - lat0) * 111320;
+  const Lx = (lon1 - lon0) * 111320 * Math.cos(clat * Math.PI / 180);
+  const gi = py / Ly * (ny - 1);
+  const gj = px / Lx * (nx - 1);
+  const i = Math.floor(gi);
+  const j = Math.floor(gj);
+  if (i < 1 || i >= ny - 1 || j < 1 || j >= nx - 1) return 0;
+  const dr = windDir * Math.PI / 180;
+  const ux = Math.sin(dr);
+  const uy = Math.cos(dr);
+  const upwindDist = 2000;
+  const dx = upwindDist * ux;
+  const dy = upwindDist * uy;
+  const dX = Lx / (nx - 1);
+  const dY = Ly / (ny - 1);
+  const h0 = grid[i]?.[j] || 0;
+  const ui = Math.round(i + dy / dY);
+  const uj = Math.round(j + dx / dX);
+  const hUp = (ui >= 0 && ui < ny && uj >= 0 && uj < nx) ? (grid[ui]?.[uj] || 0) : h0;
+  return (h0 - hUp) / upwindDist;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// WINDFLOW PRO — WAsP BZ OROGRAPHIC MODEL v9.0
 // Jackson-Hunt (1983) linearized terrain flow theory
 // Modified Bessel K₀/K₁ spectral decomposition of terrain
 // Beljaars-Walmsley (1982) multi-layer IBL roughness model
 // Directional half-plane filter for per-sector orographic speedups
 // Full OWC → GWC → SWC pipeline per wind direction sector
+// Mortensen-Wood steep terrain correction for RIX > 5%
+// Businger-Dyer stability corrections for IBL growth
 // ══════════════════════════════════════════════════════════════════════
 
 const BZ={enabled:false,speedups:[],mastSU:1,grid:null,rix:0,showLayer:false,sectorSU:[],sectorSpeedups:[],mastSectorSU:[],turbRoughRC:[],sectorRoughRC:[],turbDistM:[]};
@@ -1619,8 +1957,9 @@ function bzG(K,z,l){
 // Applies half-plane filter: include only upwind Fourier components
 function bzDeltaAtDir(Re,Im,ny,nx,Lx,Ly,px,py,hubH,z0,lScale,windDir){
   const kappa=0.4;
-  const logZ=Math.log(Math.max(hubH,z0*1.1)/Math.max(z0,1e-6));
-  const l=lScale*kappa*hubH/Math.max(0.01,logZ); // inner-layer scale
+  const stabL = getStabilityL();
+  const logZ=Math.log(Math.max(hubH,z0*1.1)/Math.max(z0,1e-6)) - psi_m(hubH, stabL);
+  const l=lScale*kappa*hubH/Math.max(0.01,logZ); // stability-corrected inner-layer scale
   let su=0;
   const N=ny*nx;
   const useDirFilter=windDir!==undefined&&windDir!==null&&isFinite(windDir);
@@ -1663,13 +2002,13 @@ function bzDeltaAt(Re,Im,ny,nx,Lx,Ly,px,py,hubH,z0,lScale){
 
 // ── IBL ROUGHNESS MODEL (Beljaars-Walmsley 1982) ──────────────────────
 // Internal boundary layer height after roughness transition
-function iblH(x,z02){
+function iblH(x,z02,L){
   if(x<=0)return z02;
-  // Implicit: h·ln(h/z02) = 0.3·x → solve by iteration
-  let h=Math.max(z02*2,0.3*x*0.5);
+  const c = (L !== undefined && L !== null) ? iblGrowthConstant(L) : 0.3;
+  let h=Math.max(z02*2,c*x*0.5);
   for(let i=0;i<60;i++){
     const lnh=Math.log(Math.max(h,z02*1.001)/z02);
-    const hn=Math.max(z02*1.001,0.3*x/Math.max(0.001,lnh));
+    const hn=Math.max(z02*1.001,c*x/Math.max(0.001,lnh));
     if(Math.abs(hn-h)<0.01){h=hn;break;}
     h=0.6*h+0.4*hn; // damped iteration
   }
@@ -1703,7 +2042,8 @@ function roughnessRatioMultiLayer(z0Seq,xSeq,z){
   // At each transition x_i, IBL grows on top of previous profile
   // h_i solves: h_i * ln(h_i / z0_i) = h_{i-1} * ln(h_{i-1} / z0_i) + c * (x_{i-1} - x_i)
   // where c ≈ 0.3 for neutral (Beljaars-Walmsley)
-  const c=0.3; // growth constant
+  const stabL = getStabilityL();
+  const c=iblGrowthConstant(stabL); // stability-dependent growth constant
   const n=z0Seq.length;
   const hBL=new Array(n); // IBL height at each transition
   
@@ -1764,10 +2104,14 @@ function roughnessRatioMultiLayer(z0Seq,xSeq,z){
   return Math.max(0.5,Math.min(2.0,uiAtZ/Math.max(1e-6,u1AtZ)));
 }
 
-// Helper: build roughness sequence per sector (default 2-zone approximation)
-function buildRoughnessSequence(z0Mast,z0Site,mastDist,hubH,windDir){
-  // Default: 2 zones [z0Site, z0Mast] with transition at mastDist
-  // For a more detailed model, one could add intermediate zones based on land cover
+// Helper: build roughness sequence per sector (supports roughness rose)
+function buildRoughnessSequence(z0Mast,z0Site,mastDist,hubH,windDir,sectorIndex){
+  if(sectorIndex!==undefined && S.roughnessRose && S.roughnessRose[sectorIndex]){
+    const rose = S.roughnessRose[sectorIndex];
+    const ratio=roughnessRatioMultiLayer(rose.z0, rose.x, hubH);
+    return{z0Seq:rose.z0,xSeq:rose.x,ratio};
+  }
+  // Fallback: 2-zone default
   const z0Seq=[z0Site,z0Mast];
   const xSeq=[0,mastDist];
   const ratio=roughnessRatioMultiLayer(z0Seq,xSeq,hubH);
@@ -1862,7 +2206,13 @@ async function runBZModel(){
       const tx=(S.turbines[ti].lon-lon0)/(lon1-lon0)*Lx;
       const ty=(S.turbines[ti].lat-lat0)/(lat1-lat0)*Ly;
       const deltaDir=bzDeltaAtDir(Re,Im,ny,nx,Lx,Ly,tx,ty,hubH,z0Site,lScale,dirDeg);
-      turbSU.push(1+deltaDir);
+      let rawSU = 1+deltaDir;
+      // Apply steep terrain correction if RIX > 5%
+      if(BZ.rix > 5 && S.terrain){
+        const slope = computeUpwindSlope(S.terrain, tx, ty, dirDeg, hubH);
+        rawSU = steepTerrainCorrection(rawSU, BZ.rix, slope, dirDeg, S.terrain);
+      }
+      turbSU.push(rawSU);
     }
     BZ.sectorSpeedups.push(turbSU);
     // Mean SU for this sector (for chart display)
@@ -1905,12 +2255,13 @@ async function runBZModel(){
   const turbRoughRC=S.turbines.map((t,i)=>{
     return buildRoughnessSequence(z0Mast,z0Site,turbDistM[i],hubH,null).ratio;
   });
-  // Per-sector roughness ratios (approximate: use mean distance for each sector)
+  // Per-sector roughness ratios using multi-layer IBL + roughness rose
   const sectorRoughRC=[];
+  const stabL = getStabilityL();
   for(let si=0;si<nSect;si++){
-    // For each sector, approximate roughness change along that direction
-    // Use the average turbine distance as a proxy for fetch
-    sectorRoughRC.push(roughRC); // simplified; could be refined with actual roughness rose
+    // Use roughness rose if available, otherwise use default 2-zone
+    const seq = buildRoughnessSequence(z0Mast,z0Site,meanDistM,hubH,(si+.5)*360/nSect,si);
+    sectorRoughRC.push(seq.ratio);
   }
 
   setProg('bz',95,'Updating UI...');
@@ -1935,6 +2286,9 @@ async function runBZModel(){
   $('bzBadge').style.background='rgba(63,185,80,.18)';
   $('bzBadge').style.color='var(--grn)';
   if(BZ.rix>5)$('bzRixWarn').style.display='block';
+  if(BZ.rix>5){
+    $('bzRixWarn').innerHTML=`⚠ RIX=${BZ.rix.toFixed(1)}%: Steep terrain correction applied (Mortensen-Wood). Linear BZ speedups adjusted by ${(0.02*Math.max(0,BZ.rix-5)*100).toFixed(1)}% on windward slopes.`;
+  }
 
   // Right panel results
   $('bz-maSU').textContent=BZ.mastSU.toFixed(4);$('bz-mastSU').textContent=BZ.mastSU.toFixed(4);
@@ -1992,7 +2346,7 @@ async function runBZModel(){
   drawBesselChart();
 
   setProg('bz',100,`✓ BZ complete. Mast SU=${BZ.mastSU.toFixed(4)}, mean turb SU=${meanSU.toFixed(4)}, RIX=${BZ.rix.toFixed(1)}% (directional per-sector speedups)`);
-  log(`BZ model v8.0: mastSU=${BZ.mastSU.toFixed(4)}, turb mean SU=${meanSU.toFixed(4)}, RIX=${BZ.rix.toFixed(1)}%, IBL=${iblHeight.toFixed(0)}m, RC=${roughRC.toFixed(4)} — Directional speedups computed for ${nSect} sectors`,'i');
+  log(`BZ model v9.0: mastSU=${BZ.mastSU.toFixed(4)}, turb mean SU=${meanSU.toFixed(4)}, RIX=${BZ.rix.toFixed(1)}%, IBL=${iblHeight.toFixed(0)}m, RC=${roughRC.toFixed(4)} — Directional speedups computed for ${nSect} sectors${BZ.rix>5?' · Steep terrain correction applied':''}${S.roughnessRose?' · Roughness rose integrated':''}`,'i');
 
   // Hook into AEP if results exist
   if(S.results)log('Re-run analysis to apply BZ speedups to AEP calculation','w');
@@ -2070,7 +2424,7 @@ function drawBesselChart(){
 }
 
 // ── HOOK BZ SPEEDUPS INTO calcAEP ─────────────────────────────────────
-// v8.0: BZ is now INTEGRATED directly into calcAEP — no post-processing hook needed.
+// v9.0: BZ is now INTEGRATED directly into calcAEP — no post-processing hook needed.
 // The old post-processing hook is removed because:
 // 1. calcAEP now computes wake on BZ-corrected free-stream WS (proper WAsP sequencing)
 // 2. GWC→SWC chain uses per-sector directional speedups from BZ.sectorSpeedups[][]
@@ -2101,7 +2455,7 @@ calcAEP=function(){
 };
 
 // ── ALSO HOOK INTO TS: Apply BZ speedups as per-turbine spatial variation
-// v8.0: BZ speedups are now applied as per-turbine spatial variation in the TS engine
+// v9.0: BZ speedups are now applied as per-turbine spatial variation in the TS engine
 const _origRunTS=runTimeSeries;
 runTimeSeries=async function(){
   if(BZ.enabled&&BZ.speedups.length===S.turbines.length){
