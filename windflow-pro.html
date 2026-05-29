@@ -93,10 +93,10 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
     </div>
     <div>
       <div class="card"><div class="card-title green">Upload Boundary</div>
-        <div class="upload-zone" id="boundaryUploadZone"><input type="file" accept=".kml,.geojson,.json" onchange="handleBoundaryUpload(event)"><span class="upload-icon">📂</span><span class="upload-text">Drop KML / GeoJSON boundary</span><span class="upload-hint">.kml .geojson .json</span></div>
+        <div class="upload-zone" id="boundaryUploadZone"><input type="file" accept=".kml,.kmz,.geojson,.json" onchange="handleBoundaryUpload(event)"><span class="upload-icon">📂</span><span class="upload-text">Drop KML / KMZ / GeoJSON boundary</span><span class="upload-hint">.kml .kmz .geojson .json</span></div>
       </div>
       <div class="card"><div class="card-title green">Upload Turbine Layout</div>
-        <div class="upload-zone" id="layoutUploadZone"><input id="impCSV" type="file" accept=".csv,.kml,.geojson,.json" onchange="importLayout(event)"><span class="upload-icon">📍</span><span class="upload-text">Drop CSV / KML / GeoJSON layout</span><span class="upload-hint">CSV: lat,lon | KML: Points | GeoJSON: Points</span></div>
+        <div class="upload-zone" id="layoutUploadZone"><input id="impCSV" type="file" accept=".csv,.kml,.kmz,.geojson,.json,.shp" onchange="importLayout(event)"><span class="upload-icon">📍</span><span class="upload-text">Drop CSV / KML / KMZ / GeoJSON / SHP layout</span><span class="upload-hint">CSV: lat,lon | KML/KMZ: Points | GeoJSON: Points | UTM auto-detect</span></div>
       </div>
       <div class="card"><div class="card-title gold">Turbine Grid Generator</div>
         <div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">Rows</label><input class="fi" id="gR" type="number" value="2" min="1" max="15"></div><div class="fg"><label class="fl">Cols</label><input class="fi" id="gC" type="number" value="5" min="1" max="15"></div><div class="fg"><label class="fl">Spac(D)</label><input class="fi" id="gS" type="number" value="7" min="3" max="20" step="0.5"></div></div>
@@ -129,7 +129,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <optgroup label="Generic"><option value="2mw">IEC-IIA 2MW D=80m HH=80m</option><option value="4mw" selected>IEC-IIA 4MW D=150m HH=120m</option><option value="6mw">IEC-IIIA 6MW D=180m HH=140m</option></optgroup>
           <optgroup label="Vestas"><option value="v90">V90-2.0MW</option><option value="v110">V110-2.0MW</option><option value="v136">V136-4.2MW</option><option value="v150">V150-5.6MW</option><option value="v164">V164-9.5MW</option><option value="v174">V174-9.5MW</option></optgroup>
           <optgroup label="Siemens Gamesa"><option value="sg108">SG 108-4.5MW</option><option value="sg132">SG 132-6.6MW</option><option value="sg170">SG 170-7.0MW</option><option value="sg222">SG 222-13.0MW</option></optgroup>
-          <optgroup label="Nordex"><option value="n117">N117/3600</option><option value="n133">N133/4800</option><option value="n149">N149/5700</option><option value="n163">N163/6800</option></optgroup>
+          <optgroup label="Nordex"><option value="n117">N117/3600</option><option value="n133">N133/4800</option><option value="n149">N149/5700</option><option value="n163">N163/6800</option><option value="n163_7mw">N163/7000 138m HH</option></optgroup>
           <optgroup label="GE"><option value="ge136">GE 136-4.8MW</option><option value="ge158">GE 158-6.1MW</option><option value="ge220">GE 220-14.0MW</option></optgroup>
           <optgroup label="Enercon"><option value="e115">E-115 EP3 4.2MW</option><option value="e126">E-126 7.58MW</option><option value="e160">E-160 EP5 5.5MW</option></optgroup>
           <optgroup label="Goldwind"><option value="gw121">GW121/2500</option><option value="gw136">GW136/4200</option><option value="gw171">GW171/6450</option></optgroup>
@@ -1658,28 +1658,93 @@ function exportReport(){
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain)','i');
 }
-function importLayout(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const text=e.target.result;const ts=[];const hh=parseFloat($('hubH').value)||120;
-  // Detect file format
-  if(f.name.endsWith('.kml')){
-    // Parse KML — extract Point coordinates
+function importLayout(ev){const f=ev.target.files[0];if(!f)return;
+  // KMZ files need to be read as ArrayBuffer and unzipped
+  if(f.name.toLowerCase().endsWith('.kmz')){
+    const r=new FileReader();r.onload=function(e){
+      try{
+        const admZip=typeof JSZip!=='undefined'?null:null; // JSZip not available, use manual ZIP parsing
+        // Manual KMZ (ZIP) parsing: find and extract the .kml file
+        const buf=new Uint8Array(e.target.result);
+        const text=new TextDecoder().decode(buf);
+        // Simple approach: find the KML content within the ZIP
+        // ZIP files have local file headers starting with PK\x03\x04
+        let kmlText='';
+        for(let i=0;i<buf.length-4;i++){
+          if(buf[i]===0x50&&buf[i+1]===0x4B&&buf[i+2]===0x03&&buf[i+3]===0x04){
+            // Found a local file header
+            const compMethod=buf[i+8]|(buf[i+9]<<8);
+            const compSize=buf[i+18]|(buf[i+19]<<8)|(buf[i+20]<<16)|(buf[i+21]<<24);
+            const uncompSize=buf[i+22]|(buf[i+23]<<8)|(buf[i+24]<<16)|(buf[i+25]<<24);
+            const nameLen=buf[i+26]|(buf[i+27]<<8);
+            const extraLen=buf[i+28]|(buf[i+29]<<8);
+            const dataStart=i+30+nameLen+extraLen;
+            const nameBytes=buf.slice(i+30,i+30+nameLen);
+            const entryName=new TextDecoder().decode(nameBytes);
+            if(entryName.toLowerCase().endsWith('.kml')){
+              if(compMethod===0){
+                // Stored (no compression)
+                kmlText=new TextDecoder().decode(buf.slice(dataStart,dataStart+uncompSize));
+              }else if(compMethod===8){
+                // Deflated — use DecompressionStream if available
+                if(typeof DecompressionStream!=='undefined'){
+                  try{
+                    const ds=new DecompressionStream('deflate-raw');
+                    const writer=ds.writable.getWriter();
+                    const reader=ds.readable.getReader();
+                    writer.write(buf.slice(dataStart,dataStart+compSize));
+                    writer.close();
+                    const chunks=[];
+                    reader.read().then(function pump(result){
+                      if(result.done){kmlText=new TextDecoder().decode(function(){const c=new Uint8Array(chunks.reduce((s,a)=>s+a.length,0));let o=0;chunks.forEach(ch=>{c.set(ch,o);o+=ch.length;});return c;}());processKMLLayout(kmlText,f.name);return;}
+                      chunks.push(result.value);return reader.read().then(pump);
+                    });
+                    return; // async path
+                  }catch(de){log('DecompressionStream failed, trying raw text search','w');}
+                }
+                // Fallback: search for XML content in the raw buffer
+                const rawText=new TextDecoder('utf-8',{fatal:false}).decode(buf);
+                const xmlStart=rawText.indexOf('<?xml');
+                const kmlEnd=rawText.lastIndexOf('</kml>');
+                if(xmlStart>=0&&kmlEnd>xmlStart){kmlText=rawText.substring(xmlStart,kmlEnd+6);}
+              }
+              break;
+            }
+          }
+        }
+        if(kmlText){processKMLLayout(kmlText,f.name);}
+        else{alert('Could not extract KML from KMZ file. Try extracting the .kml manually and uploading that.');}
+      }catch(err){alert('KMZ parse error: '+err.message);log('KMZ parse error: '+err.message,'e');}
+    };r.readAsArrayBuffer(f);ev.target.value='';return;
+  }
+  const r=new FileReader();r.onload=e=>{const text=e.target.result;processLayoutText(text,f.name);};r.readAsText(f);ev.target.value='';
+}
+function processKMLLayout(kmlText,fileName){
+  const ts=[];const hh=parseFloat($('hubH').value)||120;
+  const parser=new DOMParser();const doc=parser.parseFromString(kmlText,'text/xml');
+  const pts=doc.querySelectorAll('Placemark');
+  pts.forEach((pm,i)=>{const coordEl=pm.querySelector('coordinates');if(coordEl){const vals=coordEl.textContent.trim().split(/[,\s]+/);const lon=+vals[0],lat=+vals[1];if(!isNaN(lat)&&!isNaN(lon)){const name=pm.querySelector('name')?.textContent||'T'+(ts.length+1);ts.push({lat,lon,hh,name});}}});
+  if(!ts.length){alert('No valid turbine positions found in KML/KMZ');return;}
+  S.turbines=ts;refreshTable();updateMarkers();autoCenterMap();
+  log(`Imported ${ts.length} turbines from ${fileName}`,'i');
+}
+function processLayoutText(text,fileName){
+  const ts=[];const hh=parseFloat($('hubH').value)||120;let isUTM=false,utmZone=null;
+  if(fileName.endsWith('.kml')){
     const parser=new DOMParser();const doc=parser.parseFromString(text,'text/xml');
     const pts=doc.querySelectorAll('Placemark');
     pts.forEach((pm,i)=>{const coordEl=pm.querySelector('coordinates');if(coordEl){const vals=coordEl.textContent.trim().split(/[,\s]+/);const lon=+vals[0],lat=+vals[1];if(!isNaN(lat)&&!isNaN(lon)){const name=pm.querySelector('name')?.textContent||'T'+(ts.length+1);ts.push({lat,lon,hh,name});}}});
-  }else if(f.name.endsWith('.geojson')||f.name.endsWith('.json')){
-    // Parse GeoJSON — extract Point/MultiPoint features
+  }else if(fileName.endsWith('.geojson')||fileName.endsWith('.json')){
     try{const geojson=JSON.parse(text);const features=geojson.features||[geojson];
     features.forEach((feat,i)=>{if(feat.geometry){const g=feat.geometry;
       if(g.type==='Point'){ts.push({lat:g.coordinates[1],lon:g.coordinates[0],hh,name:feat.properties?.name||'T'+(ts.length+1)});}
       else if(g.type==='MultiPoint'){g.coordinates.forEach(c=>ts.push({lat:c[1],lon:c[0],hh,name:'T'+(ts.length+1)}));}
     }});}catch(err){alert('GeoJSON parse error: '+err.message);return;}
   }else{
-    // CSV — support lat/lon, x/y (UTM auto-detect), with header detection
     const lines=text.split('\n').filter(l=>l.trim());
     const headers=lines[0].toLowerCase().split(/[,\t;]/).map(s=>s.trim());
-    let isUTM=false,utmZone=null;
     const xIdx=headers.indexOf('x'),yIdx=headers.indexOf('y');
     const latIdx=headers.indexOf('lat'),lonIdx=headers.indexOf('lon')>=0?headers.indexOf('lon'):headers.indexOf('longitude');
-    // Check for UTM coordinates
     if(xIdx>=0&&yIdx>=0&&lines.length>1){const testX=parseFloat(lines[1].split(/[,\t;]/)[xIdx]);if(testX>10000)isUTM=true;}
     for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/).map(s=>s.trim());if(i===0&&isNaN(+p[0]))continue;
       let lat,lon;
@@ -1691,10 +1756,25 @@ function importLayout(ev){const f=ev.target.files[0];if(!f)return;const r=new Fi
     }
     if(isUTM&&utmZone)log(`UTM Zone ${utmZone}N auto-detected and converted to lat/lon`,'i');
   }
-  if(!ts.length){alert('No valid turbine positions found in file. Supported: CSV (lat,lon or x,y UTM), KML (Points), GeoJSON (Points)');return;}
-  S.turbines=ts;refreshTable();updateMarkers();
-  log(`Imported ${ts.length} turbines from ${f.name}${isUTM?' (UTM auto-converted)':''}`,'i');
-  };r.readAsText(f);ev.target.value='';}
+  if(!ts.length){alert('No valid turbine positions found. Supported: CSV (lat,lon or x,y UTM), KML/KMZ (Points), GeoJSON (Points)');return;}
+  S.turbines=ts;refreshTable();updateMarkers();autoCenterMap();
+  log(`Imported ${ts.length} turbines from ${fileName}${isUTM?' (UTM auto-converted)':''}`,'i');
+}
+function autoCenterMap(){
+  if(!S.turbines.length||!leafMap)return;
+  const lats=S.turbines.map(t=>t.lat),lons=S.turbines.map(t=>t.lon);
+  const cLat=lats.reduce((s,v)=>s+v,0)/lats.length;
+  const cLon=lons.reduce((s,v)=>s+v,0)/lons.length;
+  leafMap.setView([cLat,cLon],11);
+  // Also update ERA5/terrain coordinates
+  if($('e5La'))$('e5La').value=cLat.toFixed(2);
+  if($('e5Lo'))$('e5Lo').value=cLon.toFixed(2);
+  if($('terrLa'))$('terrLa').value=cLat.toFixed(3);
+  if($('terrLo'))$('terrLo').value=cLon.toFixed(3);
+  if($('gLat'))$('gLat').value=cLat.toFixed(3);
+  if($('gLon'))$('gLon').value=cLon.toFixed(3);
+  log(`Map centered on layout: ${cLat.toFixed(4)}, ${cLon.toFixed(4)}`,'i');
+}
 function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)&&ws>=0&&ws<80){sp.push(ws);dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;const vs=sp.filter(v=>v>0.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
 function dlFile(c,f,m){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:m}));a.download=f;a.click();}
 function showTab(id){/* legacy stub */}
@@ -3733,6 +3813,7 @@ const PC_PRESETS={
   'n133':{rated:4800,D:133,hh:110,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,85,300,650,1150,1780,2510,3320,4050,4500,4720,4800,4800,4800,4800,4800,4800,4800,4800,4800,4800,4800,4800,0],ct:[0,0,0,.89,.86,.83,.80,.77,.72,.65,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
   'n149':{rated:5700,D:149,hh:130,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,95,340,740,1300,2020,2860,3780,4620,5200,5500,5680,5700,5700,5700,5700,5700,5700,5700,5700,5700,5700,5700,0],ct:[0,0,0,.89,.86,.83,.80,.77,.72,.65,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
   'n163':{rated:6800,D:163,hh:148,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,110,400,870,1530,2380,3370,4450,5450,6150,6550,6750,6800,6800,6800,6800,6800,6800,6800,6800,6800,6800,6800,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'n163_7mw':{rated:7000,D:163,hh:138,cutIn:2,cutOut:26,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26],pw:[0,0,0,42,283,659,1189,1919,2883,4044,5199,6156,6703,6953,7000,7000,7000,7000,7000,7000,6882,6331,5794,5270,4760,4264,0],ct:[0,0,0,.892,.845,.82,.809,.806,.787,.73,.652,.559,.464,.378,.307,.25,.204,.169,.145,.128,.114,.093,.075,.06,.048,.04,0]},
   'ge136':{rated:4800,D:136,hh:110,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,85,300,650,1150,1780,2510,3320,4050,4500,4720,4800,4800,4800,4800,4800,4800,4800,4800,4800,4800,4800,4800,0],ct:[0,0,0,.89,.86,.83,.80,.77,.72,.65,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
   'ge158':{rated:6100,D:158,hh:128,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,100,360,780,1380,2150,3050,4050,4950,5650,6000,6100,6100,6100,6100,6100,6100,6100,6100,6100,6100,6100,6100,0],ct:[0,0,0,.89,.86,.83,.80,.77,.72,.65,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
   'ge220':{rated:14000,D:220,hh:150,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,170,620,1340,2360,3700,5250,7000,8600,10300,11800,13000,13700,14000,14000,14000,14000,14000,14000,14000,14000,14000,14000,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
