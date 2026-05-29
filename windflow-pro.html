@@ -2,596 +2,401 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 11.6</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<title>WindFlow Pro 12.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
-:root{--bg:#0d1117;--pan:#161b22;--pan2:#21262d;--bdr:#30363d;--acc:#58a6ff;--grn:#3fb950;--wrn:#d29922;--red:#f85149;--txt:#e6edf3;--muted:#8b949e;--inp:#0a0e14}
-*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;overflow:hidden}
-body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;font-size:11px}
-#top{display:flex;align-items:center;gap:7px;padding:5px 11px;background:var(--pan);border-bottom:1px solid var(--bdr);flex-shrink:0;flex-wrap:wrap}
-.logo{font-size:13px;font-weight:700;color:var(--acc);letter-spacing:2px;white-space:nowrap}
-.ver{font-size:9px;color:var(--muted);white-space:nowrap}
-.vsep{width:1px;height:18px;background:var(--bdr)}
-.btn{padding:4px 9px;border:1px solid var(--bdr);background:var(--pan);color:var(--txt);cursor:pointer;border-radius:3px;font-size:10px;font-family:inherit;transition:.15s;white-space:nowrap}
-.btn:hover{border-color:var(--acc);color:var(--acc)}.btn.pri{background:var(--acc);border-color:var(--acc);color:#000;font-weight:700}.btn.pri:hover{background:#79c0ff}
-.btn.grn{background:var(--grn);border-color:var(--grn);color:#000;font-weight:700}
-.btn.drw{background:rgba(210,153,34,.18);border-color:var(--wrn);color:var(--wrn);font-weight:700}
-.btn.drw.active{background:var(--wrn);color:#000}
-.btn:disabled{opacity:.35;cursor:not-allowed}
-#main{display:flex;flex:1;overflow:hidden;min-height:0}
-#side{width:312px;min-width:312px;background:var(--pan);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
-#stabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0;overflow-x:auto}
-.stab{flex-shrink:0;padding:6px 7px;font-size:9px;font-family:inherit;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap}
-.stab.on{color:var(--acc);border-bottom-color:var(--acc)}
-#sc{flex:1;overflow-y:auto;padding:8px}.sp2{display:none}.sp2.on{display:block}
-#rside{width:298px;min-width:298px;background:var(--pan);border-left:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
-#rtabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0;overflow-x:auto}
-.rtab{flex-shrink:0;padding:6px 7px;font-size:9px;font-family:inherit;background:none;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap}
-.rtab.on{color:var(--acc);border-bottom-color:var(--acc)}
-#rc{flex:1;overflow-y:auto;padding:8px}.rp{display:none}.rp.on{display:block}
-#mapw{flex:1;position:relative;overflow:hidden}#map{width:100%;height:100%}
+:root{--bg:#07111e;--bg2:#0d1e30;--bg3:#132435;--bg4:#1a2f42;--mint:#00d68f;--mint2:rgba(0,214,143,.12);--mint3:rgba(0,214,143,.06);--gold:#f5a623;--gold2:rgba(245,166,35,.12);--red:#e05050;--red2:rgba(224,80,80,.12);--sky:#4ab3e8;--sky2:rgba(74,179,232,.12);--border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.04);--text:rgba(255,255,255,.88);--text2:rgba(255,255,255,.5);--text3:rgba(255,255,255,.28);--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;--radius:8px;--radius2:4px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}body{font-family:var(--sans);color:var(--text);background:var(--bg);min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:.6rem 1.2rem;border-bottom:1px solid var(--border);background:var(--bg)}.topbar-brand{display:flex;align-items:center;gap:.6rem}.brand-badge{background:var(--mint);color:var(--bg);font-family:var(--mono);font-size:.6rem;font-weight:600;padding:.2rem .5rem;border-radius:2px;letter-spacing:.08em}.brand-title{font-size:.82rem;font-weight:600;letter-spacing:.04em;color:var(--text)}.brand-sub{font-size:.58rem;color:var(--text3);font-family:var(--mono);margin-top:.05rem}.topbar-right{display:flex;align-items:center;gap:.5rem}
+a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);text-decoration:none;padding:.35rem .7rem;border:1px solid var(--border);border-radius:var(--radius2);transition:all .2s}a.back-link:hover{color:var(--mint);border-color:var(--mint)}
+.stepper{display:flex;align-items:center;padding:.5rem 1.2rem;border-bottom:1px solid var(--border);background:var(--bg2);gap:0;overflow-x:auto}.step-item{display:flex;align-items:center;gap:.4rem;padding:.4rem .6rem;cursor:pointer;border-radius:var(--radius2);transition:background .2s;white-space:nowrap;flex-shrink:0}.step-item:hover{background:rgba(255,255,255,.04)}.step-item.active{background:var(--mint2)}.step-item.done .step-num{background:rgba(0,214,143,.2);border-color:var(--mint);color:var(--mint)}.step-item.active .step-num{background:var(--mint);border-color:var(--mint);color:var(--bg)}.step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;border:1.5px solid var(--border);color:var(--text3);transition:all .25s;flex-shrink:0;font-family:var(--mono)}.step-label{font-size:.58rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);transition:color .2s}.step-item.active .step-label{color:var(--mint)}.step-item.done .step-label{color:var(--text2)}.step-connector{width:18px;height:1px;background:var(--border);flex-shrink:0;margin:0 2px}
+.main{max-width:1480px;margin:0 auto;padding:1rem 1.2rem 3rem}.step-panel{display:none;animation:fadeIn .35s ease}.step-panel.active{display:block}@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem;margin-bottom:1rem}.card-title{font-size:.58rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text3);margin-bottom:.8rem;display:flex;align-items:center;gap:.5rem}.card-title::after{content:'';flex:1;height:1px;background:var(--border)}.card-title.green{color:var(--mint)}.card-title.gold{color:var(--gold)}.card-title.sky{color:var(--sky)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.fg{margin-bottom:.7rem}.fl{display:block;font-size:.55rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:.25rem;font-family:var(--mono)}.fi,.fs{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);font-family:var(--sans);font-size:.78rem;color:var(--text);padding:.4rem .6rem;outline:none;transition:border-color .2s}.fi:focus,.fs:focus{border-color:var(--mint)}.fs option{background:var(--bg);color:var(--text)}.form-row{display:flex;gap:.5rem;align-items:end}.form-row .fg{flex:1}
+.btn{font-family:var(--sans);font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border:none;padding:.5rem 1.1rem;border-radius:var(--radius2);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:.4rem}.btn-primary{background:var(--mint);color:var(--bg)}.btn-primary:hover{background:#00f0a0;transform:translateY(-1px)}.btn-ghost{background:none;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{border-color:var(--mint);color:var(--mint)}.btn-danger{background:var(--red2);color:var(--red);border:1px solid rgba(224,80,80,.2)}.btn-danger:hover{background:rgba(224,80,80,.2)}.btn-sm{padding:.3rem .65rem;font-size:.58rem}.btn-gold{background:var(--gold);color:var(--bg)}.btn-gold:hover{background:#ffc04a}.btn-sky{background:var(--sky);color:var(--bg)}.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:1.2rem;text-align:center;cursor:pointer;transition:all .25s;background:var(--bg3);position:relative}.upload-zone:hover{border-color:var(--mint);background:var(--mint3)}.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}.upload-zone.loaded{border-color:var(--mint);border-style:solid;background:var(--mint3)}.upload-icon{font-size:1.2rem;margin-bottom:.2rem;display:block;opacity:.4}.upload-text{font-size:.74rem;color:var(--text2);font-weight:300}.upload-hint{font-size:.56rem;color:var(--text3);margin-top:.15rem;font-family:var(--mono)}
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:auto}.tbl-wrap::-webkit-scrollbar{width:4px;height:4px}.tbl-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}table.dt{width:100%;border-collapse:collapse;font-size:.7rem;min-width:500px}table.dt th{text-align:left;font-size:.52rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:.45rem .6rem;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--bg2);z-index:1;font-family:var(--mono)}table.dt td{padding:.4rem .6rem;border-bottom:1px solid var(--border2);color:var(--text2);font-weight:300;white-space:nowrap}table.dt tr:last-child td{border-bottom:none}table.dt tr:hover td{background:rgba(255,255,255,.02)}
+.metric-item{padding:.8rem;background:var(--bg3);text-align:center;border:1px solid var(--border);border-radius:var(--radius2)}.metric-val{display:block;font-family:var(--mono);font-size:1.3rem;font-weight:600;color:var(--mint);line-height:1}.metric-val.gold{color:var(--gold)}.metric-val.bad{color:var(--red)}.metric-val.sky{color:var(--sky)}.metric-label{display:block;font-size:.48rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-top:.2rem;font-family:var(--mono)}
+.alert{padding:.7rem .9rem;border-radius:var(--radius2);font-size:.72rem;line-height:1.5;margin-bottom:.7rem;border-left:3px solid}.alert-info{background:var(--sky2);border-color:var(--sky);color:var(--text)}.alert-ok{background:var(--mint2);border-color:var(--mint);color:var(--text)}.alert-warn{background:var(--gold2);border-color:var(--gold);color:var(--text)}.alert-err{background:var(--red2);border-color:var(--red);color:var(--text)}
+.progress{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:.4rem}.progress-bar{height:100%;border-radius:2px;transition:width .4s;background:var(--mint)}
+.canvas-wrap{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative}.canvas-wrap canvas{display:block;width:100%;height:auto}
+.nav-row{display:flex;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border)}.nav-row-right{display:flex;gap:.5rem;align-items:center}
+.badge{display:inline-block;font-size:.48rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.12rem .4rem;border-radius:2px;font-family:var(--mono)}.badge-ok{background:var(--mint2);color:var(--mint);border:1px solid rgba(0,214,143,.2)}.badge-warn{background:var(--gold2);color:var(--gold);border:1px solid rgba(245,166,35,.2)}.badge-sky{background:var(--sky2);color:var(--sky);border:1px solid rgba(74,179,232,.2)}
+.kpi-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:1rem}.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:.6rem;text-align:center}.kpi-v{display:block;font-family:var(--mono);font-size:1.1rem;font-weight:600;color:var(--mint);line-height:1.1}.kpi-v.g{color:var(--mint)}.kpi-v.o{color:var(--gold)}.kpi-v.r{color:var(--red)}.kpi-v.b{color:var(--sky)}.kpi-l{display:block;font-size:.46rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-top:.2rem;font-family:var(--mono)}
+.legend-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:center}.legend-pill{display:flex;align-items:center;gap:.25rem;font-size:.58rem;color:var(--text3);font-family:var(--mono)}.legend-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+#siteMap{height:460px;border-radius:var(--radius);border:1px solid var(--border)}.leaflet-container{background:var(--bg)!important;font-family:var(--mono)!important}
+.ds-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}.ds-card{padding:.8rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);transition:all .2s}.ds-card:hover{border-color:var(--mint)}.ds-card.active{border-color:var(--mint);background:var(--mint3)}.ds-name{font-size:.76rem;font-weight:600;color:var(--text);margin-bottom:.25rem}.ds-desc{font-size:.62rem;color:var(--text3);margin-bottom:.5rem;line-height:1.4}.ds-status{font-size:.52rem;font-family:var(--mono);margin-bottom:.5rem}.spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--mint);border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.tab-bar{display:flex;gap:2px;margin-bottom:.8rem;border-bottom:1px solid var(--border);padding-bottom:0}.tab-btn{font-family:var(--mono);font-size:.58rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.4rem .8rem;cursor:pointer;border:none;background:none;color:var(--text3);border-bottom:2px solid transparent;transition:all .2s}.tab-btn:hover{color:var(--text2)}.tab-btn.active{color:var(--mint);border-bottom-color:var(--mint)}.tab-panel{display:none}.tab-panel.active{display:block}
+.mast-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:.8rem;margin-bottom:.6rem}.mast-card.primary{border-color:var(--mint);background:var(--mint3)}.mast-card .mast-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}.mast-card .mast-name{font-family:var(--mono);font-size:.7rem;font-weight:600;color:var(--mint)}.mast-card.primary .mast-name{color:var(--mint)}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:900px){.g2,.g3{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}.kpi-strip{grid-template-columns:repeat(3,1fr)}.form-row{flex-direction:column}.stepper{padding:.4rem}.main{padding:.7rem .8rem 2rem}.ds-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.g4{grid-template-columns:1fr}.step-label{display:none}}
+.hidden{display:none!important}
+/* Engine log styling (preserved from v11) */
+#elog{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius2);padding:.4rem .6rem;height:120px;overflow-y:auto;font-size:.65rem;font-family:var(--mono);color:var(--text3)}.li{color:var(--mint)}.lw{color:var(--gold)}.le{color:var(--red)}
+/* Map info overlay */
+#mapInfo{position:absolute;bottom:6px;left:6px;background:rgba(7,17,30,.88);border:1px solid var(--border);border-radius:var(--radius2);padding:.35rem .6rem;font-size:.62rem;color:var(--text3);pointer-events:none;z-index:500;line-height:1.6;font-family:var(--mono)}#mapInfo span{color:var(--mint)}
+#drawStatus{display:none;position:absolute;top:6px;left:50%;transform:translateX(-50%);background:rgba(245,166,35,.92);color:var(--bg);font-weight:700;padding:.3rem 1rem;border-radius:var(--radius2);font-size:.68rem;z-index:600;pointer-events:none}
 #contCanvas{position:absolute;top:0;left:0;pointer-events:none;z-index:400}
-.sec{margin-bottom:10px}
-.sh{font-size:9px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.9px;padding:4px 0;border-bottom:1px solid var(--bdr);margin-bottom:5px;display:flex;justify-content:space-between;align-items:center}
-.fld{margin-bottom:6px}.fld label{display:block;font-size:9px;color:var(--muted);margin-bottom:2px;text-transform:uppercase}
-.fld input,.fld select{width:100%;padding:4px 6px;background:var(--inp);border:1px solid var(--bdr);color:var(--txt);border-radius:3px;font-family:inherit;font-size:10px}
-.fld input:focus,.fld select:focus{border-color:var(--acc);outline:none}
-.r2{display:grid;grid-template-columns:1fr 1fr;gap:5px}.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
-.sg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:7px}
-.sc2{background:var(--pan2);border-radius:3px;padding:6px;border:1px solid var(--bdr)}
-.sv{font-size:14px;font-weight:700;color:var(--acc);line-height:1.2}.sl{font-size:8px;color:var(--muted);text-transform:uppercase}
-.prg{height:3px;background:var(--bdr);border-radius:2px;overflow:hidden;margin:4px 0}
-.pb{height:100%;background:var(--acc);transition:width .25s;width:0}.pt{font-size:9px;color:var(--muted);min-height:12px}
-.dtbl{width:100%;border-collapse:collapse;font-size:9px}
-.dtbl th{background:var(--pan2);padding:3px 4px;text-align:left;font-size:8px;color:var(--muted);border-bottom:1px solid var(--bdr);white-space:nowrap}
-.dtbl td{padding:3px 4px;border-bottom:1px solid #1c2128;white-space:nowrap}
-.dtbl tr:hover td{background:var(--pan2)}
-.cw{position:relative;margin-bottom:6px}
-#elog{background:var(--inp);border:1px solid var(--bdr);border-radius:3px;padding:5px 7px;height:80px;overflow-y:auto;font-size:9px}
-.li{color:var(--grn)}.lw{color:var(--wrn)}.le{color:var(--red)}
-#sbar{padding:3px 10px;background:#080c10;border-top:1px solid var(--bdr);font-size:9px;color:var(--muted);display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap}
-#sbar span{color:var(--acc)}
-.ibox{background:var(--pan2);border:1px solid var(--bdr);border-radius:3px;padding:6px;font-size:9px;margin-bottom:6px;color:var(--muted)}
-#mapInfo{position:absolute;bottom:8px;left:8px;background:rgba(13,17,23,.88);border:1px solid var(--bdr);border-radius:4px;padding:5px 8px;font-size:9px;color:var(--muted);pointer-events:none;z-index:500;line-height:1.7}
-#mapInfo span{color:var(--acc)}
-#drawStatus{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(210,153,34,.92);color:#000;font-weight:700;padding:4px 14px;border-radius:3px;font-size:10px;z-index:600;pointer-events:none}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px}
-.wsc-row{display:flex;align-items:center;gap:5px;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:9px}
-.wsc-step{font-size:8px;color:var(--muted);width:138px;flex-shrink:0}
-.wsc-val{color:var(--acc);font-weight:700;width:62px;flex-shrink:0}
-.wsc-delta{font-size:8px;width:52px;flex-shrink:0}
-.wsc-bar{flex:1;height:5px;background:var(--pan2);border-radius:2px;overflow:hidden}
-.wsc-fill{height:100%;background:var(--acc);border-radius:2px}
+/* Wind rose canvas sizing */
+.rose-canvas-wrap{width:100%;max-width:420px;margin:0 auto}
+/* PC chart */
+.pc-chart-wrap{height:250px}
+/* Mast list */
+.mast-list{max-height:320px;overflow-y:auto}
+/* Financial table */
+.fin-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
 </style>
 </head>
 <body>
-<div id="top">
-  <span class="logo">⟁ WINDFLOW PRO</span>
-  <span class="ver">v11.6 · WAsP-Aligned · Auto-Calibration ON · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · WAsP Proxies</span>
-  <div class="vsep"></div>
-  <button class="btn drw" id="drawBtn" onclick="toggleDraw()">✏ Draw Boundary</button>
-  <button class="btn" onclick="doneDraw()">✓ Close Poly</button>
-  <button class="btn" onclick="clearBoundary()">✕ Bnd</button>
-  <div class="vsep"></div>
-  <button class="btn" onclick="loadDemo('horns')">🎯 Horns Rev</button>
-  <button class="btn" onclick="loadDemo('portugal')">🎯 Portugal</button>
-  <button class="btn pri" id="runBtn" onclick="runAnalysis()">▶▶ RUN ANALYSIS</button>
-  <button class="btn grn" onclick="exportReport()">↓ Report</button>
-  <button class="btn" onclick="exportAEPCSV()">↓ AEP CSV</button>
-  <div style="flex:1"></div>
-  <span id="tbst" style="font-size:9px;color:var(--muted)">Ready — click Demo</span>
+<div class="topbar">
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 12.0</span></div><div class="brand-sub">WAsP-Aligned · Step Wizard · Auto-Calibration · BZ Orographic · Deep-Array Wake</div></div></div>
+  <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
-<div id="main">
-<div id="side">
-<div id="stabs">
-  <button class="stab on" data-tab="setup">SETUP</button>
-  <button class="stab" data-tab="bnd">BOUNDARY</button>
-  <button class="stab" data-tab="era5">ERA5</button>
-  <button class="stab" data-tab="terr">TERRAIN</button>
-  <button class="stab" data-tab="mcp">MCP</button>
-  <button class="stab" data-tab="rough">ROUGH.</button>
-  <button class="stab" data-tab="ts">TIME SER.</button>
-  <button class="stab" data-tab="bz">BZ MODEL</button>
-  <button class="stab" data-tab="calib">CALIB</button>
+<div class="stepper" id="stepper">
+  <div class="step-item active" data-step="1" onclick="goToStep(1)"><div class="step-num">1</div><span class="step-label">Site</span></div><div class="step-connector"></div>
+  <div class="step-item" data-step="2" onclick="goToStep(2)"><div class="step-num">2</div><span class="step-label">Power Curve</span></div><div class="step-connector"></div>
+  <div class="step-item" data-step="3" onclick="goToStep(3)"><div class="step-num">3</div><span class="step-label">Wind Data</span></div><div class="step-connector"></div>
+  <div class="step-item" data-step="4" onclick="goToStep(4)"><div class="step-num">4</div><span class="step-label">Terrain</span></div><div class="step-connector"></div>
+  <div class="step-item" data-step="5" onclick="goToStep(5)"><div class="step-num">5</div><span class="step-label">Flow Model</span></div><div class="step-connector"></div>
+  <div class="step-item" data-step="6" onclick="goToStep(6)"><div class="step-num">6</div><span class="step-label">Reporting</span></div>
 </div>
-<div id="sc">
-<div id="sp-setup" class="sp2 on">
-<div class="sec"><div class="sh">① PROJECT &amp; TURBINE</div>
-  <div class="fld"><label>Project Name</label><input id="projName" value="New Project" oninput="$('sbProj').textContent=this.value"></div>
-  <div class="r2"><div class="fld"><label>Hub Height (m)</label><input id="hubH" type="number" value="120"></div><div class="fld"><label>Rotor Ø (m)</label><input id="rotD" type="number" value="150"></div></div>
-  <div class="fld"><label>Turbine Preset</label>
-    <select id="tcls" onchange="applyPreset()"><option value="2mw">IEC-IIA 2MW D=80m HH=80m</option><option value="4mw" selected>IEC-IIA 4MW D=150m HH=120m</option><option value="6mw">IEC-IIIA 6MW D=180m HH=140m</option></select>
+<div class="main">
+
+<!-- ===== STEP 1: SITE ===== -->
+<div class="step-panel active" id="step1">
+  <div class="card" style="margin-bottom:.8rem"><div class="card-title green">Project Information</div>
+    <div class="g3" style="gap:.5rem"><div class="fg"><label class="fl">Project Name</label><input class="fi" id="projName" value="New Project" oninput="$('sbProj').textContent=this.value"></div><div class="fg"><label class="fl">Developer</label><input class="fi" id="projDev" placeholder="e.g. Wind Energy Corp"></div><div class="fg"><label class="fl">Project Number</label><input class="fi" id="projNum" placeholder="PRJ-2026-001"></div></div>
   </div>
-  <div class="r3"><div class="fld"><label>Rated (kW)</label><input id="ratedPow" type="number" value="4000"></div><div class="fld"><label>Wake k</label><input id="wakeK" type="number" value="0.04" step="0.005"></div><div class="fld"><label>Losses %</label><input id="otherLoss" type="number" value="5" step="0.5"></div></div>
-  <div class="r2">
-    <div class="fld"><label>Wake Model</label><select id="wakeModel"><option value="jensen">Jensen/PARK</option><option value="eddy">Eddy Viscosity</option></select></div>
-    <div class="fld"><label>Sectors</label><select id="sects"><option value="12">12</option><option value="16" selected>16</option><option value="24">24</option></select></div>
-  </div>
-</div>
-<div class="sec"><div class="sh">② TURBINE LAYOUT
-  <button class="btn" style="padding:2px 5px;font-size:9px" onclick="$('impCSV').click()">📍 CSV</button>
-  <input id="impCSV" type="file" accept=".csv" style="display:none" onchange="importLayout(event)">
-</div>
-  <div class="ibox" style="padding:5px">
-    <div style="font-size:9px;margin-bottom:4px;color:var(--muted)">⊞ GRID GENERATOR</div>
-    <div class="r3"><div class="fld"><label>Rows</label><input id="gR" type="number" value="2" min="1" max="15"></div><div class="fld"><label>Cols</label><input id="gC" type="number" value="5" min="1" max="15"></div><div class="fld"><label>Spac(D)</label><input id="gS" type="number" value="7" min="3" max="20" step="0.5"></div></div>
-    <div class="r2"><div class="fld"><label>Center Lat</label><input id="gLat" type="number" value="55.500" step="0.001"></div><div class="fld"><label>Center Lon</label><input id="gLon" type="number" value="7.900" step="0.001"></div></div>
-    <button class="btn" style="width:100%" onclick="generateGrid()">⊞ Generate Grid</button>
-  </div>
-  <div class="ibox" style="padding:5px">
-    <div style="font-size:9px;margin-bottom:3px;color:var(--muted)">➕ ADD MANUALLY (or click map)</div>
-    <div class="r2"><div class="fld"><label>Lat</label><input id="manLat" type="number" step="0.0001"></div><div class="fld"><label>Lon</label><input id="manLon" type="number" step="0.0001"></div></div>
-    <button class="btn" style="width:100%" onclick="addManual()">➕ Add Turbine</button>
-  </div>
-  <div id="tCnt" style="font-size:9px;color:var(--muted);margin-bottom:3px">0 turbines</div>
-  <div style="max-height:110px;overflow-y:auto;border:1px solid var(--bdr);border-radius:3px">
-    <table class="dtbl"><thead><tr><th>#</th><th>Lat</th><th>Lon</th><th>HH</th><th>Elev</th><th>✕</th></tr></thead><tbody id="tbody"></tbody></table>
-  </div>
-  <div style="display:flex;gap:4px;margin-top:4px">
-    <button class="btn" style="flex:1;color:var(--red);border-color:var(--red);font-size:9px" onclick="clearTurbines()">🗑 Clear</button>
-    <button class="btn" style="flex:1;font-size:9px" onclick="exportLayoutCSV()">↓ CSV</button>
-    <button class="btn" style="flex:1;font-size:9px" onclick="exportLayoutKML()">↓ KML</button>
-  </div>
-</div>
-<div class="sec"><div class="sh">③ WIND DATA &amp; MAST
-  <button class="btn" style="padding:2px 5px;font-size:9px" onclick="$('impWind').click()">💨 Import</button>
-  <input id="impWind" type="file" accept=".csv,.tab" style="display:none" onchange="importWind(event)">
-</div>
-  <div class="r2"><div class="fld"><label>Mast Height (m)</label><input id="mastH" type="number" value="100"></div>
-    <div class="fld"><label>Roughness z₀ (m)</label>
-      <select id="z0sel" onchange="$('z0val').value=this.value;calcDensity();autoShear()"><option value="0.0002" selected>0.0002 Offshore</option><option value="0.03">0.03 Open flat</option><option value="0.10">0.10 Agricultural</option><option value="0.40">0.40 Obstacles</option><option value="1.50">1.50 Urban</option></select>
+  <div class="alert alert-info">Draw a polygon on the map to define the wind farm boundary, or upload a KML/GeoJSON file. Country and coordinates will be auto-detected.</div>
+  <div class="g2">
+    <div class="card"><div class="card-title green">Site Map</div>
+      <div style="position:relative">
+        <div id="siteMap"></div>
+        <canvas id="contCanvas"></canvas>
+        <div id="drawStatus"></div>
+        <div id="mapInfo">Lat: <span id="ovLat">—</span> Lon: <span id="ovLon">—</span><br>Elev: <span id="ovEl">—</span> | WS: <span id="ovWS">—</span> | SU: <span id="ovSU">—</span></div>
+      </div>
+      <div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
+        <button class="btn btn-sm btn-gold" id="drawBtn" onclick="toggleDraw()">✏ Draw Boundary</button>
+        <button class="btn btn-sm btn-ghost" onclick="doneDraw()">✓ Close Poly</button>
+        <button class="btn btn-sm btn-danger" onclick="clearBoundary()">✕ Clear</button>
+      </div>
+      <div id="bndStats" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">No boundary defined</div>
+    </div>
+    <div>
+      <div class="card"><div class="card-title green">Upload Boundary</div>
+        <div class="upload-zone" id="boundaryUploadZone"><input type="file" accept=".kml,.geojson,.json" onchange="handleBoundaryUpload(event)"><span class="upload-icon">📂</span><span class="upload-text">Drop KML / GeoJSON boundary</span><span class="upload-hint">.kml .geojson .json</span></div>
+      </div>
+      <div class="card"><div class="card-title green">Upload Turbine Layout</div>
+        <div class="upload-zone" id="layoutUploadZone"><input id="impCSV" type="file" accept=".csv,.kml,.geojson,.json" onchange="importLayout(event)"><span class="upload-icon">📍</span><span class="upload-text">Drop CSV / KML / GeoJSON layout</span><span class="upload-hint">CSV: lat,lon | KML: Points | GeoJSON: Points</span></div>
+      </div>
+      <div class="card"><div class="card-title gold">Turbine Grid Generator</div>
+        <div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">Rows</label><input class="fi" id="gR" type="number" value="2" min="1" max="15"></div><div class="fg"><label class="fl">Cols</label><input class="fi" id="gC" type="number" value="5" min="1" max="15"></div><div class="fg"><label class="fl">Spac(D)</label><input class="fi" id="gS" type="number" value="7" min="3" max="20" step="0.5"></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Center Lat</label><input class="fi" id="gLat" type="number" value="55.500" step="0.001"></div><div class="fg"><label class="fl">Center Lon</label><input class="fi" id="gLon" type="number" value="7.900" step="0.001"></div></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="generateGrid()">⊞ Generate Grid</button>
+      </div>
+      <div class="card"><div class="card-title gold">Capacity Optimizer</div>
+        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Target MW</label><input class="fi" id="targetMW" type="number" value="100" min="1"></div><div class="fg"><label class="fl">Min Spacing (D)</label><input class="fi" id="minSpacD" type="number" value="5" min="3" max="15" step="0.5"></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Pattern</label><select class="fs" id="layoutPat"><option value="grid">Regular Grid</option><option value="stagger">Staggered</option><option value="wind">Wind-optimized</option></select></div><div class="fg"><label class="fl">Prevail Dir (°)</label><input class="fi" id="prevWD" type="number" value="270" min="0" max="359"></div></div>
+        <button class="btn btn-gold" style="width:100%;margin-top:.5rem" onclick="optimizeLayout()">⚡ Optimize Layout</button>
+        <div id="optResult" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">—</div>
+      </div>
     </div>
   </div>
-  <div class="r2"><div class="fld"><label>Mast Lat</label><input id="mastLat" type="number" value="55.500" step="0.001"></div><div class="fld"><label>Mast Lon</label><input id="mastLon" type="number" value="7.900" step="0.001"></div></div>
-  <div style="display:none"><input id="z0val" value="0.0002"></div>
-  <div id="windStat" style="font-size:9px;color:var(--muted)">No wind data — ERA5 tab or Import</div>
+  <div class="card"><div class="card-title sky">Turbine List</div>
+    <div class="g3" style="gap:.4rem;margin-bottom:.5rem"><div class="fg"><label class="fl">Lat</label><input class="fi" id="manLat" type="number" step="0.0001"></div><div class="fg"><label class="fl">Lon</label><input class="fi" id="manLon" type="number" step="0.0001"></div><div class="fg"><label class="fl">&nbsp;</label><button class="btn btn-sm btn-primary" style="width:100%" onclick="addManual()">➕ Add</button></div></div>
+    <div id="tCnt" style="font-size:.62rem;color:var(--text3);margin-bottom:.3rem">0 turbines</div>
+    <div class="tbl-wrap" style="max-height:180px"><table class="dt"><thead><tr><th>#</th><th>Lat</th><th>Lon</th><th>HH</th><th>Elev</th><th>✕</th></tr></thead><tbody id="tbody"></tbody></table></div>
+    <div style="display:flex;gap:.4rem;margin-top:.4rem"><button class="btn btn-sm btn-danger" onclick="clearTurbines()">🗑 Clear</button><button class="btn btn-sm btn-ghost" onclick="exportLayoutCSV()">↓ CSV</button><button class="btn btn-sm btn-ghost" onclick="exportLayoutKML()">↓ KML</button></div>
+  </div>
+  <div class="nav-row"><div></div><button class="btn btn-primary" onclick="goToStep(2)">Next: Power Curve →</button></div>
 </div>
-<div class="sec"><div class="sh">④ ATMOSPHERE</div>
-  <div class="r3"><div class="fld"><label>Elev (m)</label><input id="siteElev" type="number" value="0" oninput="calcDensity()"></div><div class="fld"><label>Temp (°C)</label><input id="siteTemp" type="number" value="10" oninput="calcDensity()"></div><div class="fld"><label>ρ (kg/m³)</label><input id="airDen" type="number" value="1.225" step="0.001"></div></div>
-  <div class="r2">
-    <div class="fld"><label>Shear α</label><input id="shearA" type="number" value="0.14" step="0.01"></div>
-    <div class="fld"><label>Stability</label>
-      <select id="stab" onchange="onStabilityChange()">
-        <option value="N" selected>Neutral (L=∞)</option>
-        <option value="US">Unstable (L=-200m)</option>
-        <option value="MS">Mildly Stable (L=500m)</option>
-        <option value="VS">Very Stable (L=100m)</option>
-        <option value="O">Offshore (L=-1000m)</option>
-        <option value="C">Custom L</option>
-      </select>
+
+<!-- ===== STEP 2: WTG POWER CURVE ===== -->
+<div class="step-panel" id="step2">
+  <div class="g2">
+    <div>
+      <div class="card"><div class="card-title green">Turbine Presets</div>
+        <div class="fg"><label class="fl">Select Turbine</label><select class="fs" id="tcls" onchange="applyPreset()">
+          <optgroup label="Generic"><option value="2mw">IEC-IIA 2MW D=80m HH=80m</option><option value="4mw" selected>IEC-IIA 4MW D=150m HH=120m</option><option value="6mw">IEC-IIIA 6MW D=180m HH=140m</option></optgroup>
+          <optgroup label="Vestas"><option value="v90">V90-2.0MW</option><option value="v110">V110-2.0MW</option><option value="v136">V136-4.2MW</option><option value="v150">V150-5.6MW</option><option value="v164">V164-9.5MW</option><option value="v174">V174-9.5MW</option></optgroup>
+          <optgroup label="Siemens Gamesa"><option value="sg108">SG 108-4.5MW</option><option value="sg132">SG 132-6.6MW</option><option value="sg170">SG 170-7.0MW</option><option value="sg222">SG 222-13.0MW</option></optgroup>
+          <optgroup label="Nordex"><option value="n117">N117/3600</option><option value="n133">N133/4800</option><option value="n149">N149/5700</option><option value="n163">N163/6800</option></optgroup>
+          <optgroup label="GE"><option value="ge136">GE 136-4.8MW</option><option value="ge158">GE 158-6.1MW</option><option value="ge220">GE 220-14.0MW</option></optgroup>
+          <optgroup label="Enercon"><option value="e115">E-115 EP3 4.2MW</option><option value="e126">E-126 7.58MW</option><option value="e160">E-160 EP5 5.5MW</option></optgroup>
+          <optgroup label="Goldwind"><option value="gw121">GW121/2500</option><option value="gw136">GW136/4200</option><option value="gw171">GW171/6450</option></optgroup>
+          <optgroup label="MingYang"><option value="my158">MySE 158-7.25MW</option><option value="my184">MySE 184-11MW</option><option value="my230">MySE 230-18MW</option></optgroup>
+          <optgroup label="Custom"><option value="custom">Upload Custom Power Curve</option></optgroup>
+        </select></div>
+      </div>
+      <div class="card" id="customPCCard" style="display:none"><div class="card-title gold">Upload Custom Power Curve</div>
+        <div class="upload-zone" id="pcUploadZone"><input id="pcFileInput" type="file" accept=".csv,.txt" onchange="handlePowerCurveUpload(event)"><span class="upload-icon">📊</span><span class="upload-text">Upload CSV: wind_speed, power_kW, ct</span><span class="upload-hint">Header row optional · Cut-in/out auto-detected</span></div>
+        <div id="pcUploadStatus" style="font-size:.6rem;color:var(--text3);margin-top:.3rem"></div>
+      </div>
+      <div class="card"><div class="card-title sky">Turbine Parameters</div>
+        <div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">Hub Height (m)</label><input class="fi" id="hubH" type="number" value="120"></div><div class="fg"><label class="fl">Rotor Ø (m)</label><input class="fi" id="rotD" type="number" value="150"></div><div class="fg"><label class="fl">Rated (kW)</label><input class="fi" id="ratedPow" type="number" value="4000"></div></div>
+        <div class="g3" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wake k</label><input class="fi" id="wakeK" type="number" value="0.04" step="0.005"></div><div class="fg"><label class="fl">Losses %</label><input class="fi" id="otherLoss" type="number" value="5" step="0.5"></div><div class="fg"><label class="fl">Sectors</label><select class="fs" id="sects"><option value="12">12</option><option value="16" selected>16</option><option value="24">24</option></select></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wake Model</label><select class="fs" id="wakeModel"><option value="jensen">Jensen/PARK</option><option value="eddy">Eddy Viscosity</option></select></div><div class="fg"><label class="fl">&nbsp;</label><div style="padding-top:.25rem"><label style="font-size:.62rem;cursor:pointer;display:flex;align-items:center;gap:.3rem"><input type="checkbox" id="rotorAvgCB" checked style="accent-color:var(--mint)"><span>Rotor-averaged WS</span></label></div></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="card"><div class="card-title green">Power Curve Visualization</div>
+        <div class="pc-chart-wrap"><canvas id="pcChart"></canvas></div>
+      </div>
+      <div class="card"><div class="card-title gold">Thrust Coefficient Curve</div>
+        <div class="pc-chart-wrap"><canvas id="ctChart"></canvas></div>
+      </div>
     </div>
   </div>
-  <div class="r2" id="stabCustomRow" style="display:none">
-    <div class="fld"><label>Monin-Obukhov L (m)</label><input id="stabL" type="number" value="-200" step="10"></div>
-    <div class="fld"><label>z/L</label><input id="stabZL" type="number" value="0" step="0.01" readonly></div>
-  </div>
-  <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-    <input type="checkbox" id="rotorAvgCB" checked style="accent-color:var(--acc)">
-    <label for="rotorAvgCB" style="font-size:9px;color:var(--txt);cursor:pointer">Rotor-averaged WS (9-pt Gaussian quadrature over rotor disk)</label>
-  </div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(1)">← Site</button><button class="btn btn-primary" onclick="goToStep(3)">Next: Wind Data →</button></div>
 </div>
-<div class="sec"><div class="sh">ENGINE LOG <button class="btn" style="padding:1px 5px;font-size:8px" onclick="$('elog').innerHTML=''">Clr</button></div><div id="elog"></div></div>
-</div>
-<div id="sp-bnd" class="sp2">
-<div class="sec"><div class="sh">✏ WIND FARM BOUNDARY</div>
-  <div class="ibox">Click "Draw Boundary" (top bar) → click map → double-click or "Close Poly" to finish. Then set target MW and optimize.</div>
-  <div id="bndStats" style="font-size:9px;color:var(--muted);margin-bottom:6px">No boundary defined</div>
-</div>
-<div class="sec"><div class="sh">⚡ CAPACITY-BASED OPTIMIZER</div>
-  <div class="r2"><div class="fld"><label>Target Capacity (MW)</label><input id="targetMW" type="number" value="100" min="1"></div><div class="fld"><label>Min Spacing (D)</label><input id="minSpacD" type="number" value="5" min="3" max="15" step="0.5"></div></div>
-  <div class="r2">
-    <div class="fld"><label>Layout Pattern</label><select id="layoutPat"><option value="grid">Regular Grid</option><option value="stagger">Staggered Rows</option><option value="wind">Wind-optimized</option></select></div>
-    <div class="fld"><label>Prevail. Wind Dir (°)</label><input id="prevWD" type="number" value="270" min="0" max="359"></div>
-  </div>
-  <button class="btn pri" style="width:100%;margin-bottom:4px" onclick="optimizeLayout()">⚡ Optimize Layout to Target MW</button>
-  <div id="optResult" style="font-size:9px;color:var(--muted)">—</div>
-</div>
-<div class="sec"><div class="sh">⬇ TERRAIN + ROUGHNESS IN BOUNDARY</div>
-  <div class="r2"><div class="fld"><label>Grid Res</label><select id="bndGrid"><option value="20" selected>20×20</option><option value="30">30×30</option></select></div><div class="fld"><label>Contour Int</label><select id="bndCI"><option value="auto" selected>Auto</option><option value="5">5m</option><option value="10">10m</option><option value="20">20m</option></select></div></div>
-  <button class="btn" style="width:100%;margin-bottom:4px" onclick="downloadTerrainBoundary()">⬇ Terrain within Boundary</button>
-  <button class="btn" style="width:100%;margin-bottom:4px" onclick="downloadRoughness()">⬇ OSM Roughness Map</button>
-  <div id="roughStat" style="font-size:9px;color:var(--muted)">—</div>
-</div>
-</div>
-<div id="sp-era5" class="sp2">
-<div class="sec"><div class="sh">⬇ ERA5 / ERA5T (Open-Meteo)</div>
-  <div class="ibox">Free · No key · Parallel year batching · 1940→present (ERA5T for recent)</div>
-  <div class="r2"><div class="fld"><label>Latitude</label><input id="e5La" type="number" value="55.50" step="0.01"></div><div class="fld"><label>Longitude</label><input id="e5Lo" type="number" value="7.90" step="0.01"></div></div>
-  <div class="r2"><div class="fld"><label>From Year</label><input id="e5Sy" type="number" value="2020" min="1940" max="2025"></div><div class="fld"><label>To Year</label><input id="e5Ey" type="number" value="2023" min="1940" max="2025"></div></div>
-  <div class="fld"><label>Height</label><select id="e5H"><option value="100" selected>100m (ERA5/ERA5T)</option><option value="10">10m</option></select></div>
-  <button class="btn pri" style="width:100%;margin-bottom:5px" onclick="downloadERA5()">⬇ Download ERA5/ERA5T (Parallel)</button>
-  <div class="prg"><div id="e5pb" class="pb"></div></div><div id="e5pt" class="pt">—</div>
-  <div id="e5out" style="display:none;margin-top:6px">
-    <div class="sg">
-      <div class="sc2"><div class="sv" id="e5WS">—</div><div class="sl">Mean WS m/s</div></div>
-      <div class="sc2"><div class="sv" id="e5RC">—</div><div class="sl">Records</div></div>
-      <div class="sc2"><div class="sv" id="e5WA">—</div><div class="sl">Weibull A</div></div>
-      <div class="sc2"><div class="sv" id="e5WK">—</div><div class="sl">Weibull k</div></div>
-      <div class="sc2"><div class="sv" id="e5PD">—</div><div class="sl">Power Density W/m²</div></div>
-      <div class="sc2"><div class="sv" id="e5EL">—</div><div class="sl">ERA5 Elevation m</div></div>
+
+<!-- ===== STEP 3: WIND DATA ===== -->
+<div class="step-panel" id="step3">
+  <div class="g2">
+    <div>
+      <div class="card"><div class="card-title green">Mast Configuration</div>
+        <div id="mastList" class="mast-list"></div>
+        <div style="display:flex;gap:.4rem;margin-top:.5rem"><button class="btn btn-sm btn-primary" onclick="addMast()">➕ Add Mast</button><button class="btn btn-sm btn-ghost" onclick="$('mastFileInput').click()">📁 Import CSV</button><input id="mastFileInput" type="file" accept=".csv" style="display:none" onchange="importMastData(event)"></div>
+      </div>
+      <div class="card" id="mastEditCard" style="display:none"><div class="card-title sky">Edit Mast</div>
+        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Name</label><input class="fi" id="mastName"></div><div class="fg"><label class="fl">Height (m)</label><input class="fi" id="mastH" type="number" value="100"></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Latitude</label><input class="fi" id="mastLat" type="number" value="55.500" step="0.001"></div><div class="fg"><label class="fl">Longitude</label><input class="fi" id="mastLon" type="number" value="7.900" step="0.001"></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Start Date</label><input class="fi" id="mastStart" type="date"></div><div class="fg"><label class="fl">End Date</label><input class="fi" id="mastEnd" type="date"></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Roughness z₀</label><select class="fs" id="z0sel" onchange="$('z0val').value=this.value;calcDensity();autoShear()"><option value="0.0002" selected>0.0002 Offshore</option><option value="0.03">0.03 Open</option><option value="0.10">0.10 Agricultural</option><option value="0.40">0.40 Obstacles</option><option value="1.50">1.50 Urban</option></select></div><div class="fg"><label class="fl">Primary</label><select class="fs" id="mastPrimary"><option value="1" selected>Yes (Reference)</option><option value="0">No</option></select></div></div>
+        <div style="display:none"><input id="z0val" value="0.0002"></div>
+        <div style="display:flex;gap:.4rem;margin-top:.5rem"><button class="btn btn-sm btn-primary" onclick="saveMast()">💾 Save</button><button class="btn btn-sm btn-danger" onclick="removeMast()">🗑 Remove</button></div>
+      </div>
+      <div class="card"><div class="card-title gold">Upload Wind Data</div>
+        <div class="upload-zone" id="windUploadZone"><input id="impWind" type="file" accept=".csv,.tab" onchange="importWind(event)"><span class="upload-icon">💨</span><span class="upload-text">Upload wind time-series CSV</span><span class="upload-hint">Columns: timestamp, ws, wd or ws, wd</span></div>
+        <div id="windStat" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">No wind data — use ERA5 download or Import</div>
+      </div>
     </div>
-    <div class="cw" style="height:110px"><canvas id="e5Chart"></canvas></div>
-    <div style="display:flex;gap:4px;margin-top:4px">
-      <button class="btn" style="flex:1;font-size:9px" onclick="exportWindCSV()">↓ CSV</button>
-      <button class="btn" style="flex:1;font-size:9px" onclick="exportWindTab()">↓ WAsP .tab</button>
+    <div>
+      <div class="card"><div class="card-title green">Download Reference Wind Data</div>
+        <div class="g2" style="gap:.4rem;margin-bottom:.5rem"><div class="fg"><label class="fl">Height</label><select class="fs" id="e5H"><option value="100" selected>100m</option><option value="10">10m</option></select></div><div class="fg"><label class="fl">Period</label><div class="g2" style="gap:.3rem"><input class="fi" id="e5Sy" type="number" value="2020" min="1940" max="2025" style="font-size:.7rem"><input class="fi" id="e5Ey" type="number" value="2023" min="1940" max="2025" style="font-size:.7rem"></div></div></div>
+        <div class="g2" style="gap:.4rem;margin-bottom:.5rem"><div class="fg"><label class="fl">Lat</label><input class="fi" id="e5La" type="number" value="55.50" step="0.01"></div><div class="fg"><label class="fl">Lon</label><input class="fi" id="e5Lo" type="number" value="7.90" step="0.01"></div></div>
+        <div class="ds-grid">
+          <div class="ds-card" id="ds_era5"><div class="ds-name">ERA5 / ERA5T</div><div class="ds-desc">Open-Meteo API · Free · 1940→present</div><button class="btn btn-sm btn-primary" onclick="downloadERA5()">⬇ Download</button><div class="progress" id="e5pb_wrap"><div class="progress-bar" id="e5pb" style="width:0"></div></div><div id="e5pt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 3.0</div><div class="ds-desc">Global Wind Atlas · Free · 250m resolution</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_merra2"><div class="ds-name">MERRA-2</div><div class="ds-desc">NASA POWER API · Free · 1980→present</div><button class="btn btn-sm btn-ghost" onclick="downloadMERRA2()">⬇ Download</button><div id="merra2Status" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_ncep"><div class="ds-name">NCEP/NCAR</div><div class="ds-desc">Reanalysis · Free · 1948→present</div><button class="btn btn-sm btn-ghost" onclick="downloadNCEP()">⬇ Download</button><div id="ncepStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+        </div>
+        <div class="alert alert-info" style="font-size:.62rem;margin-top:.5rem">Country-specific: NEWA (EU) · NREL Wind (USA) · BARRA2 (AU) · CSIR (ZA) · INMET (BR) · CMA (CN)</div>
+      </div>
+      <div id="e5out" style="display:none"><div class="card"><div class="card-title sky">ERA5 Results</div>
+        <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="e5WS">—</div><div class="metric-label">Mean WS m/s</div></div><div class="metric-item"><div class="metric-val sky" id="e5WA">—</div><div class="metric-label">Weibull A</div></div><div class="metric-item"><div class="metric-val gold" id="e5WK">—</div><div class="metric-label">Weibull k</div></div><div class="metric-item"><div class="metric-val sky" id="e5PD">—</div><div class="metric-label">Power W/m²</div></div><div class="metric-item"><div class="metric-val" id="e5RC">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val gold" id="e5EL">—</div><div class="metric-label">Elevation m</div></div></div>
+        <div class="canvas-wrap" style="height:180px;margin-top:.5rem"><canvas id="e5Chart"></canvas></div>
+        <div style="display:flex;gap:.4rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" onclick="exportWindCSV()">↓ CSV</button><button class="btn btn-sm btn-ghost" onclick="exportWindTab()">↓ WAsP .tab</button></div>
+      </div></div>
     </div>
   </div>
-</div>
-</div>
-<div id="sp-terr" class="sp2">
-<div class="sec"><div class="sh">⬇ TERRAIN (Canvas — Optimised)</div>
-  <div class="ibox">Parallel fetches · Canvas rendering · ~20× faster · Georeferenced marching squares</div>
-  <div class="r2"><div class="fld"><label>Domain Radius (km)</label><input id="terrR" type="number" value="10" min="2" max="50"></div><div class="fld"><label>Grid</label><select id="terrG"><option value="20" selected>20×20 fast</option><option value="30">30×30</option><option value="40">40×40</option></select></div></div>
-  <div class="r2"><div class="fld"><label>Center Lat</label><input id="terrLa" type="number" value="55.500" step="0.001"></div><div class="fld"><label>Center Lon</label><input id="terrLo" type="number" value="7.900" step="0.001"></div></div>
-  <div class="r2">
-    <div class="fld"><label>Contour Int (m)</label><select id="terrCI"><option value="auto" selected>Auto</option><option value="5">5m</option><option value="10">10m</option><option value="20">20m</option><option value="50">50m</option></select></div>
-    <div class="fld"><label>Opacity</label><input id="terrOp" type="range" min="0" max="1" step="0.05" value="0.5" oninput="redrawCanvas()"></div>
+  <div class="card"><div class="card-title green">Atmosphere</div>
+    <div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">Elev (m)</label><input class="fi" id="siteElev" type="number" value="0" oninput="calcDensity()"></div><div class="fg"><label class="fl">Temp (°C)</label><input class="fi" id="siteTemp" type="number" value="10" oninput="calcDensity()"></div><div class="fg"><label class="fl">ρ (kg/m³)</label><input class="fi" id="airDen" type="number" value="1.225" step="0.001"></div></div>
+    <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Shear α</label><input class="fi" id="shearA" type="number" value="0.14" step="0.01"></div><div class="fg"><label class="fl">Stability</label><select class="fs" id="stab" onchange="onStabilityChange()"><option value="N" selected>Neutral (L=∞)</option><option value="US">Unstable (L=-200m)</option><option value="MS">Mildly Stable (L=500m)</option><option value="VS">Very Stable (L=100m)</option><option value="O">Offshore (L=-1000m)</option><option value="C">Custom L</option></select></div></div>
+    <div class="g2" id="stabCustomRow" style="display:none;gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Monin-Obukhov L (m)</label><input class="fi" id="stabL" type="number" value="-200" step="10"></div><div class="fg"><label class="fl">z/L</label><input class="fi" id="stabZL" type="number" value="0" step="0.01" readonly></div></div>
   </div>
-  <button class="btn pri" style="width:100%;margin-bottom:5px" onclick="downloadTerrain()">⬇ Download + Draw Contours</button>
-  <div class="prg"><div id="terrPb" class="pb"></div></div><div id="terrPt" class="pt">—</div>
-  <div id="terrOut" style="display:none;margin-top:6px">
-    <div class="sg">
-      <div class="sc2"><div class="sv" id="terrMin">—</div><div class="sl">Min Elev m</div></div>
-      <div class="sc2"><div class="sv" id="terrMax">—</div><div class="sl">Max Elev m</div></div>
-      <div class="sc2"><div class="sv" id="terrMn">—</div><div class="sl">Mean Elev m</div></div>
-      <div class="sc2"><div class="sv" id="terrCI2">—</div><div class="sl">Contour Int m</div></div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(2)">← Power Curve</button><button class="btn btn-primary" onclick="goToStep(4)">Next: Terrain →</button></div>
+</div>
+
+<!-- ===== STEP 4: TERRAIN ===== -->
+<div class="step-panel" id="step4">
+  <div class="g2">
+    <div>
+      <div class="card"><div class="card-title green">Terrain Elevation</div>
+        <div class="canvas-wrap"><canvas id="terrainCanvas" width="560" height="480"></canvas></div>
+        <div class="legend-row" style="margin-top:.5rem;justify-content:center"><div class="legend-pill"><div class="legend-dot" style="background:#1a5e2a"></div>Low</div><div class="legend-pill"><div class="legend-dot" style="background:#c4a64a"></div>Mid</div><div class="legend-pill"><div class="legend-dot" style="background:#8b5e3c"></div>High</div><div class="legend-pill"><div class="legend-dot" style="background:#fff"></div>Peak</div></div>
+      </div>
+      <div class="card"><div class="card-title gold">Roughness Map</div>
+        <div class="canvas-wrap"><canvas id="roughnessCanvas" width="560" height="480"></canvas></div>
+        <div class="legend-row" style="margin-top:.5rem;justify-content:center;flex-wrap:wrap"><div class="legend-pill"><div class="legend-dot" style="background:#1e64c8"></div>Water</div><div class="legend-pill"><div class="legend-dot" style="background:#d2be82"></div>Sand</div><div class="legend-pill"><div class="legend-dot" style="background:#50b43c"></div>Grass</div><div class="legend-pill"><div class="legend-dot" style="background:#a0c832"></div>Farm</div><div class="legend-pill"><div class="legend-dot" style="background:#287828"></div>Forest</div><div class="legend-pill"><div class="legend-dot" style="background:#8c503c"></div>Urban</div></div>
+      </div>
     </div>
-    <div class="cw" style="height:110px"><canvas id="terrChart"></canvas></div>
-    <div style="margin-top:4px;font-size:9px;color:var(--muted)">
-      Layers:
-      <button id="btnCont" onclick="toggleCont()" style="padding:2px 6px;font-size:9px;border:1px solid var(--acc);background:rgba(88,166,255,.1);color:var(--acc);cursor:pointer;border-radius:2px">✓ Contours</button>
-      <button id="btnHeat" onclick="toggleHeat()" style="padding:2px 6px;font-size:9px;border:1px solid var(--acc);background:rgba(88,166,255,.1);color:var(--acc);cursor:pointer;border-radius:2px">✓ Heat</button>
+    <div>
+      <div class="card"><div class="card-title green">Download Terrain</div>
+        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="terrR" type="number" value="10" min="2" max="50"></div><div class="fg"><label class="fl">Grid</label><select class="fs" id="terrG"><option value="20" selected>20×20</option><option value="30">30×30</option><option value="40">40×40</option></select></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Lat</label><input class="fi" id="terrLa" type="number" value="55.500" step="0.001"></div><div class="fg"><label class="fl">Lon</label><input class="fi" id="terrLo" type="number" value="7.900" step="0.001"></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Contour Int</label><select class="fs" id="terrCI"><option value="auto" selected>Auto</option><option value="5">5m</option><option value="10">10m</option><option value="20">20m</option></select></div><div class="fg"><label class="fl">Opacity</label><input class="fi" id="terrOp" type="range" min="0" max="1" step="0.05" value="0.5" oninput="redrawCanvas()"></div></div>
+        <button class="btn btn-primary" style="margin-top:.5rem;width:100%" onclick="downloadTerrain()">⬇ Download Terrain Grid</button>
+        <div class="progress"><div class="progress-bar" id="terrPpb" style="width:0"></div></div><div id="terrPpt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div>
+      </div>
+      <div class="card"><div class="card-title gold">Roughness Data</div>
+        <button class="btn btn-primary" style="width:100%;margin-bottom:.3rem" onclick="downloadRoughness()">⬇ Generate Roughness Map</button>
+        <button class="btn btn-sm btn-ghost" onclick="exportRoughnessCSV()" style="margin-bottom:.3rem">📁 Export CSV</button>
+        <div id="roughStat" style="font-size:.6rem;color:var(--text3)">—</div>
+      </div>
+      <div class="card"><div class="card-title sky">Terrain Statistics</div>
+        <div class="g4" style="gap:.4rem">
+          <div class="metric-item"><div class="metric-val" id="terrMin">—</div><div class="metric-label">Min Elev m</div></div>
+          <div class="metric-item"><div class="metric-val gold" id="terrMax">—</div><div class="metric-label">Max Elev m</div></div>
+          <div class="metric-item"><div class="metric-val sky" id="terrMn">—</div><div class="metric-label">Mean Elev m</div></div>
+          <div class="metric-item"><div class="metric-val" id="terrCI2">—</div><div class="metric-label">Contour Int m</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-title sky">Roughness Rose</div>
+        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Site z₀</label><input class="fi" id="rrZ0site" type="number" value="0.0002" step="0.0001"></div><div class="fg"><label class="fl">Mast z₀</label><input class="fi" id="rrZ0mast" type="number" value="0.0002" step="0.0001"></div></div>
+        <div class="fg"><label class="fl">Preset</label><select class="fs" id="rrPreset" onchange="applyRoughnessPreset()"><option value="custom">Custom</option><option value="offshore">All Offshore</option><option value="open">All Open</option><option value="agri">All Agricultural</option><option value="mixed">Mixed: Off→Agri</option></select></div>
+        <button class="btn btn-sm btn-primary" style="margin-top:.4rem" onclick="applyRoughnessRose()">🗺 Apply Rose</button>
+        <div class="tbl-wrap" style="max-height:160px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>z₀¹</th><th>x¹</th><th>z₀²</th><th>x²</th><th>z₀³</th></tr></thead><tbody id="rrBody"></tbody></table></div>
+        <div class="canvas-wrap" style="height:140px;margin-top:.4rem"><canvas id="rrChart"></canvas></div>
+        <div id="rrStat" style="font-size:.58rem;color:var(--text3);margin-top:.2rem">—</div>
+      </div>
+      <div class="card"><div class="card-title">OSM Roughness Extract</div>
+        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Lat</label><input class="fi" id="osmLa" type="number" value="55.500" step="0.001"></div><div class="fg"><label class="fl">Lon</label><input class="fi" id="osmLo" type="number" value="7.900" step="0.001"></div></div>
+        <div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="osmRad" type="number" value="20" min="5" max="50"></div>
+        <button class="btn btn-sm btn-ghost" style="margin-top:.3rem" onclick="extractOSMRoughness()">🌍 Extract OSM</button>
+        <div class="progress"><div class="progress-bar" id="osmpb" style="width:0"></div></div><div id="osmpt" style="font-size:.52rem;color:var(--text3)">—</div>
+        <div id="osmStat" style="font-size:.58rem;color:var(--text3)">—</div>
+      </div>
     </div>
   </div>
-  <div style="margin-top:6px">
-    <button class="btn" style="width:100%;font-size:9px" onclick="verifyTurbineElevations()">🔍 Fetch Turbine Elevations</button>
-    <div id="elevTable" style="margin-top:4px;max-height:120px;overflow-y:auto"></div>
-  </div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(3)">← Wind Data</button><button class="btn btn-primary" onclick="goToStep(5)">Next: Flow Model →</button></div>
 </div>
-</div>
-<div id="sp-mcp" class="sp2">
-<div class="sec"><div class="sh">↺ MCP LONG-TERM CORRECTION</div>
-  <div class="ibox">ERA5 LT parallel download · WindPRO-equivalent · Requires wind data loaded first</div>
-  <div class="r2"><div class="fld"><label>LT Start Year</label><input id="mcpSy" type="number" value="1991"></div><div class="fld"><label>LT End Year</label><input id="mcpEy" type="number" value="2020"></div></div>
-  <div class="fld"><label>MCP Method</label>
-    <select id="mcpMeth"><option value="linear">Linear Regression</option><option value="matrix">Matrix Method</option><option value="variance">Variance Ratio</option><option value="weibull">Weibull Ratio</option></select>
-  </div>
-  <button class="btn pri" style="width:100%;margin-bottom:5px" onclick="runMCP()">↺ Download ERA5 LT + Run MCP</button>
-  <div class="prg"><div id="mcpPb" class="pb"></div></div><div id="mcpPt" class="pt">—</div>
-  <div id="mcpOut" style="display:none;margin-top:6px">
-    <div class="sg">
-      <div class="sc2"><div class="sv" id="mcpCW">—</div><div class="sl">Conc. WS</div></div>
-      <div class="sc2"><div class="sv" id="mcpLW">—</div><div class="sl">LT WS</div></div>
-      <div class="sc2"><div class="sv" id="mcpFc">—</div><div class="sl">LT Factor</div></div>
-      <div class="sc2"><div class="sv" id="mcpR2">—</div><div class="sl">R²</div></div>
+
+<!-- ===== STEP 5: WIND FLOW MODELLING ===== -->
+<div class="step-panel" id="step5">
+  <div class="g2">
+    <div>
+      <div class="card"><div class="card-title green">BZ Orographic Model</div>
+        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Mast z₀ (m)</label><input class="fi" id="bzMz0" type="number" value="0.0002" step="0.0001"></div><div class="fg"><label class="fl">Site z₀ (m)</label><input class="fi" id="bzSz0" type="number" value="0.0002" step="0.0001"></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Inner Layer Scale</label><select class="fs" id="bzLscale"><option value="1.0" selected>1.0 (WAsP)</option><option value="0.5">0.5×</option><option value="1.5">1.5×</option><option value="2.0">2.0×</option></select></div><div class="fg"><label class="fl">RIX Threshold</label><input class="fi" id="bzRixThr" type="number" value="0.3" step="0.05" min="0.05" max="0.5"></div></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="runBZModel()">⚙ Compute BZ Speedups</button>
+        <div class="progress"><div class="progress-bar" id="bzpb" style="width:0"></div></div><div id="bzpt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">Download terrain first, then run BZ</div>
+      </div>
+      <div id="bzOut" style="display:none"><div class="card"><div class="card-title sky">BZ Results</div>
+        <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="bzMaSU">—</div><div class="metric-label">Mast Speedup</div></div><div class="metric-item"><div class="metric-val" id="bzMnSU">—</div><div class="metric-label">Mean Turb SU</div></div><div class="metric-item"><div class="metric-val gold" id="bzRixV">—</div><div class="metric-label">RIX %</div></div><div class="metric-item"><div class="metric-val sky" id="bzGws">—</div><div class="metric-label">GWC WS</div></div></div>
+        <div id="bzRixWarn" style="display:none;margin-top:.3rem" class="alert alert-warn">⚠ RIX warning</div>
+        <div style="display:flex;gap:.4rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" onclick="toggleBZLayer()">🗺 Toggle SU Map</button></div>
+      </div></div>
+      <div class="card"><div class="card-title gold">MCP Long-term Correction</div>
+        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">LT Start</label><input class="fi" id="mcpSy" type="number" value="1991"></div><div class="fg"><label class="fl">LT End</label><input class="fi" id="mcpEy" type="number" value="2020"></div></div>
+        <div class="fg"><label class="fl">Method</label><select class="fs" id="mcpMeth"><option value="linear">Linear Regression</option><option value="matrix">Matrix</option><option value="variance">Variance Ratio</option><option value="weibull">Weibull Ratio</option></select></div>
+        <button class="btn btn-gold" style="width:100%;margin-top:.4rem" onclick="runMCP()">↺ Download ERA5 LT + MCP</button>
+        <div class="progress"><div class="progress-bar" id="mcppb" style="width:0"></div></div><div id="mcppt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div>
+      </div>
+      <div id="mcpOut" style="display:none"><div class="card"><div class="card-title sky">MCP Results</div>
+        <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="mcpCW">—</div><div class="metric-label">Concurrent WS</div></div><div class="metric-item"><div class="metric-val" id="mcpLW">—</div><div class="metric-label">LT WS</div></div><div class="metric-item"><div class="metric-val gold" id="mcpFc">—</div><div class="metric-label">LT Factor</div></div><div class="metric-item"><div class="metric-val sky" id="mcpR2">—</div><div class="metric-label">R²</div></div></div>
+        <div id="mcpPvals" style="font-size:.62rem;color:var(--text3);margin-top:.3rem"></div>
+      </div></div>
+      <div class="card"><div class="card-title">Obstacles (Perera 1981)</div>
+        <div class="tbl-wrap" style="max-height:100px"><table class="dt"><thead><tr><th>Dir°</th><th>H(m)</th><th>W(m)</th><th>D(m)</th><th>Por%</th><th>✕</th></tr></thead><tbody id="obsBody"></tbody></table></div>
+        <div class="g3" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl">Height</label><input class="fi" id="obsH" type="number" value="10" min="1"></div><div class="fg"><label class="fl">Width</label><input class="fi" id="obsW" type="number" value="20" min="1"></div><div class="fg"><label class="fl">Distance</label><input class="fi" id="obsD" type="number" value="50" min="1"></div></div>
+        <div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl">Dir (°)</label><input class="fi" id="obsDir" type="number" value="0" min="0" max="359" step="22.5"></div><div class="fg"><label class="fl">Porosity %</label><input class="fi" id="obsPor" type="number" value="0" min="0" max="90" step="10"></div></div>
+        <div style="display:flex;gap:.3rem;margin-top:.3rem"><button class="btn btn-sm btn-ghost" onclick="addObstacle()">➕ Add</button><button class="btn btn-sm btn-danger" onclick="clearObstacles()">🗑 Clear</button></div>
+        <div id="obsStat" style="font-size:.58rem;color:var(--text3);margin-top:.2rem">No obstacles</div>
+      </div>
     </div>
-    <div id="mcpPvals" class="ibox" style="font-size:9px;margin-top:4px;line-height:1.8"></div>
-  </div>
-</div>
-</div>
-<div id="sp-ts" class="sp2">
-<div class="sec"><div class="sh">⏱ TIME SERIES (Pre-binned, Fast)</div>
-  <div class="ibox">~50× faster · Pre-bins wind states · ERA5 → hub height → wake → hourly power</div>
-  <div class="r2"><div class="fld"><label>Start Year</label><input id="tsSy" type="number" value="2022"></div><div class="fld"><label>End Year</label><input id="tsEy" type="number" value="2022"></div></div>
-  <div class="fld"><label>Time Step</label><select id="tsStep"><option value="1">1-hour</option><option value="3" selected>3-hour</option><option value="6">6-hour</option></select></div>
-  <button class="btn pri" style="width:100%;margin-bottom:5px" onclick="runTimeSeries()">⏱ Run Time Series</button>
-  <div class="prg"><div id="tsPb" class="pb"></div></div><div id="tsPt" class="pt">—</div>
-  <div id="tsOut" style="display:none;margin-top:6px">
-    <div class="sg">
-      <div class="sc2"><div class="sv" id="tsRc">—</div><div class="sl">Records</div></div>
-      <div class="sc2"><div class="sv" id="tsNt">—</div><div class="sl">Net GWh/yr</div></div>
-      <div class="sc2"><div class="sv" id="tsWk">—</div><div class="sl">Wake Loss %</div></div>
-      <div class="sc2"><div class="sv" id="tsCf">—</div><div class="sl">Cap.Factor %</div></div>
+    <div>
+      <div class="card"><div class="card-title green">Run Analysis</div>
+        <button class="btn btn-primary" style="width:100%;font-size:.78rem;padding:.7rem" id="runBtn" onclick="runAnalysis()">▶▶ RUN FULL ANALYSIS</button>
+        <div id="tbst" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">Ready</div>
+      </div>
+      <div class="card"><div class="card-title green">AEP Results</div>
+        <div class="kpi-strip"><div class="kpi"><div class="kpi-v" id="rWS">—</div><div class="kpi-l">Rotor WS m/s</div></div><div class="kpi"><div class="kpi-v b" id="rDen">—</div><div class="kpi-l">ρ kg/m³</div></div><div class="kpi"><div class="kpi-v g" id="rGross">—</div><div class="kpi-l">Gross GWh</div></div><div class="kpi"><div class="kpi-v o" id="rWake">—</div><div class="kpi-l">Wake %</div></div><div class="kpi"><div class="kpi-v g" id="rNet">—</div><div class="kpi-l">Net GWh</div></div><div class="kpi"><div class="kpi-v b" id="rCF">—</div><div class="kpi-l">CF %</div></div></div>
+        <div id="calIndicator" style="display:none" class="alert alert-ok" style="font-size:.6rem">🎯 WAsP Calibrated</div>
+      </div>
+      <div class="card"><div class="card-title">P-Exceedance</div><div id="pexc" style="font-size:.7rem;color:var(--text3)">Run analysis</div></div>
+      <div class="card"><div class="card-title">Per-Turbine AEP</div>
+        <div class="tbl-wrap" style="max-height:150px"><table class="dt"><thead><tr><th>T#</th><th>WS</th><th>Gross</th><th>Wake%</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="aepBody"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div>
+      </div>
+      <div class="card"><div class="card-title">Wind Rose</div><div class="rose-canvas-wrap"><canvas id="roseCanvas" width="400" height="350"></canvas></div></div>
+      <div class="card"><div class="card-title">Sector BZ Speedup</div><div class="canvas-wrap" style="height:150px"><canvas id="bzSectChart"></canvas></div></div>
+      <div class="card"><div class="card-title">AEP by Turbine</div><div class="canvas-wrap" style="height:140px"><canvas id="aepChart"></canvas></div></div>
     </div>
-    <div class="cw" style="height:120px;margin-top:6px"><canvas id="monthChart"></canvas></div>
-    <div class="cw" style="height:100px"><canvas id="diurnChart"></canvas></div>
-    <button class="btn" style="width:100%;margin-top:4px;font-size:9px" onclick="exportTSCSV()">↓ Hourly CSV</button>
   </div>
-</div>
+  <div class="tab-bar" style="margin-top:.5rem"><button class="tab-btn active" onclick="showFlowTab(0,this)">Wind Stats</button><button class="tab-btn" onclick="showFlowTab(1,this)">WS Chain</button><button class="tab-btn" onclick="showFlowTab(2,this)">GWC</button><button class="tab-btn" onclick="showFlowTab(3,this)">BZ Detail</button><button class="tab-btn" onclick="showFlowTab(4,this)">Time Series</button><button class="tab-btn" onclick="showFlowTab(5,this)">Calibration</button><button class="tab-btn" onclick="showFlowTab(6,this)">Engine Log</button></div>
+  <div class="tab-panel active" id="flowTab0"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val sky" id="wMean">—</div><div class="metric-label">Mean WS m/s</div></div><div class="metric-item"><div class="metric-val" id="wPD">—</div><div class="metric-label">Power W/m²</div></div><div class="metric-item"><div class="metric-val sky" id="wA">—</div><div class="metric-label">Weibull A</div></div><div class="metric-item"><div class="metric-val gold" id="wK">—</div><div class="metric-label">Weibull k</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="wbChart"></canvas></div><div class="tbl-wrap" style="max-height:150px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>Freq%</th><th>A</th><th>k</th><th>WS</th></tr></thead><tbody id="sectBody"></tbody></table></div></div></div>
+  <div class="tab-panel" id="flowTab1"><div class="card"><div id="wscChain">Run analysis</div><div class="tbl-wrap" style="max-height:180px;margin-top:.5rem"><table class="dt"><thead><tr><th>T#</th><th>Free WS</th><th>Wake Δ%</th><th>Net WS</th><th>Power</th><th>Avail%</th></tr></thead><tbody id="wscBody"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.5rem"><canvas id="wscChart"></canvas></div></div></div>
+  <div class="tab-panel" id="flowTab2"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="gcZ0">—</div><div class="metric-label">z₀ m</div></div><div class="metric-item"><div class="metric-val sky" id="gcSR">—</div><div class="metric-label">Mean SR</div></div><div class="metric-item"><div class="metric-val" id="gcWS">—</div><div class="metric-label">GWC WS</div></div><div class="metric-item"><div class="metric-val sky" id="gcSW">—</div><div class="metric-label">SWC WS</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>Freq%</th><th>OWC A</th><th>OWC k</th><th>GWC A</th><th>SWC A</th><th>SR</th></tr></thead><tbody id="gwcBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.4rem"><canvas id="shearChart2"></canvas></div></div></div>
+  <div class="tab-panel" id="flowTab3"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="bz-maSU">—</div><div class="metric-label">Mast SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-mxSU">—</div><div class="metric-label">Max SU</div></div><div class="metric-item"><div class="metric-val sky" id="bz-miSU">—</div><div class="metric-label">Min SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-rix">—</div><div class="metric-label">RIX %</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>T#</th><th>BZ SU</th><th>δ%</th><th>Turn°</th><th>OWC</th><th>GWC</th><th>SWC</th></tr></thead><tbody id="bzTBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run BZ first</td></tr></tbody></table></div><div class="canvas-wrap" style="height:120px;margin-top:.4rem"><canvas id="bzBesChart"></canvas></div><div id="bzIBLnote" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">—</div><div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="metric-item"><div class="metric-val sky" id="bz-iblH">—</div><div class="metric-label">IBL Height m</div></div><div class="metric-item"><div class="metric-val" id="bz-roughRC">—</div><div class="metric-label">Rough. Corr.</div></div></div></div></div>
+  <div class="tab-panel" id="flowTab4"><div class="card"><div class="card-title gold">Time Series</div><div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Start Year</label><input class="fi" id="tsSy" type="number" value="2022"></div><div class="fg"><label class="fl">End Year</label><input class="fi" id="tsEy" type="number" value="2022"></div></div><div class="fg"><label class="fl">Step</label><select class="fs" id="tsStep"><option value="1">1-hour</option><option value="3" selected>3-hour</option><option value="6">6-hour</option></select></div><button class="btn btn-gold" style="width:100%;margin-top:.4rem" onclick="runTimeSeries()">⏱ Run Time Series</button><div class="progress"><div class="progress-bar" id="tspb" style="width:0"></div></div><div id="tspt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div><div id="tsOut" style="display:none;margin-top:.5rem"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="tsRc">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val g" id="tsNt">—</div><div class="metric-label">Net GWh/yr</div></div><div class="metric-item"><div class="metric-val o" id="tsWk">—</div><div class="metric-label">Wake %</div></div><div class="metric-item"><div class="metric-val b" id="tsCf">—</div><div class="metric-label">CF %</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="monthChart"></canvas></div><div class="canvas-wrap" style="height:100px;margin-top:.3rem"><canvas id="diurnChart"></canvas></div><button class="btn btn-sm btn-ghost" style="margin-top:.3rem" onclick="exportTSCSV()">↓ Hourly CSV</button></div></div></div>
+  <div class="tab-panel" id="flowTab5"><div class="card"><div class="card-title green">WAsP Site Calibration</div><div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">WAsP Gross (GWh)</label><input class="fi" id="calWaspGross" type="number" step="0.01"></div><div class="fg"><label class="fl">WAsP Net (GWh)</label><input class="fi" id="calWaspNet" type="number" step="0.01"></div><div class="fg"><label class="fl">WAsP Wake %</label><input class="fi" id="calWaspWake" type="number" step="0.1"></div></div><div class="g3" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">WAsP WS</label><input class="fi" id="calWaspWS" type="number" step="0.01"></div><div class="fg"><label class="fl">WAsP CF %</label><input class="fi" id="calWaspCF" type="number" step="0.1"></div><div class="fg"><label class="fl">WAsP RIX %</label><input class="fi" id="calWaspRIX" type="number" step="0.1"></div></div><button class="btn btn-primary" style="margin-top:.5rem" onclick="runWaspCalibration()">🎯 Compute</button><div id="calResult" style="display:none;margin-top:.5rem" class="alert alert-ok"><div id="calResultContent">—</div></div><div style="display:flex;align-items:center;gap:.4rem;margin-top:.5rem"><input type="checkbox" id="calApplyCB" checked style="accent-color:var(--mint)" onchange="onCalApplyChange()"><label for="calApplyCB" style="font-size:.65rem;cursor:pointer">Apply calibration (default ON)</label></div><div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">AEP Mult</label><input class="fi" id="calAepMult" value="1.000" step="0.001" readonly></div><div class="fg"><label class="fl">WS Mult</label><input class="fi" id="calWsMult" value="1.000" step="0.001" readonly></div></div><div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Wake Adj</label><input class="fi" id="calWakeAdj" value="1.000" step="0.001" readonly></div><div class="fg"><label class="fl">Confidence</label><input class="fi" id="calConf" value="—" readonly></div></div><div style="display:flex;gap:.3rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" onclick="exportCalibration()">↓ Export .json</button><button class="btn btn-sm btn-ghost" onclick="$('impCalFile').click()">↑ Import</button><input id="impCalFile" type="file" accept=".json" style="display:none" onchange="importCalibration(event)"><button class="btn btn-sm btn-danger" onclick="clearCalibration()">🗑 Clear</button></div></div></div>
+  <div class="tab-panel" id="flowTab6"><div class="card"><div class="card-title">Engine Log <button class="btn btn-sm btn-ghost" style="padding:.15rem .4rem;font-size:.5rem" onclick="$('elog').innerHTML=''">Clr</button></div><div id="elog"></div></div></div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(4)">← Terrain</button><button class="btn btn-primary" onclick="goToStep(6)">Next: Reporting →</button></div>
 </div>
 
-<div id="sp-bz" class="sp2">
-<div class="sec"><div class="sh">⚙ WAsP BZ OROGRAPHIC MODEL
-  <span id="bzBadge" style="font-size:8px;padding:2px 5px;border-radius:8px;background:rgba(210,153,34,.18);color:var(--wrn)">INACTIVE</span>
-</div>
-<div class="ibox" style="font-size:9px;line-height:1.6"><b style="color:var(--acc)">Jackson-Hunt (1983) · Modified Bessel K₀/K₁ spectral decomposition</b><br>Beljaars-Walmsley (1982) multi-layer IBL roughness model · Directional per-sector orographic speedups · OWC→GWC→SWC per sector · RIX warning<br><b style="color:var(--wrn)">v11.6:</b> Auto-Calibration ON · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · WAsP Proxies · FFT Engine · Flow Turning · Rotor-Avg · Roughness rose · Perera · Steep terrain</div>
-<div class="r2">
-  <div class="fld"><label>Mast z₀ (m)</label><input id="bzMz0" type="number" value="0.0002" step="0.0001"></div>
-  <div class="fld"><label>Site z₀ (m)</label><input id="bzSz0" type="number" value="0.0002" step="0.0001"></div>
-</div>
-<div class="r2">
-  <div class="fld"><label>Inner Layer Scale</label>
-    <select id="bzLscale"><option value="1.0" selected>1.0 (WAsP default)</option><option value="0.5">0.5×</option><option value="1.5">1.5×</option><option value="2.0">2.0×</option></select>
+<!-- ===== STEP 6: REPORTING ===== -->
+<div class="step-panel" id="step6">
+  <div class="g2">
+    <div>
+      <div class="card"><div class="card-title green">Export Data</div>
+        <div style="display:flex;flex-direction:column;gap:.4rem">
+          <button class="btn btn-primary" style="width:100%" onclick="exportReport()">📄 Full HTML Report</button>
+          <button class="btn btn-gold" style="width:100%" onclick="exportAEPCSV()">📊 AEP Results CSV</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportLayoutCSV()">📍 Layout CSV</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportLayoutKML()">📍 Layout KML</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportWindCSV()">💨 Wind Data CSV</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportWindTab()">💨 WAsP .tab</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportRoughnessCSV()">🗺 Roughness CSV</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-title sky">Save / Load Project</div>
+        <div style="display:flex;gap:.4rem"><button class="btn btn-primary" style="flex:1" onclick="saveProject()">💾 Save JSON</button><label class="btn btn-ghost" style="flex:1;cursor:pointer">📂 Load JSON<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label></div>
+      </div>
+      <div class="card"><div class="card-title gold">Financial Analysis</div>
+        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">CAPEX ($/kW)</label><input class="fi" id="finCAPEX" type="number" value="1200"></div><div class="fg"><label class="fl">OPEX ($/kW/yr)</label><input class="fi" id="finOPEX" type="number" value="35"></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">PPA Price ($/MWh)</label><input class="fi" id="finPPA" type="number" value="50"></div><div class="fg"><label class="fl">Discount Rate %</label><input class="fi" id="finDR" type="number" value="8"></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">Project Life (yr)</label><input class="fi" id="finLife" type="number" value="25"></div><div class="fg"><label class="fl">Tax Rate %</label><input class="fi" id="finTax" type="number" value="25"></div></div>
+        <button class="btn btn-gold" style="width:100%;margin-top:.5rem" onclick="runFinancial()">💰 Compute Financials</button>
+        <div id="finResults" style="display:none;margin-top:.5rem"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card"><div class="card-title green">Summary Dashboard</div>
+        <div class="kpi-strip" id="reportKPIs"><div class="kpi"><div class="kpi-v g" id="rpNetAEP">—</div><div class="kpi-l">Net AEP GWh</div></div><div class="kpi"><div class="kpi-v b" id="rpCF">—</div><div class="kpi-l">CF %</div></div><div class="kpi"><div class="kpi-v o" id="rpWake">—</div><div class="kpi-l">Wake %</div></div><div class="kpi"><div class="kpi-v g" id="rpInstMW">—</div><div class="kpi-l">Installed MW</div></div><div class="kpi"><div class="kpi-v b" id="rpMeanWS">—</div><div class="kpi-l">Mean WS m/s</div></div><div class="kpi"><div class="kpi-v o" id="rpNTurb">—</div><div class="kpi-l">Turbines</div></div></div>
+      </div>
+      <div class="card"><div class="card-title gold">Uncertainty Analysis</div>
+        <div id="uncResults" style="font-size:.7rem;color:var(--text3)">Run analysis first</div>
+      </div>
+      <div class="card"><div class="card-title sky">Noise Assessment</div>
+        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Source Level dB(A)</label><input class="fi" id="noiseSL" type="number" value="105"></div><div class="fg"><label class="fl">Receiver Dist (m)</label><input class="fi" id="noiseDist" type="number" value="500"></div></div>
+        <button class="btn btn-sm btn-sky" onclick="calcNoise()">🔊 Calculate</button>
+        <div id="noiseResult" style="font-size:.68rem;color:var(--text3);margin-top:.3rem"></div>
+      </div>
+      <div class="card"><div class="card-title">Shear Profile</div><div class="canvas-wrap" style="height:160px"><canvas id="shearChart"></canvas></div></div>
+    </div>
   </div>
-  <div class="fld"><label>RIX Slope Threshold</label><input id="bzRixThr" type="number" value="0.3" step="0.05" min="0.05" max="0.5"></div>
-</div>
-<button class="btn pri" style="width:100%;margin-bottom:4px" onclick="runBZModel()">⚙ Compute BZ Orographic Speedups</button>
-<div class="prg"><div id="bzPb" class="pb"></div></div>
-<div id="bzPt" class="pt">Download terrain first (TERRAIN tab), then run BZ model</div>
-<div id="bzOut" style="display:none;margin-top:6px">
-  <div class="sg">
-    <div class="sc2"><div class="sv" id="bzMaSU">—</div><div class="sl">Mast Speedup</div></div>
-    <div class="sc2"><div class="sv" id="bzMnSU">—</div><div class="sl">Mean Turb. SU</div></div>
-    <div class="sc2"><div class="sv" id="bzRixV">—</div><div class="sl">RIX (%)</div></div>
-    <div class="sc2"><div class="sv" id="bzGws">—</div><div class="sl">GWC WS (m/s)</div></div>
-  </div>
-  <div style="display:flex;gap:4px;margin-top:4px">
-    <button class="btn" style="flex:1;font-size:9px" onclick="toggleBZLayer()">🗺 Toggle SU Map</button>
-    <button class="btn" style="flex:1;font-size:9px" onclick="showRTab('bz')">→ BZ Results Tab</button>
-  </div>
-  <div id="bzRixWarn" style="display:none;margin-top:4px;font-size:9px;color:var(--wrn)">⚠ RIX warning: steep terrain — linear BZ model may underestimate speedup</div>
-</div>
-</div>
-<div class="sec"><div class="sh">OWC → GWC → SWC</div>
-<div id="bzGWCTbl" style="max-height:160px;overflow-y:auto;font-size:9px;color:var(--muted)">Run BZ model to see GWC table</div>
-</div>
-<div class="sec"><div class="sh">📊 CALIBRATION FACTORS</div>
-  <div id="calInfo" class="ibox" style="font-size:9px">Run BZ model to see calibration factors</div>
-</div>
-<div class="sec"><div class="sh">🏗 OBSTACLE SHELTER (Perera 1981)</div>
-  <div class="ibox">Define obstacles near mast/site · Perera shelter model per sector · Wind speed reduction behind obstacles</div>
-  <div style="max-height:120px;overflow-y:auto;margin-bottom:4px">
-    <table class="dtbl"><thead><tr><th>Dir°</th><th>H(m)</th><th>W(m)</th><th>D(m)</th><th>Por%</th><th>✕</th></tr></thead>
-    <tbody id="obsBody"></tbody></table>
-  </div>
-  <div class="r3">
-    <div class="fld"><label>Height (m)</label><input id="obsH" type="number" value="10" min="1"></div>
-    <div class="fld"><label>Width (m)</label><input id="obsW" type="number" value="20" min="1"></div>
-    <div class="fld"><label>Distance (m)</label><input id="obsD" type="number" value="50" min="1"></div>
-  </div>
-  <div class="r2">
-    <div class="fld"><label>Direction (°)</label><input id="obsDir" type="number" value="0" min="0" max="359" step="22.5"></div>
-    <div class="fld"><label>Porosity (%)</label><input id="obsPor" type="number" value="0" min="0" max="90" step="10"></div>
-  </div>
-  <button class="btn" style="width:100%;margin-bottom:4px" onclick="addObstacle()">➕ Add Obstacle</button>
-  <button class="btn" style="width:100%;margin-bottom:4px" onclick="clearObstacles()">🗑 Clear All</button>
-  <div id="obsStat" style="font-size:9px;color:var(--muted)">No obstacles defined</div>
-</div>
-</div><!-- /bz -->
-
-<div id="sp-rough" class="sp2">
-<div class="sec"><div class="sh">🗺 ROUGHNESS ROSE</div>
-  <div class="ibox">Per-sector roughness transitions · Up to 3 zones per sector · WAsP methodology</div>
-  <div class="r2">
-    <div class="fld"><label>Default z₀ site (m)</label><input id="rrZ0site" type="number" value="0.0002" step="0.0001"></div>
-    <div class="fld"><label>Default z₀ mast (m)</label><input id="rrZ0mast" type="number" value="0.0002" step="0.0001"></div>
-  </div>
-  <div class="fld"><label>Preset</label>
-    <select id="rrPreset" onchange="applyRoughnessPreset()">
-      <option value="custom">Custom</option>
-      <option value="offshore">All Offshore (0.0002)</option>
-      <option value="open">All Open (0.03)</option>
-      <option value="agri">All Agricultural (0.10)</option>
-      <option value="mixed">Mixed: Offshore→Agricultural</option>
-    </select>
-  </div>
-  <button class="btn pri" style="width:100%;margin-bottom:4px" onclick="applyRoughnessRose()">🗺 Apply Roughness Rose</button>
-  <div style="max-height:200px;overflow-y:auto">
-    <table class="dtbl"><thead><tr><th>Dir</th><th>z₀¹</th><th>x¹ km</th><th>z₀²</th><th>x² km</th><th>z₀³</th></tr></thead>
-    <tbody id="rrBody"></tbody></table>
-  </div>
-  <div class="cw" style="height:110px;margin-top:6px"><canvas id="rrChart"></canvas></div>
-  <div id="rrStat" style="font-size:9px;color:var(--muted)">—</div>
-</div>
-<div class="sec"><div class="sh">🌍 AUTO-EXTRACT FROM OSM</div>
-  <div class="ibox">Query OpenStreetMap via Overpass API · Auto-populate roughness rose from land cover</div>
-  <div class="r2">
-    <div class="fld"><label>Center Lat</label><input id="osmLa" type="number" value="55.500" step="0.001"></div>
-    <div class="fld"><label>Center Lon</label><input id="osmLo" type="number" value="7.900" step="0.001"></div>
-  </div>
-  <div class="fld"><label>Fetch Radius (km)</label><input id="osmRad" type="number" value="20" min="5" max="50"></div>
-  <button class="btn pri" style="width:100%;margin-bottom:4px" onclick="extractOSMRoughness()">🌍 Extract Roughness from OSM</button>
-  <div class="prg"><div id="osmpb" class="pb"></div></div><div id="osmpt" class="pt">—</div>
-  <div id="osmStat" style="font-size:9px;color:var(--muted)">—</div>
-</div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(5)">← Flow Model</button><div></div></div>
 </div>
 
-<div id="sp-calib" class="sp2">
-<div class="sec"><div class="sh">🎯 WAsP SITE CALIBRATION</div>
-  <div class="ibox">Enter actual WAsP results to compute site-specific calibration factors · Closes the gap to <0.5% for any terrain</div>
-  <div class="ibox" style="background:rgba(210,153,34,.08);border-color:var(--wrn);color:var(--wrn);font-size:8px">⚠ Calibration is site-specific. Do NOT apply to different sites without re-calibrating.</div>
-</div>
-<div class="sec"><div class="sh">📊 WAsP REFERENCE RESULTS</div>
-  <div class="r3">
-    <div class="fld"><label>WAsP Gross AEP (GWh)</label><input id="calWaspGross" type="number" step="0.01"></div>
-    <div class="fld"><label>WAsP Net AEP (GWh)</label><input id="calWaspNet" type="number" step="0.01"></div>
-    <div class="fld"><label>WAsP Wake Loss (%)</label><input id="calWaspWake" type="number" step="0.1"></div>
-  </div>
-  <div class="r3">
-    <div class="fld"><label>WAsP Mean WS (m/s)</label><input id="calWaspWS" type="number" step="0.01"></div>
-    <div class="fld"><label>WAsP CF (%)</label><input id="calWaspCF" type="number" step="0.1"></div>
-    <div class="fld"><label>WAsP RIX (%)</label><input id="calWaspRIX" type="number" step="0.1"></div>
-  </div>
-</div>
-<div class="sec"><div class="sh">📐 PER-SECTOR WAsP WEIBULL (optional)</div>
-  <div class="ibox">Enter WAsP sector Weibull A and k values for per-sector calibration. Leave blank to use overall calibration only.</div>
-  <div style="max-height:150px;overflow-y:auto">
-    <table class="dtbl"><thead><tr><th>Dir</th><th>WAsP A</th><th>WAsP k</th><th>WAsP Freq%</th></tr></thead>
-    <tbody id="calSecBody"></tbody></table>
-  </div>
-  <button class="btn" style="width:100%;margin-top:4px" onclick="populateCalSectorTable()">📋 Populate 16-sector table</button>
-</div>
-<div class="sec"><div class="sh">🔬 PER-TURBINE WAsP AEP (optional)</div>
-  <div class="ibox">Enter WAsP per-turbine net AEP for per-turbine calibration. Leave blank for uniform calibration.</div>
-  <div style="max-height:120px;overflow-y:auto">
-    <table class="dtbl"><thead><tr><th>WTG</th><th>WAsP Net GWh</th><th>WAsP WS</th></tr></thead>
-    <tbody id="calTurbBody"></tbody></table>
-  </div>
-  <button class="btn" style="width:100%;margin-top:4px" onclick="populateCalTurbTable()">📋 Populate turbine table</button>
-</div>
-<div class="sec"><div class="sh">⚡ CALIBRATION ENGINE</div>
-  <button class="btn pri" style="width:100%;margin-bottom:4px" onclick="runWaspCalibration()">🎯 Compute Site Calibration</button>
-  <div id="calResult" class="ibox" style="display:none">
-    <div id="calResultContent">—</div>
-  </div>
-</div>
-<div class="sec"><div class="sh">✅ APPLY CALIBRATION</div>
-  <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-    <input type="checkbox" id="calApplyCB" checked style="accent-color:var(--acc)" onchange="onCalApplyChange()">
-    <label for="calApplyCB" style="font-size:9px;color:var(--txt);cursor:pointer">Apply WAsP calibration (default auto-calibration ON)</label>
-  </div>
-  <div class="r2">
-    <div class="fld"><label>AEP Multiplier</label><input id="calAepMult" type="number" value="1.000" step="0.001" readonly></div>
-    <div class="fld"><label>WS Multiplier</label><input id="calWsMult" type="number" value="1.000" step="0.001" readonly></div>
-  </div>
-  <div class="r2">
-    <div class="fld"><label>Wake Adj Factor</label><input id="calWakeAdj" type="number" value="1.000" step="0.001" readonly></div>
-    <div class="fld"><label>Confidence</label><input id="calConf" type="text" value="—" readonly></div>
-  </div>
-  <div id="calApplyNote" class="ibox" style="font-size:8px;color:var(--grn)">✓ Default auto-calibration active — results are WAsP-aligned by default. Enter WAsP data below to refine.</div>
-</div>
-<div class="sec"><div class="sh">💾 SAVE / LOAD CALIBRATION</div>
-  <div style="display:flex;gap:4px">
-    <button class="btn" style="flex:1;font-size:9px" onclick="exportCalibration()">↓ Export .json</button>
-    <button class="btn" style="flex:1;font-size:9px" onclick="$('impCalFile').click()">↑ Import .json</button>
-    <input id="impCalFile" type="file" accept=".json" style="display:none" onchange="importCalibration(event)">
-  </div>
-  <button class="btn" style="width:100%;margin-top:4px;color:var(--red);border-color:var(--red);font-size:9px" onclick="clearCalibration()">🗑 Clear Calibration</button>
-</div>
+<!-- Hidden elements for backward compatibility with computation engine -->
+<div class="hidden">
+  <div id="terrOut"></div>
+  <input id="terrPb" value="0"><input id="terrPt" value="">
+  <div id="e5out_bak"></div>
+  <canvas id="terrChart" width="560" height="200"></canvas>
+  <div id="calApplyNote"></div>
+  <div id="bzGWCTbl"></div>
+  <div id="calInfo"></div>
+  <div id="elevTable"></div>
+  <input id="bndGrid" value="20"><input id="bndCI" value="auto">
 </div>
 
-</div></div>
-<div id="mapw">
-  <div id="map"></div>
-  <canvas id="contCanvas"></canvas>
-  <div id="drawStatus"></div>
-  <div id="mapInfo">Lat: <span id="ovLat">—</span> Lon: <span id="ovLon">—</span><br>Elev: <span id="ovEl">—</span> | Rotor WS: <span id="ovWS">—</span> | SpeedUp: <span id="ovSU">—</span></div>
-</div>
-<div id="rside">
-<div id="rtabs">
-  <button class="rtab on" data-rtab="aep">AEP</button>
-  <button class="rtab" data-rtab="wsc">WS CHAIN</button>
-  <button class="rtab" data-rtab="wind">WIND</button>
-  <button class="rtab" data-rtab="gwc">GWC</button>
-  <button class="rtab" data-rtab="bz">BZ</button>
-</div>
-<div id="rc">
-<div id="rp-aep" class="rp on">
-<div class="sec"><div class="sh">ENERGY YIELD</div>
-  <div class="sg">
-    <div class="sc2"><div class="sv" id="rWS">—</div><div class="sl">Rotor-Avg WS m/s</div></div>
-    <div class="sc2"><div class="sv" id="rDen">—</div><div class="sl">ρ kg/m³</div></div>
-    <div class="sc2"><div class="sv" id="rGross">—</div><div class="sl">Gross AEP GWh</div></div>
-    <div class="sc2"><div class="sv" id="rWake">—</div><div class="sl">Wake Loss %</div></div>
-    <div class="sc2"><div class="sv" id="rNet">—</div><div class="sl">Net AEP GWh</div></div>
-    <div class="sc2"><div class="sv" id="rCF">—</div><div class="sl">Cap.Factor %</div></div>
-  </div>
-  <div id="calIndicator" style="display:none;font-size:9px;color:var(--grn);background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.3);border-radius:3px;padding:3px 6px;margin-top:4px">🎯 WAsP Calibrated</div>
-</div>
-<div class="sec"><div class="sh">P-EXCEEDANCE</div><div id="pexc" class="ibox" style="font-size:9px">Run analysis</div></div>
-<div class="sec"><div class="sh">PER-TURBINE AEP</div>
-  <div style="max-height:155px;overflow-y:auto">
-    <table class="dtbl"><thead><tr><th>T#</th><th>WS</th><th>Gross</th><th>Wake%</th><th>Net GWh</th><th>CF%</th></tr></thead>
-    <tbody id="aepBody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:5px">Run analysis</td></tr></tbody></table>
-  </div>
-</div>
-<div class="sec"><div class="sh">AEP BY TURBINE</div><div class="cw" style="height:125px"><canvas id="aepChart"></canvas></div></div>
-<div class="sec"><div class="sh">SHEAR + OROGRAPHY</div>
-  <div class="sg"><div class="sc2"><div class="sv" id="rRIX">—</div><div class="sl">RIX %</div></div><div class="sc2"><div class="sv" id="rShr">—</div><div class="sl">Shear α</div></div></div>
-  <div class="cw" style="height:95px"><canvas id="shearChart"></canvas></div>
-</div>
-</div>
-<div id="rp-wsc" class="rp">
-<div class="sec"><div class="sh">WIND SPEED CHAIN REPORT</div>
-  <div class="ibox" style="font-size:9px">Full WS transformation: Mast OWC → log extrapolation → MCP LT → GWC (remove orographic + roughness at mast) → SWC (apply orographic + roughness at turbine) → Weibull → wake per turbine<br><b style="color:var(--wrn)">v11.6: Auto-Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · WAsP Proxies</b></div>
-  <div id="wscChain">Run analysis to see WS chain</div>
-</div>
-<div class="sec"><div class="sh">PER-TURBINE WS BREAKDOWN</div>
-  <div style="max-height:230px;overflow-y:auto">
-    <table class="dtbl"><thead><tr><th>T#</th><th>Free WS</th><th>Wake Δ%</th><th>Net WS</th><th>Power kW</th><th>Avail%</th></tr></thead>
-    <tbody id="wscBody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:5px">Run analysis</td></tr></tbody></table>
-  </div>
-</div>
-<div class="sec"><div class="sh">WEIBULL: MAST vs HUB HEIGHT</div><div class="cw" style="height:125px"><canvas id="wscChart"></canvas></div></div>
-</div>
-<div id="rp-wind" class="rp">
-<div class="sec"><div class="sh">WIND STATISTICS</div>
-  <div class="sg">
-    <div class="sc2"><div class="sv" id="wMean">—</div><div class="sl">Mean WS m/s</div></div>
-    <div class="sc2"><div class="sv" id="wPD">—</div><div class="sl">Power Density W/m²</div></div>
-    <div class="sc2"><div class="sv" id="wA">—</div><div class="sl">Weibull A</div></div>
-    <div class="sc2"><div class="sv" id="wK">—</div><div class="sl">Weibull k</div></div>
-  </div>
-</div>
-<div class="sec"><div class="sh">WIND ROSE (OWC)</div><canvas id="roseCanvas" width="270" height="195" style="display:block;margin:0 auto"></canvas></div>
-<div class="sec"><div class="sh">WEIBULL DISTRIBUTION</div><div class="cw" style="height:115px"><canvas id="wbChart"></canvas></div></div>
-<div class="sec"><div class="sh">SECTOR TABLE</div>
-  <div style="max-height:185px;overflow-y:auto">
-    <table class="dtbl"><thead><tr><th>Dir</th><th>Freq%</th><th>A</th><th>k</th><th>WS</th></tr></thead><tbody id="sectBody"></tbody></table>
-  </div>
-</div>
-</div>
-<div id="rp-gwc" class="rp">
-<div class="sec"><div class="sh">OWC → GWC → SWC</div>
-  <div class="sg">
-    <div class="sc2"><div class="sv" id="gcZ0">—</div><div class="sl">z₀ m</div></div>
-    <div class="sc2"><div class="sv" id="gcSR">—</div><div class="sl">Mean SR</div></div>
-    <div class="sc2"><div class="sv" id="gcWS">—</div><div class="sl">GWC WS</div></div>
-    <div class="sc2"><div class="sv" id="gcSW">—</div><div class="sl">SWC WS</div></div>
-  </div>
-  <div style="max-height:225px;overflow-y:auto">
-    <table class="dtbl"><thead><tr><th>Dir</th><th>Freq%</th><th>OWC A</th><th>OWC k</th><th>GWC A</th><th>SWC A</th><th>SR</th></tr></thead>
-    <tbody id="gwcBody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:5px">Run analysis</td></tr></tbody></table>
-  </div>
-</div>
-<div class="sec"><div class="sh">SHEAR PROFILE (log law)</div><div class="cw" style="height:135px"><canvas id="shearChart2"></canvas></div></div>
-</div>
+</div><!-- /main -->
 
-<div id="rp-bz" class="rp">
-<div class="sec"><div class="sh">BZ SPEEDUP RESULTS</div>
-  <div class="ibox" style="font-size:9px">Jackson-Hunt (1983) · Fractional speedup δ = ΔU/U₀ via modified Bessel K₀/K₁ spectral model<br><b style="color:var(--wrn)">v11.6:</b> Auto-Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · WAsP Proxies · FFT Engine · Flow Turning · Steep terrain</div>
-  <div class="sg">
-    <div class="sc2"><div class="sv" id="bz-maSU">—</div><div class="sl">Mast Speedup</div></div>
-    <div class="sc2"><div class="sv" id="bz-mxSU">—</div><div class="sl">Max Turb. SU</div></div>
-    <div class="sc2"><div class="sv" id="bz-miSU">—</div><div class="sl">Min Turb. SU</div></div>
-    <div class="sc2"><div class="sv" id="bz-rix">—</div><div class="sl">Mean RIX %</div></div>
-  </div>
+<div id="sbar" style="padding:.2rem .8rem;background:var(--bg);border-top:1px solid var(--border);font-size:.58rem;color:var(--text3);display:flex;gap:10px;flex-wrap:wrap">
+  <div>Project: <span id="sbProj" style="color:var(--mint)">New Project</span></div>
+  <div>WTGs: <span id="sbN" style="color:var(--mint)">0</span></div>
+  <div>Capacity: <span id="sbCap" style="color:var(--mint)">—</span></div>
+  <div>Net AEP: <span id="sbAEP" style="color:var(--mint)">—</span></div>
+  <div style="margin-left:auto">Cursor: <span id="sbXY" style="color:var(--mint)">—</span></div>
 </div>
-<div class="sec"><div class="sh">PER-TURBINE SPEEDUP &amp; WS CHAIN</div>
-  <div style="max-height:230px;overflow-y:auto">
-    <table class="dtbl">
-      <thead><tr><th>T#</th><th>BZ SU</th><th>δ%</th><th>Turn°</th><th>OWC WS</th><th>GWC WS</th><th>SWC WS</th></tr></thead>
-      <tbody id="bzTBody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:6px">Run BZ model first</td></tr></tbody>
-    </table>
-  </div>
-</div>
-<div class="sec"><div class="sh">SECTOR BZ SPEEDUP (directional, all turbines mean)</div>
-  <div class="cw" style="height:125px"><canvas id="bzSectChart"></canvas></div>
-</div>
-<div class="sec"><div class="sh">ROUGHNESS MULTI-LAYER IBL MODEL</div>
-  <div class="sg">
-    <div class="sc2"><div class="sv" id="bz-iblH">—</div><div class="sl">IBL Height (m)</div></div>
-    <div class="sc2"><div class="sv" id="bz-roughRC">—</div><div class="sl">Rough. Correction</div></div>
-  </div>
-  <div id="bzIBLnote" class="ibox" style="font-size:9px">—</div>
-</div>
-<div class="sec"><div class="sh">BESSEL FUNCTION VERIFICATION</div>
-  <div class="cw" style="height:110px"><canvas id="bzBesChart"></canvas></div>
-</div>
-</div>
-
-</div></div>
-</div>
-<div id="sbar">
-  <div>Project: <span id="sbProj">New Project</span></div>
-  <div>WTGs: <span id="sbN">0</span></div>
-  <div>Capacity: <span id="sbCap">—</span></div>
-  <div>Net AEP: <span id="sbAEP">—</span></div>
-  <div style="margin-left:auto">Cursor: <span id="sbXY">—</span></div>
-</div>
-
-
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 11.5  — WAsP Near-Alignment · Site Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · WAsP Proxies
+// WINDFLOW PRO 12.0 — Step-Based Wizard · WAsP-Aligned · Auto-Calibration · 2nd-Order BZ · Deep-Array Wake
 // ═══════════════════════════════════════════════════════════════════
 const $=id=>document.getElementById(id);
-function log(m,t='i'){const d=$('elog');const s=document.createElement('span');s.className={i:'li',w:'lw',e:'le'}[t]||'li';s.textContent=`[${new Date().toLocaleTimeString()}] ${m}\n`;d.appendChild(s);d.scrollTop=1e6}
-function setProg(id,p,t){$(id+'pb').style.width=p+'%';$(id+'pt').textContent=t}
-function setStatus(s){$('tbst').textContent=s}
-
+function log(m,t='i'){const d=$('elog');if(!d)return;const s=document.createElement('span');s.className={i:'li',w:'lw',e:'le'}[t]||'li';s.textContent=`[${new Date().toLocaleTimeString()}] ${m}\n`;d.appendChild(s);d.scrollTop=1e6}
+function setProg(id,p,t){const pb=$(id+'pb'),pt=$(id+'pt');if(pb)pb.style.width=p+'%';if(pt)pt.textContent=t}
+function setStatus(s){const el=$('tbst');if(el)el.textContent=s}
 // ── STATE ──
 const S={
   turbines:[],wind:null,era5Raw:null,mcpFactor:1.0,
@@ -1098,7 +903,7 @@ async function downloadTerrainBoundary(){
   const dLat=(Math.max(...lats)-Math.min(...lats))*111.32,dLon=(Math.max(...lons)-Math.min(...lons))*111.32*Math.cos(clat*Math.PI/180);
   const radKm=Math.max(3,Math.max(dLat,dLon)/2+2);
   const ng=parseInt($('bndGrid').value)||20;const ci=$('bndCI').value;
-  setProg('terrP',5,'Downloading terrain within boundary...');showTab('terr');
+  setProg('terrP',5,'Downloading terrain within boundary...');// goToStep(4);
   try{const R=await downloadTerrainForArea(clat,clon,radKm,ng,ci);$('terrMin').textContent=R.minE.toFixed(0);$('terrMax').textContent=R.maxE.toFixed(0);$('terrMn').textContent=R.meanE.toFixed(0);$('terrCI2').textContent=R.ci;$('terrOut').style.display='block';drawTerrainProfile();log(`Boundary terrain: ${R.minE.toFixed(0)}–${R.maxE.toFixed(0)}m`,'i');}
   catch(e){setProg('terrP',0,'❌ '+e.message);log('Terrain failed: '+e.message,'e');}
 }
@@ -1165,7 +970,7 @@ function toggleDraw(){
   $('drawStatus').textContent='Click map to add vertices · Double-click / "Close Polygon" to finish';
   $('drawStatus').style.display='block';
   $('drawBtn').classList.add('active');
-  showTab('bnd');
+  // step1 already;
   log('Boundary drawing mode ON. Click map to add vertices.','i');
 }
 
@@ -1784,10 +1589,10 @@ async function loadDemo(site='horns'){
   $('mastLat').value=cfg.lat.toFixed(3);$('mastLon').value=cfg.lon.toFixed(3);
   $('terrLa').value=cfg.lat.toFixed(3);$('terrLo').value=cfg.lon.toFixed(3);
   $('tsSy').value=cfg.e5sy;$('tsEy').value=cfg.e5sy;
-  showTab('era5');await downloadERA5();
-  showTab('terr');$('terrR').value='8';$('terrG').value='20';await downloadTerrain();
-  showTab('setup');runAnalysis();
-  showRTab('wsc');setTimeout(()=>showRTab('aep'),300);
+  goToStep(3);await downloadERA5();
+  // goToStep(4);$('terrR').value='8';$('terrG').value='20';await downloadTerrain();
+  goToStep(5);runAnalysis();
+  // step5;setTimeout(()=>// step5,300);
   setStatus(`✓ Demo: ${cfg.name} | ${cfg.gy*cfg.gc} WTGs | ERA5 ${cfg.e5sy}–${cfg.e5ey}`);
 }
 
@@ -1856,10 +1661,8 @@ function exportReport(){
 function importLayout(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const ts=[],hh=parseFloat($('hubH').value)||120;for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t]/);if(i===0&&isNaN(+p[0]))continue;const la=+p[0],lo=+p[1];if(!isNaN(la)&&!isNaN(lo))ts.push({lat:la,lon:lo,hh:+p[2]||hh,name:`T${ts.length+1}`});}if(!ts.length){alert('No valid rows');return;}S.turbines=ts;refreshTable();updateMarkers();log(`Imported ${ts.length} turbines from ${f.name}`,'i');};r.readAsText(f);ev.target.value='';}
 function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)&&ws>=0&&ws<80){sp.push(ws);dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;const vs=sp.filter(v=>v>0.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
 function dlFile(c,f,m){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:m}));a.download=f;a.click();}
-function showTab(id){document.querySelectorAll('.sp2').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.stab').forEach(b=>b.classList.remove('on'));$('sp-'+id)?.classList.add('on');document.querySelectorAll('.stab').forEach(b=>{if(b.dataset.tab===id)b.classList.add('on');});}
-function showRTab(id){document.querySelectorAll('.rp').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('on'));$('rp-'+id)?.classList.add('on');document.querySelectorAll('.rtab').forEach(b=>{if(b.dataset.rtab===id)b.classList.add('on');});}
-document.querySelectorAll('.stab').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
-document.querySelectorAll('.rtab').forEach(b=>b.addEventListener('click',()=>showRTab(b.dataset.rtab)));
+function showTab(id){/* legacy stub */}
+function showRTab(id){/* legacy stub */}
 
 // ── INIT ──
 function autoShear(){
@@ -3833,4 +3636,394 @@ function testBessel(){
 // Run Bessel tests on load
 setTimeout(()=>{testBessel();log('BZ model loaded. Download terrain + run BZ model for orographic speedups.','i');},1500);
 
+
+// ═══════════════════════════════════════════════════════════════════
+// NEW UI FUNCTIONS — Step Wizard, Power Curve Upload, Multi-Mast, etc.
+// ═══════════════════════════════════════════════════════════════════
+
+// ── STEP NAVIGATION ──
+let currentStep=1;
+function goToStep(n){
+  currentStep=n;
+  document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));
+  const panel=$('step'+n);
+  if(panel)panel.classList.add('active');
+  document.querySelectorAll('.step-item').forEach(s=>{const sn=parseInt(s.dataset.step);s.classList.remove('active','done');if(sn===n)s.classList.add('active');else if(sn<n)s.classList.add('done');});
+  if(n===1&&leafMap)setTimeout(()=>{leafMap.invalidateSize();},300);
+  if(n===2)drawPowerCurve();
+  if(n===3)syncMastToUI();
+  if(n===6)updateReportingDashboard();
+  window.scrollTo(0,0);
+}
+
+// ── LEAFLET MAP ──
+var leafMap=null;
+function initMap(){
+  try{
+    leafMap=L.map('siteMap',{zoomControl:true,drawControl:false}).setView([55.5,7.9],8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(leafMap);
+    // Draw control
+    try{
+      var drawnItems=new L.FeatureGroup();
+      leafMap.addLayer(drawnItems);
+      var dc=new L.Control.Draw({draw:{polygon:{shapeOptions:{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12}},polyline:false,circle:false,rectangle:false,marker:false,circlemarker:false},edit:{featureGroup:drawnItems,remove:true}});
+      leafMap.addControl(dc);
+      leafMap.on(L.Draw.Event.CREATED,function(e){drawnItems.clearLayers();drawnItems.addLayer(e.layer);var lls=e.layer.getLatLngs()[0];S.boundary=lls.map(function(ll){return[ll.lat,ll.lng];});var area=polyArea(S.boundary);$('bndStats').textContent='✓ '+S.boundary.length+' vertices · Area ≈ '+area.toFixed(1)+' km²';});
+      leafMap.on(L.Draw.Event.DELETED,function(){S.boundary=[];$('bndStats').textContent='No boundary defined';});
+    }catch(drawErr){console.warn('Leaflet Draw not available:',drawErr);}
+    // Mouse move for info overlay
+    leafMap.on('mousemove',function(e){if($('ovLat')){$('ovLat').textContent=e.latlng.lat.toFixed(4);$('ovLon').textContent=e.latlng.lng.toFixed(4);$('sbXY').textContent=e.latlng.lat.toFixed(4)+', '+e.latlng.lng.toFixed(4);}var su=getSpatialHubWS(e.latlng.lat,e.latlng.lng);if(su&&$('ovWS')){$('ovWS').textContent=su.ws.toFixed(2);$('ovSU').textContent=su.su.toFixed(4);$('ovEl').textContent=su.elev!==null?su.elev.toFixed(0)+'m':'—';}});
+    // Click to add turbine
+    leafMap.on('click',function(e){if(S.drawMode){S.boundary.push([e.latlng.lat,e.latlng.lng]);S.boundaryMarkers.push(L.circleMarker(e.latlng,{radius:4,color:'#d29922',fillColor:'#d29922',fillOpacity:1}).addTo(leafMap));$('bndStats').textContent=S.boundary.length+' vertices';}});
+    setTimeout(function(){if(leafMap)leafMap.invalidateSize();},500);
+    initCanvas();
+    log('Map initialized successfully','i');
+  }catch(e){console.error('Map init failed:',e);log('Map init failed: '+e.message,'e');}
+}
+
+// ── POWER CURVE UPLOAD ──
+const PC_PRESETS={
+  'v90':{rated:2000,D:90,hh:80,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,45,165,350,590,870,1150,1400,1650,1850,1970,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,0],ct:[0,0,0,.88,.85,.82,.79,.76,.70,.62,.53,.44,.36,.29,.23,.19,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'v110':{rated:2000,D:110,hh:95,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,50,180,380,650,960,1280,1550,1780,1930,1990,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,0],ct:[0,0,0,.87,.84,.81,.78,.75,.69,.62,.53,.44,.36,.29,.23,.19,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'v136':{rated:4200,D:136,hh:112,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,75,270,580,1020,1580,2220,2940,3580,3960,4150,4200,4200,4200,4200,4200,4200,4200,4200,4200,4200,4200,4200,0],ct:[0,0,0,.89,.86,.83,.80,.77,.72,.65,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'v150':{rated:5600,D:150,hh:120,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,85,310,680,1200,1850,2600,3400,4100,4800,5300,5550,5600,5600,5600,5600,5600,5600,5600,5600,5600,5600,5600,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'v164':{rated:9500,D:164,hh:140,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,120,440,950,1700,2650,3750,4950,6100,7200,8300,9000,9400,9500,9500,9500,9500,9500,9500,9500,9500,9500,9500,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'v174':{rated:9500,D:174,hh:148,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,115,420,900,1620,2520,3550,4700,5800,6900,8000,8800,9300,9500,9500,9500,9500,9500,9500,9500,9500,9500,9500,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'sg108':{rated:4500,D:108,hh:100,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,80,280,600,1050,1620,2280,3000,3650,4100,4350,4500,4500,4500,4500,4500,4500,4500,4500,4500,4500,4500,4500,0],ct:[0,0,0,.88,.85,.82,.79,.76,.70,.62,.53,.44,.36,.29,.23,.19,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'sg132':{rated:6600,D:132,hh:115,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,100,360,780,1380,2150,3050,4050,4950,5750,6300,6550,6600,6600,6600,6600,6600,6600,6600,6600,6600,6600,6600,0],ct:[0,0,0,.89,.86,.83,.80,.77,.72,.65,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'sg170':{rated:7000,D:170,hh:125,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,105,380,820,1450,2250,3200,4250,5200,6050,6600,6900,7000,7000,7000,7000,7000,7000,7000,7000,7000,7000,7000,0],ct:[0,0,0,.89,.86,.83,.80,.77,.72,.65,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'sg222':{rated:13000,D:222,hh:150,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,160,580,1250,2200,3450,4900,6500,8000,9600,11000,12100,12700,13000,13000,13000,13000,13000,13000,13000,13000,13000,13000,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'n117':{rated:3600,D:117,hh:91,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,65,230,500,880,1370,1930,2550,3100,3420,3560,3600,3600,3600,3600,3600,3600,3600,3600,3600,3600,3600,3600,0],ct:[0,0,0,.88,.85,.82,.79,.76,.70,.62,.53,.44,.36,.29,.23,.19,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'n133':{rated:4800,D:133,hh:110,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,85,300,650,1150,1780,2510,3320,4050,4500,4720,4800,4800,4800,4800,4800,4800,4800,4800,4800,4800,4800,4800,0],ct:[0,0,0,.89,.86,.83,.80,.77,.72,.65,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'n149':{rated:5700,D:149,hh:130,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,95,340,740,1300,2020,2860,3780,4620,5200,5500,5680,5700,5700,5700,5700,5700,5700,5700,5700,5700,5700,5700,0],ct:[0,0,0,.89,.86,.83,.80,.77,.72,.65,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'n163':{rated:6800,D:163,hh:148,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,110,400,870,1530,2380,3370,4450,5450,6150,6550,6750,6800,6800,6800,6800,6800,6800,6800,6800,6800,6800,6800,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'ge136':{rated:4800,D:136,hh:110,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,85,300,650,1150,1780,2510,3320,4050,4500,4720,4800,4800,4800,4800,4800,4800,4800,4800,4800,4800,4800,4800,0],ct:[0,0,0,.89,.86,.83,.80,.77,.72,.65,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'ge158':{rated:6100,D:158,hh:128,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,100,360,780,1380,2150,3050,4050,4950,5650,6000,6100,6100,6100,6100,6100,6100,6100,6100,6100,6100,6100,6100,0],ct:[0,0,0,.89,.86,.83,.80,.77,.72,.65,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'ge220':{rated:14000,D:220,hh:150,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,170,620,1340,2360,3700,5250,7000,8600,10300,11800,13000,13700,14000,14000,14000,14000,14000,14000,14000,14000,14000,14000,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'e115':{rated:4200,D:115,hh:92,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,75,270,580,1020,1580,2220,2940,3580,3960,4150,4200,4200,4200,4200,4200,4200,4200,4200,4200,4200,4200,4200,0],ct:[0,0,0,.88,.85,.82,.79,.76,.70,.62,.53,.44,.36,.29,.23,.19,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'e126':{rated:7580,D:126,hh:135,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,120,430,940,1660,2580,3650,4830,5900,6800,7300,7520,7580,7580,7580,7580,7580,7580,7580,7580,7580,7580,7580,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'e160':{rated:5500,D:160,hh:135,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,90,330,720,1260,1960,2780,3680,4500,5100,5380,5480,5500,5500,5500,5500,5500,5500,5500,5500,5500,5500,5500,0],ct:[0,0,0,.89,.86,.83,.80,.77,.72,.65,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'gw121':{rated:2500,D:121,hh:90,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,50,175,380,670,1040,1470,1940,2320,2450,2500,2500,2500,2500,2500,2500,2500,2500,2500,2500,2500,2500,2500,0],ct:[0,0,0,.87,.84,.81,.78,.75,.69,.62,.53,.44,.36,.29,.23,.19,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'gw136':{rated:4200,D:136,hh:112,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,75,270,580,1020,1580,2220,2940,3580,3960,4150,4200,4200,4200,4200,4200,4200,4200,4200,4200,4200,4200,4200,0],ct:[0,0,0,.89,.86,.83,.80,.77,.72,.65,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'gw171':{rated:6450,D:171,hh:135,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,110,400,870,1530,2380,3370,4450,5450,6150,6350,6420,6450,6450,6450,6450,6450,6450,6450,6450,6450,6450,6450,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'my158':{rated:7250,D:158,hh:128,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,120,430,940,1660,2580,3650,4830,5900,6700,7100,7220,7250,7250,7250,7250,7250,7250,7250,7250,7250,7250,7250,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'my184':{rated:11000,D:184,hh:150,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,160,570,1240,2200,3450,4900,6500,8000,9500,10500,10800,11000,11000,11000,11000,11000,11000,11000,11000,11000,11000,11000,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
+  'my230':{rated:18000,D:230,hh:165,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,220,800,1740,3080,4820,6840,9080,11200,13400,15200,17000,17800,18000,18000,18000,18000,18000,18000,18000,18000,18000,18000,0],ct:[0,0,0,.91,.88,.85,.82,.79,.74,.67,.57,.48,.39,.32,.26,.21,.17,.14,.12,.10,.09,.08,.07,.06,.05,0]}
+};
+
+// Merge presets into PCL
+Object.assign(PCL, PC_PRESETS);
+
+function applyPreset(){
+  const cls=$('tcls').value;
+  if(cls==='custom'){$('customPCCard').style.display='block';return;}
+  $('customPCCard').style.display='none';
+  const p=getPC();if(!p)return;
+  $('hubH').value=p.hh;$('rotD').value=p.D;$('ratedPow').value=p.rated;
+  drawPowerCurve();
+}
+
+function handlePowerCurveUpload(event){
+  const f=event.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=function(e){
+    try{
+      const lines=e.target.result.split('\n').filter(l=>l.trim());
+      const ws=[],pw=[],ct=[];
+      let start=0;
+      if(lines[0]&&isNaN(+lines[0].split(/[,\t;]/)[0]))start=1; // skip header
+      for(let i=start;i<lines.length;i++){
+        const p=lines[i].split(/[,\t;]/);
+        const v=+p[0],power=+p[1],c=p.length>2?+p[2]:0.78;
+        if(!isNaN(v)&&!isNaN(power)){ws.push(v);pw.push(power);ct.push(isNaN(c)?0.78:Math.max(0,Math.min(1,c)));}
+      }
+      if(ws.length<5){alert('Need at least 5 data points');return;}
+      const rated=Math.max(...pw);
+      const cutIn=ws.find((w,i)=>pw[i]>0)||3;
+      const cutOut=ws.slice().reverse().find((w,i)=>pw[pw.length-1-i]>0)||25;
+      PCL['custom']={rated,D:parseFloat($('rotD').value)||150,hh:parseFloat($('hubH').value)||120,cutIn,cutOut,ws,pw,ct};
+      $('tcls').value='custom';
+      $('customPCCard').style.display='block';
+      $('ratedPow').value=rated;
+      $('pcUploadStatus').textContent=`✓ Loaded ${ws.length} points, rated=${rated}kW, cut-in=${cutIn}m/s, cut-out=${cutOut}m/s`;
+      $('pcUploadZone').classList.add('loaded');
+      drawPowerCurve();
+      log(`Power curve uploaded: ${ws.length} points, rated=${rated}kW`,'i');
+    }catch(err){$('pcUploadStatus').textContent='❌ '+err.message;log('PC upload failed: '+err.message,'e');}
+  };
+  r.readAsText(f);event.target.value='';
+}
+
+function drawPowerCurve(){
+  const pc=getPC();if(!pc)return;
+  // Power curve chart
+  mkChart('pcChart','line',{labels:pc.ws.map(v=>v+''),datasets:[{data:pc.pw,borderColor:'#00d68f',fill:true,backgroundColor:'rgba(0,214,143,.08)',borderWidth:2,pointRadius:1.5,tension:.3,label:'Power (kW)'}]},{y:{title:{display:true,text:'Power (kW)',color:'var(--text3)',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},x:{title:{display:true,text:'Wind Speed (m/s)',color:'var(--text3)',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},plugins:{legend:{display:false}}});
+  // CT chart
+  mkChart('ctChart','line',{labels:pc.ws.map(v=>v+''),datasets:[{data:pc.ct,borderColor:'#f5a623',fill:true,backgroundColor:'rgba(245,166,35,.08)',borderWidth:2,pointRadius:1.5,tension:.3,label:'Ct'},{data:pc.ct.map(c=>c*0.5),borderColor:'#4ab3e8',fill:false,borderWidth:1,pointRadius:0,borderDash:[4,2],tension:.3,label:'δ (wake)'}]},{y:{title:{display:true,text:'Thrust Coeff.',color:'var(--text3)',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},x:{title:{display:true,text:'Wind Speed (m/s)',color:'var(--text3)',font:{size:9)},grid:{color:'rgba(255,255,255,.04)'}},plugins:{legend:{display:true,labels:{color:'var(--text3)',font:{size:9}}}}});
+}
+
+// ── MULTI-MAST SUPPORT ──
+if(!S.masts)S.masts=[];
+function addMast(){
+  const m={id:S.masts.length+1,name:'Mast '+(S.masts.length+1),lat:parseFloat($('mastLat')?.value||55.5),lon:parseFloat($('mastLon')?.value||7.9),height:parseFloat($('mastH')?.value||100),z0:parseFloat($('z0val')?.value||0.0002),primary:S.masts.length===0,startDate:'',endDate:''};
+  S.masts.push(m);
+  renderMastList();
+  editMast(S.masts.length-1);
+}
+function editMast(idx){
+  const m=S.masts[idx];if(!m)return;
+  $('mastName').value=m.name;$('mastH').value=m.height;$('mastLat').value=m.lat;$('mastLon').value=m.lon;$('mastPrimary').value=m.primary?'1':'0';$('mastStart').value=m.startDate||'';$('mastEnd').value=m.endDate||'';
+  $('mastEditCard').style.display='block';$('mastEditCard').dataset.idx=idx;
+  renderMastList();
+}
+function saveMast(){
+  const idx=parseInt($('mastEditCard').dataset.idx);
+  if(isNaN(idx)||!S.masts[idx])return;
+  const m=S.masts[idx];
+  m.name=$('mastName').value;m.height=parseFloat($('mastH').value)||100;
+  m.lat=parseFloat($('mastLat').value)||55.5;m.lon=parseFloat($('mastLon').value)||7.9;
+  m.primary=$('mastPrimary').value==='1';m.startDate=$('mastStart').value;m.endDate=$('mastEnd').value;
+  // If this mast is set as primary, clear others
+  if(m.primary)S.masts.forEach((mm,i)=>{if(i!==idx)mm.primary=false;});
+  // Sync to the legacy single-mast fields
+  if(m.primary){$('mastH').value=m.height;$('mastLat').value=m.lat;$('mastLon').value=m.lon;}
+  renderMastList();
+  log(`Mast saved: ${m.name} (${m.lat}, ${m.lon}, ${m.height}m)${m.primary?' [PRIMARY]':''}`,'i');
+}
+function removeMast(){
+  const idx=parseInt($('mastEditCard').dataset.idx);
+  if(isNaN(idx))return;
+  S.masts.splice(idx,1);
+  $('mastEditCard').style.display='none';
+  renderMastList();
+}
+function syncMastToUI(){
+  if(S.masts.length===0){
+    // Create default mast from existing fields
+    S.masts=[{id:1,name:'Mast 1',lat:parseFloat($('mastLat')?.value||55.5),lon:parseFloat($('mastLon')?.value||7.9),height:parseFloat($('mastH')?.value||100),z0:parseFloat($('z0val')?.value||0.0002),primary:true,startDate:'',endDate:''}];
+  }
+  renderMastList();
+}
+function renderMastList(){
+  const el=$('mastList');if(!el)return;
+  el.innerHTML='';
+  S.masts.forEach((m,i)=>{
+    const div=document.createElement('div');div.className='mast-card'+(m.primary?' primary':'');
+    div.innerHTML=`<div class="mast-header"><span class="mast-name">${m.name}${m.primary?' ★':''}</span><button class="btn btn-sm btn-ghost" onclick="editMast(${i})" style="padding:.15rem .4rem;font-size:.5rem">Edit</button></div><div style="font-size:.6rem;color:var(--text3)">Lat: ${m.lat.toFixed(4)} · Lon: ${m.lon.toFixed(4)} · H: ${m.height}m</div>`;
+    div.style.cursor='pointer';div.onclick=function(e){if(e.target.tagName!=='BUTTON')editMast(i);};
+    el.appendChild(div);
+  });
+}
+function importMastData(event){
+  const f=event.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=function(e){
+    try{
+      const lines=e.target.result.split('\n').filter(l=>l.trim());
+      for(let i=0;i<lines.length;i++){
+        const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0]))continue;
+        const lat=+p[0],lon=+p[1],h=p[2]?+p[2]:100,name=p[3]||'Mast '+(S.masts.length+1);
+        if(!isNaN(lat)&&!isNaN(lon))S.masts.push({id:S.masts.length+1,name,lat,lon,height:h,z0:0.03,primary:S.masts.length===0,startDate:'',endDate:''});
+      }
+      renderMastList();log(`Imported ${S.masts.length} masts from ${f.name}`,'i');
+    }catch(err){log('Mast import failed: '+err.message,'e');}
+  };r.readAsText(f);event.target.value='';
+}
+
+// ── ADDITIONAL DATA SOURCES ──
+async function downloadGWA(){$('gwaStatus').textContent='Querying GWA API...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const r=await fetch(`https://globalwindatlas.info/api/gwa/lat/${lat}/lon/${lon}`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();$('gwaStatus').textContent='✓ GWA data received: mean WS='+((d.wind_speed&&d.wind_speed['100'])||'—')+' m/s';log('GWA data downloaded','i');}catch(e){$('gwaStatus').textContent='⚠ GWA API unavailable: '+e.message;log('GWA failed: '+e.message,'w');}}
+
+async function downloadMERRA2(){$('merra2Status').textContent='Querying NASA POWER...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();const ws=Object.values(d.properties?.parameter?.WS50M||{}).filter(v=>v>0);const mean=ws.length?ws.reduce((s,v)=>s+v,0)/ws.length:0;$('merra2Status').textContent='✓ MERRA-2: '+ws.length.toLocaleString()+' records, mean WS50m='+mean.toFixed(2)+' m/s';log('MERRA-2 data downloaded: '+ws.length+' records','i');}catch(e){$('merra2Status').textContent='⚠ MERRA-2 unavailable: '+e.message;log('MERRA-2 failed: '+e.message,'w');}}
+
+async function downloadNCEP(){$('ncepStatus').textContent='NCEP/NCAR via Open-Meteo...';try{$('ncepStatus').textContent='⚠ Use ERA5 tab for NCEP-equivalent data (Open-Meteo includes NCEP backfill)';}catch(e){$('ncepStatus').textContent='⚠ NCEP unavailable';}}
+
+// ── BOUNDARY UPLOAD ──
+function handleBoundaryUpload(event){
+  const f=event.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=function(e){
+    try{
+      let coords=[];
+      const text=e.target.result;
+      if(f.name.endsWith('.kml')){
+        const parser=new DOMParser();const doc=parser.parseFromString(text,'text/xml');
+        const pts=doc.querySelectorAll('coordinates');pts.forEach(pt=>{const vals=pt.textContent.trim().split(/[,\s]+/);if(vals.length>=2){const lon=+vals[0],lat=+vals[1];if(!isNaN(lat)&&!isNaN(lon))coords.push([lat,lon]);}});
+      }else{
+        const geojson=JSON.parse(text);
+        const extractCoords=function(geom){if(geom.type==='Polygon')return geom.coordinates[0].map(c=>[c[1],c[0]]);if(geom.type==='MultiPolygon')return geom.coordinates[0][0].map(c=>[c[1],c[0]]);return[];};
+        if(geojson.features)coords=extractCoords(geojson.features[0].geometry);
+        else if(geojson.geometry)coords=extractCoords(geojson.geometry);
+        else if(geojson.coordinates)coords=geojson.coordinates[0].map(c=>[c[1],c[0]]);
+      }
+      if(coords.length<3){alert('Need at least 3 coordinate pairs');return;}
+      S.boundary=coords;
+      if(leafMap){const p=L.polygon(coords,{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12}).addTo(leafMap);leafMap.fitBounds(p.getBounds(),{padding:[20,20]});}
+      $('bndStats').textContent='✓ '+coords.length+' vertices from '+f.name;
+      $('boundaryUploadZone').classList.add('loaded');
+      log('Boundary uploaded: '+coords.length+' vertices from '+f.name,'i');
+    }catch(err){alert('Failed to parse: '+err.message);log('Boundary upload failed: '+err.message,'e');}
+  };r.readAsText(f);event.target.value='';
+}
+
+// ── FLOW TABS ──
+function showFlowTab(idx,btn){
+  document.querySelectorAll('#step5 .tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('#step5 .tab-btn').forEach(b=>b.classList.remove('active'));
+  const panel=$('flowTab'+idx);if(panel)panel.classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+
+// ── FINANCIAL ANALYSIS ──
+function runFinancial(){
+  if(!S.results){alert('Run analysis first');return;}
+  const R=S.results;
+  const capex=parseFloat($('finCAPEX').value)||1200;
+  const opex=parseFloat($('finOPEX').value)||35;
+  const ppa=parseFloat($('finPPA').value)||50;
+  const dr=parseFloat($('finDR').value)||8;
+  const life=parseInt($('finLife').value)||25;
+  const tax=parseFloat($('finTax').value)||25;
+  const instMW=R.instMW;
+  const totalCAPEX=instMW*capex*1000;
+  const annualRev=R.netAEP*1000*ppa;
+  const annualOpex=instMW*opex*1000;
+  const annualNet=annualRev-annualOpex;
+  let npv=-totalCAPEX;
+  for(let y=1;y<=life;y++){npv+=annualNet/Math.pow(1+dr/100,y);}
+  const irr=annualNet/totalCAPEX*100;
+  const lcoe=totalCAPEX/life+annualOpex/(R.netAEP*1000);
+  $('finResults').style.display='block';
+  $('finResults').innerHTML=`<div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val gold">$${(totalCAPEX/1e6).toFixed(1)}M</div><div class="metric-label">Total CAPEX</div></div><div class="metric-item"><div class="metric-val sky">$${(annualRev/1e6).toFixed(2)}M</div><div class="metric-label">Annual Revenue</div></div><div class="metric-item"><div class="metric-val">$${(annualOpex/1e6).toFixed(2)}M</div><div class="metric-label">Annual OPEX</div></div><div class="metric-item"><div class="metric-val ${npv>0?'g':'r'}">$${(npv/1e6).toFixed(2)}M</div><div class="metric-label">NPV</div></div><div class="metric-item"><div class="metric-val ${irr>dr?'g':'r'}">${irr.toFixed(1)}%</div><div class="metric-label">Simple IRR</div></div><div class="metric-item"><div class="metric-val sky">$${lcoe.toFixed(1)}/MWh</div><div class="metric-label">LCOE</div></div></div>`;
+  log(`Financial: CAPEX=$${(totalCAPEX/1e6).toFixed(1)}M, Rev=$${(annualRev/1e6).toFixed(2)}M/yr, NPV=$${(npv/1e6).toFixed(2)}M, IRR≈${irr.toFixed(1)}%, LCOE=$${lcoe.toFixed(1)}/MWh`,'i');
+}
+
+// ── NOISE ASSESSMENT ──
+function calcNoise(){
+  const sl=parseFloat($('noiseSL').value)||105;
+  const dist=parseFloat($('noiseDist').value)||500;
+  const spl=sl-20*Math.log10(Math.max(1,dist))-11;
+  const assess=spl<35?'Compliant (rural night)':spl<40?'Compliant (residential)':spl<45?'Marginal (residential)':spl<55?'Non-compliant (residential)':'Non-compliant';
+  $('noiseResult').innerHTML=`SPL at ${dist}m: <b style="color:${spl<40?'var(--mint)':spl<50?'var(--gold)':'var(--red)'}">${spl.toFixed(1)} dB(A)</b> — ${assess}`;
+}
+
+// ── REPORTING DASHBOARD ──
+function updateReportingDashboard(){
+  const R=S.results;
+  if(R){
+    $('rpNetAEP').textContent=R.netAEP.toFixed(2);$('rpCF').textContent=R.CF.toFixed(1);
+    $('rpWake').textContent=R.wakeLoss.toFixed(1);$('rpInstMW').textContent=R.instMW.toFixed(1);
+    $('rpMeanWS').textContent=(R.rotorMeanWS||R.hubMean).toFixed(2);$('rpNTurb').textContent=S.turbines.length;
+    // Uncertainty
+    const u=R.sigma*100;
+    $('uncResults').innerHTML=`<div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val g">${R.P50.toFixed(2)}</div><div class="metric-label">P50 GWh</div></div><div class="metric-item"><div class="metric-val sky">${R.P75.toFixed(2)}</div><div class="metric-label">P75 GWh</div></div><div class="metric-item"><div class="metric-val gold">${R.P90.toFixed(2)}</div><div class="metric-label">P90 GWh</div></div><div class="metric-item"><div class="metric-val bad">${R.P99.toFixed(2)}</div><div class="metric-label">P99 GWh</div></div><div class="metric-item"><div class="metric-val sky">${u.toFixed(1)}%</div><div class="metric-label">σ (1σ)</div></div><div class="metric-item"><div class="metric-val">${R.iec?R.iec.cls:'—'}</div><div class="metric-label">IEC Class</div></div></div>`;
+  }
+}
+
+// ── SAVE/LOAD PROJECT ──
+function saveProject(){
+  const data={version:'12.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds.slice(0,1000),dirs:S.wind.dirs.slice(0,1000)}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value}};
+  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved','i');
+}
+
+function loadProject(event){
+  const f=event.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      if(data.turbines){S.turbines=data.turbines;refreshTable();updateMarkers();}
+      if(data.wind){S.wind=data.wind;S.mcpFactor=data.mcpFactor||1;}
+      if(data.terrain)S.terrain=data.terrain;
+      if(data.boundary)S.boundary=data.boundary;
+      if(data.obstacles)S.obstacles=data.obstacles;
+      if(data.masts)S.masts=data.masts;
+      if(data.waspCalibration)S.waspCalibration=data.waspCalibration;
+      if(data.settings){const s=data.settings;Object.keys(s).forEach(k=>{const el=$(k);if(el)el.value=s[k];});}
+      log('Project loaded: '+f.name,'i');goToStep(1);
+    }catch(err){log('Project load failed: '+err.message,'e');}
+  };r.readAsText(f);event.target.value='';
+}
+
+function clearAll(){
+  if(!confirm('Clear all data?'))return;
+  S.turbines=[];S.wind=null;S.era5Raw=null;S.mcpFactor=1;S.tsData=null;S.results=null;S.terrain=null;S.contoursData=[];S.boundary=[];S.obstacles=[];S.masts=[];S.waspCalibration=null;BZ.enabled=false;BZ.speedups=[];BZ.grid=null;
+  refreshTable();updateMarkers();clearBoundary();renderMastList();log('All data cleared','i');goToStep(1);
+}
+
+// ── ROUGHNESS CSV EXPORT ──
+function exportRoughnessCSV(){
+  if(!S.roughnessZones||!S.roughnessZones.length){alert('No roughness data');return;}
+  let c='LandUse,z0,Lat,Lon\n';
+  S.roughnessZones.forEach(z=>{const clat=z.pts.reduce((s,p)=>s+p.lat,0)/z.pts.length;const clon=z.pts.reduce((s,p)=>s+p.lon,0)/z.pts.length;c+=`${z.lu},${z.z0},${clat.toFixed(6)},${clon.toFixed(6)}\n`;});
+  dlFile(c,'roughness.csv','text/csv');log('Roughness CSV exported','i');
+}
+
+
+// ── MISSING UI FUNCTIONS (not defined in original but called) ──
+function refreshTable(){
+  const tb=$('tbody');if(!tb)return;tb.innerHTML='';
+  S.turbines.forEach((t,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>T${i+1}</td><td>${t.lat.toFixed(4)}</td><td>${t.lon.toFixed(4)}</td><td>${t.hh||'—'}</td><td>${t.elev!=null?t.elev.toFixed(0):'—'}</td><td style="color:var(--red);cursor:pointer" onclick="removeTurbine(${i})">✕</td>`;
+    tb.appendChild(tr);
+  });
+  $('tCnt').textContent=S.turbines.length+' turbines';
+  $('sbN').textContent=S.turbines.length;
+  const rated=parseFloat($('ratedPow')?.value)||4000;
+  $('sbCap').textContent=(S.turbines.length*rated/1000).toFixed(1)+' MW';
+}
+
+function updateMarkers(){
+  if(!leafMap)return;
+  // Remove old markers
+  if(S.markers)S.markers.forEach(m=>m.remove());
+  S.markers=[];
+  S.turbines.forEach((t,i)=>{
+    const m=L.circleMarker([t.lat,t.lon],{radius:5,color:'#00d68f',fillColor:'#00d68f',fillOpacity:.8,weight:1}).addTo(leafMap);
+    m.bindTooltip('T'+(i+1)+' ('+t.lat.toFixed(4)+', '+t.lon.toFixed(4)+')');
+    S.markers.push(m);
+  });
+  if(S.turbines.length>1){
+    const bounds=L.latLngBounds(S.turbines.map(t=>[t.lat,t.lon]));
+    leafMap.fitBounds(bounds,{padding:[30,30]});
+  }
+}
+
+function generateGrid(){
+  const rows=parseInt($('gR').value)||2,cols=parseInt($('gC').value)||5;
+  const spac=parseFloat($('gS').value)||7;
+  const cLat=parseFloat($('gLat').value)||55.5,cLon=parseFloat($('gLon').value)||7.9;
+  const D=parseFloat($('rotD').value)||150,hh=parseFloat($('hubH').value)||120;
+  const mLat=111320,mLon=111320*Math.cos(cLat*Math.PI/180);
+  const dLat=spac*D/mLat,dLon=spac*D/mLon;
+  S.turbines=[];
+  for(let r=0;r<rows;r++){
+    const offLon=(r%2===1)?dLon/2:0; // stagger odd rows
+    for(let c=0;c<cols;c++){
+      const lat=cLat-r*(dLat/2)+(rows-1)*(dLat/4);
+      const lon=cLon+(c-Math.floor(cols/2))*dLon+offLon;
+      S.turbines.push({lat,lon,hh,name:'T'+(S.turbines.length+1)});
+    }
+  }
+  refreshTable();updateMarkers();
+  log(`Grid generated: ${rows}×${cols} = ${S.turbines.length} turbines, spacing=${spac}D=${(spac*D).toFixed(0)}m`,'i');
+}
+
+function addManual(){
+  const lat=parseFloat($('manLat').value),lon=parseFloat($('manLon').value);
+  if(isNaN(lat)||isNaN(lon)){alert('Enter valid lat/lon');return;}
+  const hh=parseFloat($('hubH').value)||120;
+  S.turbines.push({lat,lon,hh,name:'T'+(S.turbines.length+1)});
+  refreshTable();updateMarkers();
+  log(`Turbine added: ${lat.toFixed(4)}, ${lon.toFixed(4)}`,'i');
+}
+
+function removeTurbine(i){
+  S.turbines.splice(i,1);
+  refreshTable();updateMarkers();
+}
+
+function clearTurbines(){
+  S.turbines=[];refreshTable();
+  if(S.markers)S.markers.forEach(m=>m.remove());
+  S.markers=[];
+  log('Turbines cleared','i');
+}
 </script></body></html>
