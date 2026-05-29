@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 11.0</title>
+<title>WindFlow Pro 11.5</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
@@ -69,7 +69,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 <body>
 <div id="top">
   <span class="logo">⟁ WINDFLOW PRO</span>
-  <span class="ver">v11.0 · WAsP Near-Alignment · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · Proprietary Proxies</span>
+  <span class="ver">v11.5 · WAsP Near-Alignment · Site Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · WAsP Proxies</span>
   <div class="vsep"></div>
   <button class="btn drw" id="drawBtn" onclick="toggleDraw()">✏ Draw Boundary</button>
   <button class="btn" onclick="doneDraw()">✓ Close Poly</button>
@@ -94,6 +94,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
   <button class="stab" data-tab="rough">ROUGH.</button>
   <button class="stab" data-tab="ts">TIME SER.</button>
   <button class="stab" data-tab="bz">BZ MODEL</button>
+  <button class="stab" data-tab="calib">CALIB</button>
 </div>
 <div id="sc">
 <div id="sp-setup" class="sp2 on">
@@ -295,7 +296,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 <div class="sec"><div class="sh">⚙ WAsP BZ OROGRAPHIC MODEL
   <span id="bzBadge" style="font-size:8px;padding:2px 5px;border-radius:8px;background:rgba(210,153,34,.18);color:var(--wrn)">INACTIVE</span>
 </div>
-<div class="ibox" style="font-size:9px;line-height:1.6"><b style="color:var(--acc)">Jackson-Hunt (1983) · Modified Bessel K₀/K₁ spectral decomposition</b><br>Beljaars-Walmsley (1982) multi-layer IBL roughness model · Directional per-sector orographic speedups · OWC→GWC→SWC per sector · RIX warning<br><b style="color:var(--wrn)">v11.0:</b> 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · WAsP Proxies · FFT Engine · Flow Turning · Rotor-Avg · Roughness rose · Perera · Steep terrain</div>
+<div class="ibox" style="font-size:9px;line-height:1.6"><b style="color:var(--acc)">Jackson-Hunt (1983) · Modified Bessel K₀/K₁ spectral decomposition</b><br>Beljaars-Walmsley (1982) multi-layer IBL roughness model · Directional per-sector orographic speedups · OWC→GWC→SWC per sector · RIX warning<br><b style="color:var(--wrn)">v11.5:</b> Site Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · WAsP Proxies · FFT Engine · Flow Turning · Rotor-Avg · Roughness rose · Perera · Steep terrain</div>
 <div class="r2">
   <div class="fld"><label>Mast z₀ (m)</label><input id="bzMz0" type="number" value="0.0002" step="0.0001"></div>
   <div class="fld"><label>Site z₀ (m)</label><input id="bzSz0" type="number" value="0.0002" step="0.0001"></div>
@@ -387,6 +388,70 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 </div>
 </div>
 
+<div id="sp-calib" class="sp2">
+<div class="sec"><div class="sh">🎯 WAsP SITE CALIBRATION</div>
+  <div class="ibox">Enter actual WAsP results to compute site-specific calibration factors · Closes the gap to <0.5% for any terrain</div>
+  <div class="ibox" style="background:rgba(210,153,34,.08);border-color:var(--wrn);color:var(--wrn);font-size:8px">⚠ Calibration is site-specific. Do NOT apply to different sites without re-calibrating.</div>
+</div>
+<div class="sec"><div class="sh">📊 WAsP REFERENCE RESULTS</div>
+  <div class="r3">
+    <div class="fld"><label>WAsP Gross AEP (GWh)</label><input id="calWaspGross" type="number" step="0.01"></div>
+    <div class="fld"><label>WAsP Net AEP (GWh)</label><input id="calWaspNet" type="number" step="0.01"></div>
+    <div class="fld"><label>WAsP Wake Loss (%)</label><input id="calWaspWake" type="number" step="0.1"></div>
+  </div>
+  <div class="r3">
+    <div class="fld"><label>WAsP Mean WS (m/s)</label><input id="calWaspWS" type="number" step="0.01"></div>
+    <div class="fld"><label>WAsP CF (%)</label><input id="calWaspCF" type="number" step="0.1"></div>
+    <div class="fld"><label>WAsP RIX (%)</label><input id="calWaspRIX" type="number" step="0.1"></div>
+  </div>
+</div>
+<div class="sec"><div class="sh">📐 PER-SECTOR WAsP WEIBULL (optional)</div>
+  <div class="ibox">Enter WAsP sector Weibull A and k values for per-sector calibration. Leave blank to use overall calibration only.</div>
+  <div style="max-height:150px;overflow-y:auto">
+    <table class="dtbl"><thead><tr><th>Dir</th><th>WAsP A</th><th>WAsP k</th><th>WAsP Freq%</th></tr></thead>
+    <tbody id="calSecBody"></tbody></table>
+  </div>
+  <button class="btn" style="width:100%;margin-top:4px" onclick="populateCalSectorTable()">📋 Populate 16-sector table</button>
+</div>
+<div class="sec"><div class="sh">🔬 PER-TURBINE WAsP AEP (optional)</div>
+  <div class="ibox">Enter WAsP per-turbine net AEP for per-turbine calibration. Leave blank for uniform calibration.</div>
+  <div style="max-height:120px;overflow-y:auto">
+    <table class="dtbl"><thead><tr><th>WTG</th><th>WAsP Net GWh</th><th>WAsP WS</th></tr></thead>
+    <tbody id="calTurbBody"></tbody></table>
+  </div>
+  <button class="btn" style="width:100%;margin-top:4px" onclick="populateCalTurbTable()">📋 Populate turbine table</button>
+</div>
+<div class="sec"><div class="sh">⚡ CALIBRATION ENGINE</div>
+  <button class="btn pri" style="width:100%;margin-bottom:4px" onclick="runWaspCalibration()">🎯 Compute Site Calibration</button>
+  <div id="calResult" class="ibox" style="display:none">
+    <div id="calResultContent">—</div>
+  </div>
+</div>
+<div class="sec"><div class="sh">✅ APPLY CALIBRATION</div>
+  <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+    <input type="checkbox" id="calApplyCB" style="accent-color:var(--acc)" onchange="onCalApplyChange()">
+    <label for="calApplyCB" style="font-size:9px;color:var(--txt);cursor:pointer">Apply site calibration to AEP results</label>
+  </div>
+  <div class="r2">
+    <div class="fld"><label>AEP Multiplier</label><input id="calAepMult" type="number" value="1.000" step="0.001" readonly></div>
+    <div class="fld"><label>WS Multiplier</label><input id="calWsMult" type="number" value="1.000" step="0.001" readonly></div>
+  </div>
+  <div class="r2">
+    <div class="fld"><label>Wake Adj Factor</label><input id="calWakeAdj" type="number" value="1.000" step="0.001" readonly></div>
+    <div class="fld"><label>Confidence</label><input id="calConf" type="text" value="—" readonly></div>
+  </div>
+  <div id="calApplyNote" class="ibox" style="font-size:8px;color:var(--wrn)">Run calibration first, then check "Apply" to use in analysis</div>
+</div>
+<div class="sec"><div class="sh">💾 SAVE / LOAD CALIBRATION</div>
+  <div style="display:flex;gap:4px">
+    <button class="btn" style="flex:1;font-size:9px" onclick="exportCalibration()">↓ Export .json</button>
+    <button class="btn" style="flex:1;font-size:9px" onclick="$('impCalFile').click()">↑ Import .json</button>
+    <input id="impCalFile" type="file" accept=".json" style="display:none" onchange="importCalibration(event)">
+  </div>
+  <button class="btn" style="width:100%;margin-top:4px;color:var(--red);border-color:var(--red);font-size:9px" onclick="clearCalibration()">🗑 Clear Calibration</button>
+</div>
+</div>
+
 </div></div>
 <div id="mapw">
   <div id="map"></div>
@@ -413,6 +478,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
     <div class="sc2"><div class="sv" id="rNet">—</div><div class="sl">Net AEP GWh</div></div>
     <div class="sc2"><div class="sv" id="rCF">—</div><div class="sl">Cap.Factor %</div></div>
   </div>
+  <div id="calIndicator" style="display:none;font-size:9px;color:var(--grn);background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.3);border-radius:3px;padding:3px 6px;margin-top:4px">🎯 WAsP Calibrated</div>
 </div>
 <div class="sec"><div class="sh">P-EXCEEDANCE</div><div id="pexc" class="ibox" style="font-size:9px">Run analysis</div></div>
 <div class="sec"><div class="sh">PER-TURBINE AEP</div>
@@ -429,7 +495,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 </div>
 <div id="rp-wsc" class="rp">
 <div class="sec"><div class="sh">WIND SPEED CHAIN REPORT</div>
-  <div class="ibox" style="font-size:9px">Full WS transformation: Mast OWC → log extrapolation → MCP LT → GWC (remove orographic + roughness at mast) → SWC (apply orographic + roughness at turbine) → Weibull → wake per turbine<br><b style="color:var(--wrn)">v11.0: 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · WAsP Proxies</b></div>
+  <div class="ibox" style="font-size:9px">Full WS transformation: Mast OWC → log extrapolation → MCP LT → GWC (remove orographic + roughness at mast) → SWC (apply orographic + roughness at turbine) → Weibull → wake per turbine<br><b style="color:var(--wrn)">v11.5: Site Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · WAsP Proxies</b></div>
   <div id="wscChain">Run analysis to see WS chain</div>
 </div>
 <div class="sec"><div class="sh">PER-TURBINE WS BREAKDOWN</div>
@@ -475,7 +541,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 
 <div id="rp-bz" class="rp">
 <div class="sec"><div class="sh">BZ SPEEDUP RESULTS</div>
-  <div class="ibox" style="font-size:9px">Jackson-Hunt (1983) · Fractional speedup δ = ΔU/U₀ via modified Bessel K₀/K₁ spectral model<br><b style="color:var(--wrn)">v11.0:</b> 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · WAsP Proxies · FFT Engine · Flow Turning · Steep terrain</div>
+  <div class="ibox" style="font-size:9px">Jackson-Hunt (1983) · Fractional speedup δ = ΔU/U₀ via modified Bessel K₀/K₁ spectral model<br><b style="color:var(--wrn)">v11.5:</b> Site Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · WAsP Proxies · FFT Engine · Flow Turning · Steep terrain</div>
   <div class="sg">
     <div class="sc2"><div class="sv" id="bz-maSU">—</div><div class="sl">Mast Speedup</div></div>
     <div class="sc2"><div class="sv" id="bz-mxSU">—</div><div class="sl">Max Turb. SU</div></div>
@@ -519,7 +585,7 @@ body{font-family:'Consolas','Monaco',monospace;background:var(--bg);color:var(--
 
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 11.0  — WAsP Near-Alignment · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · Proprietary Proxies
+// WINDFLOW PRO 11.5  — WAsP Near-Alignment · Site Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · WAsP Proxies
 // ═══════════════════════════════════════════════════════════════════
 const $=id=>document.getElementById(id);
 function log(m,t='i'){const d=$('elog');const s=document.createElement('span');s.className={i:'li',w:'lw',e:'le'}[t]||'li';s.textContent=`[${new Date().toLocaleTimeString()}] ${m}\n`;d.appendChild(s);d.scrollTop=1e6}
@@ -535,7 +601,8 @@ const S={
   boundary:[],boundaryLayer:null,boundaryMarkers:[],
   drawMode:false,charts:{},
   roughnessRose:null,
-  obstacles:[]
+  obstacles:[],
+  waspCalibration:null
 };
 
 // ── POWER CURVES ──
@@ -1414,7 +1481,9 @@ function runAnalysis(){
   if(!S.wind){alert('Load wind data (ERA5 tab or Import)');return;}
   setStatus('Running WAsP engine...');$('runBtn').disabled=true;
   setTimeout(()=>{try{
-    const R=calcAEP();if(!R){setStatus('Error');$('runBtn').disabled=false;return;}
+    let R=calcAEP();if(!R){setStatus('Error');$('runBtn').disabled=false;return;}
+    // v11.5: Apply site-specific WAsP calibration if enabled
+    if($('calApplyCB')?.checked && S.waspCalibration) R=applyWaspCalibration(R);
     S.results=R;updateResultsUI(R);updateWindUI(S.wind.speeds,S.wind.dirs);updateWSChain(R);updateGWCTab(R);
     setStatus(`✓ Net AEP: ${R.netAEP.toFixed(2)} GWh | Wake: ${R.wakeLoss.toFixed(1)}% | CF: ${R.CF.toFixed(1)}%${R.bzEnabled?' [BZ]':''}`);
     $('sbAEP').textContent=`${R.netAEP.toFixed(2)} GWh`;
@@ -1442,6 +1511,11 @@ function updateResultsUI(R){
   const tb=$('aepBody');tb.innerHTML='';
   R.perTurbine.forEach(t=>{const tr=document.createElement('tr');tr.innerHTML=`<td>T${t.i}</td><td>${t.ws}</td><td>${t.gross}</td><td>${t.wake}%</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;tb.appendChild(tr);});
   drawAEPChart(R.perTurbine);drawShearChart(R.shearProfile);
+  if (R.calibrated) {
+    if ($('calIndicator')) $('calIndicator').style.display = 'block';
+  } else {
+    if ($('calIndicator')) $('calIndicator').style.display = 'none';
+  }
 }
 
 // ── WIND SPEED CHAIN ──
@@ -1773,7 +1847,7 @@ function exportReport(){
   <h2>Turbine Layout (${S.turbines.length} WTGs)</h2>
   <table><tr><th>T#</th><th>Latitude</th><th>Longitude</th><th>Hub Height(m)</th><th>Elevation(m)</th></tr>
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 11.0 — WAsP Near-Alignment · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · Proprietary Proxies · IEC 61400-12-1 density correction · Component uncertainty model</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 11.5 — WAsP Near-Alignment · Site-Specific WAsP Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · Proprietary Proxies · IEC 61400-12-1 density correction · Component uncertainty model</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain)','i');
 }
@@ -1794,10 +1868,10 @@ function autoShear(){
   log(`Auto shear: z0=${z0} → α=${alpha.toFixed(2)} (${stab} stability)`,'i');
 }
 initMap();calcDensity();
-log('WindFlow Pro 11.0 ready. 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · WAsP Proxies.','i');
+log('WindFlow Pro 11.5 ready. Site Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · WAsP Proxies.','i');
 
 // ══════════════════════════════════════════════════════════════════════
-// WINDFLOW PRO v11.0 — 2ND-ORDER BZ · DEEP-ARRAY WAKE · FLOW INCLINATION · GDL STABILITY · SHEAR CORRECTION · WAsP PROXIES
+// WINDFLOW PRO v11.5 — SITE CALIBRATION · 2ND-ORDER BZ · DEEP-ARRAY WAKE · FLOW INCLINATION · GDL STABILITY · SHEAR CORRECTION · WAsP PROXIES
 // ══════════════════════════════════════════════════════════════════════
 
 // ── ROUGHNESS ROSE ──────────────────────────────────────────────
@@ -2341,6 +2415,343 @@ function directionalSmoothing(sectors) {
   const totalFreq = smoothed.reduce((s, sec) => s + sec.freq, 0);
   if (totalFreq > 0) smoothed.forEach(s => s.freq /= totalFreq);
   return smoothed;
+}
+
+// ── SITE-SPECIFIC WAsP CALIBRATION ─────────────────────────────
+// Compare WindFlow Pro results with actual WAsP results to compute
+// site-specific calibration factors that close the remaining gap
+
+function populateCalSectorTable() {
+  const nSect = parseInt($('sects').value) || 16;
+  const dirs16 = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  const tb = $('calSecBody');
+  tb.innerHTML = '';
+  for (let i = 0; i < nSect; i++) {
+    const dn = nSect === 16 ? dirs16[i] : `${((i * 360 / nSect + 360 / nSect / 2) % 360).toFixed(0)}°`;
+    // Pre-fill with WindFlow Pro values if available
+    const wfA = S.results && S.results.sectors[i] ? S.results.sectors[i].A.toFixed(2) : '';
+    const wfK = S.results && S.results.sectors[i] ? S.results.sectors[i].k.toFixed(2) : '';
+    const wfF = S.results && S.results.sectors[i] ? (S.results.sectors[i].freq * 100).toFixed(1) : '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${dn}</td><td><input type="number" step="0.01" style="width:55px;background:var(--inp);border:1px solid var(--bdr);color:var(--txt);font-size:9px;padding:1px 3px;border-radius:2px" data-cal-sec-a="${i}" placeholder="${wfA}"></td><td><input type="number" step="0.01" style="width:55px;background:var(--inp);border:1px solid var(--bdr);color:var(--txt);font-size:9px;padding:1px 3px;border-radius:2px" data-cal-sec-k="${i}" placeholder="${wfK}"></td><td><input type="number" step="0.1" style="width:55px;background:var(--inp);border:1px solid var(--bdr);color:var(--txt);font-size:9px;padding:1px 3px;border-radius:2px" data-cal-sec-f="${i}" placeholder="${wfF}"></td>`;
+    tb.appendChild(tr);
+  }
+  log(`Calibration: ${nSect}-sector table populated. Enter WAsP values (WindFlow Pro values shown as placeholders).`, 'i');
+}
+
+function populateCalTurbTable() {
+  if (!S.turbines.length) { log('Add turbines first', 'w'); return; }
+  const tb = $('calTurbBody');
+  tb.innerHTML = '';
+  S.turbines.forEach((t, i) => {
+    const wfNet = S.results && S.results.perTurbine[i] ? S.results.perTurbine[i].net : '';
+    const wfWS = S.results && S.results.perTurbine[i] ? S.results.perTurbine[i].ws : '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>T${i + 1}</td><td><input type="number" step="0.001" style="width:70px;background:var(--inp);border:1px solid var(--bdr);color:var(--txt);font-size:9px;padding:1px 3px;border-radius:2px" data-cal-turb-aep="${i}" placeholder="${wfNet}"></td><td><input type="number" step="0.01" style="width:60px;background:var(--inp);border:1px solid var(--bdr);color:var(--txt);font-size:9px;padding:1px 3px;border-radius:2px" data-cal-turb-ws="${i}" placeholder="${wfWS}"></td>`;
+    tb.appendChild(tr);
+  });
+  log(`Calibration: ${S.turbines.length}-turbine table populated.`, 'i');
+}
+
+function runWaspCalibration() {
+  if (!S.results) { log('Run analysis first before calibration', 'w'); return; }
+  
+  const waspGross = parseFloat($('calWaspGross')?.value);
+  const waspNet = parseFloat($('calWaspNet')?.value);
+  const waspWake = parseFloat($('calWaspWake')?.value);
+  const waspWS = parseFloat($('calWaspWS')?.value);
+  const waspCF = parseFloat($('calWaspCF')?.value);
+  const waspRIX = parseFloat($('calWaspRIX')?.value);
+  
+  // Need at least net AEP or mean WS from WAsP
+  if (!isFinite(waspNet) && !isFinite(waspWS)) {
+    log('Calibration requires at least WAsP Net AEP or WAsP Mean WS', 'e');
+    return;
+  }
+  
+  const R = S.results;
+  const cal = { timestamp: new Date().toISOString(), sectorFactors: [], turbFactors: [] };
+  
+  // ── Overall AEP calibration ──
+  if (isFinite(waspNet)) {
+    cal.aepMultiplier = waspNet / Math.max(0.001, R.netAEP);
+    cal.aepBias = R.netAEP - waspNet; // positive = WindFlow overpredicts
+    cal.aepBiasPct = cal.aepBias / waspNet * 100;
+  }
+  
+  // ── Wind speed calibration ──
+  if (isFinite(waspWS)) {
+    cal.wsMultiplier = waspWS / Math.max(0.1, R.rotorMeanWS || R.hubMean);
+    cal.wsBias = (R.rotorMeanWS || R.hubMean) - waspWS;
+    cal.wsBiasPct = cal.wsBias / waspWS * 100;
+  }
+  
+  // ── Wake calibration ──
+  if (isFinite(waspWake)) {
+    cal.wakeAdjFactor = R.wakeLoss > 0 ? waspWake / R.wakeLoss : 1.0;
+    cal.wakeBias = R.wakeLoss - waspWake;
+  }
+  
+  // ── Gross AEP calibration ──
+  if (isFinite(waspGross)) {
+    cal.grossMultiplier = waspGross / Math.max(0.001, R.grossAEP);
+  }
+  
+  // ── Per-sector Weibull calibration ──
+  const secInputs = document.querySelectorAll('[data-cal-sec-a]');
+  if (secInputs.length > 0) {
+    const nSect = parseInt($('sects').value) || 16;
+    for (let i = 0; i < nSect; i++) {
+      const waspA = parseFloat(document.querySelector(`[data-cal-sec-a="${i}"]`)?.value);
+      const waspK = parseFloat(document.querySelector(`[data-cal-sec-k="${i}"]`)?.value);
+      const waspF = parseFloat(document.querySelector(`[data-cal-sec-f="${i}"]`)?.value);
+      
+      if (isFinite(waspA) || isFinite(waspK) || isFinite(waspF)) {
+        const wfSec = R.sectors[i] || {};
+        cal.sectorFactors.push({
+          sector: i,
+          dir: wfSec.dir || (i + 0.5) * 360 / nSect,
+          aMultiplier: isFinite(waspA) && wfSec.A > 0 ? waspA / wfSec.A : null,
+          kMultiplier: isFinite(waspK) && wfSec.k > 0 ? waspK / wfSec.k : null,
+          freqMultiplier: isFinite(waspF) && wfSec.freq > 0 ? (waspF / 100) / wfSec.freq : null,
+          waspA, waspK, waspF,
+          wfA: wfSec.A, wfK: wfSec.k, wfFreq: wfSec.freq
+        });
+      }
+    }
+  }
+  
+  // ── Per-turbine calibration ──
+  const turbInputs = document.querySelectorAll('[data-cal-turb-aep]');
+  if (turbInputs.length > 0) {
+    S.turbines.forEach((t, i) => {
+      const waspTurbAEP = parseFloat(document.querySelector(`[data-cal-turb-aep="${i}"]`)?.value);
+      const waspTurbWS = parseFloat(document.querySelector(`[data-cal-turb-ws="${i}"]`)?.value);
+      
+      if (isFinite(waspTurbAEP) || isFinite(waspTurbWS)) {
+        const wfTurb = R.perTurbine[i] || {};
+        cal.turbFactors.push({
+          turbine: i + 1,
+          aepMultiplier: isFinite(waspTurbAEP) && parseFloat(wfTurb.net) > 0 ? waspTurbAEP / parseFloat(wfTurb.net) : null,
+          wsMultiplier: isFinite(waspTurbWS) && parseFloat(wfTurb.ws) > 0 ? waspTurbWS / parseFloat(wfTurb.ws) : null,
+          waspAEP: waspTurbAEP,
+          waspWS: waspTurbWS,
+          wfAEP: parseFloat(wfTurb.net),
+          wfWS: parseFloat(wfTurb.ws)
+        });
+      }
+    });
+  }
+  
+  // ── Confidence assessment ──
+  let confidence = 'LOW';
+  let confNote = '';
+  if (isFinite(waspNet) && isFinite(waspWS) && isFinite(waspWake)) {
+    confidence = 'MEDIUM';
+    confNote = ' (AEP + WS + Wake provided)';
+    if (cal.sectorFactors.length > 0) {
+      confidence = 'HIGH';
+      confNote = ` (AEP + WS + Wake + ${cal.sectorFactors.length} sectors)`;
+    }
+    if (cal.turbFactors.length > 0) {
+      confidence = 'VERY HIGH';
+      confNote = ` (AEP + WS + Wake + ${cal.sectorFactors.length} sectors + ${cal.turbFactors.length} turbines)`;
+    }
+  }
+  cal.confidence = confidence;
+  
+  // ── Store calibration ──
+  S.waspCalibration = cal;
+  
+  // ── Update UI ──
+  $('calResult').style.display = 'block';
+  
+  let html = `<b style="color:var(--acc)">Calibration Computed</b><br><br>`;
+  html += `<b>Overall:</b><br>`;
+  if (cal.aepMultiplier) html += `AEP multiplier: <b style="color:var(--acc)">${cal.aepMultiplier.toFixed(4)}</b> (bias: ${cal.aepBiasPct >= 0 ? '+' : ''}${cal.aepBiasPct?.toFixed(2)}%)<br>`;
+  if (cal.wsMultiplier) html += `WS multiplier: <b style="color:var(--acc)">${cal.wsMultiplier.toFixed(4)}</b> (bias: ${cal.wsBiasPct >= 0 ? '+' : ''}${cal.wsBiasPct?.toFixed(2)}%)<br>`;
+  if (cal.wakeAdjFactor) html += `Wake adj factor: <b style="color:var(--acc)">${cal.wakeAdjFactor.toFixed(4)}</b> (bias: ${cal.wakeBias >= 0 ? '+' : ''}${cal.wakeBias?.toFixed(2)}%)<br>`;
+  if (cal.grossMultiplier) html += `Gross multiplier: <b style="color:var(--acc)">${cal.grossMultiplier.toFixed(4)}</b><br>`;
+  html += `<br><b>Confidence:</b> <span style="color:${confidence === 'VERY HIGH' ? 'var(--grn)' : confidence === 'HIGH' ? 'var(--acc)' : confidence === 'MEDIUM' ? 'var(--wrn)' : 'var(--red)'}">${confidence}</span>${confNote}<br>`;
+  
+  if (cal.sectorFactors.length > 0) {
+    html += `<br><b>Per-sector multipliers:</b><br>`;
+    cal.sectorFactors.forEach(sf => {
+      html += `  Sector ${sf.sector}: A×${sf.aMultiplier?.toFixed(3) || '—'} k×${sf.kMultiplier?.toFixed(3) || '—'} f×${sf.freqMultiplier?.toFixed(3) || '—'}<br>`;
+    });
+  }
+  
+  if (cal.turbFactors.length > 0) {
+    html += `<br><b>Per-turbine multipliers:</b><br>`;
+    cal.turbFactors.forEach(tf => {
+      html += `  T${tf.turbine}: AEP×${tf.aepMultiplier?.toFixed(3) || '—'} WS×${tf.wsMultiplier?.toFixed(3) || '—'}<br>`;
+    });
+  }
+  
+  html += `<br><span style="color:var(--wrn);font-size:8px">⚠ Site-specific. Valid only for this site and similar terrain conditions.</span>`;
+  $('calResultContent').innerHTML = html;
+  
+  // Update the apply fields
+  if (cal.aepMultiplier) $('calAepMult').value = cal.aepMultiplier.toFixed(4);
+  if (cal.wsMultiplier) $('calWsMult').value = cal.wsMultiplier.toFixed(4);
+  if (cal.wakeAdjFactor) $('calWakeAdj').value = cal.wakeAdjFactor.toFixed(4);
+  $('calConf').value = confidence;
+  
+  log(`WAsP calibration computed: AEP×${cal.aepMultiplier?.toFixed(4) || '—'} WS×${cal.wsMultiplier?.toFixed(4) || '—'} Wake×${cal.wakeAdjFactor?.toFixed(4) || '—'} [${confidence}]`, 'i');
+}
+
+function onCalApplyChange() {
+  const apply = $('calApplyCB')?.checked;
+  if (apply && !S.waspCalibration) {
+    $('calApplyCB').checked = false;
+    log('Compute calibration first before applying', 'w');
+    return;
+  }
+  if (apply) {
+    log('Site calibration APPLIED — results will be adjusted to match WAsP reference', 'i');
+    // Re-run analysis with calibration
+    if (S.results) {
+      const R = applyWaspCalibration(S.results);
+      updateResultsUI(R);
+      $('sbAEP').textContent = `${R.netAEP.toFixed(2)} GWh`;
+      log(`✓ Calibrated: Net AEP ${S.results.netAEP.toFixed(2)} → ${R.netAEP.toFixed(2)} GWh (WAsP-aligned)`, 'i');
+    }
+  } else {
+    log('Site calibration REMOVED — showing uncalibrated results', 'i');
+    // Re-run without calibration
+    if (S.results) {
+      updateResultsUI(S.results);
+      $('sbAEP').textContent = `${S.results.netAEP.toFixed(2)} GWh`;
+    }
+  }
+}
+
+function applyWaspCalibration(R) {
+  if (!S.waspCalibration) return R;
+  const cal = S.waspCalibration;
+  
+  // Create calibrated copy of results
+  const cR = JSON.parse(JSON.stringify(R));
+  
+  // Apply overall AEP multiplier
+  if (cal.aepMultiplier) {
+    const calNetAEP = R.netAEP * cal.aepMultiplier;
+    const calGrossAEP = cal.grossMultiplier ? R.grossAEP * cal.grossMultiplier : R.grossAEP;
+    cR.netAEP = calNetAEP;
+    cR.grossAEP = calGrossAEP;
+    cR.wakeLoss = calGrossAEP > 0 ? (calGrossAEP - calNetAEP) / calGrossAEP * 100 : R.wakeLoss;
+    cR.CF = cR.netAEP * 1000 / (R.instMW * 8760) * 100;
+    
+    // Recalculate P-exceedance
+    const u_wind_r = R.u_wind_r;
+    const u_wake_r = cR.wakeLoss > 15 ? 0.035 : 0.020;
+    const u_pc_r = 0.015;
+    const u_den_r = R.u_den_r || 0;
+    const u_other_r = 0.015;
+    const sig = Math.sqrt(u_wind_r**2 + u_wake_r**2 + u_pc_r**2 + u_den_r**2 + u_other_r**2);
+    cR.P50 = calNetAEP;
+    cR.P75 = calNetAEP * (1 - 0.674 * sig);
+    cR.P90 = calNetAEP * (1 - 1.282 * sig);
+    cR.P99 = calNetAEP * (1 - 2.326 * sig);
+    cR.sigma = sig;
+  }
+  
+  // Apply wind speed multiplier
+  if (cal.wsMultiplier) {
+    cR.rotorMeanWS = (R.rotorMeanWS || R.hubMean) * cal.wsMultiplier;
+    cR.hubMean = R.hubMean * cal.wsMultiplier;
+  }
+  
+  // Apply per-sector Weibull multipliers
+  if (cal.sectorFactors && cal.sectorFactors.length > 0) {
+    cal.sectorFactors.forEach(sf => {
+      if (cR.sectors[sf.sector]) {
+        if (sf.aMultiplier) cR.sectors[sf.sector].A = R.sectors[sf.sector].A * sf.aMultiplier;
+        if (sf.kMultiplier) cR.sectors[sf.sector].k = R.sectors[sf.sector].k * sf.kMultiplier;
+        if (sf.freqMultiplier) cR.sectors[sf.sector].freq = R.sectors[sf.sector].freq * sf.freqMultiplier;
+      }
+    });
+    // Re-normalize sector frequencies
+    const totalFreq = cR.sectors.reduce((s, sec) => s + sec.freq, 0);
+    if (totalFreq > 0) cR.sectors.forEach(s => s.freq /= totalFreq);
+  }
+  
+  // Apply per-turbine calibration
+  if (cal.turbFactors && cal.turbFactors.length > 0) {
+    cal.turbFactors.forEach(tf => {
+      const idx = tf.turbine - 1;
+      if (cR.perTurbine[idx]) {
+        if (tf.aepMultiplier) {
+          cR.perTurbine[idx].net = (parseFloat(R.perTurbine[idx].net) * tf.aepMultiplier).toFixed(3);
+          cR.perTurbine[idx].gross = (parseFloat(R.perTurbine[idx].gross) * tf.aepMultiplier).toFixed(3);
+        }
+        if (tf.wsMultiplier) {
+          cR.perTurbine[idx].ws = (parseFloat(R.perTurbine[idx].ws) * tf.wsMultiplier).toFixed(2);
+        }
+      }
+    });
+  }
+  
+  // Mark as calibrated
+  cR.calibrated = true;
+  cR.calSource = 'WAsP site-specific';
+  
+  return cR;
+}
+
+function exportCalibration() {
+  if (!S.waspCalibration) { log('No calibration to export', 'w'); return; }
+  const json = JSON.stringify(S.waspCalibration, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `wasp-calibration-${$('projName')?.value || 'site'}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  log('Calibration exported as JSON', 'i');
+}
+
+function importCalibration(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const cal = JSON.parse(e.target.result);
+      S.waspCalibration = cal;
+      // Update UI
+      if (cal.aepMultiplier) $('calAepMult').value = cal.aepMultiplier.toFixed(4);
+      if (cal.wsMultiplier) $('calWsMult').value = cal.wsMultiplier.toFixed(4);
+      if (cal.wakeAdjFactor) $('calWakeAdj').value = cal.wakeAdjFactor.toFixed(4);
+      if (cal.confidence) $('calConf').value = cal.confidence;
+      log(`Calibration imported: ${cal.confidence} confidence, AEP×${cal.aepMultiplier?.toFixed(4) || '—'}`, 'i');
+    } catch (err) {
+      log('Failed to import calibration: ' + err.message, 'e');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function clearCalibration() {
+  S.waspCalibration = null;
+  $('calAepMult').value = '1.000';
+  $('calWsMult').value = '1.000';
+  $('calWakeAdj').value = '1.000';
+  $('calConf').value = '—';
+  $('calApplyCB').checked = false;
+  $('calResult').style.display = 'none';
+  // Clear input fields
+  ['calWaspGross','calWaspNet','calWaspWake','calWaspWS','calWaspCF','calWaspRIX'].forEach(id => {
+    if ($(id)) $(id).value = '';
+  });
+  log('Calibration cleared', 'i');
+  // Re-show uncalibrated results
+  if (S.results) {
+    updateResultsUI(S.results);
+    $('sbAEP').textContent = `${S.results.netAEP.toFixed(2)} GWh`;
+  }
 }
 
 // 7d: Roughness length stability correction
