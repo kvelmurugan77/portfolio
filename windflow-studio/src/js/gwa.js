@@ -4,7 +4,7 @@ import {S,log} from './state.js';import {gamma,powerDensity} from './utils.js';
 const CORS_PROXIES = [
   url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
   url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  url => `https://cors-anywhere.herokuapp.com/${url}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
 ];
 
 export async function downloadGWA(lat,lon,height,z0){
@@ -13,7 +13,7 @@ export async function downloadGWA(lat,lon,height,z0){
 
   // 1) Try direct fetch first (works in some environments / local dev)
   try{
-    const r=await fetch(url,{headers:{Referer:'https://globalwindatlas.info'}});
+    const r=await fetch(url,{headers:{'Accept':'text/plain'}});
     if(r.ok){txt=await r.text();}
   }catch(e){lastErr=e;}
 
