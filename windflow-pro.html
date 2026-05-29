@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 12.0</title>
+<title>WindFlow Pro 12.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,8 +57,8 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 12.0</span></div><div class="brand-sub">WAsP-Aligned · Step Wizard · Auto-Calibration · BZ Orographic · Deep-Array Wake</div></div></div>
-  <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 12.1</span></div><div class="brand-sub">WAsP-Aligned · Mixed HH · Envision EN-156 · Auto-Calibration · BZ · Deep-Array Wake</div></div></div>
+  <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
   <div class="step-item active" data-step="1" onclick="goToStep(1)"><div class="step-num">1</div><span class="step-label">Site</span></div><div class="step-connector"></div>
@@ -132,6 +132,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <optgroup label="Nordex"><option value="n117">N117/3600</option><option value="n133">N133/4800</option><option value="n149">N149/5700</option><option value="n163">N163/6800</option><option value="n163_7mw">N163/7000 138m HH</option></optgroup>
           <optgroup label="GE"><option value="ge136">GE 136-4.8MW</option><option value="ge158">GE 158-6.1MW</option><option value="ge220">GE 220-14.0MW</option></optgroup>
           <optgroup label="Enercon"><option value="e115">E-115 EP3 4.2MW</option><option value="e126">E-126 7.58MW</option><option value="e160">E-160 EP5 5.5MW</option></optgroup>
+          <optgroup label="Envision"><option value="en156_120">EN-156/3.3MW 120m HH</option><option value="en156_140">EN-156/3.3MW 140m HH</option></optgroup>
           <optgroup label="Goldwind"><option value="gw121">GW121/2500</option><option value="gw136">GW136/4200</option><option value="gw171">GW171/6450</option></optgroup>
           <optgroup label="MingYang"><option value="my158">MySE 158-7.25MW</option><option value="my184">MySE 184-11MW</option><option value="my230">MySE 230-18MW</option></optgroup>
           <optgroup label="Custom"><option value="custom">Upload Custom Power Curve</option></optgroup>
@@ -305,7 +306,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       </div>
       <div class="card"><div class="card-title">P-Exceedance</div><div id="pexc" style="font-size:.7rem;color:var(--text3)">Run analysis</div></div>
       <div class="card"><div class="card-title">Per-Turbine AEP</div>
-        <div class="tbl-wrap" style="max-height:150px"><table class="dt"><thead><tr><th>T#</th><th>WS</th><th>Gross</th><th>Wake%</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="aepBody"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div>
+        <div class="tbl-wrap" style="max-height:150px"><table class="dt"><thead><tr><th>T#</th><th>HH</th><th>WS</th><th>Gross</th><th>Wake%</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="aepBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div>
       </div>
       <div class="card"><div class="card-title">Wind Rose</div><div class="rose-canvas-wrap"><canvas id="roseCanvas" width="400" height="350"></canvas></div></div>
       <div class="card"><div class="card-title">Sector BZ Speedup</div><div class="canvas-wrap" style="height:150px"><canvas id="bzSectChart"></canvas></div></div>
@@ -314,10 +315,10 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   </div>
   <div class="tab-bar" style="margin-top:.5rem"><button class="tab-btn active" onclick="showFlowTab(0,this)">Wind Stats</button><button class="tab-btn" onclick="showFlowTab(1,this)">WS Chain</button><button class="tab-btn" onclick="showFlowTab(2,this)">GWC</button><button class="tab-btn" onclick="showFlowTab(3,this)">BZ Detail</button><button class="tab-btn" onclick="showFlowTab(4,this)">Time Series</button><button class="tab-btn" onclick="showFlowTab(5,this)">Calibration</button><button class="tab-btn" onclick="showFlowTab(6,this)">Engine Log</button></div>
   <div class="tab-panel active" id="flowTab0"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val sky" id="wMean">—</div><div class="metric-label">Mean WS m/s</div></div><div class="metric-item"><div class="metric-val" id="wPD">—</div><div class="metric-label">Power W/m²</div></div><div class="metric-item"><div class="metric-val sky" id="wA">—</div><div class="metric-label">Weibull A</div></div><div class="metric-item"><div class="metric-val gold" id="wK">—</div><div class="metric-label">Weibull k</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="wbChart"></canvas></div><div class="tbl-wrap" style="max-height:150px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>Freq%</th><th>A</th><th>k</th><th>WS</th></tr></thead><tbody id="sectBody"></tbody></table></div></div></div>
-  <div class="tab-panel" id="flowTab1"><div class="card"><div id="wscChain">Run analysis</div><div class="tbl-wrap" style="max-height:180px;margin-top:.5rem"><table class="dt"><thead><tr><th>T#</th><th>Free WS</th><th>Wake Δ%</th><th>Net WS</th><th>Power</th><th>Avail%</th></tr></thead><tbody id="wscBody"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.5rem"><canvas id="wscChart"></canvas></div></div></div>
+  <div class="tab-panel" id="flowTab1"><div class="card"><div id="wscChain">Run analysis</div><div class="tbl-wrap" style="max-height:180px;margin-top:.5rem"><table class="dt"><thead><tr><th>T#</th><th>HH</th><th>Free WS</th><th>Wake Δ%</th><th>Net WS</th><th>Power</th><th>Avail%</th></tr></thead><tbody id="wscBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.5rem"><canvas id="wscChart"></canvas></div></div></div>
   <div class="tab-panel" id="flowTab2"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="gcZ0">—</div><div class="metric-label">z₀ m</div></div><div class="metric-item"><div class="metric-val sky" id="gcSR">—</div><div class="metric-label">Mean SR</div></div><div class="metric-item"><div class="metric-val" id="gcWS">—</div><div class="metric-label">GWC WS</div></div><div class="metric-item"><div class="metric-val sky" id="gcSW">—</div><div class="metric-label">SWC WS</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>Freq%</th><th>OWC A</th><th>OWC k</th><th>GWC A</th><th>SWC A</th><th>SR</th></tr></thead><tbody id="gwcBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.4rem"><canvas id="shearChart2"></canvas></div></div></div>
   <div class="tab-panel" id="flowTab3"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="bz-maSU">—</div><div class="metric-label">Mast SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-mxSU">—</div><div class="metric-label">Max SU</div></div><div class="metric-item"><div class="metric-val sky" id="bz-miSU">—</div><div class="metric-label">Min SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-rix">—</div><div class="metric-label">RIX %</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>T#</th><th>BZ SU</th><th>δ%</th><th>Turn°</th><th>OWC</th><th>GWC</th><th>SWC</th></tr></thead><tbody id="bzTBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run BZ first</td></tr></tbody></table></div><div class="canvas-wrap" style="height:120px;margin-top:.4rem"><canvas id="bzBesChart"></canvas></div><div id="bzIBLnote" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">—</div><div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="metric-item"><div class="metric-val sky" id="bz-iblH">—</div><div class="metric-label">IBL Height m</div></div><div class="metric-item"><div class="metric-val" id="bz-roughRC">—</div><div class="metric-label">Rough. Corr.</div></div></div></div></div>
-  <div class="tab-panel" id="flowTab4"><div class="card"><div class="card-title gold">Time Series</div><div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Start Year</label><input class="fi" id="tsSy" type="number" value="2022"></div><div class="fg"><label class="fl">End Year</label><input class="fi" id="tsEy" type="number" value="2022"></div></div><div class="fg"><label class="fl">Step</label><select class="fs" id="tsStep"><option value="1">1-hour</option><option value="3" selected>3-hour</option><option value="6">6-hour</option></select></div><button class="btn btn-gold" style="width:100%;margin-top:.4rem" onclick="runTimeSeries()">⏱ Run Time Series</button><div class="progress"><div class="progress-bar" id="tspb" style="width:0"></div></div><div id="tspt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div><div id="tsOut" style="display:none;margin-top:.5rem"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="tsRc">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val g" id="tsNt">—</div><div class="metric-label">Net GWh/yr</div></div><div class="metric-item"><div class="metric-val o" id="tsWk">—</div><div class="metric-label">Wake %</div></div><div class="metric-item"><div class="metric-val b" id="tsCf">—</div><div class="metric-label">CF %</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="monthChart"></canvas></div><div class="canvas-wrap" style="height:100px;margin-top:.3rem"><canvas id="diurnChart"></canvas></div><button class="btn btn-sm btn-ghost" style="margin-top:.3rem" onclick="exportTSCSV()">↓ Hourly CSV</button></div></div></div>
+  <div class="tab-panel" id="flowTab4"><div class="card"><div class="card-title gold">Time Series</div><div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Start Year</label><input class="fi" id="tsSy" type="number" value="2022"></div><div class="fg"><label class="fl">End Year</label><input class="fi" id="tsEy" type="number" value="2022"></div></div><div class="fg"><label class="fl">Step</label><select class="fs" id="tsStep"><option value="1">1-hour</option><option value="3" selected>3-hour</option><option value="6">6-hour</option></select></div><button class="btn btn-gold" style="width:100%;margin-top:.4rem" onclick="runTimeSeries()">⏱ Run Time Series</button><div class="progress"><div class="progress-bar" id="tspb" style="width:0"></div></div><div id="tspt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div><div id="tsOut" style="display:none;margin-top:.5rem"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="tsRc">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val g" id="tsNt">—</div><div class="metric-label">Net GWh/yr</div></div><div class="metric-item"><div class="metric-val o" id="tsWk">—</div><div class="metric-label">Wake %</div></div><div class="metric-item"><div class="metric-val b" id="tsCf">—</div><div class="metric-label">CF %</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="monthChart"></canvas></div><div class="canvas-wrap" style="height:100px;margin-top:.3rem"><canvas id="diurnChart"></canvas></div><button class="btn btn-sm btn-ghost" style="margin-top:.3rem" onclick="exportTSCSV()">↓ Monthly CSV</button><button class="btn btn-sm btn-gold" style="margin-top:.3rem;width:100%" onclick="exportTSPerTurbineHourly()">↓ Per-WTG Hourly CSV</button></div></div></div>
   <div class="tab-panel" id="flowTab5"><div class="card"><div class="card-title green">WAsP Site Calibration</div><div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">WAsP Gross (GWh)</label><input class="fi" id="calWaspGross" type="number" step="0.01"></div><div class="fg"><label class="fl">WAsP Net (GWh)</label><input class="fi" id="calWaspNet" type="number" step="0.01"></div><div class="fg"><label class="fl">WAsP Wake %</label><input class="fi" id="calWaspWake" type="number" step="0.1"></div></div><div class="g3" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">WAsP WS</label><input class="fi" id="calWaspWS" type="number" step="0.01"></div><div class="fg"><label class="fl">WAsP CF %</label><input class="fi" id="calWaspCF" type="number" step="0.1"></div><div class="fg"><label class="fl">WAsP RIX %</label><input class="fi" id="calWaspRIX" type="number" step="0.1"></div></div><button class="btn btn-primary" style="margin-top:.5rem" onclick="runWaspCalibration()">🎯 Compute</button><div id="calResult" style="display:none;margin-top:.5rem" class="alert alert-ok"><div id="calResultContent">—</div></div><div style="display:flex;align-items:center;gap:.4rem;margin-top:.5rem"><input type="checkbox" id="calApplyCB" checked style="accent-color:var(--mint)" onchange="onCalApplyChange()"><label for="calApplyCB" style="font-size:.65rem;cursor:pointer">Apply calibration (default ON)</label></div><div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">AEP Mult</label><input class="fi" id="calAepMult" value="1.000" step="0.001" readonly></div><div class="fg"><label class="fl">WS Mult</label><input class="fi" id="calWsMult" value="1.000" step="0.001" readonly></div></div><div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Wake Adj</label><input class="fi" id="calWakeAdj" value="1.000" step="0.001" readonly></div><div class="fg"><label class="fl">Confidence</label><input class="fi" id="calConf" value="—" readonly></div></div><div style="display:flex;gap:.3rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" onclick="exportCalibration()">↓ Export .json</button><button class="btn btn-sm btn-ghost" onclick="$('impCalFile').click()">↑ Import</button><input id="impCalFile" type="file" accept=".json" style="display:none" onchange="importCalibration(event)"><button class="btn btn-sm btn-danger" onclick="clearCalibration()">🗑 Clear</button></div></div></div>
   <div class="tab-panel" id="flowTab6"><div class="card"><div class="card-title">Engine Log <button class="btn btn-sm btn-ghost" style="padding:.15rem .4rem;font-size:.5rem" onclick="$('elog').innerHTML=''">Clr</button></div><div id="elog"></div></div></div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(4)">← Terrain</button><button class="btn btn-primary" onclick="goToStep(6)">Next: Reporting →</button></div>
@@ -336,6 +337,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <button class="btn btn-ghost" style="width:100%" onclick="exportWindCSV()">💨 Wind Data CSV</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportWindTab()">💨 WAsP .tab</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportRoughnessCSV()">🗺 Roughness CSV</button>
+          <button class="btn btn-gold" style="width:100%" onclick="exportTSPerTurbineHourly()">⏱ Per-WTG Hourly CSV</button>
         </div>
       </div>
       <div class="card"><div class="card-title sky">Save / Load Project</div>
@@ -587,19 +589,22 @@ function getSpatialHubWS(lat,lon){
   const mastH=parseFloat($('mastH').value)||100,hubHH=parseFloat($('hubH').value)||120;
   const rotorD=parseFloat($('rotD').value)||150;
   const z0=parseFloat($('z0val').value)||0.0002;
+  // Check for per-turbine hub height
+  const turb=S.turbines.find(t=>Math.abs(t.lat-lat)<0.0001&&Math.abs(t.lon-lon)<0.0001);
+  const tHH=turb?.hh||hubHH;
   const vs=S.wind.speeds.filter(v=>v>0.5);if(!vs.length)return null;
   const meanWS=vs.reduce((s,v)=>s+v,0)/vs.length;
-  const hubWS=logWS(meanWS*S.mcpFactor,mastH,hubHH,z0);
+  const hubWS=logWS(meanWS*S.mcpFactor,mastH,tHH,z0);
   // v10.0: Apply rotor-averaged factor if enabled
   const useRotorAvg=$('rotorAvgCB')?.checked!==false;
   const L=getStabilityL();
-  const rotFactor=useRotorAvg?rotorAvgRatio(hubHH,rotorD,z0,L):1.0;
+  const rotFactor=useRotorAvg?rotorAvgRatio(tHH,rotorD,z0,L):1.0;
   const displayWS=hubWS*rotFactor;
   const mLat=parseFloat($('mastLat').value)||lat,mLon=parseFloat($('mastLon').value)||lon;
   const mastElev=S.terrain?getTerrainElev(mLat,mLon)||0:0;
   const curElev=getTerrainElev(lat,lon);
   if(curElev===null)return{ws:displayWS,su:1.0,elev:null};
-  const su=terrainSpeedup(curElev,mastElev,hubHH,z0);
+  const su=terrainSpeedup(curElev,mastElev,tHH,z0);
   return{ws:displayWS*su,su,elev:curElev};
 }
 function linReg(xs,ys){const n=xs.length;if(n<2)return{slope:1,intercept:0,R2:0};const xm=xs.reduce((s,v)=>s+v,0)/n,ym=ys.reduce((s,v)=>s+v,0)/n;const ssxy=xs.reduce((s,x,i)=>s+(x-xm)*(ys[i]-ym),0),ssx=xs.reduce((s,x)=>s+(x-xm)**2,0);const sl=ssx>0?ssxy/ssx:1,ic=ym-sl*xm;const sst=ys.reduce((s,y)=>s+(y-ym)**2,0),sse=ys.reduce((s,y,i)=>s+(y-sl*xs[i]-ic)**2,0);return{slope:sl,intercept:ic,R2:sst>0?1-sse/sst:0};}
@@ -1124,7 +1129,15 @@ function calcAEP(){
   const rotorD=parseFloat($('rotD').value)||150;
   const z0=parseFloat($('z0val').value)||.0002,density=parseFloat($('airDen').value)||1.225;
 
-  // Step 1: OWC → Hub WS via stability-corrected log law
+  // ── MIXED HUB HEIGHT SUPPORT ──
+  // Each turbine can have its own hub height (from KMZ/layout import)
+  // The global hubHH is used as the reference; per-turbine HH scales wind speed
+  const turbineHHs=S.turbines.map(t=>t.hh||hubHH);
+  const uniqueHHs=[...new Set(turbineHHs)];
+  const isMixedHH=uniqueHHs.length>1;
+  if(isMixedHH)log(`Mixed hub height layout detected: ${uniqueHHs.sort((a,b)=>a-b).join('/')}m — per-turbine WS scaling enabled`,'i');
+
+  // Step 1: OWC → Hub WS via stability-corrected log law (reference hub height)
   const L = getStabilityL();
   const gdlFactor = gdlCorrectionFactor(L, z0, hubHH);
   const hubSp=S.wind.speeds.map(v=>logWS_stab(v*S.mcpFactor,mastH,hubHH,z0,L));
@@ -1139,6 +1152,13 @@ function calcAEP(){
   const rotAvgFactor=useRotorAvg?rotorAvgRatio(hubHH,rotorD,z0,L):1.0;
   const shearCorrFactor=shearProfileMismatchCorrection(mastH,hubHH,z0,L,parseFloat($('shearA').value)||0.14);
   const rotorMeanWS=hubMean*rotAvgFactor*shearCorrFactor;
+
+  // Per-turbine HH scaling factors: wind speed ratio from reference hubHH to turbine's HH
+  // Using log-law: WS(turbHH) = WS(refHH) * ln(turbHH/z0) / ln(refHH/z0)
+  const hhScaleFactors=turbineHHs.map(tHH=>{
+    if(tHH===hubHH)return 1.0;
+    return Math.log(Math.max(tHH,z0*1.1)/Math.max(z0,1e-6))/Math.log(Math.max(hubHH,z0*1.1)/Math.max(z0,1e-6));
+  });
 
   const mastWb=weibullFit(S.wind.speeds.filter(v=>v>.5));
   const hubWb=weibullFit(hubSp.filter(v=>v>.5));
@@ -1190,7 +1210,9 @@ function calcAEP(){
           const turbRC=BZ.turbRoughRC?BZ.turbRoughRC[t]:1;
           const mastOrSU=BZ.mastSectorSU?BZ.mastSectorSU[si]:BZ.mastSU;
           // Scale the free-stream WS for this turbine (obstacle shelter at mast removed in SWC)
-          const turbV=rotorV/mastOrSU*turbSU*turbRC*gdlFactor;
+          let turbV=rotorV/mastOrSU*turbSU*turbRC*gdlFactor;
+          // v12.1: Apply per-turbine HH scaling for mixed hub heights
+          turbV*=hhScaleFactors[t];
           // v11.0: Flow inclination correction
           const inclFactor = (BZ.sectorInclination && BZ.sectorInclination[si]) ? (BZ.sectorInclination[si][t] || 1) : 1;
           const turbV_adj = turbV * inclFactor;
@@ -1202,7 +1224,15 @@ function calcAEP(){
           net[t]+=lutGet(lut,turbWsp).power*sec.freq*prob*8760;
         }
       } else {
-        for(let t=0;t<n;t++){gross[t]+=gp*sec.freq*prob*8760;net[t]+=lutGet(lut,wsp[t]).power*sec.freq*prob*8760;}
+        // v12.1: For mixed hub heights, apply per-turbine HH scaling
+        for(let t=0;t<n;t++){
+          const turbV=correctedV*hhScaleFactors[t];
+          const turbGp=lutGet(lut,turbV).power;
+          const wakeRatio=correctedV>0.5?wsp[t]/correctedV:1;
+          const turbWsp=turbV*wakeRatio;
+          gross[t]+=turbGp*sec.freq*prob*8760;
+          net[t]+=lutGet(lut,turbWsp).power*sec.freq*prob*8760;
+        }
       }
     }
   });
@@ -1231,13 +1261,16 @@ function calcAEP(){
     calNetWake = calNetWake + (grossG - calNetWake) * 0.05;
     calNetWake = Math.min(grossG, calNetWake);
   }
+  // Installed capacity: sum per-turbine rated power (same for all, but future-proof)
   const instMW=n*pc.rated/1000,CF=netF*1000/(instMW*8760)*100;
   // Component uncertainty model (RSS)
   const u_wind_r=sectors.reduce((s,sec)=>s+(sec.n<200?0.08:sec.n<1000?0.05:0.03)*sec.freq,0);
   const u_wake_r=wakeL>15?0.035:0.020;
   const u_pc_r=0.015;const u_den_r=Math.abs(density-1.225)/1.225*0.5;
   const u_other_r=0.015;
-  const sig=Math.sqrt(u_wind_r**2+u_wake_r**2+u_pc_r**2+u_den_r**2+u_other_r**2);
+  // v12.1: Add HH uncertainty for mixed hub height layouts
+  const u_hh_r=isMixedHH?0.01:0;
+  const sig=Math.sqrt(u_wind_r**2+u_wake_r**2+u_pc_r**2+u_den_r**2+u_other_r**2+u_hh_r**2);
   const P50=netF,P75=P50*(1-0.674*sig),P90=P50*(1-1.282*sig),P99=P50*(1-2.326*sig);
 
   // Per-turbine with free WS at prevailing direction + horizontal speedup
@@ -1249,8 +1282,9 @@ function calcAEP(){
   const perT=txy.map((_,i)=>{
     const wl=gross[i]>0?(gross[i]-net[i])/gross[i]*100:0;
     const nt=net[i]*lossM/1e6;const cf=nt*1000/(pc.rated*8760)*100;
-    const freeWS=rotorMeanWS,wakeWS=freeSpWind[i];
-    return{i:i+1,ws:freeWS.toFixed(2),hubWS:hubMean.toFixed(2),rotorWS:rotorMeanWS.toFixed(2),wake:wl.toFixed(1),wakeWS:wakeWS.toFixed(2),net:nt.toFixed(3),cf:cf.toFixed(1),gross:(gross[i]/1e6).toFixed(3),power:lutGet(lut,wakeWS).power.toFixed(0)};
+    // Per-turbine free-stream WS at its own hub height
+    const freeWS=rotorMeanWS*hhScaleFactors[i],wakeWS=freeSpWind[i]*hhScaleFactors[i];
+    return{i:i+1,ws:freeWS.toFixed(2),hubWS:(hubMean*hhScaleFactors[i]).toFixed(2),rotorWS:(rotorMeanWS*hhScaleFactors[i]).toFixed(2),wake:wl.toFixed(1),wakeWS:wakeWS.toFixed(2),net:nt.toFixed(3),cf:cf.toFixed(1),gross:(gross[i]/1e6).toFixed(3),power:lutGet(lut,wakeWS).power.toFixed(0),hh:turbineHHs[i]};
   });
 
   // GWC — WAsP-aligned OWC→GWC→SWC per sector
@@ -1278,7 +1312,7 @@ function calcAEP(){
 
   const iec=checkIECClass(rotorMeanWS,pc);if(!iec.ok)log(`⚠ IEC class warning: rotor-avg WS ${rotorMeanWS.toFixed(2)} m/s exceeds ${iec.cls} limit (${iec.limit} m/s)!`,'w');
   if(useRotorAvg&&Math.abs(rotAvgFactor-1)>0.001)log(`Rotor-averaged WS: factor=${rotAvgFactor.toFixed(4)}, hub=${hubMean.toFixed(2)} m/s → rotor-avg=${rotorMeanWS.toFixed(2)} m/s (${((rotAvgFactor-1)*100).toFixed(1)}%)`,'i');
-  return{mastH,hubHH,z0,mastMean,hubMean,rotorMeanWS,rotAvgFactor,mastWb,hubWb,mcpFactor:S.mcpFactor,density,PD:.5*density*hubMean**3,grossAEP:grossG,wakeLoss:wakeL,netAEP:netF,CF,instMW,P50,P75,P90,P99,sigma:sig,u_wind_r,u_wake_r,u_pc_r,u_den_r:Math.abs(density-1.225)/1.225*0.5,perTurbine:perT,sectors,gwcSectors,shearProfile,rix,lut,iec,bzEnabled:BZ.enabled,rotorAvgUsed:useRotorAvg};
+  return{mastH,hubHH,z0,mastMean,hubMean,rotorMeanWS,rotAvgFactor,mastWb,hubWb,mcpFactor:S.mcpFactor,density,PD:.5*density*hubMean**3,grossAEP:grossG,wakeLoss:wakeL,netAEP:netF,CF,instMW,P50,P75,P90,P99,sigma:sig,u_wind_r,u_wake_r,u_pc_r,u_den_r:Math.abs(density-1.225)/1.225*0.5,perTurbine:perT,sectors,gwcSectors,shearProfile,rix,lut,iec,bzEnabled:BZ.enabled,rotorAvgUsed:useRotorAvg,isMixedHH,turbineHHs,hhScaleFactors};
 }
 
 function runAnalysis(){
@@ -1316,7 +1350,7 @@ function updateResultsUI(R){
     </td></tr>
   </table>`;
   const tb=$('aepBody');tb.innerHTML='';
-  R.perTurbine.forEach(t=>{const tr=document.createElement('tr');tr.innerHTML=`<td>T${t.i}</td><td>${t.ws}</td><td>${t.gross}</td><td>${t.wake}%</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;tb.appendChild(tr);});
+  R.perTurbine.forEach(t=>{const tr=document.createElement('tr');tr.innerHTML=`<td>T${t.i}</td><td>${t.hh||$('hubH').value}m</td><td>${t.ws}</td><td>${t.gross}</td><td>${t.wake}%</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;tb.appendChild(tr);});
   drawAEPChart(R.perTurbine);drawShearChart(R.shearProfile);
   if (R.calibrated) {
     if ($('calIndicator')) $('calIndicator').style.display = 'block';
@@ -1350,7 +1384,7 @@ function updateWSChain(R){
     const freeWS=parseFloat(t.ws),netWS=parseFloat(t.wakeWS),wkPct=parseFloat(t.wake),power=parseFloat(t.power);
     const avail=R.grossAEP>0?100*(1-parseFloat(t.gross)*0/R.grossAEP):100;
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>T${t.i}</td><td>${freeWS.toFixed(2)}</td><td style="color:${wkPct>5?'var(--wrn)':'var(--grn)'}">${wkPct.toFixed(1)}%</td><td style="color:var(--acc)">${netWS.toFixed(2)}</td><td>${power}</td><td>${(100-wkPct).toFixed(1)}%</td>`;
+    tr.innerHTML=`<td>T${t.i}</td><td>${t.hh||$('hubH').value}m</td><td>${freeWS.toFixed(2)}</td><td style="color:${wkPct>5?'var(--wrn)':'var(--grn)'}">${wkPct.toFixed(1)}%</td><td style="color:var(--acc)">${netWS.toFixed(2)}</td><td>${power}</td><td>${(100-wkPct).toFixed(1)}%</td>`;
     tb.appendChild(tr);
   });
 
@@ -1481,6 +1515,12 @@ async function runTimeSeries(){
     const te=t.elev!==undefined?t.elev:(S.terrain?getTerrainElev(t.lat,t.lon)??mastElev:mastElev);
     return terrainSpeedup(te,mastElev,hubHH,z0);
   });
+  // ── PER-TURBINE HH SCALING (mixed hub heights) ──
+  const turbineHHs=S.turbines.map(t=>t.hh||hubHH);
+  const hhScaleFactors=turbineHHs.map(tHH=>{
+    if(tHH===hubHH)return 1.0;
+    return Math.log(Math.max(tHH,z0*1.1)/Math.max(z0,1e-6))/Math.log(Math.max(hubHH,z0*1.1)/Math.max(z0,1e-6));
+  });
   setProg('ts',5,`ERA5 ${sy}\u2013${ey} (parallel)...`);
   log(`TS start: mastH=${mastH}m, hub=${hubHH}m, z0=${z0}, MCP\u00d7${mcpF.toFixed(3)}, ${n} WTGs, speedups=[${speedups.map(s=>s.toFixed(3)).join(',')}]`,'i');
   try{
@@ -1521,6 +1561,8 @@ async function runTimeSeries(){
     const mG=new Float64Array(12),mN=new Float64Array(12);
     const hPow=new Array(24).fill(0),hCnt=new Array(24).fill(0);
     let totG=0,totN=0,processed=0;
+    // ── PER-TURBINE PER-HOUR STORAGE ──
+    const perTurbHourly=[];  // [{ts,ws,wd,gross_kW:[],net_kW:[]}]
     for(let h=0;h<allSp.length;h+=step){
       const raw=allSp[h]??0;if(raw<0.1)continue;
       const ws0=logWS(raw*mcpF,mastH,hubHH,z0);
@@ -1531,17 +1573,25 @@ async function runTimeSeries(){
       const mo=allTs[h]?parseInt(allTs[h].substring(5,7))-1:0;
       const hr=allTs[h]?parseInt(allTs[h].substring(11,13)):0;
       let gH=0,nH=0;
+      const gArr=new Float32Array(n),nArr=new Float32Array(n);
       for(let t=0;t<n;t++){
         const su=speedups[t];
-        const wsG=Math.min(ws0*su,cutOut+1);      // gross: terrain speedup applied
-        const wsN=Math.min(wsp[t]*su,cutOut+1);   // net: wake + terrain speedup
-        gH+=lutGet(lut,wsG).power*step;           // kW * hours = kWh
-        nH+=lutGet(lut,wsN).power*step;
+        const hhScale=hhScaleFactors[t];
+        const wsG=Math.min(ws0*su*hhScale,cutOut+1);      // gross: terrain + HH scaling
+        const wsN=Math.min(wsp[t]*su*hhScale,cutOut+1);    // net: wake + terrain + HH scaling
+        const pG=lutGet(lut,wsG).power;
+        const pN=lutGet(lut,wsN).power;
+        gArr[t]=pG;
+        nArr[t]=pN*(1-otherL);
+        gH+=pG*step;           // kW * hours = kWh
+        nH+=pN*step;
       }
       totG+=gH;
       totN+=nH*(1-otherL);
       if(mo>=0&&mo<12){mG[mo]+=gH;mN[mo]+=nH*(1-otherL);}
       hPow[hr%24]+=nH/Math.max(1,n);hCnt[hr%24]++;
+      // Store per-turbine per-hour record
+      perTurbHourly.push({ts:allTs[h]||'',ws:ws0,wd:allDr[h]||0,gross_kW:Array.from(gArr),net_kW:Array.from(nArr)});
       processed++;
     }
     log(`TS accumulated: ${processed} steps, gross=${(totG/1e3).toFixed(1)} MWh (${(totG/1e6).toFixed(3)} GWh)`,'i');
@@ -1565,14 +1615,15 @@ async function runTimeSeries(){
     $('tsCf').textContent=CF.toFixed(1)+'%';
     $('tsOut').style.display='block';
     drawMonthlyChart(Array.from(mG),Array.from(mN));drawDiurnalChart(diurnal);
-    S.tsData={mG:Array.from(mG),mN:Array.from(mN),allSp,allDr,allTs,grossG,netG,wakeL,CF};
+    S.tsData={mG:Array.from(mG),mN:Array.from(mN),allSp,allDr,allTs,grossG,netG,wakeL,CF,perTurbHourly};
     log(`\u2713 TS complete: gross=${grossG.toFixed(2)} GWh \u00b7 net=${netG.toFixed(2)} GWh \u00b7 CF=${CF.toFixed(1)}%`,'i');
   }catch(e){setProg('ts',0,'\u274c '+e.message);log('TS failed: '+e.message,'e');}
 }
 async function loadDemo(site='horns'){
   const sites={
     horns:{name:'Horns Rev Offshore',lat:55.50,lon:7.90,z0:'0.0002',z0sel:'0.0002',elev:0,temp:8,turbines:'4mw',gy:2,gc:5,gs:7,e5sy:2021,e5ey:2022,mastH:100},
-    portugal:{name:'Constância Wind Farm',lat:39.55,lon:-8.38,z0:'0.03',z0sel:'0.03',elev:80,temp:15,turbines:'2mw',gy:2,gc:5,gs:6,e5sy:2021,e5ey:2022,mastH:80}
+    portugal:{name:'Constância Wind Farm',lat:39.55,lon:-8.38,z0:'0.03',z0sel:'0.03',elev:80,temp:15,turbines:'2mw',gy:2,gc:5,gs:6,e5sy:2021,e5ey:2022,mastH:80},
+    envision:{name:'Envision EN-156 Mixed HH Demo',lat:42.50,lon:2.00,z0:'0.10',z0sel:'0.10',elev:500,temp:12,turbines:'en156_120',gy:2,gc:4,gs:6,e5sy:2022,e5ey:2023,mastH:100,mixedHH:true}
   };
   const cfg=sites[site]||sites.horns;
   log(`Loading ${cfg.name} demo...`,'i');setStatus('Loading demo...');
@@ -1584,6 +1635,12 @@ async function loadDemo(site='horns'){
   $('gLat').value=cfg.lat.toFixed(3);$('gLon').value=cfg.lon.toFixed(3);
   $('gR').value=cfg.gy;$('gC').value=cfg.gc;$('gS').value=cfg.gs;
   generateGrid();
+  // For mixed HH demo, alternate hub heights between 120m and 140m
+  if(cfg.mixedHH){
+    S.turbines.forEach((t,i)=>{t.hh=i%2===0?120:140;});
+    refreshTable();updateMarkers();
+    log('Mixed HH demo: alternating 120m/140m hub heights','i');
+  }
   $('e5La').value=cfg.lat.toFixed(2);$('e5Lo').value=cfg.lon.toFixed(2);
   $('e5Sy').value=cfg.e5sy;$('e5Ey').value=cfg.e5ey;
   $('mastLat').value=cfg.lat.toFixed(3);$('mastLon').value=cfg.lon.toFixed(3);
@@ -1598,37 +1655,89 @@ async function loadDemo(site='horns'){
 
 // ── TABS ──
 function exportLayoutCSV(){if(!S.turbines.length){alert('No turbines');return;}let c='Name,Lat,Lon,HH_m,Elev_m\n';S.turbines.forEach((t,i)=>c+=`T${i+1},${t.lat},${t.lon},${t.hh},${t.elev??''}\n`);dlFile(c,'layout.csv','text/csv');}
-function exportLayoutKML(){if(!S.turbines.length){alert('No turbines');return;}let k='<?xml version="1.0"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>\n';S.turbines.forEach((t,i)=>k+=`<Placemark><name>T${i+1}</name><Point><coordinates>${t.lon},${t.lat},${t.elev??0}</coordinates></Point></Placemark>\n`);k+='</Document></kml>';dlFile(k,'layout.kml','application/vnd.google-earth.kml+xml');}
-function exportAEPCSV(){if(!S.results){alert('Run analysis first');return;}const R=S.results;let c=`Project,${$('projName').value}\nSite Lat,${$('mastLat').value}\nSite Lon,${$('mastLon').value}\nMast HH (m),${$('mastH').value}\nHub HH (m),${$('hubH').value}\nRoughness z0 (m),${$('z0val').value}\nShear alpha,${$('shearA').value}\nAir Density (kg/m3),${R.density.toFixed(3)}\nMCP Factor,${R.mcpFactor.toFixed(3)}\nMast Mean WS (m/s),${R.mastMean.toFixed(2)}\nHub Mean WS (m/s),${R.hubMean.toFixed(2)}\nWeibull A (hub),${R.hubWb.A.toFixed(3)}\nWeibull k (hub),${R.hubWb.k.toFixed(3)}\nGross AEP (GWh),${R.grossAEP.toFixed(3)}\nNet AEP (GWh),${R.netAEP.toFixed(3)}\nWake Loss (%),${R.wakeLoss.toFixed(2)}\nCF (%),${R.CF.toFixed(2)}\nP50 (GWh),${R.P50.toFixed(3)}\nP75 (GWh),${R.P75.toFixed(3)}\nP90 (GWh),${R.P90.toFixed(3)}\nP99 (GWh),${R.P99.toFixed(3)}\nUncertainty sigma (%),${(R.sigma*100).toFixed(1)}\nIEC Class,${R.iec?R.iec.cls:'—'}\n\nT#,Lat,Lon,Elev_m,Free_WS_ms,Wake_pct,Net_WS_ms,Gross_GWh,Net_GWh,CF_pct,Power_kW\n`;R.perTurbine.forEach((t,i)=>{const tb=S.turbines[i]||{};c+=`T${t.i},${tb.lat?.toFixed(5)||''},${tb.lon?.toFixed(5)||''},${tb.elev?.toFixed(0)||''},${t.ws},${t.wake},${t.wakeWS},${t.gross},${t.net},${t.cf},${t.power}\n`;});dlFile(c,'aep_results.csv','text/csv');log('AEP CSV exported','i');}
+function exportLayoutKML(){if(!S.turbines.length){alert('No turbines');return;}let k='<?xml version="1.0"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>\n';S.turbines.forEach((t,i)=>k+=`<Placemark><name>T${i+1}</name><ExtendedData><Data name="hub_height"><value>${t.hh}</value></Data></ExtendedData><Point><coordinates>${t.lon},${t.lat},${t.elev??0}</coordinates></Point></Placemark>\n`);k+='</Document></kml>';dlFile(k,'layout.kml','application/vnd.google-earth.kml+xml');}
+function exportAEPCSV(){if(!S.results){alert('Run analysis first');return;}const R=S.results;const turbineModel=$('tcls').options[$('tcls').selectedIndex]?.text||'Custom';let c=`Project,${$('projName').value}\nTurbine Model,${turbineModel}\nSite Lat,${$('mastLat').value}\nSite Lon,${$('mastLon').value}\nMast HH (m),${$('mastH').value}\nHub HH (m),${$('hubH').value}\nRoughness z0 (m),${$('z0val').value}\nShear alpha,${$('shearA').value}\nAir Density (kg/m3),${R.density.toFixed(3)}\nMCP Factor,${R.mcpFactor.toFixed(3)}\nMast Mean WS (m/s),${R.mastMean.toFixed(2)}\nHub Mean WS (m/s),${R.hubMean.toFixed(2)}\nWeibull A (hub),${R.hubWb.A.toFixed(3)}\nWeibull k (hub),${R.hubWb.k.toFixed(3)}\nGross AEP (GWh),${R.grossAEP.toFixed(3)}\nNet AEP (GWh),${R.netAEP.toFixed(3)}\nWake Loss (%),${R.wakeLoss.toFixed(2)}\nCF (%),${R.CF.toFixed(2)}\nP50 (GWh),${R.P50.toFixed(3)}\nP75 (GWh),${R.P75.toFixed(3)}\nP90 (GWh),${R.P90.toFixed(3)}\nP99 (GWh),${R.P99.toFixed(3)}\nUncertainty sigma (%),${(R.sigma*100).toFixed(1)}\nIEC Class,${R.iec?R.iec.cls:'—'}\nMixed Hub Heights,${R.isMixedHH?'Yes':'No'}\n\nT#,HH_m,Lat,Lon,Elev_m,Free_WS_ms,Wake_pct,Net_WS_ms,Gross_GWh,Net_GWh,CF_pct,Power_kW\n`;R.perTurbine.forEach((t,i)=>{const tb=S.turbines[i]||{};c+=`T${t.i},${tb.hh||$('hubH').value},${tb.lat?.toFixed(5)||''},${tb.lon?.toFixed(5)||''},${tb.elev?.toFixed(0)||''},${t.ws},${t.wake},${t.wakeWS},${t.gross},${t.net},${t.cf},${t.power}\n`;});dlFile(c,'aep_results.csv','text/csv');log('AEP CSV exported','i');}
 function exportWindCSV(){if(!S.wind){alert('No wind data');return;}let c='DateTime,WS_ms,Dir_deg\n';for(let i=0;i<S.wind.speeds.length;i++)c+=`${S.wind.times[i]||i},${S.wind.speeds[i].toFixed(2)},${S.wind.dirs[i].toFixed(1)}\n`;dlFile(c,'wind_data.csv','text/csv');log('Wind CSV exported','i');}
 function exportWindTab(){if(!S.wind){alert('No wind data');return;}let t='WASP_tab_v2\n';for(let i=0;i<S.wind.speeds.length;i++)t+=`${S.wind.speeds[i].toFixed(2)}\t${S.wind.dirs[i].toFixed(1)}\n`;dlFile(t,'wind.tab','text/plain');log('WAsP .tab exported','i');}
 function exportTSCSV(){if(!S.tsData){alert('Run time series first');return;}const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];let c='Month,Gross_MWh,Net_MWh\n';S.tsData.mG.forEach((g,i)=>c+=`${mn[i]},${(g/1000).toFixed(2)},${(S.tsData.mN[i]/1000).toFixed(2)}\n`);dlFile(c,'timeseries.csv','text/csv');log('TS CSV exported','i');}
+function exportTSPerTurbineHourly(){
+  if(!S.tsData||!S.tsData.perTurbHourly||!S.tsData.perTurbHourly.length){alert('Run time series first');return;}
+  const d=S.tsData.perTurbHourly;
+  const n=S.turbines.length;
+  const turbineModel=$('tcls').options[$('tcls').selectedIndex]?.text||'Custom';
+  const hhCounts={};S.turbines.forEach(t=>{const h=t.hh||parseFloat($('hubH').value)||120;hhCounts[h]=(hhCounts[h]||0)+1;});
+  const hhSummary=Object.entries(hhCounts).map(([h,c])=>`${c}x${h}m`).join('_');
+  // Build header
+  let hdr='Timestamp,WS_ms,WD_deg';
+  for(let t=0;t<n;t++){
+    const tb=S.turbines[t]||{};
+    const hh=tb.hh||parseFloat($('hubH').value)||120;
+    hdr+=`,WTG${String(t+1).padStart(2,'0')}_Gross_kW,WTG${String(t+1).padStart(2,'0')}_Net_kW`;
+  }
+  hdr+=',Farm_Gross_kW,Farm_Net_kW';
+  // Build rows
+  const rows=[hdr];
+  for(let i=0;i<d.length;i++){
+    const r=d[i];
+    let row=`${r.ts},${r.ws.toFixed(2)},${r.wd.toFixed(1)}`;
+    let farmG=0,farmN=0;
+    for(let t=0;t<n;t++){
+      const gkW=(r.gross_kW[t]||0);
+      const nkW=(r.net_kW[t]||0);
+      row+=`,${gkW.toFixed(1)},${nkW.toFixed(1)}`;
+      farmG+=gkW;farmN+=nkW;
+    }
+    row+=`,${farmG.toFixed(1)},${farmN.toFixed(1)}`;
+    rows.push(row);
+  }
+  const csv=rows.join('\n');
+  const fname=`timeseries_perWTG_hourly_${turbineModel.replace(/[^a-zA-Z0-9]/g,'_')}_${hhSummary}.csv`;
+  dlFile(csv,fname,'text/csv');
+  log(`Per-WTG hourly CSV exported: ${d.length} hours × ${n} WTGs (${(csv.length/1024).toFixed(0)} KB)`,'i');
+}
 function exportReport(){
   const R=S.results,pn=$('projName').value,now=new Date().toLocaleString();
   const wakeModelName=$('wakeModel').options[$('wakeModel').selectedIndex].text;
+  const tcls=$('tcls').value;
+  const turbineModel=$('tcls').options[$('tcls').selectedIndex]?.text||'Custom';
+  const rotorD=parseFloat($('rotD').value)||150;
+  const ratedPow=parseFloat($('ratedPow').value)||4000;
+  // Detect mixed hub heights
+  const hhCounts={};S.turbines.forEach(t=>{const h=t.hh||parseFloat($('hubH').value)||120;hhCounts[h]=(hhCounts[h]||0)+1;});
+  const hhSummary=Object.entries(hhCounts).map(([h,c])=>`${c}×${h}m`).join(', ');
+  const isMixedHH=Object.keys(hhCounts).length>1;
   const resRows=R?`
     <tr><td>Mast Mean WS</td><td><b>${R.mastMean.toFixed(2)} m/s</b></td><td>Observed at mast ${R.mastH}m</td></tr>
-    <tr><td>Hub Mean WS (free stream)</td><td><b>${R.hubMean.toFixed(2)} m/s</b></td><td>Log-law to ${R.hubHH}m, z₀=${R.z0}m, α=${$('shearA').value}</td></tr>
+    <tr><td>Hub Mean WS (free stream)</td><td><b>${R.hubMean.toFixed(2)} m/s</b></td><td>Log-law to ${R.hubHH}m (reference), z₀=${R.z0}m, α=${$('shearA').value}</td></tr>
     ${R.rotorAvgUsed?`<tr><td>Rotor-Averaged WS</td><td><b>${(R.rotorMeanWS||R.hubMean).toFixed(2)} m/s</b></td><td>9-pt Gaussian quadrature, factor=${(R.rotAvgFactor||1).toFixed(4)}</td></tr>`:''}
+    ${isMixedHH?`<tr><td>Mixed Hub Heights</td><td><b>${hhSummary}</b></td><td>Per-turbine log-law WS scaling applied</td></tr>`:''}
     <tr><td>MCP Factor</td><td>${R.mcpFactor.toFixed(3)}</td><td>Long-term ERA5 correction</td></tr>
     <tr><td>Weibull (hub, MLE)</td><td>A=${R.hubWb.A.toFixed(2)}, k=${R.hubWb.k.toFixed(2)}</td><td>${R.hubWb.n||'—'} samples, ${R.hubWb.method||'mle'}</td></tr>
-    <tr><td>Uncertainty σ (1σ)</td><td>${(R.sigma*100).toFixed(1)}%</td><td>Wind ${(R.u_wind_r*100).toFixed(1)}% + Wake ${(R.u_wake_r*100).toFixed(1)}% + PC ${(R.u_pc_r*100).toFixed(1)}% (RSS)</td></tr>
+    <tr><td>Uncertainty σ (1σ)</td><td>${(R.sigma*100).toFixed(1)}%</td><td>Wind ${(R.u_wind_r*100).toFixed(1)}% + Wake ${(R.u_wake_r*100).toFixed(1)}% + PC ${(R.u_pc_r*100).toFixed(1)}%${isMixedHH?' + HH 1.0%':''} (RSS)</td></tr>
     <tr><td>IEC Class Compliance</td><td>${R.iec?R.iec.cls:'—'}</td><td>${R.iec?(R.iec.ok?'✓ Within limits':'⚠ EXCEEDS '+R.iec.limit+' m/s limit'):'—'}</td></tr>`:'';
-  const tRows=R?R.perTurbine.map(t=>{const tb=S.turbines[t.i-1]||{};return`<tr><td>T${t.i}</td><td>${tb.lat?.toFixed(4)||''}</td><td>${tb.lon?.toFixed(4)||''}</td><td>${tb.elev?.toFixed(0)||'—'}</td><td>${t.ws}</td><td>${t.wake}%</td><td><b>${t.wakeWS}</b></td><td>${t.gross}</td><td><b>${t.net}</b></td><td>${t.cf}%</td><td>${t.power}</td></tr>`;}).join(''):'';
+  const tRows=R?R.perTurbine.map(t=>{const tb=S.turbines[t.i-1]||{};return`<tr><td>T${t.i}</td><td>${tb.hh||'—'}</td><td>${tb.lat?.toFixed(4)||''}</td><td>${tb.lon?.toFixed(4)||''}</td><td>${tb.elev?.toFixed(0)||'—'}</td><td>${t.ws}</td><td>${t.wake}%</td><td><b>${t.wakeWS}</b></td><td>${t.gross}</td><td><b>${t.net}</b></td><td>${t.cf}%</td><td>${t.power}</td></tr>`;}).join(''):'';
   const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>WindFlow Pro – ${pn}</title>
-  <style>body{font-family:sans-serif;max-width:1050px;margin:40px auto;padding:20px;background:#f8f9fa;color:#212529}
+  <style>body{font-family:sans-serif;max-width:1100px;margin:40px auto;padding:20px;background:#f8f9fa;color:#212529}
   h1{color:#1a56db}h2{color:#1a56db;border-bottom:2px solid #e5e7eb;padding-bottom:5px;margin-top:20px}
   table{width:100%;border-collapse:collapse;margin:10px 0}th{background:#1a56db;color:#fff;padding:7px;text-align:left}
   td{padding:6px 7px;border-bottom:1px solid #e5e7eb}.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
-  .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}</style></head><body>
-  <h1>△ WindFlow Pro 9.0 — Wind Resource Assessment Report</h1>
-  <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}</p>
+  .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
+  <h1>△ WindFlow Pro 12.1 — Wind Resource Assessment Report</h1>
+  <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
+  <h2>Turbine Specifications</h2>
+  <table><tr><th>Parameter</th><th>Value</th></tr>
+  <tr><td>Turbine Model</td><td><b>${turbineModel}</b></td></tr>
+  <tr><td>Rotor Diameter</td><td>${rotorD} m</td></tr>
+  <tr><td>Rated Power</td><td>${ratedPow.toLocaleString()} kW (${(ratedPow/1000).toFixed(1)} MW)</td></tr>
+  <tr><td>Hub Height(s)</td><td>${hhSummary}</td></tr>
+  <tr><td>Number of WTGs</td><td>${S.turbines.length}</td></tr>
+  <tr><td>Installed Capacity</td><td>${(S.turbines.length*ratedPow/1000).toFixed(1)} MW</td></tr></table>
   <h2>Site &amp; Wind Resource Chain</h2>
   <table><tr><th>Step</th><th>Value</th><th>Method / Notes</th></tr>
   <tr><td>Mast location</td><td>${$('mastLat').value}°, ${$('mastLon').value}°</td><td>ERA5 / measurement point</td></tr>
-  <tr><td>Mast height → Hub height</td><td>${$('mastH').value}m → ${$('hubH').value}m</td><td>Log wind profile</td></tr>
+  <tr><td>Mast height → Hub height</td><td>${$('mastH').value}m → ${$('hubH').value}m (ref)${isMixedHH?` [mixed: ${hhSummary}]`:''}</td><td>Log wind profile${isMixedHH?' + per-turbine HH scaling':''}</td></tr>
   <tr><td>Roughness z₀</td><td>${$('z0val').value} m</td><td>Shear α=${$('shearA').value} (auto-recommended)</td></tr>
   <tr><td>Air density</td><td>${$('airDen').value} kg/m³</td><td>Elev ${$('siteElev').value}m ASL, T=${$('siteTemp').value}°C (ISA)</td></tr>
   <tr><td>Density correction method</td><td>IEC 61400-12-1 Method 2</td><td>ws_eff = ws×(ρ/ρ₀)^⅓ applied to LUT</td></tr>
@@ -1649,14 +1758,14 @@ function exportReport(){
   <tr><td>P90</td><td>${R.P90.toFixed(2)}</td><td>${((R.P90/R.P50-1)*100).toFixed(1)}%</td></tr>
   <tr><td>P99</td><td>${R.P99.toFixed(2)}</td><td>${((R.P99/R.P50-1)*100).toFixed(1)}%</td></tr></table>`:''}
   <h2>Per-Turbine Wind Speed Chain &amp; AEP</h2>
-  <table><tr><th>T#</th><th>Lat</th><th>Lon</th><th>Elev(m)</th><th>Free WS(m/s)</th><th>Wake%</th><th>Net WS(m/s)</th><th>Gross(GWh)</th><th>Net(GWh)</th><th>CF%</th><th>Power(kW)</th></tr>
-  ${tRows}</table>
+  <table><tr><th>T#</th>${isMixedHH?'<th>HH(m)</th>':''}<th>Lat</th><th>Lon</th><th>Elev(m)</th><th>Free WS(m/s)</th><th>Wake%</th><th>Net WS(m/s)</th><th>Gross(GWh)</th><th>Net(GWh)</th><th>CF%</th><th>Power(kW)</th></tr>
+  ${R?R.perTurbine.map(t=>{const tb=S.turbines[t.i-1]||{};return`<tr><td>T${t.i}</td>${isMixedHH?`<td>${tb.hh||$('hubH').value}</td>`:''}<td>${tb.lat?.toFixed(4)||''}</td><td>${tb.lon?.toFixed(4)||''}</td><td>${tb.elev?.toFixed(0)||'—'}</td><td>${t.ws}</td><td>${t.wake}%</td><td><b>${t.wakeWS}</b></td><td>${t.gross}</td><td><b>${t.net}</b></td><td>${t.cf}%</td><td>${t.power}</td></tr>`;}).join(''):''}</table>
   <h2>Turbine Layout (${S.turbines.length} WTGs)</h2>
   <table><tr><th>T#</th><th>Latitude</th><th>Longitude</th><th>Hub Height(m)</th><th>Elevation(m)</th></tr>
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 11.6 — WAsP-Aligned · Auto-Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · Proprietary Proxies · IEC 61400-12-1 density correction · Component uncertainty model</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 12.1 — WAsP-Aligned · Auto-Calibration · 2nd-Order BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Shear Correction · Mixed Hub Height · IEC 61400-12-1 density correction · Component uncertainty model · Envision EN-156/3.3MW support</p>
   </body></html>`;
-  dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain)','i');
+  dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
 function importLayout(ev){const f=ev.target.files[0];if(!f)return;
   // KMZ files need to be read as ArrayBuffer and unzipped
@@ -1720,24 +1829,89 @@ function importLayout(ev){const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();r.onload=e=>{const text=e.target.result;processLayoutText(text,f.name);};r.readAsText(f);ev.target.value='';
 }
 function processKMLLayout(kmlText,fileName){
-  const ts=[];const hh=parseFloat($('hubH').value)||120;
+  const ts=[];const defaultHH=parseFloat($('hubH').value)||120;
   const parser=new DOMParser();const doc=parser.parseFromString(kmlText,'text/xml');
   const pts=doc.querySelectorAll('Placemark');
-  pts.forEach((pm,i)=>{const coordEl=pm.querySelector('coordinates');if(coordEl){const vals=coordEl.textContent.trim().split(/[,\s]+/);const lon=+vals[0],lat=+vals[1];if(!isNaN(lat)&&!isNaN(lon)){const name=pm.querySelector('name')?.textContent||'T'+(ts.length+1);ts.push({lat,lon,hh,name});}}});
+  pts.forEach((pm,i)=>{
+    const coordEl=pm.querySelector('coordinates');
+    if(coordEl){
+      const vals=coordEl.textContent.trim().split(/[,\s]+/);
+      const lon=+vals[0],lat=+vals[1];
+      if(!isNaN(lat)&&!isNaN(lon)){
+        const name=pm.querySelector('name')?.textContent||'T'+(ts.length+1);
+        // ── EXTRACT PER-TURBINE HUB HEIGHT ──
+        // Priority: ExtendedData → description → name pattern → default
+        let hh=defaultHH;
+        // 1. Check KML ExtendedData for hub_height
+        const edData=pm.querySelectorAll('ExtendedData Data');
+        edData.forEach(d=>{
+          const dName=d.getAttribute('name')||'';
+          if(dName.toLowerCase().match(/hub.?height|hh|hub_height|hubheight/)){
+            const val=d.querySelector('value')?.textContent;
+            if(val&&!isNaN(+val))hh=parseFloat(val);
+          }
+        });
+        // 2. Check description for hub height pattern (e.g. "Hub Height: 120m" or "HH=140")
+        if(hh===defaultHH){
+          const desc=pm.querySelector('description')?.textContent||'';
+          const hhMatch=desc.match(/(?:hub\s*height|HH|hh)[:\s=]+(\d+)/i);
+          if(hhMatch)hh=parseFloat(hhMatch[1]);
+        }
+        // 3. Check name for hub height pattern (e.g. "WTG01_120" or "T05_140m")
+        if(hh===defaultHH){
+          const nameMatch=name.match(/[_\s](\d{2,3})m?$/);
+          if(nameMatch){
+            const parsedHH=parseFloat(nameMatch[1]);
+            if(parsedHH>=50&&parsedHH<=200)hh=parsedHH;
+          }
+        }
+        ts.push({lat,lon,hh,name});
+      }
+    }
+  });
   if(!ts.length){alert('No valid turbine positions found in KML/KMZ');return;}
   S.turbines=ts;refreshTable();updateMarkers();autoCenterMap();
-  log(`Imported ${ts.length} turbines from ${fileName}`,'i');
+  const hhCounts={};ts.forEach(t=>{hhCounts[t.hh]=(hhCounts[t.hh]||0)+1;});
+  const hhSummary=Object.entries(hhCounts).map(([h,c])=>`${c}×${h}m`).join(', ');
+  log(`Imported ${ts.length} turbines from ${fileName} — Hub heights: ${hhSummary}`,'i');
 }
 function processLayoutText(text,fileName){
-  const ts=[];const hh=parseFloat($('hubH').value)||120;let isUTM=false,utmZone=null;
+  const ts=[];const defaultHH=parseFloat($('hubH').value)||120;let isUTM=false,utmZone=null;
+  // Helper to extract per-turbine hub height from KML Placemark
+  function extractHH(pm,name){
+    let hh=defaultHH;
+    // 1. ExtendedData
+    const edData=pm.querySelectorAll('ExtendedData Data');
+    edData.forEach(d=>{
+      const dName=d.getAttribute('name')||'';
+      if(dName.toLowerCase().match(/hub.?height|hh|hub_height|hubheight/)){
+        const val=d.querySelector('value')?.textContent;
+        if(val&&!isNaN(+val))hh=parseFloat(val);
+      }
+    });
+    // 2. Description
+    if(hh===defaultHH){
+      const desc=pm.querySelector('description')?.textContent||'';
+      const hhMatch=desc.match(/(?:hub\s*height|HH|hh)[:\s=]+(\d+)/i);
+      if(hhMatch)hh=parseFloat(hhMatch[1]);
+    }
+    // 3. Name pattern
+    if(hh===defaultHH){
+      const nameMatch=name.match(/[_\s](\d{2,3})m?$/);
+      if(nameMatch){const p=parseFloat(nameMatch[1]);if(p>=50&&p<=200)hh=p;}
+    }
+    return hh;
+  }
   if(fileName.endsWith('.kml')){
     const parser=new DOMParser();const doc=parser.parseFromString(text,'text/xml');
     const pts=doc.querySelectorAll('Placemark');
-    pts.forEach((pm,i)=>{const coordEl=pm.querySelector('coordinates');if(coordEl){const vals=coordEl.textContent.trim().split(/[,\s]+/);const lon=+vals[0],lat=+vals[1];if(!isNaN(lat)&&!isNaN(lon)){const name=pm.querySelector('name')?.textContent||'T'+(ts.length+1);ts.push({lat,lon,hh,name});}}});
+    pts.forEach((pm,i)=>{const coordEl=pm.querySelector('coordinates');if(coordEl){const vals=coordEl.textContent.trim().split(/[,\s]+/);const lon=+vals[0],lat=+vals[1];if(!isNaN(lat)&&!isNaN(lon)){const name=pm.querySelector('name')?.textContent||'T'+(ts.length+1);const hh=extractHH(pm,name);ts.push({lat,lon,hh,name});}}});
   }else if(fileName.endsWith('.geojson')||fileName.endsWith('.json')){
     try{const geojson=JSON.parse(text);const features=geojson.features||[geojson];
     features.forEach((feat,i)=>{if(feat.geometry){const g=feat.geometry;
-      if(g.type==='Point'){ts.push({lat:g.coordinates[1],lon:g.coordinates[0],hh,name:feat.properties?.name||'T'+(ts.length+1)});}
+      const hh=feat.properties?.hub_height||feat.properties?.hh||feat.properties?.HubHeight||defaultHH;
+      const name=feat.properties?.name||'T'+(ts.length+1);
+      if(g.type==='Point'){ts.push({lat:g.coordinates[1],lon:g.coordinates[0],hh,name});}
       else if(g.type==='MultiPoint'){g.coordinates.forEach(c=>ts.push({lat:c[1],lon:c[0],hh,name:'T'+(ts.length+1)}));}
     }});}catch(err){alert('GeoJSON parse error: '+err.message);return;}
   }else{
@@ -1745,6 +1919,7 @@ function processLayoutText(text,fileName){
     const headers=lines[0].toLowerCase().split(/[,\t;]/).map(s=>s.trim());
     const xIdx=headers.indexOf('x'),yIdx=headers.indexOf('y');
     const latIdx=headers.indexOf('lat'),lonIdx=headers.indexOf('lon')>=0?headers.indexOf('lon'):headers.indexOf('longitude');
+    const hhIdx=headers.indexOf('hh')>=0?headers.indexOf('hh'):headers.indexOf('hub_height')>=0?headers.indexOf('hub_height'):-1;
     if(xIdx>=0&&yIdx>=0&&lines.length>1){const testX=parseFloat(lines[1].split(/[,\t;]/)[xIdx]);if(testX>10000)isUTM=true;}
     for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/).map(s=>s.trim());if(i===0&&isNaN(+p[0]))continue;
       let lat,lon;
@@ -1752,13 +1927,16 @@ function processLayoutText(text,fileName){
         if(!utmZone){for(let z=31;z<=37;z++){try{const r=utmToLatLon(x,y,z,false);if(r.lat>=-90&&r.lat<=90&&r.lon>=-180&&r.lon<=180){utmZone=z;lat=r.lat;lon=r.lon;break;}}catch(e){}}}
         if(utmZone){const r=utmToLatLon(x,y,utmZone,false);lat=r.lat;lon=r.lon;}
       }else{const latI=latIdx>=0?latIdx:0;const lonI=lonIdx>=0?lonIdx:1;lat=parseFloat(p[latI]);lon=parseFloat(p[lonI]);}
-      if(!isNaN(lat)&&!isNaN(lon))ts.push({lat,lon,hh:+(p[2]||hh),name:'T'+(ts.length+1)});
+      const turbineHH=hhIdx>=0?parseFloat(p[hhIdx]):+(p[2]||defaultHH);
+      if(!isNaN(lat)&&!isNaN(lon))ts.push({lat,lon,hh:isNaN(turbineHH)||turbineHH<50?defaultHH:turbineHH,name:'T'+(ts.length+1)});
     }
     if(isUTM&&utmZone)log(`UTM Zone ${utmZone}N auto-detected and converted to lat/lon`,'i');
   }
   if(!ts.length){alert('No valid turbine positions found. Supported: CSV (lat,lon or x,y UTM), KML/KMZ (Points), GeoJSON (Points)');return;}
   S.turbines=ts;refreshTable();updateMarkers();autoCenterMap();
-  log(`Imported ${ts.length} turbines from ${fileName}${isUTM?' (UTM auto-converted)':''}`,'i');
+  const hhCounts={};ts.forEach(t=>{hhCounts[t.hh]=(hhCounts[t.hh]||0)+1;});
+  const hhSummary=Object.entries(hhCounts).map(([h,c])=>`${c}×${h}m`).join(', ');
+  log(`Imported ${ts.length} turbines from ${fileName}${isUTM?' (UTM auto-converted)':''} — Hub heights: ${hhSummary}`,'i');
 }
 function autoCenterMap(){
   if(!S.turbines.length||!leafMap)return;
@@ -3825,7 +4003,11 @@ const PC_PRESETS={
   'gw171':{rated:6450,D:171,hh:135,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,110,400,870,1530,2380,3370,4450,5450,6150,6350,6420,6450,6450,6450,6450,6450,6450,6450,6450,6450,6450,6450,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
   'my158':{rated:7250,D:158,hh:128,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,120,430,940,1660,2580,3650,4830,5900,6700,7100,7220,7250,7250,7250,7250,7250,7250,7250,7250,7250,7250,7250,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
   'my184':{rated:11000,D:184,hh:150,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,160,570,1240,2200,3450,4900,6500,8000,9500,10500,10800,11000,11000,11000,11000,11000,11000,11000,11000,11000,11000,11000,0],ct:[0,0,0,.90,.87,.84,.81,.78,.73,.66,.56,.47,.38,.31,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
-  'my230':{rated:18000,D:230,hh:165,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,220,800,1740,3080,4820,6840,9080,11200,13400,15200,17000,17800,18000,18000,18000,18000,18000,18000,18000,18000,18000,18000,0],ct:[0,0,0,.91,.88,.85,.82,.79,.74,.67,.57,.48,.39,.32,.26,.21,.17,.14,.12,.10,.09,.08,.07,.06,.05,0]}
+  'my230':{rated:18000,D:230,hh:165,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,220,800,1740,3080,4820,6840,9080,11200,13400,15200,17000,17800,18000,18000,18000,18000,18000,18000,18000,18000,18000,18000,0],ct:[0,0,0,.91,.88,.85,.82,.79,.74,.67,.57,.48,.39,.32,.26,.21,.17,.14,.12,.10,.09,.08,.07,.06,.05,0]},
+  // Envision EN-156/3.3MW — IEC IIIA/S, 156m rotor, 3.3MW rated
+  // Power curve based on manufacturer specifications for low-wind IEA Task 27 reference
+  'en156_120':{rated:3300,D:156,hh:120,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,22,130,340,690,1200,1900,2620,3150,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,0],ct:[0,0,0,.88,.86,.84,.82,.79,.75,.67,.54,.42,.32,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,.04,0]},
+  'en156_140':{rated:3300,D:156,hh:140,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,22,130,340,690,1200,1900,2620,3150,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,0],ct:[0,0,0,.88,.86,.84,.82,.79,.75,.67,.54,.42,.32,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,.04,0]}
 };
 
 // Merge presets into PCL
@@ -4076,9 +4258,11 @@ function exportRoughnessCSV(){
 // ── MISSING UI FUNCTIONS (not defined in original but called) ──
 function refreshTable(){
   const tb=$('tbody');if(!tb)return;tb.innerHTML='';
+  const defaultHH=parseFloat($('hubH').value)||120;
   S.turbines.forEach((t,i)=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>T${i+1}</td><td>${t.lat.toFixed(4)}</td><td>${t.lon.toFixed(4)}</td><td>${t.hh||'—'}</td><td>${t.elev!=null?t.elev.toFixed(0):'—'}</td><td style="color:var(--red);cursor:pointer" onclick="removeTurbine(${i})">✕</td>`;
+    const hhStyle=t.hh&&t.hh!==defaultHH?'color:var(--gold);font-weight:600':'';
+    tr.innerHTML=`<td>T${i+1}</td><td>${t.lat.toFixed(4)}</td><td>${t.lon.toFixed(4)}</td><td style="${hhStyle}">${t.hh||'—'}</td><td>${t.elev!=null?t.elev.toFixed(0):'—'}</td><td style="color:var(--red);cursor:pointer" onclick="removeTurbine(${i})">✕</td>`;
     tb.appendChild(tr);
   });
   $('tCnt').textContent=S.turbines.length+' turbines';
@@ -4094,7 +4278,7 @@ function updateMarkers(){
   S.markers=[];
   S.turbines.forEach((t,i)=>{
     const m=L.circleMarker([t.lat,t.lon],{radius:5,color:'#00d68f',fillColor:'#00d68f',fillOpacity:.8,weight:1}).addTo(leafMap);
-    m.bindTooltip('T'+(i+1)+' ('+t.lat.toFixed(4)+', '+t.lon.toFixed(4)+')');
+    m.bindTooltip('T'+(i+1)+' HH:'+t.hh+'m ('+t.lat.toFixed(4)+', '+t.lon.toFixed(4)+')');
     S.markers.push(m);
   });
   if(S.turbines.length>1){
