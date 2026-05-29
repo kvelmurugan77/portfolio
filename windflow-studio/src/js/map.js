@@ -1,10 +1,22 @@
 import {S} from './state.js';
 let map=null, turbineLayer=null, terrainLayer=null, contourLayer=null, roughLayer=null;
-function boundsFromData(){
-  const pts=[];if(S.turbines?.length)pts.push(...S.turbines);if(S.terrain)pts.push({lat:S.terrain.lat0,lon:S.terrain.lon0},{lat:S.terrain.lat1,lon:S.terrain.lon1});
+
+function boundsFromTurbines(){
+  // Priority: use turbines only for zoom-to-layout
+  if(S.turbines?.length)return S.turbines.map(t=>({lat:t.lat,lon:t.lon}));
+  if(S.terrain)return [{lat:S.terrain.lat0,lon:S.terrain.lon0},{lat:S.terrain.lat1,lon:S.terrain.lon1}];
+  return [{lat:S.project.lat,lon:S.project.lon}];
+}
+
+function boundsFromAll(){
+  // All data combined for full view
+  const pts=[];
+  if(S.turbines?.length)pts.push(...S.turbines);
+  if(S.terrain)pts.push({lat:S.terrain.lat0,lon:S.terrain.lon0},{lat:S.terrain.lat1,lon:S.terrain.lon1});
   if(!pts.length)pts.push({lat:S.project.lat,lon:S.project.lon});
   return pts;
 }
+
 function initLeaflet(){
   const el=document.getElementById('leafletMap');if(!el||typeof L==='undefined')return false;
   if(map)return true;
@@ -15,7 +27,8 @@ function initLeaflet(){
   return true;
 }
 function colorElev(z,min,max){const t=Math.max(0,Math.min(1,(z-min)/Math.max(1,max-min)));const h=220-t*180;return `hsla(${h},80%,50%,0.35)`}
-export function drawMap(){
+
+export function drawMap(focusTurbines=false){
   if(initLeaflet()){
     setTimeout(()=>map.invalidateSize(),0);
     turbineLayer.clearLayers();terrainLayer.clearLayers();contourLayer.clearLayers();roughLayer.clearLayers();
@@ -30,7 +43,15 @@ export function drawMap(){
     }
     if(S.roughness?.length){for(const r of S.roughness.slice(0,300)){L.polygon(r.pts.map(p=>[p.lat,p.lon]),{color:'#22c55e',weight:1,fillOpacity:.12,interactive:false}).addTo(roughLayer)}}
     for(const t of S.turbines){L.circleMarker([t.lat,t.lon],{radius:5,color:'#fff',weight:1,fillColor:'#58a6ff',fillOpacity:.95}).bindPopup(`<b>${t.name||'T'+t.id}</b><br>${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}`).addTo(turbineLayer)}
-    const pts=boundsFromData();if(pts.length>1){const b=L.latLngBounds(pts.map(p=>[p.lat,p.lon]));if(b.isValid())map.fitBounds(b.pad(.15),{maxZoom:13});}else map.setView([S.project.lat,S.project.lon],12);
+
+    // Zoom logic: focus on turbines when layout loaded, otherwise show all data
+    const pts=focusTurbines?boundsFromTurbines():boundsFromAll();
+    if(pts.length>1){
+      const b=L.latLngBounds(pts.map(p=>[p.lat,p.lon]));
+      if(b.isValid())map.fitBounds(b.pad(.2),{maxZoom:15,padding:[30,30]});
+    }else{
+      map.setView([S.project.lat,S.project.lon],12);
+    }
     return;
   }
   // Canvas fallback if Leaflet CDN is blocked.

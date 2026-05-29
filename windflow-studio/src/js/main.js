@@ -32,7 +32,20 @@ window.addEventListener('load',()=>{
 
   // Layout
   $('btnGrid').onclick=()=>{readProject();generateGrid(+$('gridRows').value,+$('gridCols').value,+$('gridSpacingD').value);refresh()};
-  $('btnLoadLayout').onclick=async()=>{const f=$('layoutFile').files[0];if(!f)return alert('Choose CSV/TXT/KML');parseLayout(await f.text());refresh()};
+  $('btnLoadLayout').onclick=async()=>{const f=$('layoutFile').files[0];if(!f)return alert('Choose CSV/TXT/KML');parseLayout(await f.text());refresh(true)};
+
+  // After grid generation, also update project center to layout centroid
+  $('btnGrid').onclick=()=>{
+    readProject();
+    generateGrid(+$('gridRows').value,+$('gridCols').value,+$('gridSpacingD').value);
+    // Update site coords to layout centroid for terrain/data downloads
+    if(S.turbines.length){
+      const cLat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
+      const cLon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
+      $('siteLat').value=cLat.toFixed(5);$('siteLon').value=cLon.toFixed(5);
+    }
+    refresh(true);
+  };
 
   // Terrain download — reduced grid default and better rate-limit handling
   $('btnTerrain').onclick=async()=>{

@@ -9,62 +9,93 @@ export async function downloadTerrain(lat,lon,radKm,ng,ciSel='auto',progress=()=
     log('Terrain loaded from cache');return v.terrain;
   }
 
+  // Cap grid size to prevent API overload (max 60x60 = 3600 points)
+  ng=Math.min(ng,60);
+  if(ng>40)log(`Grid capped at ${ng}\u00d7${ng} for stability`,'w');
+
   const dLat=radKm/111.32,dLon=radKm/(111.32*Math.cos(rad(lat)));
   const lat0=lat-dLat,lat1=lat+dLat,lon0=lon-dLon,lon1=lon+dLon;
+
+  // Generate grid points
   const lats=[],lons=[];
   for(let i=0;i<ng;i++)for(let j=0;j<ng;j++){
     lats.push(+(lat0+i*(lat1-lat0)/(ng-1)).toFixed(6));
     lons.push(+(lon0+j*(lon1-lon0)/(ng-1)).toFixed(6));
   }
 
-  // Chunk into batches of 80 points (well within Open-Meteo limits per request)
-  const BATCH=80;
+  const totalPoints=lats.length;
+  log(`Terrain: requesting ${totalPoints} elevation points in ${ng}\u00d7${ng} grid, radius ${radKm}km`);
+
+  // Use smaller batch sizes for reliability (50 points per request max)
+  const BATCH=Math.min(50, totalPoints);
   const chunks=[];
   for(let i=0;i<lats.length;i+=BATCH)
     chunks.push({i,la:lats.slice(i,i+BATCH),lo:lons.slice(i,i+BATCH)});
 
-  const elev=new Array(lats.length);
-  let next=0,done=0;
+  const elev=new Array(lats.length).fill(null);
+  let next=0,done=0,failedChunks=[];
 
-  async function fetchChunk(ch){
+  async function fetchChunk(ch,retries=6){
     const url=`https://api.open-meteo.com/v1/elevation?latitude=${ch.la.join(',')}&longitude=${ch.lo.join(',')}`;
-    // Retry with exponential backoff; handle 429 rate-limit gracefully
-    for(let attempt=0;attempt<5;attempt++){
+    for(let attempt=0;attempt<retries;attempt++){
       try{
         const r=await fetch(url);
         if(r.status===429){
-          // Rate limited — wait longer and retry
-          const wait=2000*Math.pow(2,attempt);
-          log(`Terrain rate-limited (429), retrying in ${wait/1000}s…`,'w');
+          // Rate limited — exponential backoff with jitter
+          const base=2000*Math.pow(2,attempt);
+          const jitter=Math.random()*1000;
+          const wait=base+jitter;
+          log(`Terrain rate-limited (429), retrying in ${(wait/1000).toFixed(1)}s…`,'w');
+          await new Promise(res=>setTimeout(res,wait));
+          continue;
+        }
+        if(r.status===503||r.status===504){
+          // Server overloaded — longer wait
+          const wait=5000*(attempt+1);
+          log(`Terrain server busy (${r.status}), retrying in ${wait/1000}s…`,'w');
           await new Promise(res=>setTimeout(res,wait));
           continue;
         }
         if(!r.ok)throw Error('HTTP '+r.status);
         const j=await r.json();
-        return j.elevation||[];
+        const result=j.elevation||[];
+        if(result.length!==ch.la.length){
+          log(`Terrain chunk returned ${result.length}/${ch.la.length} points, retrying…`,'w');
+          if(attempt<retries-1){await new Promise(res=>setTimeout(res,2000));continue;}
+        }
+        return result;
       }catch(e){
-        if(attempt>=4)throw e;
-        const wait=1000*(attempt+1);
-        log(`Terrain fetch error, retry ${attempt+1} in ${wait/1000}s: ${e.message}`,'w');
+        if(attempt>=retries-1)throw e;
+        const wait=1500*(attempt+1)+Math.random()*500;
+        log(`Terrain fetch error, retry ${attempt+1}/${retries} in ${(wait/1000).toFixed(1)}s: ${e.message}`,'w');
         await new Promise(res=>setTimeout(res,wait));
       }
     }
-    throw Error('Terrain fetch failed after retries');
+    throw Error('Terrain fetch failed after '+retries+' retries');
   }
 
-  // Use only 2 concurrent workers (was 6) to avoid hitting rate limits
-  const CONCURRENCY=2;
-  // Add a minimum delay between consecutive requests per worker
-  const MIN_DELAY=400; // ms between requests
+  // Sequential processing with controlled concurrency (1 worker for large grids)
+  const CONCURRENCY=totalPoints>1000?1:2;
+  const MIN_DELAY=totalPoints>500?600:400;
+
+  progress(5,`Fetching ${chunks.length} chunks…`);
 
   async function worker(){
     while(next<chunks.length){
       const ch=chunks[next++];
       const t0=Date.now();
-      const arr=await fetchChunk(ch);
-      arr.forEach((v,k)=>elev[ch.i+k]=v);
-      done++;
-      progress(10+45*done/chunks.length,`Elevation ${done}/${chunks.length}`);
+      try{
+        const arr=await fetchChunk(ch);
+        arr.forEach((v,k)=>{if(ch.i+k<elev.length)elev[ch.i+k]=v;});
+        done++;
+        const pct=5+55*done/chunks.length;
+        progress(pct,`Elevation ${done}/${chunks.length}`);
+      }catch(e){
+        // Store failed chunk for retry
+        failedChunks.push(ch);
+        done++;
+        log(`Terrain chunk ${done}/${chunks.length} failed: ${e.message}`,'e');
+      }
       // Enforce minimum delay between requests
       const elapsed=Date.now()-t0;
       if(elapsed<MIN_DELAY)await new Promise(r=>setTimeout(r,MIN_DELAY-elapsed));
@@ -72,6 +103,45 @@ export async function downloadTerrain(lat,lon,radKm,ng,ciSel='auto',progress=()=
   }
 
   await Promise.all(Array.from({length:Math.min(CONCURRENCY,chunks.length)},worker));
+
+  // Retry failed chunks with longer delays
+  if(failedChunks.length>0 && failedChunks.length<=chunks.length*0.3){
+    log(`Retrying ${failedChunks.length} failed terrain chunks…`,'w');
+    for(const ch of failedChunks){
+      try{
+        await new Promise(r=>setTimeout(r,2000));
+        const arr=await fetchChunk(ch,8);
+        arr.forEach((v,k)=>{if(ch.i+k<elev.length)elev[ch.i+k]=v;});
+      }catch(e){
+        log(`Terrain retry failed for chunk: ${e.message}`,'e');
+      }
+    }
+  }
+
+  // Check we got enough data
+  const validCount=elev.filter(v=>v!=null).length;
+  const coverage=validCount/totalPoints;
+  if(coverage<0.5)throw Error(`Terrain download incomplete: only ${validCount}/${totalPoints} points (${(coverage*100).toFixed(0)}%). Try a smaller grid or radius.`);
+
+  // Fill any remaining nulls with nearest-neighbor interpolation
+  for(let idx=0;idx<elev.length;idx++){
+    if(elev[idx]==null){
+      // Find nearest valid neighbor
+      const row=Math.floor(idx/ng),col=idx%ng;
+      let best=null,bestDist=Infinity;
+      for(let dr=-2;dr<=2;dr++)for(let dc=-2;dc<=2;dc++){
+        const nr=row+dr,nc=col+dc;
+        if(nr>=0&&nr<ng&&nc>=0&&nc<ng){
+          const ni=nr*ng+nc;
+          if(elev[ni]!=null){
+            const d=dr*dr+dc*dc;
+            if(d<bestDist){bestDist=d;best=elev[ni];}
+          }
+        }
+      }
+      elev[idx]=best!=null?best:0;
+    }
+  }
 
   const grid=[];
   for(let i=0;i<ng;i++){grid[i]=[];for(let j=0;j<ng;j++){
@@ -91,7 +161,7 @@ export async function downloadTerrain(lat,lon,radKm,ng,ciSel='auto',progress=()=
   S.terrain={grid,lat0,lat1,lon0,lon1,ny:ng,nx:ng,minE,maxE,meanE,ci,levels};
   S.contours=levels.map(z=>({z,segs:contours[z]||[]}));
   S.terrainCache.set(key,{terrain:S.terrain,contours:S.contours});
-  log(`Terrain ${ng}\u00d7${ng}, ${levels.length} contours, ${minE.toFixed(0)}-${maxE.toFixed(0)}m`);
+  log(`Terrain ${ng}\u00d7${ng}, ${levels.length} contours, ${minE.toFixed(0)}-${maxE.toFixed(0)}m, coverage ${(coverage*100).toFixed(0)}%`);
   return S.terrain;
 }
 
