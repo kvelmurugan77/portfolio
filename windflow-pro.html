@@ -127,7 +127,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <div class="card"><div class="card-title green">Turbine Presets</div>
         <div class="fg"><label class="fl">Select Turbine</label><select class="fs" id="tcls" onchange="applyPreset()">
           <optgroup label="Generic"><option value="2mw">IEC-IIA 2MW D=80m HH=80m</option><option value="4mw" selected>IEC-IIA 4MW D=150m HH=120m</option><option value="6mw">IEC-IIIA 6MW D=180m HH=140m</option></optgroup>
-          <optgroup label="Vestas"><option value="v90">V90-2.0MW</option><option value="v110">V110-2.0MW</option><option value="v136">V136-4.2MW</option><option value="v150">V150-5.6MW</option><option value="v164">V164-9.5MW</option><option value="v174">V174-9.5MW</option></optgroup>
+          <optgroup label="Vestas"><option value="v90">V90-2.0MW</option><option value="v110">V110-2.0MW</option><option value="v136">V136-4.2MW</option><option value="v150">V150-5.6MW</option><option value="v163_45">V163-4.5MW 113m HH</option><option value="v164">V164-9.5MW</option><option value="v174">V174-9.5MW</option></optgroup>
           <optgroup label="Siemens Gamesa"><option value="sg108">SG 108-4.5MW</option><option value="sg132">SG 132-6.6MW</option><option value="sg170">SG 170-7.0MW</option><option value="sg222">SG 222-13.0MW</option></optgroup>
           <optgroup label="Nordex"><option value="n117">N117/3600</option><option value="n133">N133/4800</option><option value="n149">N149/5700</option><option value="n163">N163/6800</option><option value="n163_7mw">N163/7000 138m HH</option></optgroup>
           <optgroup label="GE"><option value="ge136">GE 136-4.8MW</option><option value="ge158">GE 158-6.1MW</option><option value="ge220">GE 220-14.0MW</option></optgroup>
@@ -4228,7 +4228,10 @@ const PC_PRESETS={
   // Envision EN-156/3.3MW — IEC IIIA/S, 156m rotor, 3.3MW rated
   // Power curve based on manufacturer specifications for low-wind IEA Task 27 reference
   'en156_120':{rated:3300,D:156,hh:120,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,22,130,340,690,1200,1900,2620,3150,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,0],ct:[0,0,0,.88,.86,.84,.82,.79,.75,.67,.54,.42,.32,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,.04,0]},
-  'en156_140':{rated:3300,D:156,hh:140,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,22,130,340,690,1200,1900,2620,3150,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,0],ct:[0,0,0,.88,.86,.84,.82,.79,.75,.67,.54,.42,.32,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,.04,0]}
+  'en156_140':{rated:3300,D:156,hh:140,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,22,130,340,690,1200,1900,2620,3150,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,3300,0],ct:[0,0,0,.88,.86,.84,.82,.79,.75,.67,.54,.42,.32,.25,.20,.16,.13,.11,.09,.08,.07,.06,.05,.04,.04,0]},
+  // Vestas V163-4.5MW — IEC IIIA/S, 163m rotor, 4.5MW rated, 113m HH
+  // Power curve based on Vestas product brochure for V163-4.5MW (medium-wind onshore)
+  'v163_45':{rated:4500,D:163,hh:113,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,30,155,380,750,1280,1980,2780,3450,4000,4320,4480,4500,4500,4500,4500,4500,4500,4500,4500,4500,4500,4500,0],ct:[0,0,0,.89,.86,.84,.81,.78,.74,.67,.57,.48,.39,.32,.26,.21,.17,.14,.12,.10,.09,.07,.06,.05,.04,0]}
 };
 
 // Merge presets into PCL
