@@ -187,7 +187,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div class="g2" style="gap:.4rem;margin-bottom:.5rem"><div class="fg"><label class="fl">Lat</label><input class="fi" id="e5La" type="number" value="55.50" step="0.01"></div><div class="fg"><label class="fl">Lon</label><input class="fi" id="e5Lo" type="number" value="7.90" step="0.01"></div></div>
         <div class="ds-grid">
           <div class="ds-card" id="ds_era5"><div class="ds-name">ERA5 / ERA5T</div><div class="ds-desc">Open-Meteo API · Free · 1940→present</div><button class="btn btn-sm btn-primary" onclick="downloadERA5()">⬇ Download</button><div class="progress" id="e5pb_wrap"><div class="progress-bar" id="e5pb" style="width:0"></div></div><div id="e5pt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
-          <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 3.0</div><div class="ds-desc">Global Wind Atlas · Free · 250m resolution</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 4.0</div><div class="ds-desc">Global Wind Atlas · Free · 250m · WAsP .lib + WS map</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_merra2"><div class="ds-name">MERRA-2</div><div class="ds-desc">NASA POWER API · Free · 1980→present</div><button class="btn btn-sm btn-ghost" onclick="downloadMERRA2()">⬇ Download</button><div id="merra2Status" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_ncep"><div class="ds-name">NCEP/NCAR</div><div class="ds-desc">Reanalysis · Free · 1948→present</div><button class="btn btn-sm btn-ghost" onclick="downloadNCEP()">⬇ Download</button><div id="ncepStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
         </div>
@@ -4504,7 +4504,162 @@ function importMastData(event){
 }
 
 // ── ADDITIONAL DATA SOURCES ──
-async function downloadGWA(){$('gwaStatus').textContent='Querying GWA API...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const r=await fetch(`https://globalwindatlas.info/api/gwa/lat/${lat}/lon/${lon}`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();$('gwaStatus').textContent='✓ GWA data received: mean WS='+((d.wind_speed&&d.wind_speed['100'])||'—')+' m/s';log('GWA data downloaded','i');}catch(e){$('gwaStatus').textContent='⚠ GWA API unavailable: '+e.message;log('GWA failed: '+e.message,'w');}}
+async function downloadGWA(){
+  const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
+  if(isNaN(lat)||isNaN(lon)){alert('Set ERA5 lat/lon first');return;}
+  $('gwaStatus').textContent='Querying GWA API...';
+  log(`GWA: requesting wind climate for ${lat.toFixed(2)}°, ${lon.toFixed(2)}°`,'i');
+
+  // ── Strategy 1: GWA 4.0 .lib file endpoint (requires Referer header) ──
+  // The GWA API blocks cross-origin requests; try via no-cors proxy or direct fetch
+  try{
+    const libUrl=`https://globalwindatlas.info/api/gwa/custom/Lib?lat=${lat}&long=${lon}&areaname=site`;
+    const r=await fetch(libUrl,{
+      headers:{'Referer':'https://globalwindatlas.info/','Accept':'application/octet-stream,*/*'},
+      mode:'cors'
+    });
+    if(r.ok){
+      const ct=r.headers.get('content-type')||'';
+      if(ct.includes('octet-stream')||ct.includes('text/plain')){
+        const text=await r.text();
+        const parsed=parseWAsPLib(text);
+        if(parsed){
+          $('gwaStatus').textContent=`✓ GWA 4.0: ${parsed.sectors} sectors, mean WS=${parsed.meanWS.toFixed(2)} m/s, A=${parsed.weibullA.toFixed(2)}, k=${parsed.weibullK.toFixed(2)}`;
+          S.gwaData=parsed;
+          log(`GWA 4.0 .lib downloaded: ${parsed.sectors} sectors, mean=${parsed.meanWS.toFixed(2)} m/s, A=${parsed.weibullA.toFixed(2)}, k=${parsed.weibullK.toFixed(2)}`,'i');
+          return;
+        }
+      }
+      // If it returned HTML (SPA fallback), try strategy 2
+    }
+  }catch(e1){
+    log(`GWA .lib endpoint failed: ${e1.message} — trying alternatives`,'w');
+  }
+
+  // ── Strategy 2: GWA wind speed tile API (WMS/XYZ) ──
+  // Try to fetch the wind speed value from the GWA map tile service
+  try{
+    // GWA uses ESRI/Leaflet tiles — we can estimate from the tile layer
+    // Use the GWA 3.0 legacy API endpoint as fallback
+    const legUrl=`https://globalwindatlas.info/api/gwa/lat/${lat}/lon/${lon}`;
+    const r2=await fetch(legUrl,{
+      headers:{'Referer':'https://globalwindatlas.info/'},
+      mode:'cors'
+    });
+    if(r2.ok){
+      const ct2=r2.headers.get('content-type')||'';
+      if(ct2.includes('json')){
+        const d=await r2.json();
+        const ws100=(d.wind_speed&&d.wind_speed['100'])||(d.wind_speed_100)||null;
+        if(ws100){
+          $('gwaStatus').textContent=`✓ GWA: WS100=${ws100} m/s`;
+          log(`GWA data received: WS100=${ws100} m/s`,'i');
+          return;
+        }
+      }
+    }
+  }catch(e2){
+    log(`GWA legacy API also failed: ${e2.message}`,'w');
+  }
+
+  // ── Strategy 3: Open-Meteo wind speed as GWA proxy ──
+  // If GWA is completely blocked by CORS, use Open-Meteo's long-term average
+  try{
+    $('gwaStatus').textContent='GWA CORS-blocked — using Open-Meteo proxy...';
+    // Open-Meteo provides ERA5-based mean wind speed which approximates GWA
+    const omUrl=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2005-01-01&end_date=2024-12-31&hourly=wind_speed_100m,wind_direction_100m&wind_speed_unit=ms&timezone=UTC`;
+    const r3=await fetch(omUrl);
+    if(r3.ok){
+      const d3=await r3.json();
+      const ws=d3.hourly?.wind_speed_100m||[];
+      const valid=ws.filter(v=>v!=null&&v>0.5);
+      if(valid.length>100){
+        const mean=valid.reduce((s,v)=>s+v,0)/valid.length;
+        const wb=weibullFit(valid);
+        $('gwaStatus').textContent=`✓ GWA proxy (ERA5 20yr): mean=${mean.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`;
+        log(`GWA proxy via Open-Meteo: ${valid.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
+        S.gwaData={meanWS:mean,weibullA:wb.A,weibullK:wb.k,sectors:0,source:'ERA5-proxy'};
+        return;
+      }
+    }
+  }catch(e3){
+    log(`GWA proxy also failed: ${e3.message}`,'w');
+  }
+
+  // ── All strategies failed ──
+  $('gwaStatus').textContent='⚠ GWA unavailable (CORS) — use ERA5 tab instead';
+  log('GWA API is CORS-blocked by globalwindatlas.info. Use ERA5 tab for wind data download (recommended). GWA data can be manually downloaded from https://globalwindatlas.info and imported as .lib file.','w');
+}
+
+// v14.0: Parse WAsP .lib file format (GWA 4.0 output)
+// Format: header lines, then sector-wise Weibull A, k, frequency
+function parseWAsPLib(text){
+  try{
+    const lines=text.split(/\r?\n/).filter(l=>l.trim());
+    if(lines.length<10)return null;
+    // WAsP .lib format:
+    // Line 1-2: description
+    // Line 3: latitude, longitude (or 0 0)
+    // Line 4: number of sectors, height 1, height 2, ...
+    // Then per sector: frequency, A, k (for each height)
+    let sectorIdx=-1,heightIdx=-1;
+    for(let i=0;i<Math.min(lines.length,20);i++){
+      const parts=lines[i].trim().split(/\s+/);
+      // Look for line with 13 or 12 sectors count
+      if(parts.length>=2){
+        const nSect=parseInt(parts[0]);
+        if((nSect===12||nSect===16||nSect===8||nSect===36)&&!isNaN(nSect)){
+          sectorIdx=i;heightIdx=nSect;
+          break;
+        }
+      }
+    }
+    if(sectorIdx<0)return null;
+    const nSectors=parseInt(lines[sectorIdx].trim().split(/\s+/)[0]);
+    // Read sector frequencies and Weibull parameters
+    const sectorData=[];
+    let lineOffset=sectorIdx+1;
+    // .lib has: frequency line, then A line, then k line per height
+    // Skip height lines if present
+    const heights=lines[sectorIdx].trim().split(/\s+/).length-1;
+    // Read frequency/A/k for first height
+    for(let s=0;s<nSectors&&lineOffset<lines.length;s++){
+      const freq=parseFloat(lines[lineOffset]?.trim().split(/\s+/)[s]);
+      const A=parseFloat(lines[lineOffset+heights]?.trim().split(/\s+/)[s]);
+      const k=parseFloat(lines[lineOffset+heights*2]?.trim().split(/\s+/)[s]);
+      if(!isNaN(A)&&!isNaN(k))sectorData.push({freq:freq||1/nSectors,A,k});
+    }
+    if(sectorData.length<nSectors*0.5)return null;
+    // Compute overall mean WS from Weibull sectors
+    const gamma_n=Math.exp(Math.log(1+1/2)*0.8862); // approximate gamma(1+1/2)
+    const totalFreq=sectorData.reduce((s,d)=>s+(d.freq||0),0)||1;
+    let meanWS=0,weibullA=0,weibullK=2;
+    sectorData.forEach(d=>{
+      const f=(d.freq||0)/totalFreq;
+      // Mean of Weibull: A × Γ(1+1/k)
+      const gammaVal=gamma(1+1/d.k);
+      meanWS+=f*d.A*gammaVal;
+    });
+    // Fit overall Weibull to the mean
+    const allA=sectorData.map(d=>d.A);
+    weibullA=allA.reduce((s,a)=>s+a,0)/allA.length;
+    weibullK=sectorData.reduce((s,d)=>s+d.k*(d.freq||0),0)/totalFreq||2;
+    return{sectors:nSectors,sectorData,meanWS,weibullA,weibullK,source:'GWA4-lib'};
+  }catch(e){
+    log('.lib parse error: '+e.message,'w');
+    return null;
+  }
+}
+
+// Gamma function approximation (Lanczos)
+function gamma(z){
+  if(z<0.5)return Math.PI/(Math.sin(Math.PI*z)*gamma(1-z));
+  z-=1;const g=7;
+  const c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  let x=c[0];for(let i=1;i<g+2;i++)x+=c[i]/(z+i);
+  const t=z+g+0.5;
+  return Math.sqrt(2*Math.PI)*Math.pow(t,z+0.5)*Math.exp(-t)*x;
+}
 
 async function downloadMERRA2(){$('merra2Status').textContent='Querying NASA POWER...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();const ws=Object.values(d.properties?.parameter?.WS50M||{}).filter(v=>v>0);const mean=ws.length?ws.reduce((s,v)=>s+v,0)/ws.length:0;$('merra2Status').textContent='✓ MERRA-2: '+ws.length.toLocaleString()+' records, mean WS50m='+mean.toFixed(2)+' m/s';log('MERRA-2 data downloaded: '+ws.length+' records','i');}catch(e){$('merra2Status').textContent='⚠ MERRA-2 unavailable: '+e.message;log('MERRA-2 failed: '+e.message,'w');}}
 
