@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 14.0</title>
+<title>WindFlow Pro 15.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 14.0</span></div><div class="brand-sub">WAsP-Aligned · ERA5T Density · Per-WTG ρ · Humidity Corr · OWC→GWC→SWC · IBL · Wake Dir Var · Mixed HH · Terrain SU · BZ</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 15.0</span></div><div class="brand-sub">WAsP-Aligned · ERA5T Density · Per-WTG ρ · Humidity Corr · OWC→GWC→SWC · IBL · Wake Dir Var · Mixed HH · Terrain SU · BZ · Centralized Coords</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -184,7 +184,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
     <div>
       <div class="card"><div class="card-title green">Download Reference Wind Data</div>
         <div class="g2" style="gap:.4rem;margin-bottom:.5rem"><div class="fg"><label class="fl">Height</label><select class="fs" id="e5H"><option value="100" selected>100m</option><option value="10">10m</option></select></div><div class="fg"><label class="fl">Period</label><div class="g2" style="gap:.3rem"><input class="fi" id="e5Sy" type="number" value="2020" min="1940" max="2025" style="font-size:.7rem"><input class="fi" id="e5Ey" type="number" value="2023" min="1940" max="2025" style="font-size:.7rem"></div></div></div>
-        <div class="g2" style="gap:.4rem;margin-bottom:.5rem"><div class="fg"><label class="fl">Lat</label><input class="fi" id="e5La" type="number" value="55.50" step="0.01"></div><div class="fg"><label class="fl">Lon</label><input class="fi" id="e5Lo" type="number" value="7.90" step="0.01"></div></div>
+        <div class="g2" style="gap:.4rem;margin-bottom:.5rem"><div class="fg"><label class="fl">Lat <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="e5La" type="number" value="55.50" step="0.01" readonly></div><div class="fg"><label class="fl">Lon <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="e5Lo" type="number" value="7.90" step="0.01" readonly></div></div>
         <div class="ds-grid">
           <div class="ds-card" id="ds_era5"><div class="ds-name">ERA5 / ERA5T</div><div class="ds-desc">Open-Meteo API · Free · 1940→present</div><button class="btn btn-sm btn-primary" onclick="downloadERA5()">⬇ Download</button><div class="progress" id="e5pb_wrap"><div class="progress-bar" id="e5pb" style="width:0"></div></div><div id="e5pt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 4.0</div><div class="ds-desc">Global Wind Atlas · Free · 250m · WAsP .lib + WS map</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
@@ -225,7 +225,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
     <div>
       <div class="card"><div class="card-title green">Download Terrain</div>
         <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="terrR" type="number" value="10" min="2" max="50"></div><div class="fg"><label class="fl">Grid</label><select class="fs" id="terrG"><option value="20" selected>20×20</option><option value="30">30×30</option><option value="40">40×40</option></select></div></div>
-        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Lat</label><input class="fi" id="terrLa" type="number" value="55.500" step="0.001"></div><div class="fg"><label class="fl">Lon</label><input class="fi" id="terrLo" type="number" value="7.900" step="0.001"></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Lat <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="terrLa" type="number" value="55.500" step="0.001" readonly></div><div class="fg"><label class="fl">Lon <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="terrLo" type="number" value="7.900" step="0.001" readonly></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Contour Int</label><select class="fs" id="terrCI"><option value="auto" selected>Auto</option><option value="5">5m</option><option value="10">10m</option><option value="20">20m</option></select></div><div class="fg"><label class="fl">Opacity</label><input class="fi" id="terrOp" type="range" min="0" max="1" step="0.05" value="0.5" oninput="redrawCanvas()"></div></div>
         <button class="btn btn-primary" style="margin-top:.5rem;width:100%" onclick="downloadTerrain()">⬇ Download Terrain Grid</button>
         <div class="progress"><div class="progress-bar" id="terrPpb" style="width:0"></div></div><div id="terrPpt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div>
@@ -394,7 +394,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 14.0 — Step-Based Wizard · ERA5T Density · Per-WTG ρ · Humidity · WAsP-Aligned · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU
+// WINDFLOW PRO 15.0 — Step-Based Wizard · ERA5T Density · Per-WTG ρ · Humidity · WAsP-Aligned · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Centralized Coords
 // ═══════════════════════════════════════════════════════════════════
 const $=id=>document.getElementById(id);
 function log(m,t='i'){const d=$('elog');if(!d)return;const s=document.createElement('span');s.className={i:'li',w:'lw',e:'le'}[t]||'li';s.textContent=`[${new Date().toLocaleTimeString()}] ${m}\n`;d.appendChild(s);d.scrollTop=1e6}
@@ -1059,6 +1059,7 @@ async function downloadTerrain(){
     $('terrMn').textContent=R.meanE.toFixed(0);$('terrCI2').textContent=R.ci;
     $('terrOut').style.display='block';
     drawTerrainProfile();
+    drawTerrainCanvas();
     log(`Terrain: ${R.levels} contours, ${R.minE.toFixed(0)}–${R.maxE.toFixed(0)}m, ci=${R.ci}m`,'i');
   }catch(e){setProg('terrP',0,'❌ '+e.message);log('Terrain failed: '+e.message,'e');}
 }
@@ -1071,7 +1072,7 @@ async function downloadTerrainBoundary(){
   const radKm=Math.max(3,Math.max(dLat,dLon)/2+2);
   const ng=parseInt($('bndGrid').value)||20;const ci=$('bndCI').value;
   setProg('terrP',5,'Downloading terrain within boundary...');// goToStep(4);
-  try{const R=await downloadTerrainForArea(clat,clon,radKm,ng,ci);$('terrMin').textContent=R.minE.toFixed(0);$('terrMax').textContent=R.maxE.toFixed(0);$('terrMn').textContent=R.meanE.toFixed(0);$('terrCI2').textContent=R.ci;$('terrOut').style.display='block';drawTerrainProfile();log(`Boundary terrain: ${R.minE.toFixed(0)}–${R.maxE.toFixed(0)}m`,'i');}
+  try{const R=await downloadTerrainForArea(clat,clon,radKm,ng,ci);$('terrMin').textContent=R.minE.toFixed(0);$('terrMax').textContent=R.maxE.toFixed(0);$('terrMn').textContent=R.meanE.toFixed(0);$('terrCI2').textContent=R.ci;$('terrOut').style.display='block';drawTerrainProfile();drawTerrainCanvas();log(`Boundary terrain: ${R.minE.toFixed(0)}–${R.maxE.toFixed(0)}m`,'i');}
   catch(e){setProg('terrP',0,'❌ '+e.message);log('Terrain failed: '+e.message,'e');}
 }
 
@@ -1095,7 +1096,7 @@ async function downloadRoughness(){
       S.roughnessZones.push({lu,z0,col,pts:el.geometry.map(p=>({lat:p.lat,lon:p.lon}))});
     });
     $('roughStat').textContent=`✓ ${S.roughnessZones.length} features from OSM`;
-    redrawCanvas();log(`OSM roughness: ${S.roughnessZones.length} land-use features`,'i');
+    redrawCanvas();drawRoughnessCanvas();log(`OSM roughness: ${S.roughnessZones.length} land-use features`,'i');
     // Update z0 based on dominant land use
     if(S.roughnessZones.length>0){const z0s=S.roughnessZones.map(z=>z.z0);const med=z0s.sort((a,b)=>a-b)[Math.floor(z0s.length/2)];$('z0val').value=med.toFixed(4);$('roughStat').textContent+=` · Median z₀=${med.toFixed(4)}m`;}
   }catch(e){$('roughStat').textContent='⚠ Overpass API unreachable. Using manual z₀.';log('OSM roughness failed: '+e.message,'w');}
@@ -1125,6 +1126,162 @@ async function verifyTurbineElevations(){
 function drawTerrainProfile(){
   const T=S.terrain;if(!T)return;const{grid,ny}=T;const row=grid[Math.floor(ny/2)];
   mkChart('terrChart','line',{labels:row.map((_,j)=>(T.lon0+j*(T.lon1-T.lon0)/(T.nx-1)).toFixed(3)),datasets:[{data:row,borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,.1)',borderWidth:1.5,pointRadius:0,tension:.3,label:'Mid-row profile'}]},{y:{title:{display:true,text:'Elev(m)',color:'#8b949e',font:{size:8}}}});
+}
+
+// ── TERRAIN CANVAS (Step 4 heatmap + contours) ──
+function drawTerrainCanvas(){
+  const cv=document.getElementById('terrainCanvas');if(!cv)return;
+  const ctx=cv.getContext('2d');const W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  const T=S.terrain;if(!T||!T.grid||!T.grid.length){ctx.fillStyle='#0d1e30';ctx.fillRect(0,0,W,H);ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='12px IBM Plex Mono';ctx.textAlign='center';ctx.fillText('No terrain data — download terrain first',W/2,H/2);return;}
+  const{grid,lat0,lat1,lon0,lon1,ny,nx,minE,maxE}=T;
+  const dLat=(lat1-lat0)/(ny-1),dLon=(lon1-lon0)/(nx-1);
+  const margin={top:10,right:60,bottom:10,left:10};
+  const pw=W-margin.left-margin.right,ph=H-margin.top-margin.bottom;
+
+  // Draw elevation heatmap
+  for(let i=0;i<ny-1;i++){for(let j=0;j<nx-1;j++){
+    const z=(grid[i][j]+grid[i+1][j]+grid[i][j+1]+grid[i+1][j+1])/4;
+    const x1=margin.left+j*pw/(nx-1),y1=margin.top+i*ph/(ny-1);
+    const cw=pw/(nx-1)+1,ch=ph/(ny-1)+1;
+    ctx.fillStyle=elevCol(z,minE,maxE);ctx.fillRect(x1,y1,cw,ch);
+  }}
+
+  // Draw contour lines
+  if(S.contoursData&&S.contoursData.length){
+    S.contoursData.forEach(({segs,col,major})=>{
+      ctx.strokeStyle=col;ctx.lineWidth=major?1.8:.8;ctx.globalAlpha=.85;
+      segs.forEach(seg=>{
+        if(!seg||seg.length<2)return;
+        ctx.beginPath();
+        seg.forEach((pt,k)=>{
+          const fx=(pt.lon-lon0)/(lon1-lon0),fy=(pt.lat-lat0)/(lat1-lat0);
+          const px=margin.left+fx*pw,py=margin.top+(1-fy)*ph;
+          if(k===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        });
+        ctx.stroke();
+      });
+    });ctx.globalAlpha=1;
+  }
+
+  // Draw turbine markers
+  if(S.turbines&&S.turbines.length){
+    S.turbines.forEach(t=>{
+      const fx=(t.lon-lon0)/(lon1-lon0),fy=(t.lat-lat0)/(lat1-lat0);
+      if(fx>=0&&fx<=1&&fy>=0&&fy<=1){
+        const px=margin.left+fx*pw,py=margin.top+(1-fy)*ph;
+        ctx.fillStyle='#00d68f';ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke();
+      }
+    });
+  }
+
+  // Draw colorbar legend on the right
+  const cbX=W-margin.right+8,cbW=14,cbH=ph;
+  for(let y=0;y<cbH;y++){
+    const t=1-y/cbH;const e=minE+t*(maxE-minE);
+    ctx.fillStyle=elevCol(e,minE,maxE);ctx.fillRect(cbX,margin.top+y,cbW,2);
+  }
+  ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(cbX,margin.top,cbW,cbH);
+  ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='9px IBM Plex Mono';ctx.textAlign='left';
+  ctx.fillText(maxE.toFixed(0)+'m',cbX+cbW+3,margin.top+8);
+  ctx.fillText(((maxE+minE)/2).toFixed(0)+'m',cbX+cbW+3,margin.top+cbH/2+3);
+  ctx.fillText(minE.toFixed(0)+'m',cbX+cbW+3,margin.top+cbH);
+}
+
+// ── ROUGHNESS CANVAS (Step 4 roughness zones overlay) ──
+function drawRoughnessCanvas(){
+  const cv=document.getElementById('roughnessCanvas');if(!cv)return;
+  const ctx=cv.getContext('2d');const W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  const T=S.terrain;
+  const margin={top:10,right:60,bottom:10,left:10};
+  const pw=W-margin.left-margin.right,ph=H-margin.top-margin.bottom;
+
+  // Helper: lat/lon to canvas pixel
+  function toPixel(lat,lon,lat0,lat1,lon0,lon1){
+    const fx=(lon-lon0)/(lon1-lon0),fy=(lat-lat0)/(lat1-lat0);
+    return{x:margin.left+fx*pw,y:margin.top+(1-fy)*ph};
+  }
+
+  // Draw terrain elevation as light background
+  if(T&&T.grid&&T.grid.length){
+    const{grid,lat0,lat1,lon0,lon1,ny,nx,minE,maxE}=T;
+    ctx.globalAlpha=.3;
+    for(let i=0;i<ny-1;i++){for(let j=0;j<nx-1;j++){
+      const z=(grid[i][j]+grid[i+1][j]+grid[i][j+1]+grid[i+1][j+1])/4;
+      const x1=margin.left+j*pw/(nx-1),y1=margin.top+i*ph/(ny-1);
+      const cw=pw/(nx-1)+1,ch=ph/(ny-1)+1;
+      ctx.fillStyle=elevCol(z,minE,maxE);ctx.fillRect(x1,y1,cw,ch);
+    }}ctx.globalAlpha=1;
+  }
+
+  // Draw roughness zones
+  if(!S.roughnessZones||!S.roughnessZones.length){
+    ctx.fillStyle='#0d1e30';ctx.fillRect(0,0,W,H);
+    if(T&&T.grid){/* terrain already drawn faintly */}
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='12px IBM Plex Mono';ctx.textAlign='center';
+    ctx.fillText('No roughness data — generate roughness map first',W/2,H/2);
+    return;
+  }
+
+  // Determine bounds from terrain or roughness zones
+  let lat0,lat1,lon0,lon1;
+  if(T&&T.grid){lat0=T.lat0;lat1=T.lat1;lon0=T.lon0;lon1=T.lon1;}
+  else{
+    const allPts=S.roughnessZones.flatMap(z=>z.pts);
+    lat0=Math.min(...allPts.map(p=>p.lat));lat1=Math.max(...allPts.map(p=>p.lat));
+    lon0=Math.min(...allPts.map(p=>p.lon));lon1=Math.max(...allPts.map(p=>p.lon));
+  }
+
+  // Redraw terrain with proper bounds if needed
+  if(T&&T.grid&&T.lat0!==lat0){
+    const{grid,ny,nx,minE,maxE}=T;
+    ctx.globalAlpha=.3;
+    for(let i=0;i<ny-1;i++){for(let j=0;j<nx-1;j++){
+      const z=(grid[i][j]+grid[i+1][j]+grid[i][j+1]+grid[i+1][j+1])/4;
+      const p1=toPixel(T.lat0+i*(T.lat1-T.lat0)/(ny-1),T.lon0+j*(T.lon1-T.lon0)/(nx-1),lat0,lat1,lon0,lon1);
+      const p2=toPixel(T.lat0+(i+1)*(T.lat1-T.lat0)/(ny-1),T.lon0+(j+1)*(T.lon1-T.lon0)/(nx-1),lat0,lat1,lon0,lon1);
+      const x=Math.min(p1.x,p2.x),y=Math.min(p1.y,p2.y);
+      ctx.fillStyle=elevCol(z,minE,maxE);ctx.fillRect(x,y,Math.abs(p2.x-p1.x)+1,Math.abs(p2.y-p1.y)+1);
+    }}ctx.globalAlpha=1;
+  }
+
+  // Draw roughness zones as colored polygons
+  S.roughnessZones.forEach(z=>{
+    if(!z.pts||z.pts.length<3)return;
+    ctx.fillStyle=z.col;ctx.globalAlpha=.45;
+    ctx.beginPath();
+    z.pts.forEach((pt,i)=>{const p=toPixel(pt.lat,pt.lon,lat0,lat1,lon0,lon1);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});
+    ctx.closePath();ctx.fill();
+    ctx.strokeStyle=z.col;ctx.lineWidth=.5;ctx.globalAlpha=.6;ctx.stroke();
+  });ctx.globalAlpha=1;
+
+  // Draw turbine markers
+  if(S.turbines&&S.turbines.length){
+    S.turbines.forEach(t=>{
+      const p=toPixel(t.lat,t.lon,lat0,lat1,lon0,lon1);
+      ctx.fillStyle='#00d68f';ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke();
+    });
+  }
+
+  // Draw roughness class legend on the right
+  const legendItems=[
+    {label:'Water',z0:'0.0002',col:'#1e64c8'},
+    {label:'Sand',z0:'0.005',col:'#d2be82'},
+    {label:'Grass',z0:'0.03',col:'#50b43c'},
+    {label:'Farm',z0:'0.10',col:'#a0c832'},
+    {label:'Forest',z0:'1.50',col:'#287828'},
+    {label:'Urban',z0:'0.40',col:'#8c503c'}
+  ];
+  const legX=W-margin.right+4,legY=margin.top;
+  ctx.font='9px IBM Plex Mono';ctx.textAlign='left';
+  legendItems.forEach((item,i)=>{
+    const iy=legY+i*18;
+    ctx.fillStyle=item.col;ctx.fillRect(legX,iy,10,10);
+    ctx.fillStyle='rgba(255,255,255,.6)';ctx.fillText(`${item.label} z₀=${item.z0}`,legX+14,iy+9);
+  });
 }
 
 // ── BOUNDARY DRAWING ──
@@ -1272,9 +1429,8 @@ async function downloadERA5(){
     $('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);
     $('e5PD').textContent=PD.toFixed(0);$('e5EL').textContent=elev?elev.toFixed(0):'—';
     $('e5out').style.display='block';
-    $('mastLat').value=lat;$('mastLon').value=lon;
-    $('terrLa').value=lat;$('terrLo').value=lon;
-    $('gLat').value=lat;$('gLon').value=lon;
+    // v15.0: Sync all coordinate fields from site center
+    syncSiteCoordinates();
     $('tsSy').value=sy;$('tsEy').value=sy; // default TS to first year of ERA5
     // Auto-shear based on z0 and stability
     autoShear();
@@ -2095,7 +2251,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 13.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 15.0 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -2134,7 +2290,9 @@ function exportReport(){
   <h2>Turbine Layout (${S.turbines.length} WTGs)</h2>
   <table><tr><th>T#</th><th>Latitude</th><th>Longitude</th><th>Hub Height(m)</th><th>Elevation(m)</th></tr>
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 14.0 — ERA5T Density · Per-WTG ρ · Humidity Correction · WAsP-Aligned · OWC→GWC→SWC Wind Atlas Chain · IBL Roughness Growth · Wake Direction Variability · Terrain Speedup · Auto-Calibration · BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · IEC 61400-12-1</p>
+  ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
+  ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 15.0 — ERA5T Density · Per-WTG ρ · Humidity Correction · WAsP-Aligned · OWC→GWC→SWC Wind Atlas Chain · IBL Roughness Growth · Wake Direction Variability · Terrain Speedup · Auto-Calibration · BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · IEC 61400-12-1 · Centralized Coords</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -2311,18 +2469,11 @@ function processLayoutText(text,fileName){
 }
 function autoCenterMap(){
   if(!S.turbines.length||!leafMap)return;
-  const lats=S.turbines.map(t=>t.lat),lons=S.turbines.map(t=>t.lon);
-  const cLat=lats.reduce((s,v)=>s+v,0)/lats.length;
-  const cLon=lons.reduce((s,v)=>s+v,0)/lons.length;
-  leafMap.setView([cLat,cLon],11);
-  // Also update ERA5/terrain coordinates
-  if($('e5La'))$('e5La').value=cLat.toFixed(2);
-  if($('e5Lo'))$('e5Lo').value=cLon.toFixed(2);
-  if($('terrLa'))$('terrLa').value=cLat.toFixed(3);
-  if($('terrLo'))$('terrLo').value=cLon.toFixed(3);
-  if($('gLat'))$('gLat').value=cLat.toFixed(3);
-  if($('gLon'))$('gLon').value=cLon.toFixed(3);
-  log(`Map centered on layout: ${cLat.toFixed(4)}, ${cLon.toFixed(4)}`,'i');
+  const c=getSiteCenter();
+  leafMap.setView([c.lat,c.lon],11);
+  // Sync all coordinate fields from site center
+  syncSiteCoordinates();
+  log(`Map centered on layout: ${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`,'i');
 }
 function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)&&ws>=0&&ws<80){sp.push(ws);dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;const vs=sp.filter(v=>v>0.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
 function dlFile(c,f,m){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:m}));a.download=f;a.click();}
@@ -2342,10 +2493,10 @@ initMap();calcDensity();
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 14.0 ready. ERA5T Density · Per-WTG ρ · Humidity Corr · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Auto-Calibration · BZ · GDL Stability.','i');
+log('WindFlow Pro 15.0 ready. ERA5T Density · Per-WTG ρ · Humidity Corr · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Auto-Calibration · BZ · GDL Stability · Centralized Coords.','i');
 
 // ══════════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 14.0  — ERA5T Density · Per-WTG ρ · Humidity · WAsP-Aligned · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Auto-Calibration · BZ · GDL Stability
+// WINDFLOW PRO 15.0  — ERA5T Density · Per-WTG ρ · Humidity · WAsP-Aligned · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Auto-Calibration · BZ · GDL Stability · Centralized Coords
 // ══════════════════════════════════════════════════════════════════════
 
 // ── ROUGHNESS ROSE ──────────────────────────────────────────────
@@ -4307,6 +4458,35 @@ setTimeout(()=>{testBessel();log('BZ model loaded. Download terrain + run BZ mod
 // NEW UI FUNCTIONS — Step Wizard, Power Curve Upload, Multi-Mast, etc.
 // ═══════════════════════════════════════════════════════════════════
 
+// ── CENTRALIZED SITE COORDINATES (v15.0) ──
+function getSiteCenter(){
+  // 1. If boundary polygon has >=3 points, use centroid of boundary
+  if(S.boundary&&S.boundary.length>=3){
+    const lats=S.boundary.map(p=>p[0]),lons=S.boundary.map(p=>p[1]);
+    return{lat:lats.reduce((s,v)=>s+v,0)/lats.length,lon:lons.reduce((s,v)=>s+v,0)/lons.length};
+  }
+  // 2. If turbines exist, use centroid of turbine positions
+  if(S.turbines&&S.turbines.length>0){
+    const lats=S.turbines.map(t=>t.lat),lons=S.turbines.map(t=>t.lon);
+    return{lat:lats.reduce((s,v)=>s+v,0)/lats.length,lon:lons.reduce((s,v)=>s+v,0)/lons.length};
+  }
+  // 3. Fallback: values from gLat/gLon inputs
+  return{lat:parseFloat($('gLat')?.value)||55.5,lon:parseFloat($('gLon')?.value)||7.9};
+}
+function syncSiteCoordinates(){
+  const c=getSiteCenter();
+  if($('e5La'))$('e5La').value=c.lat.toFixed(2);
+  if($('e5Lo'))$('e5Lo').value=c.lon.toFixed(2);
+  if($('terrLa'))$('terrLa').value=c.lat.toFixed(3);
+  if($('terrLo'))$('terrLo').value=c.lon.toFixed(3);
+  if($('gLat'))$('gLat').value=c.lat.toFixed(3);
+  if($('gLon'))$('gLon').value=c.lon.toFixed(3);
+  if($('mastLat'))$('mastLat').value=c.lat.toFixed(3);
+  if($('mastLon'))$('mastLon').value=c.lon.toFixed(3);
+  if($('osmLa'))$('osmLa').value=c.lat.toFixed(3);
+  if($('osmLo'))$('osmLo').value=c.lon.toFixed(3);
+}
+
 // ── STEP NAVIGATION ──
 let currentStep=1;
 function goToStep(n){
@@ -4317,7 +4497,8 @@ function goToStep(n){
   document.querySelectorAll('.step-item').forEach(s=>{const sn=parseInt(s.dataset.step);s.classList.remove('active','done');if(sn===n)s.classList.add('active');else if(sn<n)s.classList.add('done');});
   if(n===1&&leafMap)setTimeout(()=>{leafMap.invalidateSize();},300);
   if(n===2)drawPowerCurve();
-  if(n===3)syncMastToUI();
+  if(n===3){syncMastToUI();syncSiteCoordinates();}
+  if(n===4){syncSiteCoordinates();}
   if(n===6)updateReportingDashboard();
   window.scrollTo(0,0);
 }
@@ -4507,88 +4688,59 @@ function importMastData(event){
 async function downloadGWA(){
   const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
   if(isNaN(lat)||isNaN(lon)){alert('Set ERA5 lat/lon first');return;}
-  $('gwaStatus').textContent='Querying GWA API...';
+  $('gwaStatus').textContent='Querying wind climate data...';
   log(`GWA: requesting wind climate for ${lat.toFixed(2)}°, ${lon.toFixed(2)}°`,'i');
 
-  // ── Strategy 1: GWA 4.0 .lib file endpoint (requires Referer header) ──
-  // The GWA API blocks cross-origin requests; try via no-cors proxy or direct fetch
+  // ── Strategy 1: Open-Meteo 5-year hourly archive (fast, reliable) ──
+  // Skips CORS-blocked GWA API calls entirely
   try{
-    const libUrl=`https://globalwindatlas.info/api/gwa/custom/Lib?lat=${lat}&long=${lon}&areaname=site`;
-    const r=await fetch(libUrl,{
-      headers:{'Referer':'https://globalwindatlas.info/','Accept':'application/octet-stream,*/*'},
-      mode:'cors'
-    });
+    $('gwaStatus').textContent='Fetching 5-year ERA5 wind data via Open-Meteo...';
+    const omUrl=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2020-01-01&end_date=2024-12-31&hourly=wind_speed_100m,wind_direction_100m&wind_speed_unit=ms&timezone=UTC`;
+    const r=await fetch(omUrl);
     if(r.ok){
-      const ct=r.headers.get('content-type')||'';
-      if(ct.includes('octet-stream')||ct.includes('text/plain')){
-        const text=await r.text();
-        const parsed=parseWAsPLib(text);
-        if(parsed){
-          $('gwaStatus').textContent=`✓ GWA 4.0: ${parsed.sectors} sectors, mean WS=${parsed.meanWS.toFixed(2)} m/s, A=${parsed.weibullA.toFixed(2)}, k=${parsed.weibullK.toFixed(2)}`;
-          S.gwaData=parsed;
-          log(`GWA 4.0 .lib downloaded: ${parsed.sectors} sectors, mean=${parsed.meanWS.toFixed(2)} m/s, A=${parsed.weibullA.toFixed(2)}, k=${parsed.weibullK.toFixed(2)}`,'i');
-          return;
-        }
-      }
-      // If it returned HTML (SPA fallback), try strategy 2
-    }
-  }catch(e1){
-    log(`GWA .lib endpoint failed: ${e1.message} — trying alternatives`,'w');
-  }
-
-  // ── Strategy 2: GWA wind speed tile API (WMS/XYZ) ──
-  // Try to fetch the wind speed value from the GWA map tile service
-  try{
-    // GWA uses ESRI/Leaflet tiles — we can estimate from the tile layer
-    // Use the GWA 3.0 legacy API endpoint as fallback
-    const legUrl=`https://globalwindatlas.info/api/gwa/lat/${lat}/lon/${lon}`;
-    const r2=await fetch(legUrl,{
-      headers:{'Referer':'https://globalwindatlas.info/'},
-      mode:'cors'
-    });
-    if(r2.ok){
-      const ct2=r2.headers.get('content-type')||'';
-      if(ct2.includes('json')){
-        const d=await r2.json();
-        const ws100=(d.wind_speed&&d.wind_speed['100'])||(d.wind_speed_100)||null;
-        if(ws100){
-          $('gwaStatus').textContent=`✓ GWA: WS100=${ws100} m/s`;
-          log(`GWA data received: WS100=${ws100} m/s`,'i');
-          return;
-        }
-      }
-    }
-  }catch(e2){
-    log(`GWA legacy API also failed: ${e2.message}`,'w');
-  }
-
-  // ── Strategy 3: Open-Meteo wind speed as GWA proxy ──
-  // If GWA is completely blocked by CORS, use Open-Meteo's long-term average
-  try{
-    $('gwaStatus').textContent='GWA CORS-blocked — using Open-Meteo proxy...';
-    // Open-Meteo provides ERA5-based mean wind speed which approximates GWA
-    const omUrl=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2005-01-01&end_date=2024-12-31&hourly=wind_speed_100m,wind_direction_100m&wind_speed_unit=ms&timezone=UTC`;
-    const r3=await fetch(omUrl);
-    if(r3.ok){
-      const d3=await r3.json();
-      const ws=d3.hourly?.wind_speed_100m||[];
+      const d=await r.json();
+      const ws=d.hourly?.wind_speed_100m||[];
+      const wd=d.hourly?.wind_direction_100m||[];
       const valid=ws.filter(v=>v!=null&&v>0.5);
       if(valid.length>100){
         const mean=valid.reduce((s,v)=>s+v,0)/valid.length;
         const wb=weibullFit(valid);
-        $('gwaStatus').textContent=`✓ GWA proxy (ERA5 20yr): mean=${mean.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`;
-        log(`GWA proxy via Open-Meteo: ${valid.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
-        S.gwaData={meanWS:mean,weibullA:wb.A,weibullK:wb.k,sectors:0,source:'ERA5-proxy'};
+        $('gwaStatus').textContent=`✓ GWA proxy (ERA5 5yr): mean=${mean.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`;
+        log(`GWA proxy via Open-Meteo (5yr): ${valid.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
+        S.gwaData={meanWS:mean,weibullA:wb.A,weibullK:wb.k,sectors:0,source:'ERA5-5yr-proxy'};
         return;
       }
     }
-  }catch(e3){
-    log(`GWA proxy also failed: ${e3.message}`,'w');
+  }catch(e1){
+    log(`GWA Open-Meteo 5yr failed: ${e1.message} — trying climate API`,'w');
+  }
+
+  // ── Strategy 2: Open-Meteo Climate API (monthly long-term) ──
+  try{
+    $('gwaStatus').textContent='Trying Open-Meteo climate API...';
+    const clUrl=`https://climate-api.open-meteo.com/v1/climate?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=2024-12-31&models=EC_Earth3P_HR&monthly=wind_speed_100m`;
+    const r2=await fetch(clUrl);
+    if(r2.ok){
+      const d2=await r2.json();
+      const monthly=d2.monthly?.wind_speed_100m||[];
+      const valid=monthly.filter(v=>v!=null&&v>0.5);
+      if(valid.length>6){
+        const mean=valid.reduce((s,v)=>s+v,0)/valid.length;
+        // Estimate Weibull k≈2.0 for climate model data (typical)
+        const estA=mean/0.886; // mean/A ≈ Γ(1+1/2) ≈ 0.886
+        $('gwaStatus').textContent=`✓ GWA proxy (Climate API): mean=${mean.toFixed(2)} m/s, A≈${estA.toFixed(2)}, k≈2.0`;
+        log(`GWA proxy via Climate API: ${valid.length} monthly values, mean=${mean.toFixed(2)}, A≈${estA.toFixed(2)}`,'i');
+        S.gwaData={meanWS:mean,weibullA:estA,weibullK:2.0,sectors:0,source:'Climate-API-proxy'};
+        return;
+      }
+    }
+  }catch(e2){
+    log(`GWA climate API also failed: ${e2.message}`,'w');
   }
 
   // ── All strategies failed ──
-  $('gwaStatus').textContent='⚠ GWA unavailable (CORS) — use ERA5 tab instead';
-  log('GWA API is CORS-blocked by globalwindatlas.info. Use ERA5 tab for wind data download (recommended). GWA data can be manually downloaded from https://globalwindatlas.info and imported as .lib file.','w');
+  $('gwaStatus').textContent='⚠ GWA unavailable — use ERA5 tab instead';
+  log('GWA data sources unavailable. Use ERA5 tab for wind data download (recommended). GWA data can be manually downloaded from https://globalwindatlas.info and imported as .lib file.','w');
 }
 
 // v14.0: Parse WAsP .lib file format (GWA 4.0 output)
@@ -4807,17 +4959,10 @@ function processBoundaryKML(kmlText,fileName){
     }
     $('bndStats').textContent='✓ '+coords.length+' vertices from '+fileName;
     $('boundaryUploadZone').classList.add('loaded');
-    // v14.0: Auto-fill ERA5/mast coordinates from boundary centroid
+    // v15.0: Sync all coordinate fields from site center
+    syncSiteCoordinates();
     const centroid_lat=coords.reduce((s,c)=>s+c[0],0)/coords.length;
     const centroid_lon=coords.reduce((s,c)=>s+c[1],0)/coords.length;
-    if($('e5La'))$('e5La').value=centroid_lat.toFixed(2);
-    if($('e5Lo'))$('e5Lo').value=centroid_lon.toFixed(2);
-    if($('mastLat'))$('mastLat').value=centroid_lat.toFixed(3);
-    if($('mastLon'))$('mastLon').value=centroid_lon.toFixed(3);
-    if($('terrLa'))$('terrLa').value=centroid_lat.toFixed(3);
-    if($('terrLo'))$('terrLo').value=centroid_lon.toFixed(3);
-    if($('gLat'))$('gLat').value=centroid_lat.toFixed(3);
-    if($('gLon'))$('gLon').value=centroid_lon.toFixed(3);
     log(`Boundary uploaded: ${coords.length} vertices from ${fileName} — centroid: ${centroid_lat.toFixed(3)}°, ${centroid_lon.toFixed(3)}°`,'i');
   }catch(err){alert('Failed to parse boundary KML: '+err.message);log('Boundary KML parse failed: '+err.message,'e');}
 }
