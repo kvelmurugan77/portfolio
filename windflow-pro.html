@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 15.0</title>
+<title>WindFlow Pro 15.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 15.0</span></div><div class="brand-sub">WAsP-Aligned · ERA5T Density · Per-WTG ρ · Humidity Corr · OWC→GWC→SWC · IBL · Wake Dir Var · Mixed HH · Terrain SU · BZ · Centralized Coords</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 15.1</span></div><div class="brand-sub">WAsP-Aligned · ERA5T Density · Per-WTG ρ · Humidity Corr · OWC→GWC→SWC · IBL · Wake Dir Var · Mixed HH · Terrain SU · BZ · Centralized Coords · Fixed Canvas</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -1016,20 +1016,29 @@ async function downloadTerrainForArea(clat,clon,radKm,ng,ciSel){
   const gLats=[],gLons=[];
   for(let i=0;i<ng;i++)for(let j=0;j<ng;j++){gLats.push(lat0+i*(lat1-lat0)/(ng-1));gLons.push(lon0+j*(lon1-lon0)/(ng-1));}
 
-  // Parallel batches of 200 (safe URL length)
-  const CHUNK=200;const chunks=[];
-  for(let c=0;c<gLats.length;c+=CHUNK)chunks.push({la:gLats.slice(c,c+CHUNK),lo:gLons.slice(c,c+CHUNK)});
+  // Round coordinates to 4 decimals to keep URL short
+  const rLats=gLats.map(v=>+v.toFixed(4)),rLons=gLons.map(v=>+v.toFixed(4));
 
-  setProg('terrP',10,`Fetching ${gLats.length} pts in ${chunks.length} parallel requests...`);
-  const results=await Promise.all(chunks.map(async ch=>{
-    const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${ch.la.join(',')}&longitude=${ch.lo.join(',')}`);
-    const d=await r.json();return d.elevation||[];
-  }));
-  const elevs=results.flat();
+  // Parallel batches of 50 (Open-Meteo API rejects URLs > ~3000 chars)
+  const CHUNK=50;const chunks=[];
+  for(let c=0;c<rLats.length;c+=CHUNK)chunks.push({la:rLats.slice(c,c+CHUNK),lo:rLons.slice(c,c+CHUNK)});
+
+  setProg('terrP',10,`Fetching ${rLats.length} pts in ${chunks.length} batches...`);
+  const elevs=[];
+  for(let bi=0;bi<chunks.length;bi++){
+    const ch=chunks[bi];
+    try{
+      const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${ch.la.join(',')}&longitude=${ch.lo.join(',')}`);
+      if(!r.ok){log(`Terrain batch ${bi+1} HTTP ${r.status} — retrying...`,'w');await new Promise(r=>setTimeout(r,500));const r2=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${ch.la.join(',')}&longitude=${ch.lo.join(',')}`);if(r2.ok){const d2=await r2.json();elevs.push(...(d2.elevation||[]));}else{elevs.push(...ch.la.map(()=>null));}}
+      else{const d=await r.json();elevs.push(...(d.elevation||[]));}
+    }catch(e){log(`Terrain batch ${bi+1} failed: ${e.message}`,'w');elevs.push(...ch.la.map(()=>null));}
+    setProg('terrP',10+50*(bi+1)/chunks.length,`Batch ${bi+1}/${chunks.length}...`);
+  }
 
   setProg('terrP',60,'Building grid + marching squares...');
-  const grid=[];for(let i=0;i<ng;i++){grid[i]=[];for(let j=0;j<ng;j++)grid[i][j]=elevs[i*ng+j]||0;}
+  const grid=[];for(let i=0;i<ng;i++){grid[i]=[];for(let j=0;j<ng;j++){const v=elevs[i*ng+j];grid[i][j]=(v!==null&&v!==undefined&&!isNaN(v))?v:0;}}
   const validE=elevs.filter(e=>e!==null&&!isNaN(e)&&e!==undefined);
+  if(!validE.length){setProg('terrP',0,'❌ No elevation data received');log('Terrain: Open-Meteo API returned no data. Check coordinates and try again.','e');return{minE:0,maxE:0,meanE:0,ci:5,levels:0};}
   const minE=Math.min(...validE),maxE=Math.max(...validE),meanE=validE.reduce((s,v)=>s+v,0)/validE.length;
 
   let ci=ciSel==='auto'?autoCI(maxE-minE):parseFloat(ciSel);if(ci<1)ci=1;
@@ -1048,18 +1057,20 @@ async function downloadTerrainForArea(clat,clon,radKm,ng,ciSel){
 }
 
 async function downloadTerrain(){
-  let clat=parseFloat($('terrLa').value)||55.5,clon=parseFloat($('terrLo').value)||7.9;
-  if(S.turbines.length>0){clat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;clon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;$('terrLa').value=clat.toFixed(4);$('terrLo').value=clon.toFixed(4);}
+  const c=getSiteCenter();
+  let clat=c.lat,clon=c.lon;
   const radKm=parseFloat($('terrR').value)||10;
   const ng=parseInt($('terrG').value)||20;
   const ciSel=$('terrCI').value;
   try{
     const R=await downloadTerrainForArea(clat,clon,radKm,ng,ciSel);
+    if(!R||R.levels===0)return; // error already logged
     $('terrMin').textContent=R.minE.toFixed(0);$('terrMax').textContent=R.maxE.toFixed(0);
     $('terrMn').textContent=R.meanE.toFixed(0);$('terrCI2').textContent=R.ci;
     $('terrOut').style.display='block';
     drawTerrainProfile();
     drawTerrainCanvas();
+    drawRoughnessCanvas(); // refresh roughness canvas with new terrain data
     log(`Terrain: ${R.levels} contours, ${R.minE.toFixed(0)}–${R.maxE.toFixed(0)}m, ci=${R.ci}m`,'i');
   }catch(e){setProg('terrP',0,'❌ '+e.message);log('Terrain failed: '+e.message,'e');}
 }
@@ -1072,7 +1083,7 @@ async function downloadTerrainBoundary(){
   const radKm=Math.max(3,Math.max(dLat,dLon)/2+2);
   const ng=parseInt($('bndGrid').value)||20;const ci=$('bndCI').value;
   setProg('terrP',5,'Downloading terrain within boundary...');// goToStep(4);
-  try{const R=await downloadTerrainForArea(clat,clon,radKm,ng,ci);$('terrMin').textContent=R.minE.toFixed(0);$('terrMax').textContent=R.maxE.toFixed(0);$('terrMn').textContent=R.meanE.toFixed(0);$('terrCI2').textContent=R.ci;$('terrOut').style.display='block';drawTerrainProfile();drawTerrainCanvas();log(`Boundary terrain: ${R.minE.toFixed(0)}–${R.maxE.toFixed(0)}m`,'i');}
+  try{const R=await downloadTerrainForArea(clat,clon,radKm,ng,ci);if(!R||R.levels===0)return;$('terrMin').textContent=R.minE.toFixed(0);$('terrMax').textContent=R.maxE.toFixed(0);$('terrMn').textContent=R.meanE.toFixed(0);$('terrCI2').textContent=R.ci;$('terrOut').style.display='block';drawTerrainProfile();drawTerrainCanvas();drawRoughnessCanvas();log(`Boundary terrain: ${R.minE.toFixed(0)}–${R.maxE.toFixed(0)}m`,'i');}
   catch(e){setProg('terrP',0,'❌ '+e.message);log('Terrain failed: '+e.message,'e');}
 }
 
@@ -1132,12 +1143,18 @@ function drawTerrainProfile(){
 function drawTerrainCanvas(){
   const cv=document.getElementById('terrainCanvas');if(!cv)return;
   const ctx=cv.getContext('2d');const W=cv.width,H=cv.height;
-  ctx.clearRect(0,0,W,H);
-  const T=S.terrain;if(!T||!T.grid||!T.grid.length){ctx.fillStyle='#0d1e30';ctx.fillRect(0,0,W,H);ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='12px IBM Plex Mono';ctx.textAlign='center';ctx.fillText('No terrain data — download terrain first',W/2,H/2);return;}
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#0d1e30';ctx.fillRect(0,0,W,H);
+  const T=S.terrain;
+  if(!T||!T.grid||!T.grid.length||!isFinite(T.minE)||!isFinite(T.maxE)||T.minE>=T.maxE){
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='12px IBM Plex Mono';ctx.textAlign='center';
+    ctx.fillText('No terrain data — click "Download Terrain Grid" first',W/2,H/2);
+    return;
+  }
   const{grid,lat0,lat1,lon0,lon1,ny,nx,minE,maxE}=T;
   const dLat=(lat1-lat0)/(ny-1),dLon=(lon1-lon0)/(nx-1);
-  const margin={top:10,right:60,bottom:10,left:10};
+  const margin={top:20,right:70,bottom:20,left:40};
   const pw=W-margin.left-margin.right,ph=H-margin.top-margin.bottom;
+  const rangeE=maxE-minE||1;
 
   // Draw elevation heatmap
   for(let i=0;i<ny-1;i++){for(let j=0;j<nx-1;j++){
@@ -1166,105 +1183,129 @@ function drawTerrainCanvas(){
 
   // Draw turbine markers
   if(S.turbines&&S.turbines.length){
-    S.turbines.forEach(t=>{
+    S.turbines.forEach((t,idx)=>{
       const fx=(t.lon-lon0)/(lon1-lon0),fy=(t.lat-lat0)/(lat1-lat0);
       if(fx>=0&&fx<=1&&fy>=0&&fy<=1){
         const px=margin.left+fx*pw,py=margin.top+(1-fy)*ph;
-        ctx.fillStyle='#00d68f';ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();
-        ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke();
+        ctx.fillStyle='#00d68f';ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
+        ctx.fillStyle='#fff';ctx.font='bold 8px IBM Plex Mono';ctx.textAlign='center';
+        ctx.fillText('T'+(idx+1),px,py-8);
       }
     });
   }
 
+  // Draw border
+  ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=1;
+  ctx.strokeRect(margin.left,margin.top,pw,ph);
+
   // Draw colorbar legend on the right
-  const cbX=W-margin.right+8,cbW=14,cbH=ph;
+  const cbX=W-margin.right+10,cbW=16,cbH=ph;
   for(let y=0;y<cbH;y++){
-    const t=1-y/cbH;const e=minE+t*(maxE-minE);
+    const t=1-y/cbH;const e=minE+t*rangeE;
     ctx.fillStyle=elevCol(e,minE,maxE);ctx.fillRect(cbX,margin.top+y,cbW,2);
   }
   ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(cbX,margin.top,cbW,cbH);
-  ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='9px IBM Plex Mono';ctx.textAlign='left';
-  ctx.fillText(maxE.toFixed(0)+'m',cbX+cbW+3,margin.top+8);
-  ctx.fillText(((maxE+minE)/2).toFixed(0)+'m',cbX+cbW+3,margin.top+cbH/2+3);
-  ctx.fillText(minE.toFixed(0)+'m',cbX+cbW+3,margin.top+cbH);
+  ctx.fillStyle='rgba(255,255,255,.8)';ctx.font='9px IBM Plex Mono';ctx.textAlign='left';
+  ctx.fillText(maxE.toFixed(0)+'m',cbX+cbW+4,margin.top+8);
+  ctx.fillText((minE+rangeE/2).toFixed(0)+'m',cbX+cbW+4,margin.top+cbH/2+3);
+  ctx.fillText(minE.toFixed(0)+'m',cbX+cbW+4,margin.top+cbH);
+
+  // Draw axis labels
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='8px IBM Plex Mono';
+  ctx.textAlign='center';
+  ctx.fillText(lon0.toFixed(3)+'°',margin.left,H-4);
+  ctx.fillText(lon1.toFixed(3)+'°',margin.left+pw,H-4);
+  ctx.textAlign='right';
+  ctx.fillText(lat0.toFixed(3)+'°',margin.left-4,margin.top+ph);
+  ctx.fillText(lat1.toFixed(3)+'°',margin.left-4,margin.top+8);
+  // Title
+  ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='10px IBM Plex Mono';ctx.textAlign='center';
+  ctx.fillText('Terrain Elevation (m ASL)',W/2,14);
 }
 
 // ── ROUGHNESS CANVAS (Step 4 roughness zones overlay) ──
 function drawRoughnessCanvas(){
   const cv=document.getElementById('roughnessCanvas');if(!cv)return;
   const ctx=cv.getContext('2d');const W=cv.width,H=cv.height;
-  ctx.clearRect(0,0,W,H);
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#0d1e30';ctx.fillRect(0,0,W,H);
   const T=S.terrain;
-  const margin={top:10,right:60,bottom:10,left:10};
+  const margin={top:20,right:70,bottom:20,left:40};
   const pw=W-margin.left-margin.right,ph=H-margin.top-margin.bottom;
 
+  // Determine bounds from terrain (preferred) or roughness zones
+  let lat0,lat1,lon0,lon1;
+  const hasTerrain=T&&T.grid&&T.grid.length&&isFinite(T.minE)&&isFinite(T.maxE);
+  if(hasTerrain){lat0=T.lat0;lat1=T.lat1;lon0=T.lon0;lon1=T.lon1;}
+  else if(S.roughnessZones&&S.roughnessZones.length){
+    const allPts=S.roughnessZones.flatMap(z=>z.pts);
+    if(allPts.length){
+      lat0=Math.min(...allPts.map(p=>p.lat))-0.005;lat1=Math.max(...allPts.map(p=>p.lat))+0.005;
+      lon0=Math.min(...allPts.map(p=>p.lon))-0.005;lon1=Math.max(...allPts.map(p=>p.lon))+0.005;
+    }else{lat0=40.4;lat1=40.7;lon0=-88.7;lon1=-88.4;}
+  }else{lat0=40.4;lat1=40.7;lon0=-88.7;lon1=-88.4;}
+
   // Helper: lat/lon to canvas pixel
-  function toPixel(lat,lon,lat0,lat1,lon0,lon1){
+  function toPixel(lat,lon){
     const fx=(lon-lon0)/(lon1-lon0),fy=(lat-lat0)/(lat1-lat0);
     return{x:margin.left+fx*pw,y:margin.top+(1-fy)*ph};
   }
 
   // Draw terrain elevation as light background
-  if(T&&T.grid&&T.grid.length){
-    const{grid,lat0,lat1,lon0,lon1,ny,nx,minE,maxE}=T;
+  if(hasTerrain){
+    const{grid,ny,nx,minE,maxE}=T;
     ctx.globalAlpha=.3;
     for(let i=0;i<ny-1;i++){for(let j=0;j<nx-1;j++){
       const z=(grid[i][j]+grid[i+1][j]+grid[i][j+1]+grid[i+1][j+1])/4;
-      const x1=margin.left+j*pw/(nx-1),y1=margin.top+i*ph/(ny-1);
-      const cw=pw/(nx-1)+1,ch=ph/(ny-1)+1;
-      ctx.fillStyle=elevCol(z,minE,maxE);ctx.fillRect(x1,y1,cw,ch);
+      const latPt=T.lat0+i*(T.lat1-T.lat0)/(ny-1);
+      const lonPt=T.lon0+j*(T.lon1-T.lon0)/(nx-1);
+      const p1=toPixel(latPt,lonPt);
+      const p2=toPixel(latPt+(T.lat1-T.lat0)/(ny-1),lonPt+(T.lon1-T.lon0)/(nx-1));
+      const x=Math.min(p1.x,p2.x),y=Math.min(p1.y,p2.y);
+      ctx.fillStyle=elevCol(z,minE,maxE);
+      ctx.fillRect(x,y,Math.abs(p2.x-p1.x)+1,Math.abs(p2.y-p1.y)+1);
     }}ctx.globalAlpha=1;
   }
 
   // Draw roughness zones
   if(!S.roughnessZones||!S.roughnessZones.length){
-    ctx.fillStyle='#0d1e30';ctx.fillRect(0,0,W,H);
-    if(T&&T.grid){/* terrain already drawn faintly */}
     ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='12px IBM Plex Mono';ctx.textAlign='center';
-    ctx.fillText('No roughness data — generate roughness map first',W/2,H/2);
-    return;
+    ctx.fillText('No roughness data — click "Generate Roughness Map" first',W/2,H/2);
+  }else{
+    // Draw roughness zones as colored polygons
+    S.roughnessZones.forEach(z=>{
+      if(!z.pts||z.pts.length<3)return;
+      ctx.fillStyle=z.col;ctx.globalAlpha=.45;
+      ctx.beginPath();
+      z.pts.forEach((pt,i)=>{const p=toPixel(pt.lat,pt.lon);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});
+      ctx.closePath();ctx.fill();
+      ctx.strokeStyle=z.col;ctx.lineWidth=.5;ctx.globalAlpha=.6;ctx.stroke();
+    });ctx.globalAlpha=1;
   }
-
-  // Determine bounds from terrain or roughness zones
-  let lat0,lat1,lon0,lon1;
-  if(T&&T.grid){lat0=T.lat0;lat1=T.lat1;lon0=T.lon0;lon1=T.lon1;}
-  else{
-    const allPts=S.roughnessZones.flatMap(z=>z.pts);
-    lat0=Math.min(...allPts.map(p=>p.lat));lat1=Math.max(...allPts.map(p=>p.lat));
-    lon0=Math.min(...allPts.map(p=>p.lon));lon1=Math.max(...allPts.map(p=>p.lon));
-  }
-
-  // Redraw terrain with proper bounds if needed
-  if(T&&T.grid&&T.lat0!==lat0){
-    const{grid,ny,nx,minE,maxE}=T;
-    ctx.globalAlpha=.3;
-    for(let i=0;i<ny-1;i++){for(let j=0;j<nx-1;j++){
-      const z=(grid[i][j]+grid[i+1][j]+grid[i][j+1]+grid[i+1][j+1])/4;
-      const p1=toPixel(T.lat0+i*(T.lat1-T.lat0)/(ny-1),T.lon0+j*(T.lon1-T.lon0)/(nx-1),lat0,lat1,lon0,lon1);
-      const p2=toPixel(T.lat0+(i+1)*(T.lat1-T.lat0)/(ny-1),T.lon0+(j+1)*(T.lon1-T.lon0)/(nx-1),lat0,lat1,lon0,lon1);
-      const x=Math.min(p1.x,p2.x),y=Math.min(p1.y,p2.y);
-      ctx.fillStyle=elevCol(z,minE,maxE);ctx.fillRect(x,y,Math.abs(p2.x-p1.x)+1,Math.abs(p2.y-p1.y)+1);
-    }}ctx.globalAlpha=1;
-  }
-
-  // Draw roughness zones as colored polygons
-  S.roughnessZones.forEach(z=>{
-    if(!z.pts||z.pts.length<3)return;
-    ctx.fillStyle=z.col;ctx.globalAlpha=.45;
-    ctx.beginPath();
-    z.pts.forEach((pt,i)=>{const p=toPixel(pt.lat,pt.lon,lat0,lat1,lon0,lon1);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});
-    ctx.closePath();ctx.fill();
-    ctx.strokeStyle=z.col;ctx.lineWidth=.5;ctx.globalAlpha=.6;ctx.stroke();
-  });ctx.globalAlpha=1;
 
   // Draw turbine markers
   if(S.turbines&&S.turbines.length){
-    S.turbines.forEach(t=>{
-      const p=toPixel(t.lat,t.lon,lat0,lat1,lon0,lon1);
-      ctx.fillStyle='#00d68f';ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke();
+    S.turbines.forEach((t,idx)=>{
+      const p=toPixel(t.lat,t.lon);
+      ctx.fillStyle='#00d68f';ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.fillStyle='#fff';ctx.font='bold 8px IBM Plex Mono';ctx.textAlign='center';
+      ctx.fillText('T'+(idx+1),p.x,p.y-8);
     });
   }
+
+  // Draw border
+  ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=1;
+  ctx.strokeRect(margin.left,margin.top,pw,ph);
+
+  // Draw axis labels
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='8px IBM Plex Mono';
+  ctx.textAlign='center';
+  ctx.fillText(lon0.toFixed(3)+'°',margin.left,H-4);
+  ctx.fillText(lon1.toFixed(3)+'°',margin.left+pw,H-4);
+  ctx.textAlign='right';
+  ctx.fillText(lat0.toFixed(3)+'°',margin.left-4,margin.top+ph);
+  ctx.fillText(lat1.toFixed(3)+'°',margin.left-4,margin.top+8);
 
   // Draw roughness class legend on the right
   const legendItems=[
@@ -1275,13 +1316,16 @@ function drawRoughnessCanvas(){
     {label:'Forest',z0:'1.50',col:'#287828'},
     {label:'Urban',z0:'0.40',col:'#8c503c'}
   ];
-  const legX=W-margin.right+4,legY=margin.top;
+  const legX=W-margin.right+4,legY=margin.top+20;
   ctx.font='9px IBM Plex Mono';ctx.textAlign='left';
   legendItems.forEach((item,i)=>{
     const iy=legY+i*18;
     ctx.fillStyle=item.col;ctx.fillRect(legX,iy,10,10);
-    ctx.fillStyle='rgba(255,255,255,.6)';ctx.fillText(`${item.label} z₀=${item.z0}`,legX+14,iy+9);
+    ctx.fillStyle='rgba(255,255,255,.6)';ctx.fillText(`${item.label} z\u2080=${item.z0}`,legX+14,iy+9);
   });
+  // Title
+  ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='10px IBM Plex Mono';ctx.textAlign='center';
+  ctx.fillText('Roughness Map (z\u2080 from OSM)',W/2,14);
 }
 
 // ── BOUNDARY DRAWING ──
@@ -2251,7 +2295,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 15.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 15.1 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -2292,7 +2336,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 15.0 — ERA5T Density · Per-WTG ρ · Humidity Correction · WAsP-Aligned · OWC→GWC→SWC Wind Atlas Chain · IBL Roughness Growth · Wake Direction Variability · Terrain Speedup · Auto-Calibration · BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · IEC 61400-12-1 · Centralized Coords</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 15.1 — ERA5T Density · Per-WTG ρ · Humidity Correction · WAsP-Aligned · OWC→GWC→SWC Wind Atlas Chain · IBL Roughness Growth · Wake Direction Variability · Terrain Speedup · Auto-Calibration · BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · IEC 61400-12-1 · Centralized Coords</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -2493,7 +2537,9 @@ initMap();calcDensity();
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 15.0 ready. ERA5T Density · Per-WTG ρ · Humidity Corr · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Auto-Calibration · BZ · GDL Stability · Centralized Coords.','i');
+log('WindFlow Pro 15.1 ready. ERA5T Density · Per-WTG ρ · Humidity Corr · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Auto-Calibration · BZ · GDL Stability · Centralized Coords · Fixed Terrain/Roughness Canvas.','i');
+// Initialize terrain and roughness canvases with placeholder
+setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 
 // ══════════════════════════════════════════════════════════════════════
 // WINDFLOW PRO 15.0  — ERA5T Density · Per-WTG ρ · Humidity · WAsP-Aligned · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Auto-Calibration · BZ · GDL Stability · Centralized Coords
