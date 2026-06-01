@@ -1111,15 +1111,22 @@ function getSectorRoughnessRatio(sectorIdx, hubH, nSect) {
   if (!sector) return 1.0;
 
   // v17.0 auto roughness rose: use z0Seq and xSeq for IBL
-  if (sector.z0Seq && sector.z0Seq.length >= 2 && sector.xSeq) {
+  if (sector.z0Seq && Array.isArray(sector.z0Seq) && sector.z0Seq.length >= 2 && sector.xSeq) {
     const ratio = roughnessRatioMultiLayer(sector.z0Seq, sector.xSeq, hubH);
-    return ratio;
+    return isFinite(ratio) ? ratio : 1.0;
   }
 
-  // Legacy format
-  if (!sector.z0 || sector.z0.length < 2) return 1.0;
-  const ratio = roughnessRatioMultiLayer(sector.z0, sector.x, hubH);
-  return ratio;
+  // If z0Seq has only 1 element (single roughness zone), no roughness change effect
+  if (sector.z0Seq && Array.isArray(sector.z0Seq) && sector.z0Seq.length < 2) return 1.0;
+
+  // Legacy format: sector.z0 is an array
+  if (sector.z0 && Array.isArray(sector.z0) && sector.z0.length >= 2) {
+    const ratio = roughnessRatioMultiLayer(sector.z0, sector.x, hubH);
+    return isFinite(ratio) ? ratio : 1.0;
+  }
+
+  // Single zone or no roughness change
+  return 1.0;
 }
 
 // ── 2. OWC→GWC→SWC WIND ATLAS CHAIN ────────────────────────────
@@ -5215,7 +5222,7 @@ function roughnessRatio(z01,z02,x,z){
 // z = height at which to compute wind speed ratio
 // Returns: wind speed ratio relative to the first roughness zone
 function roughnessRatioMultiLayer(z0Seq,xSeq,z){
-  if(!z0Seq||z0Seq.length<2)return 1.0;
+  if(!z0Seq||!Array.isArray(z0Seq)||z0Seq.length<2)return 1.0;
   if(z0Seq.length===2)return roughnessRatio(z0Seq[0],z0Seq[1],xSeq[1]||5000,z);
 
   const stabL = getStabilityL();
