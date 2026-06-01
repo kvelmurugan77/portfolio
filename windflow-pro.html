@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 16.0</title>
+<title>WindFlow Pro 18.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -11,7 +11,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
-:root{--bg:#07111e;--bg2:#0d1e30;--bg3:#132435;--bg4:#1a2f42;--mint:#00d68f;--mint2:rgba(0,214,143,.12);--mint3:rgba(0,214,143,.06);--gold:#f5a623;--gold2:rgba(245,166,35,.12);--red:#e05050;--red2:rgba(224,80,80,.12);--sky:#4ab3e8;--sky2:rgba(74,179,232,.12);--border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.04);--text:rgba(255,255,255,.88);--text2:rgba(255,255,255,.5);--text3:rgba(255,255,255,.28);--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;--radius:8px;--radius2:4px}
+:root{--bg:#07111e;--bg2:#0d1e30;--bg3:#132435;--bg4:#1a2f42;--mint:#00d68f;--mint2:rgba(0,214,143,.12);--mint3:rgba(0,214,143,.06);--gold:#f5a623;--gold2:rgba(245,166,35,.12);--red:#e05050;--red2:rgba(224,80,80,.12);--sky:#4ab3e8;--sky2:rgba(74,179,232,.12);--border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.04);--text:rgba(255,255,255,.88);--text2:rgba(255,255,255,.5);--text3:rgba(255,255,255,.28);--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;--radius:8px;--radius2:4px;--grn:#00d68f;--acc:#4ab3e8;--wrn:#f5a623;--muted:rgba(255,255,255,.5);--pan2:#0d1e30}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}body{font-family:var(--sans);color:var(--text);background:var(--bg);min-height:100vh}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:.6rem 1.2rem;border-bottom:1px solid var(--border);background:var(--bg)}.topbar-brand{display:flex;align-items:center;gap:.6rem}.brand-badge{background:var(--mint);color:var(--bg);font-family:var(--mono);font-size:.6rem;font-weight:600;padding:.2rem .5rem;border-radius:2px;letter-spacing:.08em}.brand-title{font-size:.82rem;font-weight:600;letter-spacing:.04em;color:var(--text)}.brand-sub{font-size:.58rem;color:var(--text3);font-family:var(--mono);margin-top:.05rem}.topbar-right{display:flex;align-items:center;gap:.5rem}
 a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);text-decoration:none;padding:.35rem .7rem;border:1px solid var(--border);border-radius:var(--radius2);transition:all .2s}a.back-link:hover{color:var(--mint);border-color:var(--mint)}
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 17.0</span></div><div class="brand-sub">JH Terrain · Hourly Stability · Auto Roughness Rose · Canopy d₀ · Auto lScale · Iterative GDL · Sempreviva IBL · WAsP-Weibull · ERA5T ρ</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 18.0</span></div><div class="brand-sub">JH Terrain · Hourly Stability · Auto Roughness Rose · Canopy d₀ · Auto lScale · Iterative GDL · Sempreviva IBL · WAsP-Weibull · ERA5T ρ</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -228,6 +228,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Lat <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="terrLa" type="number" value="55.500" step="0.001" readonly></div><div class="fg"><label class="fl">Lon <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="terrLo" type="number" value="7.900" step="0.001" readonly></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Contour Int</label><select class="fs" id="terrCI"><option value="auto" selected>Auto</option><option value="5">5m</option><option value="10">10m</option><option value="20">20m</option></select></div><div class="fg"><label class="fl">Opacity</label><input class="fi" id="terrOp" type="range" min="0" max="1" step="0.05" value="0.5" oninput="redrawCanvas()"></div></div>
         <button class="btn btn-primary" style="margin-top:.5rem;width:100%" onclick="downloadTerrain()">⬇ Download Terrain Grid</button>
+        <div style="display:flex;gap:.4rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" id="btnCont" style="opacity:1" onclick="toggleCont()">📐 Contours</button><button class="btn btn-sm btn-ghost" id="btnHeat" style="opacity:1" onclick="toggleHeat()">🗺 Heatmap</button></div>
         <div class="progress"><div class="progress-bar" id="terrPpb" style="width:0"></div></div><div id="terrPpt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div>
       </div>
       <div class="card"><div class="card-title gold">Roughness Data</div>
@@ -302,7 +303,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div id="tbst" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">Ready</div>
       </div>
       <div class="card"><div class="card-title green">AEP Results</div>
-        <div class="kpi-strip"><div class="kpi"><div class="kpi-v" id="rWS">—</div><div class="kpi-l">Rotor WS m/s</div></div><div class="kpi"><div class="kpi-v b" id="rDen">—</div><div class="kpi-l">ρ kg/m³</div></div><div class="kpi"><div class="kpi-v g" id="rGross">—</div><div class="kpi-l">Gross GWh</div></div><div class="kpi"><div class="kpi-v o" id="rWake">—</div><div class="kpi-l">Wake %</div></div><div class="kpi"><div class="kpi-v g" id="rNet">—</div><div class="kpi-l">Net GWh</div></div><div class="kpi"><div class="kpi-v b" id="rCF">—</div><div class="kpi-l">CF %</div></div></div>
+        <div class="kpi-strip"><div class="kpi"><div class="kpi-v" id="rWS">—</div><div class="kpi-l">Rotor WS m/s</div></div><div class="kpi"><div class="kpi-v b" id="rDen">—</div><div class="kpi-l">ρ kg/m³</div></div><div class="kpi"><div class="kpi-v g" id="rGross">—</div><div class="kpi-l">Gross GWh</div></div><div class="kpi"><div class="kpi-v o" id="rWake">—</div><div class="kpi-l">Wake %</div></div><div class="kpi"><div class="kpi-v g" id="rNet">—</div><div class="kpi-l">Net GWh</div></div><div class="kpi"><div class="kpi-v b" id="rCF">—</div><div class="kpi-l">CF %</div></div><div class="kpi"><div class="kpi-v o" id="rRIX">—</div><div class="kpi-l">RIX %</div></div><div class="kpi"><div class="kpi-v sky" id="rShr">—</div><div class="kpi-l">Shear α</div></div></div>
         <div id="calIndicator" style="display:none" class="alert alert-ok" style="font-size:.6rem">🎯 WAsP Calibrated</div>
       </div>
       <div class="card"><div class="card-title">P-Exceedance</div><div id="pexc" style="font-size:.7rem;color:var(--text3)">Run analysis</div></div>
@@ -1524,6 +1525,8 @@ async function downloadTerrain(){
     drawTerrainProfile();
     drawTerrainCanvas();
     drawRoughnessCanvas(); // refresh roughness canvas with new terrain data
+    // Auto-populate turbine elevations from terrain grid
+    if(S.turbines.length){S.turbines.forEach(t=>{const el=getTerrainElev(t.lat,t.lon);if(el!==null)t.elev=el;});refreshTable();}
     log(`Terrain: ${R.levels} contours, ${R.minE.toFixed(0)}–${R.maxE.toFixed(0)}m, ci=${R.ci}m`,'i');
   }catch(e){setProg('terrP',0,'❌ '+e.message);log('Terrain failed: '+e.message,'e');}
 }
@@ -1833,7 +1836,7 @@ function toggleDraw(){
   S.drawMode=true;S.boundary=[];
   S.boundaryMarkers.forEach(m=>m.remove());S.boundaryMarkers=[];
   if(S.boundaryLayer){S.boundaryLayer.remove();S.boundaryLayer=null;}
-  $('map').style.cursor='crosshair';
+  if(leafMap)leafMap.getContainer().style.cursor='crosshair';
   $('drawStatus').textContent='Click map to add vertices · Double-click / "Close Polygon" to finish';
   $('drawStatus').style.display='block';
   $('drawBtn').classList.add('active');
@@ -1842,8 +1845,8 @@ function toggleDraw(){
 }
 
 function doneDraw(){
-  if(S.boundary.length<3){if(S.drawMode){S.drawMode=false;$('map').style.cursor='';$('drawStatus').style.display='none';$('drawBtn').classList.remove('active');}return;}
-  S.drawMode=false;$('map').style.cursor='';$('drawStatus').style.display='none';$('drawBtn').classList.remove('active');
+  if(S.boundary.length<3){if(S.drawMode){S.drawMode=false;if(leafMap)leafMap.getContainer().style.cursor='';$('drawStatus').style.display='none';$('drawBtn').classList.remove('active');}return;}
+  S.drawMode=false;if(leafMap)leafMap.getContainer().style.cursor='';$('drawStatus').style.display='none';$('drawBtn').classList.remove('active');
   if(S.boundaryLayer)S.boundaryLayer.remove();
   S.boundaryLayer=L.polygon(S.boundary,{color:'#d29922',weight:2.5,fillOpacity:.08,dashArray:'6,3'}).addTo(leafMap);
   S.boundaryMarkers.forEach(m=>m.remove());S.boundaryMarkers=[];
@@ -1853,7 +1856,7 @@ function doneDraw(){
 }
 
 function clearBoundary(){
-  S.boundary=[];S.drawMode=false;$('map').style.cursor='';$('drawStatus').style.display='none';$('drawBtn').classList.remove('active');
+  S.boundary=[];S.drawMode=false;if(leafMap)leafMap.getContainer().style.cursor='';$('drawStatus').style.display='none';$('drawBtn').classList.remove('active');
   S.boundaryMarkers.forEach(m=>m.remove());S.boundaryMarkers=[];
   if(S.boundaryLayer){S.boundaryLayer.remove();S.boundaryLayer=null;}
   $('bndStats').textContent='No boundary defined';
@@ -1903,8 +1906,8 @@ function optimizeLayout(){
         let score=1.0;
         // Score by elevation (higher = more wind) if terrain available
         if(S.terrain){const el=getTerrainElev(lat,lon)??S.terrain.meanE;score=1+(el-S.terrain.minE)/Math.max(1,S.terrain.maxE-S.terrain.minE)*.3;}
-        // Wind-optimized: penalize downwind shadowing
-        if(pat==='wind'){const ang=(prevWD+180)%360*Math.PI/180;const shadow=Math.sin(lat*Math.PI/180)*Math.cos(ang)+Math.cos(lon*Math.PI/180)*Math.sin(ang);score*=(1+shadow*.1);}
+        // Wind-optimized: penalize locations in downwind shadow of terrain, reward upwind positions
+        if(pat==='wind'){const angRad=(prevWD+180)%360*Math.PI/180;const dx_m=Math.cos(angRad)*minSpacM;const dy_m=Math.sin(angRad)*minSpacM;const upwindLat=lat+dy_m/111320;const upwindLon=lon+dx_m/(111320*Math.cos(lat*Math.PI/180));const elHere=getTerrainElev(lat,lon)??0;const elUpwind=getTerrainElev(upwindLat,upwindLon)??0;const slopeUp=(elHere-elUpwind)/minSpacM;score*=(1+slopeUp*0.5);}
         candidates.push({lat,lon,score});
       }
     }
@@ -2437,7 +2440,7 @@ function updateResultsUI(R){
   $('rDen').textContent=densInfo;
   $('rGross').textContent=R.grossAEP.toFixed(2);$('rWake').textContent=R.wakeLoss.toFixed(1)+'%';
   $('rNet').textContent=R.netAEP.toFixed(2);$('rCF').textContent=R.CF.toFixed(1)+'%';
-  $('rRIX').textContent=R.rix.toFixed(1)+'%';$('rShr').textContent=parseFloat($('shearA').value).toFixed(2);
+  if($('rRIX'))$('rRIX').textContent=R.rix.toFixed(1)+'%';if($('rShr'))$('rShr').textContent=parseFloat($('shearA').value).toFixed(2);
   const sigPct=(R.sigma*100).toFixed(1);
   $('pexc').innerHTML=`<table style="width:100%;font-size:9px">
     <tr><td style="color:var(--muted)">P50</td><td style="color:var(--grn);font-weight:700">${R.P50.toFixed(2)} GWh</td></tr>
@@ -2877,7 +2880,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 15.1 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 18.0 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -2918,7 +2921,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 17.0 — ERA5T Density · Per-WTG ρ · Humidity Correction · Hourly Stability · Auto Roughness Rose · Canopy d₀ · Auto lScale · WAsP-Aligned · OWC→GWC→SWC · IBL Roughness Growth · Jackson-Hunt Terrain · Wake Direction Variability · BZ · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · IEC 61400-12-1</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 18.0 — ERA5T Density · Per-WTG ρ · Humidity Correction · Hourly Stability · Auto Roughness Rose · Canopy d₀ · Auto lScale · WAsP-Aligned · OWC→GWC→SWC · IBL Roughness Growth · Jackson-Hunt Terrain · BZ Orographic · Wake Direction Variability · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · RIX · IEC 61400-12-1</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -5701,11 +5704,12 @@ calcAEP=function(){
 };
 
 // ── ALSO HOOK INTO TS: Apply BZ speedups as per-turbine spatial variation
-// v10.0: BZ speedups are now applied as per-turbine spatial variation in the TS engine
+// v18.0: BZ speedups are already integrated into the TS engine via terrainSpeedupJH()
+// The time series engine already applies per-turbine speedups computed by JH model
 const _origRunTS=runTimeSeries;
 runTimeSeries=async function(){
   if(BZ.enabled&&BZ.speedups.length===S.turbines.length){
-    log(`BZ active: Bessel K₀/K₁ speedups applied to ${S.turbines.length} turbines in time series`,'i');
+    log(`BZ/JH active: ${S.turbines.length} turbines have terrain speedups applied in time series`,'i');
   }
   await _origRunTS();
 };
@@ -6270,12 +6274,25 @@ function runFinancial(){
   const annualRev=R.netAEP*1000*ppa;
   const annualOpex=instMW*opex*1000;
   const annualNet=annualRev-annualOpex;
+  // NPV with discounted cash flows
   let npv=-totalCAPEX;
   for(let y=1;y<=life;y++){npv+=annualNet/Math.pow(1+dr/100,y);}
-  const irr=annualNet/totalCAPEX*100;
-  const lcoe=totalCAPEX/life+annualOpex/(R.netAEP*1000);
+  // IRR using Newton-Raphson
+  let irrGuess=annualNet/totalCAPEX;
+  for(let iter=0;iter<50;iter++){
+    let npvIrr=-totalCAPEX;let dNpv=0;
+    for(let y=1;y<=life;y++){const f=Math.pow(1+irrGuess,y);npvIrr+=annualNet/f;dNpv-=y*annualNet/(f*(1+irrGuess));}
+    if(Math.abs(dNpv)<1e-10)break;
+    const newIrr=irrGuess-npvIrr/dNpv;
+    if(Math.abs(newIrr-irrGuess)<1e-8){irrGuess=newIrr;break;}
+    irrGuess=newIrr;
+  }
+  const irr=irrGuess*100;
+  // LCOE = (CRF × CAPEX + annual OPEX) / annual energy
+  const crf=(dr/100*Math.pow(1+dr/100,life))/(Math.pow(1+dr/100,life)-1);
+  const lcoe=(crf*totalCAPEX+annualOpex)/(R.netAEP*1000);
   $('finResults').style.display='block';
-  $('finResults').innerHTML=`<div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val gold">$${(totalCAPEX/1e6).toFixed(1)}M</div><div class="metric-label">Total CAPEX</div></div><div class="metric-item"><div class="metric-val sky">$${(annualRev/1e6).toFixed(2)}M</div><div class="metric-label">Annual Revenue</div></div><div class="metric-item"><div class="metric-val">$${(annualOpex/1e6).toFixed(2)}M</div><div class="metric-label">Annual OPEX</div></div><div class="metric-item"><div class="metric-val ${npv>0?'g':'r'}">$${(npv/1e6).toFixed(2)}M</div><div class="metric-label">NPV</div></div><div class="metric-item"><div class="metric-val ${irr>dr?'g':'r'}">${irr.toFixed(1)}%</div><div class="metric-label">Simple IRR</div></div><div class="metric-item"><div class="metric-val sky">$${lcoe.toFixed(1)}/MWh</div><div class="metric-label">LCOE</div></div></div>`;
+  $('finResults').innerHTML=`<div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val gold">$${(totalCAPEX/1e6).toFixed(1)}M</div><div class="metric-label">Total CAPEX</div></div><div class="metric-item"><div class="metric-val sky">$${(annualRev/1e6).toFixed(2)}M</div><div class="metric-label">Annual Revenue</div></div><div class="metric-item"><div class="metric-val">$${(annualOpex/1e6).toFixed(2)}M</div><div class="metric-label">Annual OPEX</div></div><div class="metric-item"><div class="metric-val ${npv>0?'g':'r'}">$${(npv/1e6).toFixed(2)}M</div><div class="metric-label">NPV</div></div><div class="metric-item"><div class="metric-val ${irr>dr?'g':'r'}">${irr.toFixed(1)}%</div><div class="metric-label">IRR</div></div><div class="metric-item"><div class="metric-val sky">$${lcoe.toFixed(1)}/MWh</div><div class="metric-label">LCOE</div></div></div>`;
   log(`Financial: CAPEX=$${(totalCAPEX/1e6).toFixed(1)}M, Rev=$${(annualRev/1e6).toFixed(2)}M/yr, NPV=$${(npv/1e6).toFixed(2)}M, IRR≈${irr.toFixed(1)}%, LCOE=$${lcoe.toFixed(1)}/MWh`,'i');
 }
 
@@ -6303,8 +6320,9 @@ function updateReportingDashboard(){
 
 // ── SAVE/LOAD PROJECT ──
 function saveProject(){
-  const data={version:'14.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds.slice(0,1000),dirs:S.wind.dirs.slice(0,1000)}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,era5Atm:S.era5Atm?{pres:S.era5Atm.pres.slice(0,1000),temp:S.era5Atm.temp.slice(0,1000),rh:S.era5Atm.rh.slice(0,1000),elev:S.era5Atm.elev}:null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,useERA5TDensity:$('useERA5TDensity')?.checked,useHumidity:$('useHumidity')?.checked,perWtgDensity:$('perWtgDensity')?.checked}};
-  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved','i');
+  // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
+  const data={version:'18.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0'}};
+  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v18.0)','i');
 }
 
 function loadProject(event){
@@ -6315,20 +6333,34 @@ function loadProject(event){
       if(data.turbines){S.turbines=data.turbines;refreshTable();updateMarkers();}
       if(data.wind){S.wind=data.wind;S.mcpFactor=data.mcpFactor||1;}
       if(data.terrain)S.terrain=data.terrain;
-      if(data.boundary)S.boundary=data.boundary;
+      if(data.boundary){S.boundary=data.boundary;if(S.boundary.length>=3&&leafMap){if(S.boundaryLayer)S.boundaryLayer.remove();S.boundaryLayer=L.polygon(S.boundary,{color:'#d29922',weight:2.5,fillOpacity:.08,dashArray:'6,3'}).addTo(leafMap);const area=polyArea(S.boundary);$('bndStats').textContent=`✓ ${S.boundary.length} vertices · Area ≈ ${area.toFixed(1)} km²`;}}
       if(data.obstacles)S.obstacles=data.obstacles;
       if(data.masts)S.masts=data.masts;
       if(data.waspCalibration)S.waspCalibration=data.waspCalibration;
       if(data.roughnessRose){S.roughnessRose=data.roughnessRose;if(typeof renderRoughnessRoseTable==='function')renderRoughnessRoseTable();log('Roughness rose loaded ('+data.roughnessRose.length+' sectors)','i');}
-      if(data.settings){const s=data.settings;Object.keys(s).forEach(k=>{const el=$(k);if(el)el.value=s[k];});}
-      log('Project loaded: '+f.name,'i');goToStep(1);
-    }catch(err){log('Project load failed: '+err.message,'e');}
+      if(data.autoRoughnessRose)S.autoRoughnessRose=data.autoRoughnessRose;
+      if(data.hourlyStability)S.hourlyStability=data.hourlyStability;
+      if(data.roughnessZones)S.roughnessZones=data.roughnessZones;
+      if(data.era5Atm)S.era5Atm=data.era5Atm;
+      // Restore settings with proper checkbox handling
+      if(data.settings){const s=data.settings;Object.keys(s).forEach(k=>{
+        const el=$(k);if(!el)return;
+        if(el.type==='checkbox'){el.checked=s[k]==='1'||s[k]===true||s[k]===1;}
+        else{el.value=s[k];}
+      });}
+      // Restore boundary on map and redraw canvases if terrain loaded
+      if(S.terrain&&typeof drawTerrainCanvas==='function'){drawTerrainCanvas();drawRoughnessCanvas();}
+      if(S.obstacles&&S.obstacles.length&&typeof renderObstacleTable==='function')renderObstacleTable();
+      if(S.masts&&S.masts.length&&typeof renderMastList==='function')renderMastList();
+      syncSiteCoordinates();
+      log('Project loaded: '+f.name+' (v'+data.version+', '+(data.wind?data.wind.speeds.length:0)+' wind records)','i');goToStep(1);
+    }catch(err){log('Project load failed: '+err.message,'e');alert('Load failed: '+err.message);}
   };r.readAsText(f);event.target.value='';
 }
 
 function clearAll(){
   if(!confirm('Clear all data?'))return;
-  S.turbines=[];S.wind=null;S.era5Raw=null;S.mcpFactor=1;S.tsData=null;S.results=null;S.terrain=null;S.contoursData=[];S.boundary=[];S.obstacles=[];S.masts=[];S.waspCalibration=null;S.hourlyStability=null;S.autoRoughnessRose=null;BZ.enabled=false;BZ.speedups=[];BZ.grid=null;
+  S.turbines=[];S.wind=null;S.era5Raw=null;S.mcpFactor=1;S.tsData=null;S.results=null;S.terrain=null;S.contoursData=[];S.boundary=[];S.obstacles=[];S.masts=[];S.waspCalibration=null;S.hourlyStability=null;S.autoRoughnessRose=null;S.roughnessZones=null;BZ.enabled=false;BZ.speedups=[];BZ.grid=null;BZ.sectorSU=[];BZ.sectorTurning=[];BZ.sectorRoughRC=[];BZ.turbRoughRC=[];BZ.mastSU=1;BZ.showLayer=false;
   refreshTable();updateMarkers();clearBoundary();renderMastList();log('All data cleared','i');goToStep(1);
 }
 
@@ -6386,7 +6418,8 @@ function generateGrid(){
     for(let c=0;c<cols;c++){
       const lat=cLat-r*(dLat/2)+(rows-1)*(dLat/4);
       const lon=cLon+(c-Math.floor(cols/2))*dLon+offLon;
-      S.turbines.push({lat,lon,hh,name:'T'+(S.turbines.length+1)});
+      const elev=S.terrain?getTerrainElev(lat,lon):undefined;
+      S.turbines.push({lat,lon,hh,elev,name:'T'+(S.turbines.length+1)});
     }
   }
   refreshTable();updateMarkers();
@@ -6397,9 +6430,10 @@ function addManual(){
   const lat=parseFloat($('manLat').value),lon=parseFloat($('manLon').value);
   if(isNaN(lat)||isNaN(lon)){alert('Enter valid lat/lon');return;}
   const hh=parseFloat($('hubH').value)||120;
-  S.turbines.push({lat,lon,hh,name:'T'+(S.turbines.length+1)});
+  const elev=S.terrain?getTerrainElev(lat,lon):undefined;
+  S.turbines.push({lat,lon,hh,elev,name:'T'+(S.turbines.length+1)});
   refreshTable();updateMarkers();
-  log(`Turbine added: ${lat.toFixed(4)}, ${lon.toFixed(4)}`,'i');
+  log(`Turbine added: ${lat.toFixed(4)}, ${lon.toFixed(4)}${elev!=null?' elev='+elev.toFixed(0)+'m':''}`,'i');
 }
 
 function removeTurbine(i){
