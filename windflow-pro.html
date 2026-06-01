@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 21.0</title>
+<title>WindFlow Pro 21.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 21.0</span></div><div class="brand-sub">JH Terrain · Hourly Stability · Auto Roughness Rose · Canopy d₀ · Auto lScale · Iterative GDL · Sempreviva IBL · WAsP-Weibull · ERA5T ρ</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 21.1</span></div><div class="brand-sub">JH Terrain · Hourly Stability · Auto Roughness Rose · Canopy d0 · Data Export: .grd .map .lib .tab OWC WRG KML · WAsP-Weibull · ERA5T rho</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -196,7 +196,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <div id="e5out" style="display:none"><div class="card"><div class="card-title sky">ERA5 Results</div>
         <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="e5WS">—</div><div class="metric-label">Mean WS m/s</div></div><div class="metric-item"><div class="metric-val sky" id="e5WA">—</div><div class="metric-label">Weibull A</div></div><div class="metric-item"><div class="metric-val gold" id="e5WK">—</div><div class="metric-label">Weibull k</div></div><div class="metric-item"><div class="metric-val sky" id="e5PD">—</div><div class="metric-label">Power W/m²</div></div><div class="metric-item"><div class="metric-val" id="e5RC">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val gold" id="e5EL">—</div><div class="metric-label">Elevation m</div></div></div>
         <div class="canvas-wrap" style="height:180px;margin-top:.5rem"><canvas id="e5Chart"></canvas></div>
-        <div style="display:flex;gap:.4rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" onclick="exportWindCSV()">↓ CSV</button><button class="btn btn-sm btn-ghost" onclick="exportWindTab()">↓ WAsP .tab</button></div>
+        <div style="display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap"><button class="btn btn-sm btn-ghost" onclick="exportWindCSV()">↓ CSV</button><button class="btn btn-sm btn-ghost" onclick="exportWindTab()">↓ WAsP .tab</button><button class="btn btn-sm btn-ghost" onclick="exportWindOWC()">↓ OWC .tab</button><button class="btn btn-sm btn-ghost" onclick="exportWindLib()">↓ WAsP .lib</button></div>
       </div></div>
     </div>
   </div>
@@ -230,10 +230,20 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <button class="btn btn-primary" style="margin-top:.5rem;width:100%" onclick="downloadTerrain()">⬇ Download Terrain Grid</button>
         <div style="display:flex;gap:.4rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" id="btnCont" style="opacity:1" onclick="toggleCont()">📐 Contours</button><button class="btn btn-sm btn-ghost" id="btnHeat" style="opacity:1" onclick="toggleHeat()">🗺 Heatmap</button></div>
         <div class="progress"><div class="progress-bar" id="terrPpb" style="width:0"></div></div><div id="terrPpt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div>
+        <div style="display:flex;gap:.3rem;margin-top:.4rem;flex-wrap:wrap">
+          <button class="btn btn-sm btn-ghost" onclick="exportTerrainGridCSV()">📁 Elevation CSV</button>
+          <button class="btn btn-sm btn-ghost" onclick="exportTerrainGRD()">📁 WAsP .grd</button>
+          <button class="btn btn-sm btn-ghost" onclick="exportContourKML()">📁 Contour KML</button>
+        </div>
       </div>
       <div class="card"><div class="card-title gold">Roughness Data</div>
         <button class="btn btn-primary" style="width:100%;margin-bottom:.3rem" onclick="downloadRoughness()">⬇ Generate Roughness Map</button>
-        <button class="btn btn-sm btn-ghost" onclick="exportRoughnessCSV()" style="margin-bottom:.3rem">📁 Export CSV</button>
+        <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.3rem">
+          <button class="btn btn-sm btn-ghost" onclick="exportRoughnessCSV()">📁 Zones CSV</button>
+          <button class="btn btn-sm btn-ghost" onclick="exportRoughnessRoseCSV()">📁 Rose CSV</button>
+          <button class="btn btn-sm btn-ghost" onclick="exportRoughnessMap()">📁 WAsP .map</button>
+          <button class="btn btn-sm btn-ghost" onclick="exportRoughnessGridCSV()">📁 Grid CSV</button>
+        </div>
         <div id="roughStat" style="font-size:.6rem;color:var(--text3)">—</div>
       </div>
       <div class="card"><div class="card-title sky">Terrain Statistics</div>
@@ -336,10 +346,32 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <button class="btn btn-gold" style="width:100%" onclick="exportAEPCSV()">📊 AEP Results CSV</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportLayoutCSV()">📍 Layout CSV</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportLayoutKML()">📍 Layout KML</button>
-          <button class="btn btn-ghost" style="width:100%" onclick="exportWindCSV()">💨 Wind Data CSV</button>
-          <button class="btn btn-ghost" style="width:100%" onclick="exportWindTab()">💨 WAsP .tab</button>
-          <button class="btn btn-ghost" style="width:100%" onclick="exportRoughnessCSV()">🗺 Roughness CSV</button>
           <button class="btn btn-gold" style="width:100%" onclick="exportTSPerTurbineHourly()">⏱ Per-WTG Hourly CSV</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-title sky">Terrain Data Downloads</div>
+        <div style="display:flex;flex-direction:column;gap:.3rem">
+          <button class="btn btn-ghost" style="width:100%" onclick="exportTerrainGridCSV()">⛰ Elevation Grid CSV</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportTerrainGRD()">⛰ WAsP .grd Format</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportContourKML()">⛰ Contour KML</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-title gold">Roughness Data Downloads</div>
+        <div style="display:flex;flex-direction:column;gap:.3rem">
+          <button class="btn btn-ghost" style="width:100%" onclick="exportRoughnessCSV()">🗺 Roughness Zones CSV</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportRoughnessRoseCSV()">🗺 Roughness Rose CSV</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportRoughnessMap()">🗺 WAsP .map Format</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportRoughnessGridCSV()">🗺 Roughness Grid CSV</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-title green">Wind Data Downloads</div>
+        <div style="display:flex;flex-direction:column;gap:.3rem">
+          <button class="btn btn-ghost" style="width:100%" onclick="exportWindCSV()">💨 Time Series CSV</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportWindTab()">💨 WAsP .tab (Simple)</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportWindOWC()">💨 WAsP OWC .tab (Sector)</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportWindLib()">💨 WAsP .lib (Library)</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportWRG()">💨 WRG Wind Resource Grid</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="exportWindClimateSummary()">💨 Wind Climate Summary</button>
         </div>
       </div>
       <div class="card"><div class="card-title sky">Save / Load Project</div>
@@ -2954,7 +2986,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 21.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 21.1 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -2995,7 +3027,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 21.0 — ERA5T Density · Per-WTG ρ · Humidity Correction · Hourly Stability · Auto Roughness Rose · Canopy d₀ · Auto lScale · WAsP-Aligned · OWC→GWC→SWC · IBL Roughness Growth · Jackson-Hunt Terrain · BZ Orographic · Wake Direction Variability · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · RIX · IEC 61400-12-1</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 21.1 — Data Export: .grd .map .lib .tab OWC WRG KML · ERA5T Density · Per-WTG ρ · Humidity Correction · Hourly Stability · Auto Roughness Rose · Canopy d0 · WAsP-Aligned · OWC→GWC→SWC · IBL · Jackson-Hunt Terrain · BZ Orographic · Wake Direction Variability · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · RIX · IEC 61400-12-1</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -3241,7 +3273,7 @@ initMap();calcDensity();
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 21.0 ready. KML Namespace Fix · Layout Zoom-to-Fit · Auto Coords Sync · ERA5T Density · Per-WTG ρ · Humidity Corr · OWC→GWC→SWC · IBL · Wake Dir Var · JH Terrain · Auto Roughness Rose · GDL Stability','i');
+log('WindFlow Pro 21.1 ready. Data Export: .grd .map .lib .tab OWC WRG KML · JH Terrain · ERA5T rho · Auto Roughness Rose · GDL Stability','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 
@@ -6514,7 +6546,7 @@ function exportWaspProject(){
   // Build WAsP .wwh file (WAsP Workspace Hierarchical)
   // This is a simplified export that WAsP can import
   let lines=[];
-  lines.push(`WAsP Workspace File - Exported from WindFlow Pro 21.0`);
+  lines.push(`WAsP Workspace File - Exported from WindFlow Pro 21.1`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
@@ -6760,5 +6792,346 @@ function clearTurbines(){
   if(S.markers)S.markers.forEach(m=>m.remove());
   S.markers=[];
   log('Turbines cleared','i');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TERRAIN DATA DOWNLOAD FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════
+
+// Export elevation grid as CSV: Lat, Lon, Elevation_m
+function exportTerrainGridCSV(){
+  const T=S.terrain;
+  if(!T||!T.grid||!T.grid.length){alert('Download terrain data first (Step 4)');return;}
+  let csv='Lat,Lon,Elevation_m\n';
+  const{lat0,lat1,lon0,lon1,ny,nx,grid}=T;
+  for(let i=0;i<ny;i++){
+    const lat=lat0+i*(lat1-lat0)/(ny-1);
+    for(let j=0;j<nx;j++){
+      const lon=lon0+j*(lon1-lon0)/(nx-1);
+      csv+=`${lat.toFixed(6)},${lon.toFixed(6)},${grid[i][j].toFixed(1)}\n`;
+    }
+  }
+  dlFile(csv,'terrain_elevation_grid.csv','text/csv');
+  log(`Terrain grid CSV exported: ${ny}×${nx} = ${ny*nx} points`,'i');
+}
+
+// Export terrain in WAsP .grd format (Surfer-compatible ASCII grid)
+// Format: DSAA header + grid values row by row
+function exportTerrainGRD(){
+  const T=S.terrain;
+  if(!T||!T.grid||!T.grid.length){alert('Download terrain data first (Step 4)');return;}
+  const{lat0,lat1,lon0,lon1,ny,nx,grid,minE,maxE}=T;
+  let grd='DSAA\n';
+  grd+=`${nx} ${ny}\n`;
+  grd+=`${lon0.toFixed(6)} ${lon1.toFixed(6)}\n`;
+  grd+=`${lat0.toFixed(6)} ${lat1.toFixed(6)}\n`;
+  grd+=`${minE.toFixed(1)} ${maxE.toFixed(1)}\n`;
+  // Surfer DSAA: row-major, bottom to top (south to north)
+  for(let i=ny-1;i>=0;i--){
+    const row=grid[i].map(v=>v.toFixed(1)).join(' ');
+    grd+=row+'\n';
+  }
+  dlFile(grd,'terrain_elevation.grd','text/plain');
+  log(`WAsP .grd exported: ${nx}×${ny}, ${minE.toFixed(0)}–${maxE.toFixed(0)}m`,'i');
+}
+
+// Export contour lines as KML for Google Earth / GIS
+function exportContourKML(){
+  if(!S.contoursData||!S.contoursData.length){alert('Download terrain data first (Step 4)');return;}
+  const T=S.terrain;
+  if(!T){alert('No terrain data');return;}
+  let kml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n';
+  kml+=`<name>WindFlow Pro Terrain Contours</name>\n`;
+  kml+=`<description>Elevation contour lines exported from WindFlow Pro</description>\n`;
+  S.contoursData.forEach(({segs,col,major})=>{
+    if(!segs||!segs.length)return;
+    segs.forEach(seg=>{
+      if(!seg||seg.length<2)return;
+      kml+=`<Placemark>\n`;
+      kml+=`<styleUrl>#contour${major?'Major':'Minor'}</styleUrl>\n`;
+      kml+=`<LineString>\n<altitudeMode>clampToGround</altitudeMode>\n<coordinates>\n`;
+      seg.forEach(pt=>{
+        const lat=Array.isArray(pt)?pt[0]:pt.lat;
+        const lon=Array.isArray(pt)?pt[1]:pt.lon;
+        if(lat!=null&&lon!=null)kml+=`${lon},${lat},0 \n`;
+      });
+      kml+=`</coordinates>\n</LineString>\n</Placemark>\n`;
+    });
+  });
+  kml+=`<Style id="contourMajor"><LineStyle><color>ffffffff</color><width>2</width></LineStyle></Style>\n`;
+  kml+=`<Style id="contourMinor"><LineStyle><color>ffaaaaaa</color><width>1</width></LineStyle></Style>\n`;
+  kml+=`</Document>\n</kml>`;
+  dlFile(kml,'terrain_contours.kml','application/vnd.google-earth.kml+xml');
+  log(`Contour KML exported: ${S.contoursData.length} contour levels`,'i');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ROUGHNESS DATA DOWNLOAD FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════
+
+// Export roughness rose as sector-wise CSV
+function exportRoughnessRoseCSV(){
+  const nSectors=parseInt($('sects').value)||12;
+  const rose=S.roughnessRose||S.autoRoughnessRose;
+  let csv='Sector,Dir_deg,z0_1,x_1_m,z0_2,x_2_m,z0_3,x_3_m\n';
+  if(rose&&rose.length){
+    rose.forEach((s,i)=>{
+      const dir=(i*360/nSectors).toFixed(1);
+      const z01=(s.z0_1||0).toFixed(4),x1=(s.x_1||0).toFixed(0);
+      const z02=(s.z0_2||0).toFixed(4),x2=(s.x_2||0).toFixed(0);
+      const z03=(s.z0_3||0).toFixed(4),x3=(s.x_3||0).toFixed(0);
+      csv+=`${i+1},${dir},${z01},${x1},${z02},${x2},${z03},${x3}\n`;
+    });
+  }else{
+    // Generate default roughness rose from site z0
+    const z0site=parseFloat($('z0val').value)||0.03;
+    const z0mast=parseFloat($('rrZ0mast').value)||z0site;
+    for(let i=0;i<nSectors;i++){
+      const dir=(i*360/nSectors).toFixed(1);
+      csv+=`${i+1},${dir},${z0mast.toFixed(4)},1000,${z0site.toFixed(4)},5000,0.0002,0\n`;
+    }
+  }
+  dlFile(csv,'roughness_rose.csv','text/csv');
+  log('Roughness rose CSV exported','i');
+}
+
+// Export roughness in WAsP .map format
+// WAsP .map format: Header + number of roughness change lines per sector
+// Each line: distance(m), roughness_left, roughness_right
+function exportRoughnessMap(){
+  const nSectors=parseInt($('sects').value)||12;
+  const z0site=parseFloat($('z0val').value)||0.03;
+  const z0mast=parseFloat($('rrZ0mast')?.value)||z0site;
+  const lat=parseFloat($('e5La')?.value||'55.5');
+  const lon=parseFloat($('e5Lo')?.value||'7.9');
+  let map=`! WAsP Roughness Map - exported from WindFlow Pro\n`;
+  map+=`! Site: ${$('projName')?.value||'Project'} at ${lat.toFixed(4)}N ${lon.toFixed(4)}E\n`;
+  map+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
+  map+=`${nSectors} 0\n`; // nSectors, 0 = polar format
+  const rose=S.roughnessRose||S.autoRoughnessRose;
+  for(let s=0;s<nSectors;s++){
+    if(rose&&rose[s]){
+      const r=rose[s];
+      const nLines=2;
+      map+=`${nLines}\n`;
+      map+=`${(r.x_1||1000).toFixed(0)} ${(r.z0_1||z0mast).toFixed(4)} ${z0site.toFixed(4)}\n`;
+      map+=`${(r.x_2||5000).toFixed(0)} ${z0site.toFixed(4)} ${(r.z0_3||0.0002).toFixed(4)}\n`;
+    }else{
+      map+=`1\n`;
+      map+=`1000 ${z0mast.toFixed(4)} ${z0site.toFixed(4)}\n`;
+    }
+  }
+  dlFile(map,'roughness.map','text/plain');
+  log(`WAsP .map exported: ${nSectors} sectors`,'i');
+}
+
+// Export roughness grid as CSV (raster grid of z0 values)
+function exportRoughnessGridCSV(){
+  const T=S.terrain;
+  if(!T||!T.grid||!T.grid.length){alert('Download terrain data first (Step 4)');return;}
+  const{lat0,lat1,lon0,lon1,ny,nx}=T;
+  const z0site=parseFloat($('z0val').value)||0.03;
+  let csv='Lat,Lon,z0_m,LandUse\n';
+  if(S.roughnessZones&&S.roughnessZones.length>0){
+    for(let i=0;i<ny;i++){
+      const lat=lat0+i*(lat1-lat0)/(ny-1);
+      for(let j=0;j<nx;j++){
+        const lon=lon0+j*(lon1-lon0)/(nx-1);
+        let z0=z0site,lu='default';
+        for(const zone of S.roughnessZones){
+          if(pointInPolygon(lat,lon,zone.pts)){z0=zone.z0;lu=zone.lu;break;}
+        }
+        csv+=`${lat.toFixed(6)},${lon.toFixed(6)},${z0.toFixed(4)},${lu}\n`;
+      }
+    }
+  }else{
+    for(let i=0;i<ny;i++){
+      const lat=lat0+i*(lat1-lat0)/(ny-1);
+      for(let j=0;j<nx;j++){
+        const lon=lon0+j*(lon1-lon0)/(nx-1);
+        csv+=`${lat.toFixed(6)},${lon.toFixed(6)},${z0site.toFixed(4)},uniform\n`;
+      }
+    }
+  }
+  dlFile(csv,'roughness_grid.csv','text/csv');
+  log(`Roughness grid CSV exported: ${ny}×${nx}`,'i');
+}
+
+// Simple point-in-polygon test (ray casting)
+function pointInPolygon(lat,lon,pts){
+  if(!pts||pts.length<3)return false;
+  let inside=false;
+  for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+    const yi=pts[i].lat,xi=pts[i].lon;
+    const yj=pts[j].lat,xj=pts[j].lon;
+    if(((yi>lat)!==(yj>lat))&&(lon<(xj-xi)*(lat-yi)/(yj-yi)+xi)){
+      inside=!inside;
+    }
+  }
+  return inside;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// WIND DATA DOWNLOAD FUNCTIONS (ENHANCED)
+// ═══════════════════════════════════════════════════════════════════
+
+// Compute sector-wise wind statistics from time series data
+function computeSectorWindStats(nSectors){
+  if(!S.wind||!S.wind.speeds||!S.wind.speeds.length)return null;
+  const speeds=S.wind.speeds,dirs=S.wind.dirs;
+  const sectorWidth=360/nSectors;
+  const sectorStats=[];
+  for(let s=0;s<nSectors;s++){
+    const sectorSpeeds=[];
+    for(let i=0;i<speeds.length;i++){
+      let d=dirs[i]||0;
+      if(d<0)d+=360;
+      const si=Math.floor((d+sectorWidth/2)%360/sectorWidth);
+      if(si===s&&speeds[i]>0.5)sectorSpeeds.push(speeds[i]);
+    }
+    const freq=sectorSpeeds.length/Math.max(1,speeds.length);
+    let A=0,k=2;
+    if(sectorSpeeds.length>10){
+      const wb=weibullFit(sectorSpeeds);
+      A=wb.A;k=wb.k;
+    }else if(sectorSpeeds.length>0){
+      A=sectorSpeeds.reduce((s,v)=>s+v,0)/sectorSpeeds.length/0.886;
+      k=2;
+    }
+    sectorStats.push({freq,A,k,count:sectorSpeeds.length,meanWS:sectorSpeeds.length?sectorSpeeds.reduce((s,v)=>s+v,0)/sectorSpeeds.length:0});
+  }
+  return sectorStats;
+}
+
+// Export WAsP OWC (Observed Wind Climate) .tab format with sector-wise Weibull
+function exportWindOWC(){
+  if(!S.wind||!S.wind.speeds){alert('Download wind data first');return;}
+  const nSectors=parseInt($('sects').value)||12;
+  const sectorStats=computeSectorWindStats(nSectors);
+  if(!sectorStats){alert('Could not compute sector statistics');return;}
+  const lat=parseFloat($('e5La').value);
+  const lon=parseFloat($('e5Lo').value);
+  const hh=parseFloat($('e5H').value)||100;
+  let tab=`! WAsP Observed Wind Climate .tab file\n`;
+  tab+=`! Generated by WindFlow Pro\n`;
+  tab+=`! Project: ${$('projName')?.value||'Project'}\n`;
+  tab+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
+  tab+=`! Location: ${lat.toFixed(4)}N, ${lon.toFixed(4)}E, ${hh}m a.g.l.\n`;
+  tab+=`${lat.toFixed(4)} ${lon.toFixed(4)} ${hh}\n`;
+  tab+=`${nSectors} ${hh} 0.0\n`;
+  const freqLine=sectorStats.map(s=>(s.freq*100).toFixed(2)).join(' ');
+  tab+=freqLine+'\n';
+  const aLine=sectorStats.map(s=>s.A.toFixed(2)).join(' ');
+  tab+=aLine+'\n';
+  const kLine=sectorStats.map(s=>s.k.toFixed(2)).join(' ');
+  tab+=kLine+'\n';
+  dlFile(tab,'wind_climate_owc.tab','text/plain');
+  log(`WAsP OWC .tab exported: ${nSectors} sectors, ${S.wind.speeds.length} records`,'i');
+}
+
+// Export WAsP .lib format (wind atlas library with sector-wise Weibull for multiple heights)
+function exportWindLib(){
+  if(!S.wind||!S.wind.speeds){alert('Download wind data first');return;}
+  const nSectors=parseInt($('sects').value)||12;
+  const sectorStats=computeSectorWindStats(nSectors);
+  if(!sectorStats){alert('Could not compute sector statistics');return;}
+  const lat=parseFloat($('e5La').value);
+  const lon=parseFloat($('e5Lo').value);
+  const hh=parseFloat($('e5H').value)||100;
+  const hubHH=parseFloat($('hubH').value)||120;
+  const heights=[hh,hubHH];
+  let lib=`Wind atlas library file - Generated by WindFlow Pro\n`;
+  lib+=`Project: ${$('projName')?.value||'Project'} at ${lat.toFixed(4)}N ${lon.toFixed(4)}E\n`;
+  lib+=`${lat.toFixed(4)} ${lon.toFixed(4)}\n`;
+  lib+=`${nSectors} ${heights.join(' ')}\n`;
+  for(const h of heights){
+    const freqLine=sectorStats.map(s=>(s.freq*100).toFixed(2)).join(' ');
+    lib+=freqLine+'\n';
+  }
+  for(const h of heights){
+    const z0=parseFloat($('z0val').value)||0.03;
+    const scaleFactor=h!==hh?Math.log(h/z0)/Math.log(hh/z0):1;
+    const aLine=sectorStats.map(s=>(s.A*scaleFactor).toFixed(2)).join(' ');
+    lib+=aLine+'\n';
+  }
+  for(const h of heights){
+    const kLine=sectorStats.map(s=>s.k.toFixed(2)).join(' ');
+    lib+=kLine+'\n';
+  }
+  dlFile(lib,'wind_atlas.lib','text/plain');
+  log(`WAsP .lib exported: ${nSectors} sectors, heights: ${heights.join(', ')}m`,'i');
+}
+
+// Export WRG (Wind Resource Grid) format
+function exportWRG(){
+  if(!S.results){alert('Run analysis first');return;}
+  if(!S.turbines.length){alert('Add turbines first');return;}
+  const nSectors=parseInt($('sects').value)||12;
+  const R=S.results;
+  let wrg=`! Wind Resource Grid - WindFlow Pro\n`;
+  wrg+=`! Project: ${$('projName')?.value||'Project'}\n`;
+  wrg+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
+  const nPoints=S.turbines.length;
+  wrg+=`${nPoints} ${nSectors}\n`;
+  R.perTurbine.forEach((t,i)=>{
+    const tb=S.turbines[i]||{};
+    const hh=tb.hh||parseFloat($('hubH').value)||120;
+    const lat=tb.lat||0;
+    const lon=tb.lon||0;
+    const elev=tb.elev||0;
+    const A=R.hubWb?R.hubWb.A:5;
+    const k=R.hubWb?R.hubWb.k:2;
+    let line=`${i+1} ${lat.toFixed(6)} ${lon.toFixed(6)} ${elev.toFixed(0)} ${hh.toFixed(0)} ${A.toFixed(2)} ${k.toFixed(2)}`;
+    const sectorStats=computeSectorWindStats(nSectors);
+    if(sectorStats){
+      sectorStats.forEach(s=>{
+        line+=` ${(s.freq*100).toFixed(2)} ${s.A.toFixed(2)} ${s.k.toFixed(2)}`;
+      });
+    }else{
+      for(let s=0;s<nSectors;s++){
+        line+=` ${(100/nSectors).toFixed(2)} ${A.toFixed(2)} ${k.toFixed(2)}`;
+      }
+    }
+    wrg+=line+'\n';
+  });
+  dlFile(wrg,'wind_resource_grid.wrg','text/plain');
+  log(`WRG exported: ${nPoints} points, ${nSectors} sectors`,'i');
+}
+
+// Export wind climate summary as comprehensive CSV
+function exportWindClimateSummary(){
+  if(!S.wind||!S.wind.speeds){alert('Download wind data first');return;}
+  const nSectors=parseInt($('sects').value)||12;
+  const sectorStats=computeSectorWindStats(nSectors);
+  const speeds=S.wind.speeds.filter(v=>v>0.5);
+  const mean=speeds.length?speeds.reduce((s,v)=>s+v,0)/speeds.length:0;
+  const wb=weibullFit(speeds);
+  const lat=parseFloat($('e5La').value);
+  const lon=parseFloat($('e5Lo').value);
+  const hh=parseFloat($('e5H').value)||100;
+  const rho=parseFloat($('airDen').value)||1.225;
+  const z0=parseFloat($('z0val').value)||0.03;
+  let csv='Parameter,Value,Unit,Notes\n';
+  csv+=`Project,${$('projName')?.value||'Project'},,\n`;
+  csv+=`Latitude,${lat.toFixed(4)},degrees,\n`;
+  csv+=`Longitude,${lon.toFixed(4)},degrees,\n`;
+  csv+=`Data_Height,${hh},m a.g.l.,\n`;
+  csv+=`Total_Records,${S.wind.speeds.length},,\n`;
+  csv+=`Valid_Records,${speeds.length},,WS > 0.5 m/s\n`;
+  csv+=`Mean_WS,${mean.toFixed(2)},m/s,\n`;
+  csv+=`Weibull_A,${wb.A.toFixed(3)},m/s,\n`;
+  csv+=`Weibull_k,${wb.k.toFixed(3)},,\n`;
+  csv+=`Power_Density,${(0.5*rho*mean*mean*mean).toFixed(0)},W/m2,\n`;
+  csv+=`Air_Density,${rho.toFixed(3)},kg/m3,\n`;
+  csv+=`Roughness_z0,${z0.toFixed(4)},m,\n`;
+  csv+=`Site_Elevation,${$('siteElev')?.value||0},m,\n`;
+  csv+=`\nSector,Dir_deg,Freq_pct,Weibull_A,Weibull_k,Mean_WS\n`;
+  if(sectorStats){
+    sectorStats.forEach((s,i)=>{
+      csv+=`${i+1},${(i*360/nSectors).toFixed(1)},${(s.freq*100).toFixed(2)},${s.A.toFixed(2)},${s.k.toFixed(2)},${s.meanWS.toFixed(2)}\n`;
+    });
+  }
+  dlFile(csv,'wind_climate_summary.csv','text/csv');
+  log('Wind climate summary CSV exported','i');
 }
 </script></body></html>
