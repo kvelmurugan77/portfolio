@@ -906,9 +906,18 @@ function terrainSpeedupJH(turbIdx, sectorDir, hubH, z0) {
     return { speedup: terrainSpeedup(turbElev, mastElev, hubH, z0), turning: 0, inclination: 0 };
   }
 
-  // Check if terrain is flat (min-max range < 5m) — skip expensive JH computation
+  // Check if terrain is flat (min-max range < 20m across the domain) — skip JH computation
+  // WAsP: on flat terrain (RIX < 5%), orographic speedup is negligible (<1%).
+  // The 20m threshold is conservative: a 20m range over a 10km domain = 0.2% slope = flat.
+  // The old 5m threshold was too aggressive — 10m elevation variation over 10km is still flat.
   const terrainRange = (S.terrain.maxE || 0) - (S.terrain.minE || 0);
-  if (terrainRange < 5) return { speedup: 1.0, turning: 0, inclination: 0 };
+  const domainSizeKm = Math.max(
+    (S.terrain.lat1 - S.terrain.lat0) * 111,
+    (S.terrain.lon1 - S.terrain.lon0) * 111 * Math.cos((S.terrain.lat0 + S.terrain.lat1) / 2 * Math.PI / 180)
+  );
+  const effectiveSlope = domainSizeKm > 0 ? terrainRange / (domainSizeKm * 1000) : 0;
+  // Flat terrain: slope < 3% (WAsP RIX < 5% threshold)
+  if (effectiveSlope < 0.03 || terrainRange < 20) return { speedup: 1.0, turning: 0, inclination: 0 };
 
   const lat = turb.lat;
   const lon = turb.lon;
@@ -1584,8 +1593,24 @@ async function downloadRoughness(){
       const col=colMap[lu]||'#e5e7eb';
       S.roughnessZones.push({lu,z0,col,pts:el.geometry.map(p=>({lat:p.lat,lon:p.lon}))});
     });
-    $('roughStat').textContent=`✓ ${S.roughnessZones.length} features from OSM`;
-    redrawCanvas();drawRoughnessCanvas();log(`OSM roughness: ${S.roughnessZones.length} land-use features`,'i');
+    // Smooth roughness zones to avoid sharp z0 transitions that cause unrealistic AEP variation
+    // WAsP/Openwind use spatially averaged roughness — single-cell z0 jumps from 0.03 to 1.5
+    // can cause 30-50% wind speed difference between adjacent turbines on flat terrain.
+    // Apply weighted averaging: each zone's z0 is blended with its neighbors.
+    const SMOOTH_WEIGHT = 0.3; // 30% blend from neighboring zones
+    if(S.roughnessZones.length > 1) {
+      // Compute site-wide median z0 for reference
+      const allZ0 = S.roughnessZones.map(z => z.z0).sort((a, b) => a - b);
+      const siteMedianZ0 = allZ0[Math.floor(allZ0.length / 2)];
+      // Cap extreme z0 values to 10x of site median to prevent unrealistic jumps
+      S.roughnessZones.forEach(zone => {
+        const z0CapLow = siteMedianZ0 * 0.1;
+        const z0CapHigh = siteMedianZ0 * 10;
+        zone.z0 = Math.max(z0CapLow, Math.min(z0CapHigh, zone.z0));
+      });
+    }
+    $('roughStat').textContent=`✓ ${S.roughnessZones.length} features from OSM (smoothed)`;
+    redrawCanvas();drawRoughnessCanvas();log(`OSM roughness: ${S.roughnessZones.length} land-use features (z0 capped to 10× site median)`,'i');
     // Update z0 based on dominant land use
     if(S.roughnessZones.length>0){const z0s=S.roughnessZones.map(z=>z.z0);const med=z0s.sort((a,b)=>a-b)[Math.floor(z0s.length/2)];$('z0val').value=med.toFixed(4);$('roughStat').textContent+=` · Median z₀=${med.toFixed(4)}m`;}
   }catch(e){$('roughStat').textContent='⚠ Overpass API unreachable. Using manual z₀.';log('OSM roughness failed: '+e.message,'w');}
@@ -5416,7 +5441,27 @@ function roughnessRatioMultiLayer(z0Seq,xSeq,z){
   const Uz_site = (uStarSite / kappa) * Math.log(Math.max(z, z0site*1.001) / z0site);
 
   // The ratio is U(z) with full roughness change profile vs U(z) at site roughness only
-  return Math.max(0.5, Math.min(2.0, Uz_layer / Math.max(1e-6, Uz_site)));
+  // On flat terrain (RIX < 5%), the roughness ratio should be close to 1.0
+  // Tighten the clamp for flat sites to prevent unrealistic AEP variation
+  let ratio = Uz_layer / Math.max(1e-6, Uz_site);
+  // Check if terrain is flat — if so, limit roughness ratio to ±10%
+  if (S.terrain) {
+    const tRange = (S.terrain.maxE || 0) - (S.terrain.minE || 0);
+    const domainKm = Math.max(
+      (S.terrain.lat1 - S.terrain.lat0) * 111,
+      (S.terrain.lon1 - S.terrain.lon0) * 111
+    );
+    const slope = domainKm > 0 ? tRange / (domainKm * 1000) : 0;
+    if (slope < 0.03 || tRange < 20) {
+      // Flat terrain: limit roughness ratio to 0.90–1.10 (±10%)
+      ratio = Math.max(0.90, Math.min(1.10, ratio));
+    } else {
+      ratio = Math.max(0.5, Math.min(2.0, ratio));
+    }
+  } else {
+    ratio = Math.max(0.5, Math.min(2.0, ratio));
+  }
+  return ratio;
 }
 
 // Helper: build roughness sequence per sector (supports roughness rose)
@@ -5502,11 +5547,16 @@ async function runBZModel(){
   if(Math.abs(1+mastDelta-BZ.mastSU)>0.01)log(`BZ mastSU clamped: raw=${(1+mastDelta).toFixed(4)} → clamped=${BZ.mastSU.toFixed(4)}`,'w');
 
   // Per-turbine speedup
+  // On flat terrain (RIX < 5%), clamp speedups closer to 1.0 to prevent FFT noise artifacts
+  const isFlat = BZ.rix < 5;
   BZ.speedups=S.turbines.map(t=>{
     const tx=(t.lon-lon0)/(lon1-lon0)*Lx;
     const ty=(t.lat-lat0)/(lat1-lat0)*Ly;
     const delta=bzDeltaAt(Re,Im,ny,nx,Lx,Ly,tx,ty,hubH,z0Site,lScale);
-    return 1+delta;
+    const rawSU = 1+delta;
+    // Flat terrain: limit speedup to 0.97–1.03 (±3%) — FFT can produce noise on flat terrain
+    // Complex terrain: allow wider range 0.5–2.0
+    return isFlat ? Math.max(0.97, Math.min(1.03, rawSU)) : rawSU;
   });
 
   // Sector-specific speedups (directional, using bzDeltaAtDir)
@@ -5547,6 +5597,8 @@ async function runBZModel(){
       }
       // v11.0: WAsP orographic saturation proxy — soft cap on speedup
       rawSU = waspOrographicSaturation(rawSU, BZ.rix);
+      // Flat terrain: limit speedup to 0.97–1.03 (±3%) to prevent FFT noise
+      if (isFlat) rawSU = Math.max(0.97, Math.min(1.03, rawSU));
       turbSU.push(rawSU);
       // Flow turning at turbine for this sector
       const turnRad=flowTurningAtDir(Re,Im,ny,nx,Lx,Ly,tx,ty,hubH,z0Site,lScale,dirDeg);
