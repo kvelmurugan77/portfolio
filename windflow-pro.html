@@ -44,7 +44,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 /* Map info overlay */
 #mapInfo{position:absolute;bottom:6px;left:6px;background:rgba(7,17,30,.88);border:1px solid var(--border);border-radius:var(--radius2);padding:.35rem .6rem;font-size:.62rem;color:var(--text3);pointer-events:none;z-index:500;line-height:1.6;font-family:var(--mono)}#mapInfo span{color:var(--mint)}
 #drawStatus{display:none;position:absolute;top:6px;left:50%;transform:translateX(-50%);background:rgba(245,166,35,.92);color:var(--bg);font-weight:700;padding:.3rem 1rem;border-radius:var(--radius2);font-size:.68rem;z-index:600;pointer-events:none}
-#contCanvas{position:absolute;top:0;left:0;pointer-events:none;z-index:400}
+#contCanvas{position:absolute;top:0;left:0;pointer-events:none;z-index:0}
 /* Wind rose canvas sizing */
 .rose-canvas-wrap{width:100%;max-width:420px;margin:0 auto}
 /* PC chart */
@@ -761,9 +761,9 @@ function computeHillParameters(profile) {
 
 // Jackson-Hunt speedup formula for 2D ridge
 // H: hill height, L: half-length, z: hub height, z0: roughness
-// Returns: fractional speedup Δs (1.0 = no speedup, 1.1 = 10% speedup)
+// Returns: fractional speedup increment Δs (0 = no speedup, 0.1 = 10% speedup)
 function jacksonHuntSpeedup2D(H, L, z, z0) {
-  if (L < 50 || H < 1 || z < 1) return 1.0;
+  if (L < 50 || H < 1 || z < 1) return 0; // v19.0: return 0 (no deltaS), NOT 1.0
   const kappa = 0.4;
 
   // Inner layer height (Beljaars et al. 1987, Walmsley et al. 1986)
@@ -1253,7 +1253,7 @@ function buildLUT(pc,rho){
   }
   return{pw,ct,step,rho};
 }
-function lutGet(lut,ws){const i=Math.min(Math.floor(ws/lut.step),lut.pw.length-1);return{power:lut.pw[i],ct:lut.ct[i]};}
+function lutGet(lut,ws){if(!lut||!lut.pw||!isFinite(ws)||ws<0)ws=0;const i=Math.max(0,Math.min(Math.floor(ws/lut.step),lut.pw.length-1));return{power:lut.pw[i]||0,ct:lut.ct[i]||0};}
 
 // ── WAKE MODELS ──
 // Enhanced Jensen/PARK wake with ground reflection, TI-dependent k, and mixed RSS/linear superposition
@@ -1422,6 +1422,20 @@ function autoCI(r){if(r<50)return 5;if(r<200)return 10;if(r<500)return 20;return
 let contCanvas;
 function initCanvas(){
   contCanvas=$('contCanvas');
+  // v19.0: Move canvas INSIDE Leaflet's overlay pane so it renders above tiles but below markers
+  // Leaflet pane z-indices: tilePane=200, overlayPane=400, markerPane=600
+  // By putting the canvas inside overlayPane at z-index 300, it's above tiles but below SVG markers
+  if(leafMap && contCanvas){
+    const overlayPane = leafMap.getPane('overlay');
+    if(overlayPane){
+      overlayPane.parentNode.insertBefore(contCanvas, overlayPane);
+      contCanvas.style.zIndex = '300';
+      contCanvas.style.position = 'absolute';
+      contCanvas.style.top = '0';
+      contCanvas.style.left = '0';
+      contCanvas.style.pointerEvents = 'none';
+    }
+  }
   function resize(){const sz=leafMap.getSize();contCanvas.width=sz.x;contCanvas.height=sz.y;redrawCanvas();}
   leafMap.on('moveend zoomend resize',()=>redrawCanvas());
   leafMap.on('move zoom',()=>redrawCanvas());
@@ -2143,7 +2157,9 @@ function calcAEP(){
       log(`v17.0: Auto stability requested but no ERA5T data available — falling back to neutral`,'w');
     }
   }
-  const gdlFactor = gdlCorrectionFactor(L, z0, hubHH);
+  let gdlFactor = gdlCorrectionFactor(L, z0, hubHH);
+  // v19.0: NaN guard for gdlFactor
+  if (!isFinite(gdlFactor) || isNaN(gdlFactor)) gdlFactor = 1.0;
 
   // v17.0 Fix 2: Compute auto roughness rose from terrain if available
   if (!S.autoRoughnessRose && S.terrain && S.terrain.grid) {
@@ -2235,7 +2251,9 @@ function calcAEP(){
     return wSum>0?suSum/wSum:1.0;
   });
   // Pre-compute the global-z0 vertical extrapolation ratio (used to "undo" it in OWC→GWC→SWC chain)
-  const logRatioGlobal = logWS_stab(1.0, mastH, hubHH, z0, L);
+  let logRatioGlobal = logWS_stab(1.0, mastH, hubHH, z0, L);
+  // v19.0: NaN guard for logRatioGlobal
+  if (!isFinite(logRatioGlobal) || logRatioGlobal < 0.01) logRatioGlobal = 1.0;
 
   sectors.forEach((sec,si)=>{if(sec.freq<1e-5)return;
     // v13.1: Per-sector roughness rose values (computed once per sector, not per wind speed)
@@ -2247,7 +2265,9 @@ function calcAEP(){
     // GWC (standard reference z0=0.03) to SWC (at site with site roughness + IBL)
     const owcGwcR = owcToGWC(1.0, mastH, z0_mast_sec, hubHH, 0.03, L);
     const gwcSwcR = gwcToSWC(1.0, hubHH, 0.03, hubHH, z0_site_sec, L);
-    const chainRatio = (owcGwcR * gwcSwcR * roughRatioIBL * gdlFactor) / logRatioGlobal;
+    // v19.0: NaN/Infinity guard for chainRatio
+    let chainRatio = (owcGwcR * gwcSwcR * roughRatioIBL * gdlFactor) / Math.max(logRatioGlobal, 0.01);
+    if (!isFinite(chainRatio) || isNaN(chainRatio)) chainRatio = 1.0;
 
     for(let v=.5;v<=vMax;v+=dv){
       const prob=wbPdf(v,sec.A,sec.k)*dv;if(prob<1e-9)continue;
@@ -2258,6 +2278,8 @@ function calcAEP(){
       const rotorV = shelteredV * rotAvgFactor;
       // Flow model: convert OWC to SWC
       let correctedV=rotorV;
+      // v19.0: NaN guard for correctedV
+      if (!isFinite(correctedV)) correctedV = rotorV;
       // Flow turning — adjust effective wind direction
       let effectiveDir=sec.dir;
       if(BZ.enabled&&BZ.sectorTurning&&BZ.sectorTurning[si]){
@@ -2278,6 +2300,8 @@ function calcAEP(){
         // The chainRatio captures the full conversion including IBL growth and GDL
         correctedV = rotorV * chainRatio;
       }
+      // v19.0: NaN guard after flow model correction
+      if (!isFinite(correctedV) || correctedV < 0) correctedV = rotorV;
       // Wake with direction variability (Gaussian cone spreading)
       const wsp=wakeRunWithDirVar(txy,correctedV,effectiveDir,lut,kw);const gp=lutGet(lut,correctedV).power;
       // Per-turbine energy accumulation (v14.0: uses per-WTG density LUTs)
@@ -2305,25 +2329,36 @@ function calcAEP(){
           const jhSU = jhSpeedups[t] && jhSpeedups[t][si] ? jhSpeedups[t][si].speedup : tSpeedups[t];
           const jhTurn = jhSpeedups[t] && jhSpeedups[t][si] ? jhSpeedups[t][si].turning : 0;
           // Per-turbine HH scaling: project from reference HH to turbine HH using site z0
-          const hhRoughScale = tHH !== hubHH ?
+          let hhRoughScale = tHH !== hubHH ?
             owcToSWC_sector(1.0, hubHH, z0_site_sec, tHH, z0_site_sec, L) : 1.0;
+          // v19.0: NaN guard for hhRoughScale
+          if (!isFinite(hhRoughScale) || isNaN(hhRoughScale)) hhRoughScale = 1.0;
           // v17.0 Fix 3: Displacement height correction per turbine
-          const d0Corr = turbD0[t] > 0.5 ?
+          let d0Corr = turbD0[t] > 0.5 ?
             displacementCorrectedLogWS(1.0, hubHH, tHH, z0_site_sec, turbD0[t], L) / Math.max(0.01, logWS_stab(1.0, hubHH, tHH, z0_site_sec, L)) : 1.0;
+          // v19.0: NaN guard for d0Corr
+          if (!isFinite(d0Corr) || isNaN(d0Corr)) d0Corr = 1.0;
           // Gross wind speed: SWC × Jackson-Hunt terrain speedup × HH scaling × d₀ correction
-          const turbV=correctedV*jhSU*hhRoughScale*d0Corr;
+          // v19.0: Clamp jhSU to physical range and guard NaN
+          const safeJhSU = isFinite(jhSU) && jhSU > 0.5 && jhSU < 2.0 ? jhSU : 1.0;
+          const turbV=correctedV*safeJhSU*hhRoughScale*d0Corr;
+          // v19.0: Skip if turbV is NaN or negative (protects gross/net accumulation)
+          if (!isFinite(turbV) || turbV < 0) continue;
           const turbLut=turbLUTs[t]; // v14.0: per-WTG density LUT
           const turbGp=lutGet(turbLut,turbV).power;
           const wakeRatio=correctedV>0.5?wsp[t]/correctedV:1;
           const turbWsp=turbV*wakeRatio;
-          gross[t]+=turbGp*sec.freq*prob*8760;
-          net[t]+=lutGet(turbLut,turbWsp).power*sec.freq*prob*8760;
+          if (isFinite(turbGp)) gross[t]+=turbGp*sec.freq*prob*8760;
+          const netPwr=lutGet(turbLut,turbWsp).power;
+          if (isFinite(netPwr)) net[t]+=netPwr*sec.freq*prob*8760;
         }
       }
     }
   });
 
-  const grossG=Array.from(gross).reduce((s,e)=>s+e,0)/1e6,netWake=Array.from(net).reduce((s,e)=>s+e,0)/1e6;
+  // v19.0: NaN guard for totals
+  let grossG=Array.from(gross).reduce((s,e)=>s+(isFinite(e)?e:0),0)/1e6;
+  let netWake=Array.from(net).reduce((s,e)=>s+(isFinite(e)?e:0),0)/1e6;
   // v10.0: Apply empirical calibration — roughness and wake corrections
   let calNetWake = netWake;
   let calRoughRC = 1;
@@ -3149,16 +3184,10 @@ function processLayoutText(text,fileName){
 }
 function autoCenterMap(){
   if(!S.turbines.length||!leafMap)return;
-  // v19.0: Use fitBounds for proper zoom-to-fit instead of fixed zoom 11
-  if(S.turbines.length>1){
-    const bounds=L.latLngBounds(S.turbines.map(t=>[t.lat,t.lon]));
-    leafMap.fitBounds(bounds,{padding:[40,40],maxZoom:15});
-  }else{
-    const c=getSiteCenter();
-    leafMap.setView([c.lat,c.lon],14);
-  }
-  // Sync all coordinate fields from site center
+  // v19.0: fitBounds is now handled by updateMarkers() which draws extent circle + convex hull
+  // Just sync coordinates and invalidate map
   syncSiteCoordinates();
+  setTimeout(()=>{if(leafMap)leafMap.invalidateSize();},300);
   const c=getSiteCenter();
   log(`Map centered on layout: ${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`,'i');
 }
@@ -6451,18 +6480,54 @@ function refreshTable(){
 
 function updateMarkers(){
   if(!leafMap)return;
-  // Remove old markers
+  // Remove old markers and wind farm extent layer
   if(S.markers)S.markers.forEach(m=>m.remove());
   S.markers=[];
+  if(S.wfExtentLayer){S.wfExtentLayer.remove();S.wfExtentLayer=null;}
+  if(S.wfExtentCircle){S.wfExtentCircle.remove();S.wfExtentCircle=null;}
+  // v19.0: Use larger, highly visible markers with contrasting border
   S.turbines.forEach((t,i)=>{
-    const m=L.circleMarker([t.lat,t.lon],{radius:5,color:'#00d68f',fillColor:'#00d68f',fillOpacity:.8,weight:1}).addTo(leafMap);
+    // Outer glow ring for visibility
+    const glow=L.circleMarker([t.lat,t.lon],{radius:10,color:'#00d68f',fillColor:'#00d68f',fillOpacity:.15,weight:0}).addTo(leafMap);
+    // Solid marker
+    const m=L.circleMarker([t.lat,t.lon],{radius:6,color:'#fff',fillColor:'#00d68f',fillOpacity:.9,weight:2}).addTo(leafMap);
     m.bindTooltip('T'+(i+1)+' HH:'+t.hh+'m ('+t.lat.toFixed(4)+', '+t.lon.toFixed(4)+')');
-    S.markers.push(m);
+    S.markers.push(glow,m);
   });
-  if(S.turbines.length>1){
+  // v19.0: Draw wind farm extent — 10km radius circle + convex hull boundary
+  if(S.turbines.length>=2){
+    const clat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
+    const clon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
+    // 10km radius circle (= 20km diameter extent)
+    S.wfExtentCircle=L.circle([clat,clon],{radius:10000,color:'#00d68f',fillColor:'#00d68f',fillOpacity:.04,weight:1.5,dashArray:'8,4'}).addTo(leafMap);
+    // Convex hull of turbine positions for boundary visualization
+    const hullPoints=convexHull(S.turbines.map(t=>[t.lat,t.lon]));
+    if(hullPoints.length>=3){
+      S.wfExtentLayer=L.polygon(hullPoints,{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.06,dashArray:'5,3'}).addTo(leafMap);
+    }
+    // Zoom to ~20km extent around wind farm
     const bounds=L.latLngBounds(S.turbines.map(t=>[t.lat,t.lon]));
-    leafMap.fitBounds(bounds,{padding:[30,30]});
+    leafMap.fitBounds(bounds,{padding:[60,60],maxZoom:14});
+  }else if(S.turbines.length===1){
+    // Single turbine — zoom to 10km radius view (zoom ~13)
+    leafMap.setView([S.turbines[0].lat,S.turbines[0].lon],13);
   }
+  // v19.0: Ensure map re-renders properly
+  setTimeout(()=>{if(leafMap)leafMap.invalidateSize();},200);
+}
+
+// v19.0: Convex hull algorithm for wind farm boundary visualization
+function convexHull(points){
+  if(points.length<3)return points;
+  const pts=points.map(p=>({lat:p[0],lon:p[1]}));
+  pts.sort((a,b)=>a.lat-b.lat||a.lon-b.lon);
+  const cross=(o,a,b)=>(a.lat-o.lat)*(b.lon-o.lon)-(a.lon-o.lon)*(b.lat-o.lat);
+  const lower=[];
+  for(const p of pts){while(lower.length>=2&&cross(lower[lower.length-2],lower[lower.length-1],p)<=0)lower.pop();lower.push(p);}
+  const upper=[];
+  for(let i=pts.length-1;i>=0;i--){const p=pts[i];while(upper.length>=2&&cross(upper[upper.length-2],upper[upper.length-1],p)<=0)upper.pop();upper.push(p);}
+  upper.pop();lower.pop();
+  return lower.concat(upper).map(p=>[p.lat,p.lon]);
 }
 
 function generateGrid(){
