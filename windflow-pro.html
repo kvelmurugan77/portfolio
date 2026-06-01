@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 21.1</title>
+<title>WindFlow Pro 21.2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 21.1</span></div><div class="brand-sub">JH Terrain · Hourly Stability · Auto Roughness Rose · Canopy d0 · Data Export: .grd .map .lib .tab OWC WRG KML · WAsP-Weibull · ERA5T rho</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 21.2</span></div><div class="brand-sub">SRTM DEM · CORINE · ESA CCI · NEWA · NREL · JH Terrain · Hourly Stability · Auto Roughness Rose · Canopy d0 · Data Export: .grd .map .lib .tab OWC WRG KML · WAsP-Weibull · ERA5T rho</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -190,8 +190,10 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 4.0</div><div class="ds-desc">Global Wind Atlas · Free · 250m · WAsP .lib + WS map</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_merra2"><div class="ds-name">MERRA-2</div><div class="ds-desc">NASA POWER API · Free · 1980→present</div><button class="btn btn-sm btn-ghost" onclick="downloadMERRA2()">⬇ Download</button><div id="merra2Status" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_ncep"><div class="ds-name">NCEP/NCAR</div><div class="ds-desc">Reanalysis · Free · 1948→present</div><button class="btn btn-sm btn-ghost" onclick="downloadNCEP()">⬇ Download</button><div id="ncepStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_newa"><div class="ds-name">NEWA</div><div class="ds-desc">New European Wind Atlas · Free · 200m · EU+surroundings</div><button class="btn btn-sm btn-ghost" onclick="downloadNEWA()">⬇ Download</button><div id="newaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit</div><div class="ds-desc">USA only · Free API key · developer.nrel.gov</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key" style="font-size:.6rem"></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
         </div>
-        <div class="alert alert-info" style="font-size:.62rem;margin-top:.5rem">Country-specific: NEWA (EU) · NREL Wind (USA) · BARRA2 (AU) · CSIR (ZA) · INMET (BR) · CMA (CN)</div>
+        <div class="alert alert-info" style="font-size:.62rem;margin-top:.5rem">Country-specific: NEWA (EU) · NREL Wind (USA) · BARRA2 (AU) · CSIR (ZA) · INMET (BR) · CMA (CN) · SARAN (IN)</div>
       </div>
       <div id="e5out" style="display:none"><div class="card"><div class="card-title sky">ERA5 Results</div>
         <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="e5WS">—</div><div class="metric-label">Mean WS m/s</div></div><div class="metric-item"><div class="metric-val sky" id="e5WA">—</div><div class="metric-label">Weibull A</div></div><div class="metric-item"><div class="metric-val gold" id="e5WK">—</div><div class="metric-label">Weibull k</div></div><div class="metric-item"><div class="metric-val sky" id="e5PD">—</div><div class="metric-label">Power W/m²</div></div><div class="metric-item"><div class="metric-val" id="e5RC">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val gold" id="e5EL">—</div><div class="metric-label">Elevation m</div></div></div>
@@ -224,9 +226,11 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
     </div>
     <div>
       <div class="card"><div class="card-title green">Download Terrain</div>
-        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="terrR" type="number" value="10" min="2" max="50"></div><div class="fg"><label class="fl">Grid</label><select class="fs" id="terrG"><option value="20" selected>20×20</option><option value="30">30×30</option><option value="40">40×40</option></select></div></div>
+        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Data Source</label><select class="fs" id="terrSource" onchange="onTerrSourceChange()"><option value="openmeteo" selected>Open-Meteo (current)</option><option value="srtm">SRTM 30m (OpenTopography)</option></select></div><div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="terrR" type="number" value="10" min="2" max="50"></div></div>
+        <div id="srtmOpts" style="display:none"><div class="fg" style="margin-top:.4rem"><label class="fl">OpenTopography API Key</label><input class="fi" id="otApiKey" placeholder="Free key at opentopography.org" style="font-size:.65rem"><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">Get free API key: <a href="https://opentopography.org" target="_blank" style="color:var(--sky)">opentopography.org</a></div></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Grid</label><select class="fs" id="terrG"><option value="20" selected>20×20</option><option value="30">30×30</option><option value="40">40×40</option><option value="50">50×50</option><option value="60">60×60</option><option value="80">80×80</option><option value="100">100×100</option></select></div><div class="fg"><label class="fl">Contour Int</label><select class="fs" id="terrCI"><option value="auto" selected>Auto</option><option value="5">5m</option><option value="10">10m</option><option value="20">20m</option></select></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Lat <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="terrLa" type="number" value="55.500" step="0.001" readonly></div><div class="fg"><label class="fl">Lon <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="terrLo" type="number" value="7.900" step="0.001" readonly></div></div>
-        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Contour Int</label><select class="fs" id="terrCI"><option value="auto" selected>Auto</option><option value="5">5m</option><option value="10">10m</option><option value="20">20m</option></select></div><div class="fg"><label class="fl">Opacity</label><input class="fi" id="terrOp" type="range" min="0" max="1" step="0.05" value="0.5" oninput="redrawCanvas()"></div></div>
+        <div class="fg" style="margin-top:.4rem"><label class="fl">Opacity</label><input class="fi" id="terrOp" type="range" min="0" max="1" step="0.05" value="0.5" oninput="redrawCanvas()"></div>
         <button class="btn btn-primary" style="margin-top:.5rem;width:100%" onclick="downloadTerrain()">⬇ Download Terrain Grid</button>
         <div style="display:flex;gap:.4rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" id="btnCont" style="opacity:1" onclick="toggleCont()">📐 Contours</button><button class="btn btn-sm btn-ghost" id="btnHeat" style="opacity:1" onclick="toggleHeat()">🗺 Heatmap</button></div>
         <div class="progress"><div class="progress-bar" id="terrPpb" style="width:0"></div></div><div id="terrPpt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div>
@@ -234,10 +238,19 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <button class="btn btn-sm btn-ghost" onclick="exportTerrainGridCSV()">📁 Elevation CSV</button>
           <button class="btn btn-sm btn-ghost" onclick="exportTerrainGRD()">📁 WAsP .grd</button>
           <button class="btn btn-sm btn-ghost" onclick="exportContourKML()">📁 Contour KML</button>
+          <button class="btn btn-sm btn-ghost" id="srtmGeotiffBtn" style="display:none" onclick="downloadSRTMGeoTIFF()">📁 SRTM GeoTIFF</button>
         </div>
       </div>
+      <div class="card"><div class="card-title sky">Terrain Profile Along Wind Direction</div>
+        <div class="canvas-wrap"><canvas id="terrainProfileCanvas" width="560" height="200"></canvas></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wind Dir (°)</label><input class="fi" id="terrProfDir" type="number" value="270" min="0" max="359" step="1" oninput="drawTerrainProfile()"></div><div class="fg"><label class="fl">&nbsp;</label><button class="btn btn-sm btn-ghost" style="width:100%" onclick="drawTerrainProfile()">↻ Refresh</button></div></div>
+      </div>
       <div class="card"><div class="card-title gold">Roughness Data</div>
-        <button class="btn btn-primary" style="width:100%;margin-bottom:.3rem" onclick="downloadRoughness()">⬇ Generate Roughness Map</button>
+        <div class="fg"><label class="fl">Data Source</label><select class="fs" id="roughSource" onchange="onRoughSourceChange()"><option value="osm" selected>OSM (current)</option><option value="corine">CORINE 2018 (EU)</option><option value="esa">ESA CCI (Global)</option><option value="upload">Upload Classification</option></select></div>
+        <div id="corineOpts" style="display:none;margin-top:.3rem"><button class="btn btn-sm btn-ghost" style="width:100%" onclick="downloadCORINE()">🌍 Download CORINE 2018 WFS</button><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">Copernicus Land Monitoring Service · EU coverage only</div></div>
+        <div id="esaOpts" style="display:none;margin-top:.3rem"><button class="btn btn-sm btn-ghost" style="width:100%" onclick="downloadESA_CCI()">🌍 Download ESA CCI Land Cover</button><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">ESA Climate Change Initiative · Global 300m · Samples grid</div></div>
+        <div id="uploadOpts" style="display:none;margin-top:.3rem"><div class="upload-zone" style="padding:.6rem"><input type="file" accept=".csv" onchange="handleLandCoverUpload(event)"><span class="upload-text" style="font-size:.65rem">Upload Land Cover CSV (lat,lon,code)</span><span class="upload-hint">CORINE/ESA codes auto-mapped to z₀</span></div></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:.5rem;margin-bottom:.3rem" onclick="downloadRoughness()">⬇ Generate Roughness Map (OSM)</button>
         <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.3rem">
           <button class="btn btn-sm btn-ghost" onclick="exportRoughnessCSV()">📁 Zones CSV</button>
           <button class="btn btn-sm btn-ghost" onclick="exportRoughnessRoseCSV()">📁 Rose CSV</button>
@@ -354,6 +367,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <button class="btn btn-ghost" style="width:100%" onclick="exportTerrainGridCSV()">⛰ Elevation Grid CSV</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportTerrainGRD()">⛰ WAsP .grd Format</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportContourKML()">⛰ Contour KML</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="downloadSRTMGeoTIFF()">⛰ SRTM 30m GeoTIFF (OpenTopography)</button>
         </div>
       </div>
       <div class="card"><div class="card-title gold">Roughness Data Downloads</div>
@@ -362,6 +376,8 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <button class="btn btn-ghost" style="width:100%" onclick="exportRoughnessRoseCSV()">🗺 Roughness Rose CSV</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportRoughnessMap()">🗺 WAsP .map Format</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportRoughnessGridCSV()">🗺 Roughness Grid CSV</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="downloadCORINE()">🗺 CORINE 2018 Land Cover (WFS)</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="downloadESA_CCI()">🗺 ESA CCI Land Cover (Global)</button>
         </div>
       </div>
       <div class="card"><div class="card-title green">Wind Data Downloads</div>
@@ -372,6 +388,17 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <button class="btn btn-ghost" style="width:100%" onclick="exportWindLib()">💨 WAsP .lib (Library)</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportWRG()">💨 WRG Wind Resource Grid</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportWindClimateSummary()">💨 Wind Climate Summary</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-title gold">Openwind Data Package</div>
+        <div class="alert alert-info" style="font-size:.58rem;margin-bottom:.5rem">Export all terrain + roughness + wind data for Openwind-compatible workflows</div>
+        <div style="display:flex;flex-direction:column;gap:.3rem">
+          <button class="btn btn-gold" style="width:100%" onclick="exportOpenwindPackage()">📦 Export Full Data Package</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="downloadSRTMGeoTIFF()">⛰ SRTM GeoTIFF Download</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://land.copernicus.eu/pan-european/corine-land-cover/clc2018','_blank')">🗺 CORINE 2018 Data (External)</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://maps.elie.ucl.ac.be/CCI/viewer/','_blank')">🗺 ESA CCI Land Cover (External)</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://map.neweuropeanwindatlas.eu/','_blank')">💨 NEWA Wind Atlas (External)</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://www.nrel.gov/grid/wind-toolkit.html','_blank')">💨 NREL Wind Toolkit (External)</button>
         </div>
       </div>
       <div class="card"><div class="card-title sky">Save / Load Project</div>
@@ -1574,6 +1601,9 @@ async function downloadTerrainForArea(clat,clon,radKm,ng,ciSel){
 }
 
 async function downloadTerrain(){
+  // Check if SRTM source is selected
+  const src=$('terrSource')?.value||'openmeteo';
+  if(src==='srtm'){await downloadSRTMTerrain();return;}
   const c=getSiteCenter();
   let clat=c.lat,clon=c.lon;
   const radKm=parseFloat($('terrR').value)||10;
@@ -1670,8 +1700,70 @@ async function verifyTurbineElevations(){
 }
 
 function drawTerrainProfile(){
-  const T=S.terrain;if(!T)return;const{grid,ny}=T;const row=grid[Math.floor(ny/2)];
-  mkChart('terrChart','line',{labels:row.map((_,j)=>(T.lon0+j*(T.lon1-T.lon0)/(T.nx-1)).toFixed(3)),datasets:[{data:row,borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,.1)',borderWidth:1.5,pointRadius:0,tension:.3,label:'Mid-row profile'}]},{y:{title:{display:true,text:'Elev(m)',color:'#8b949e',font:{size:8}}}});
+  const T=S.terrain;if(!T||!T.grid)return;
+  // Enhanced: draw terrain profile along prevailing wind direction on terrainProfileCanvas
+  const canvas=$('terrainProfileCanvas');
+  if(canvas){
+    const ctx=canvas.getContext('2d');
+    const wrap=canvas.parentElement;
+    if(wrap&&wrap.clientWidth>0){canvas.width=Math.max(wrap.clientWidth,200);canvas.height=Math.max(Math.round(wrap.clientWidth*200/560),100);}
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);ctx.fillStyle='#0d1e30';ctx.fillRect(0,0,W,H);
+    const prevDir=parseFloat($('terrProfDir')?.value||$('prevWD')?.value||270);
+    const dirRad=prevDir*Math.PI/180;
+    const cLat=(T.lat0+T.lat1)/2,cLon=(T.lon0+T.lon1)/2;
+    const maxDist=Math.min(T.lat1-T.lat0,T.lon1-T.lon0)*111320/2;
+    const nPts=100;
+    const distances=[],elevations=[];
+    for(let i=-nPts/2;i<=nPts/2;i++){
+      const dist=i*maxDist/(nPts/2);
+      const dLat=dist*Math.cos(dirRad)/111320;
+      const dLon=dist*Math.sin(dirRad)/(111320*Math.cos(cLat*Math.PI/180));
+      const lat=cLat+dLat,lon=cLon+dLon;
+      const elev=getTerrainElev(lat,lon);
+      distances.push(dist/1000);elevations.push(elev||0);
+    }
+    const minE=Math.min(...elevations)-10,maxE=Math.max(...elevations)+10;
+    const minD=distances[0],maxD=distances[distances.length-1];
+    const eRange=Math.max(maxE-minE,1),dRange=Math.max(maxD-minD,1);
+    // Grid lines
+    ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=1;
+    for(let e=Math.ceil(minE/50)*50;e<=maxE;e+=50){
+      const y=H-(e-minE)/eRange*H;
+      ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='9px IBM Plex Mono';
+      ctx.fillText(e.toFixed(0)+'m',2,y-2);
+    }
+    // Profile fill
+    ctx.beginPath();ctx.moveTo(0,H);
+    distances.forEach((d,i)=>{
+      const x=(d-minD)/dRange*W;const y=H-(elevations[i]-minE)/eRange*H;
+      ctx.lineTo(x,y);
+    });
+    ctx.lineTo(W,H);ctx.closePath();
+    const grad=ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0,'rgba(0,214,143,0.3)');grad.addColorStop(1,'rgba(0,214,143,0.05)');
+    ctx.fillStyle=grad;ctx.fill();
+    // Profile line
+    ctx.beginPath();
+    distances.forEach((d,i)=>{
+      const x=(d-minD)/dRange*W;const y=H-(elevations[i]-minE)/eRange*H;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle='#00d68f';ctx.lineWidth=2;ctx.stroke();
+    // Mast position marker
+    const mastX=(0-minD)/dRange*W;
+    ctx.beginPath();ctx.moveTo(mastX,0);ctx.lineTo(mastX,H);
+    ctx.strokeStyle='rgba(245,166,35,0.5)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
+    // Labels
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='10px IBM Plex Mono';
+    ctx.fillText(`Wind Dir: ${prevDir}°`,4,12);
+    ctx.fillText(`Elev: ${Math.min(...elevations).toFixed(0)}–${Math.max(...elevations).toFixed(0)}m`,4,24);
+    const srcLabel=T.source==='SRTM30'?'SRTM 30m':'Open-Meteo';
+    ctx.fillText(`Source: ${srcLabel}`,4,36);
+  }
+  // Also draw on hidden terrChart for backward compat
+  if(T.grid&&T.ny){const row=T.grid[Math.floor(T.ny/2)];mkChart('terrChart','line',{labels:row.map((_,j)=>(T.lon0+j*(T.lon1-T.lon0)/(T.nx-1)).toFixed(3)),datasets:[{data:row,borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,.1)',borderWidth:1.5,pointRadius:0,tension:.3,label:'Mid-row profile'}]},{y:{title:{display:true,text:'Elev(m)',color:'#8b949e',font:{size:8}}}});}
 }
 
 // ── TERRAIN CANVAS (Step 4 heatmap + contours) ──
@@ -2986,7 +3078,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 21.1 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 21.2 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -3027,7 +3119,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 21.1 — Data Export: .grd .map .lib .tab OWC WRG KML · ERA5T Density · Per-WTG ρ · Humidity Correction · Hourly Stability · Auto Roughness Rose · Canopy d0 · WAsP-Aligned · OWC→GWC→SWC · IBL · Jackson-Hunt Terrain · BZ Orographic · Wake Direction Variability · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · RIX · IEC 61400-12-1</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 21.2 — SRTM DEM · CORINE · ESA CCI · NEWA · NREL · Data Export: .grd .map .lib .tab OWC WRG KML · ERA5T Density · Per-WTG ρ · Humidity Correction · Hourly Stability · Auto Roughness Rose · Canopy d0 · WAsP-Aligned · OWC→GWC→SWC · IBL · Jackson-Hunt Terrain · BZ Orographic · Wake Direction Variability · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · RIX · IEC 61400-12-1</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -3273,7 +3365,7 @@ initMap();calcDensity();
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 21.1 ready. Data Export: .grd .map .lib .tab OWC WRG KML · JH Terrain · ERA5T rho · Auto Roughness Rose · GDL Stability','i');
+log('WindFlow Pro 21.2 ready. SRTM DEM · CORINE · ESA CCI · NEWA · NREL · Data Export: .grd .map .lib .tab OWC WRG KML · JH Terrain · ERA5T rho · Auto Roughness Rose · GDL Stability','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 
@@ -6546,7 +6638,7 @@ function exportWaspProject(){
   // Build WAsP .wwh file (WAsP Workspace Hierarchical)
   // This is a simplified export that WAsP can import
   let lines=[];
-  lines.push(`WAsP Workspace File - Exported from WindFlow Pro 21.1`);
+  lines.push(`WAsP Workspace File - Exported from WindFlow Pro 21.2`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
@@ -7134,4 +7226,388 @@ function exportWindClimateSummary(){
   dlFile(csv,'wind_climate_summary.csv','text/csv');
   log('Wind climate summary CSV exported','i');
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// WINDFLOW PRO 21.2 — SRTM DEM · CORINE · ESA CCI · NEWA · NREL
+// ═══════════════════════════════════════════════════════════════════
+
+// ── UI Toggle Functions ──
+function onTerrSourceChange(){
+  const src=$('terrSource')?.value||'openmeteo';
+  const srtmOpts=$('srtmOpts');const geotiffBtn=$('srtmGeotiffBtn');
+  if(srtmOpts)srtmOpts.style.display=src==='srtm'?'block':'none';
+  if(geotiffBtn)geotiffBtn.style.display=src==='srtm'?'inline-flex':'none';
+}
+function onRoughSourceChange(){
+  const src=$('roughSource')?.value||'osm';
+  ['corineOpts','esaOpts','uploadOpts'].forEach(id=>{const el=$(id);if(el)el.style.display='none';});
+  if(src==='corine'){const el=$('corineOpts');if(el)el.style.display='block';}
+  else if(src==='esa'){const el=$('esaOpts');if(el)el.style.display='block';}
+  else if(src==='upload'){const el=$('uploadOpts');if(el)el.style.display='block';}
+}
+
+// ── CORINE z₀ Lookup Table ──
+const CORINE_Z0={111:1.5,112:0.8,121:0.5,122:0.4,123:0.3,124:0.5,131:0.002,132:0.002,133:0.03,141:0.1,142:0.4,211:0.03,212:0.03,213:0.05,221:0.05,222:0.1,223:0.1,231:0.03,241:0.1,242:0.1,243:0.2,244:0.2,311:1.5,312:1.5,313:1.5,321:0.03,322:0.05,323:0.1,324:0.5,331:0.002,332:0.002,333:0.002,334:0.002,335:0.002,411:0.03,412:0.03,421:0.001,422:0.001,423:0.001,511:0.0002,512:0.0002,521:0.0002,522:0.0002,523:0.0002};
+const CORINE_NAMES={111:'Urban continuous',112:'Urban discontinuous',121:'Industrial',122:'Road/rail',123:'Ports',124:'Airports',131:'Mineral extraction',132:'Dump sites',133:'Construction',141:'Green urban',142:'Sport/leisure',211:'Non-irrigated arable',212:'Permanently irrigated',213:'Rice fields',221:'Vineyards',222:'Fruit trees',223:'Olive groves',231:'Pastures',241:'Annual crops',242:'Complex cultivation',243:'Agriculture+natural',244:'Agro-forestry',311:'Broad-leaved forest',312:'Coniferous forest',313:'Mixed forest',321:'Natural grassland',322:'Moors/heathland',323:'Sclerophyllous',324:'Transitional woodland-shrub',331:'Beaches/dunes/sand',332:'Bare rock',333:'Sparsely vegetated',334:'Burnt areas',335:'Glaciers/snow',411:'Inland marshes',412:'Peat bogs',421:'Salt marshes',422:'Salines',423:'Intertidal flats',511:'Water courses',512:'Water bodies',521:'Coastal lagoons',522:'Estuaries',523:'Sea/ocean'};
+
+// ── ESA CCI z₀ Lookup Table ──
+const ESA_Z0={0:0.2,10:0.03,11:0.03,12:0.1,20:0.03,30:0.1,40:0.2,50:0.03,60:0.03,61:0.03,62:0.2,70:1.5,71:1.5,72:1.5,80:1.5,81:1.5,82:1.5,90:0.5,100:0.5,110:0.2,120:0.05,121:0.05,122:0.05,130:0.03,140:0.1,150:0.002,151:0.002,152:0.002,153:0.002,160:0.002,170:0.002,180:0.03,190:0.8,200:0.002,201:0.002,202:0.002,210:0.0002,220:0.0002};
+
+// ── SRTM Terrain Download via OpenTopography API ──
+async function downloadSRTMTerrain(){
+  const c=getSiteCenter();
+  const radKm=parseFloat($('terrR').value)||10;
+  const apiKey=$('otApiKey')?.value||'';
+  if(!apiKey){alert('Enter OpenTopography API key (free at opentopography.org)');return;}
+  const dLat=radKm/111.32,dLon=radKm/(111.32*Math.cos(c.lat*Math.PI/180));
+  const south=(c.lat-dLat).toFixed(6),north=(c.lat+dLat).toFixed(6);
+  const west=(c.lon-dLon).toFixed(6),east=(c.lon+dLon).toFixed(6);
+  setProg('terrP',10,'Requesting SRTM 30m DEM from OpenTopography...');
+  try{
+    const url=`https://portal.opentopography.org/API/globaldem?demtype=SRTMGL30&south=${south}&north=${north}&west=${west}&east=${east}&outputFormat=AAIGrid&API_Key=${apiKey}`;
+    const r=await fetch(url);
+    if(!r.ok)throw new Error('HTTP '+r.status+': '+(r.statusText||'Check API key'));
+    const txt=await r.text();
+    setProg('terrP',40,'Parsing SRTM AAIGrid...');
+    // Parse AAIGrid (ESRI ASCII Grid) format
+    const lines=txt.trim().split('\n');
+    let ncols=0,nrows=0,xll=0,yll=0,cellsize=1,nodata=-9999;
+    for(let i=0;i<Math.min(10,lines.length);i++){
+      const parts=lines[i].trim().split(/\s+/);
+      const key=parts[0].toLowerCase();
+      if(key==='ncols')ncols=parseInt(parts[1]);
+      else if(key==='nrows')nrows=parseInt(parts[1]);
+      else if(key==='xllcorner'||key==='xllcenter')xll=parseFloat(parts[1]);
+      else if(key==='yllcorner'||key==='yllcenter')yll=parseFloat(parts[1]);
+      else if(key==='cellsize')cellsize=parseFloat(parts[1]);
+      else if(key==='nodata_value')nodata=parseFloat(parts[1]);
+    }
+    // Find where data actually starts (after header lines)
+    let headerLines=0;
+    for(let i=0;i<lines.length;i++){
+      const first=lines[i].trim().split(/\s+/)[0];
+      if(isNaN(parseFloat(first))||first.toLowerCase()==='ncols'||first.toLowerCase()==='nrows'||first.toLowerCase().startsWith('xll')||first.toLowerCase().startsWith('yll')||first.toLowerCase()==='cellsize'||first.toLowerCase().startsWith('nodata')){
+        headerLines=i+1;
+      }else break;
+    }
+    setProg('terrP',60,`Building ${ncols}×${nrows} grid...`);
+    // Build grid
+    const grid=[];
+    const allValues=[];
+    for(let i=0;i<nrows;i++){
+      grid[i]=[];
+      const rowLine=lines[headerLines+i];
+      if(!rowLine){for(let j=0;j<ncols;j++)grid[i][j]=0;continue;}
+      const vals=rowLine.trim().split(/\s+/).map(Number);
+      for(let j=0;j<ncols;j++){
+        const v=vals[j];
+        if(v!==nodata&&!isNaN(v)){grid[i][j]=v;allValues.push(v);}
+        else grid[i][j]=0;
+      }
+    }
+    if(!allValues.length){setProg('terrP',0,'No SRTM data received — check coordinates/API key');return;}
+    const minE=Math.min(...allValues),maxE=Math.max(...allValues);
+    const meanE=allValues.reduce((s,v)=>s+v,0)/allValues.length;
+    // Calculate lat/lon bounds from grid
+    const lat0=yll,lat1=yll+nrows*cellsize;
+    const lon0=xll,lon1=xll+ncols*cellsize;
+    const ciSel=$('terrCI').value;
+    let ci=ciSel==='auto'?autoCI(maxE-minE):parseFloat(ciSel);if(ci<1)ci=1;
+    const levels=[];for(let l=Math.ceil(minE/ci)*ci;l<=maxE;l+=ci)levels.push(l);
+    setProg('terrP',80,'Computing contours...');
+    const contours=marchingSquares(grid,lat0,lat1,lon0,lon1,nrows,ncols,levels);
+    S.contoursData=levels.map((lv,li)=>({segs:contours[lv]||[],col:elevCol(lv,minE,maxE),major:li%Math.max(1,Math.round(levels.length/6))===0}));
+    S.terrain={grid,lat0,lat1,lon0,lon1,ny:nrows,nx:ncols,minE,maxE,meanE,ci,levels,source:'SRTM30'};
+    setProg('terrP',95,'Rendering...');
+    redrawCanvas();
+    setProg('terrP',100,`SRTM: ${ncols}×${nrows} · ${minE.toFixed(0)}–${maxE.toFixed(0)}m · 30m res`);
+    $('siteElev').value=meanE.toFixed(0);calcDensity();
+    $('terrMin').textContent=minE.toFixed(0);$('terrMax').textContent=maxE.toFixed(0);
+    $('terrMn').textContent=meanE.toFixed(0);$('terrCI2').textContent=ci;
+    if(S.turbines.length){S.turbines.forEach(t=>{const el=getTerrainElev(t.lat,t.lon);if(el!==null)t.elev=el;});refreshTable();}
+    drawTerrainProfile();drawTerrainCanvas();drawRoughnessCanvas();
+    log(`SRTM terrain: ${ncols}×${nrows} pts, ${minE.toFixed(0)}–${maxE.toFixed(0)}m, 30m resolution`,'i');
+  }catch(e){setProg('terrP',0,'SRTM failed: '+e.message);log('SRTM terrain failed: '+e.message,'e');}
+}
+
+// ── CORINE Land Cover Download via Copernicus WFS ──
+async function downloadCORINE(){
+  const T=S.terrain;
+  if(!T){alert('Download terrain first to define area bounds');return;}
+  $('roughStat').textContent='Querying CORINE 2018 WFS...';
+  const bbox=`${T.lon0.toFixed(4)},${T.lat0.toFixed(4)},${T.lon1.toFixed(4)},${T.lat1.toFixed(4)}`;
+  try{
+    const url=`https://land.copernicus.eu/mts/wfs/CLC2018?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=CLC2018&OUTPUTFORMAT=application/json&BBOX=${bbox},EPSG:4326&COUNT=1000`;
+    const r=await fetch(url);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    const colMap={1:'#fca5a5',2:'#fde68a',3:'#86efac',4:'#fef08a',5:'#166534',6:'#50b43c',7:'#9ca3af',8:'#3b82f6',9:'#1e64c8'};
+    S.roughnessZones=[];
+    let featureCount=0;
+    (d.features||[]).forEach(f=>{
+      if(!f.geometry)return;
+      const code=parseInt(f.properties?.code||f.properties?.code_18||f.properties?.CLC_CODE||f.properties?.ITEM||0);
+      const z0=CORINE_Z0[code]||0.1;
+      let pts=[];
+      if(f.geometry.type==='Polygon'&&f.geometry.coordinates[0]){
+        pts=f.geometry.coordinates[0].map(c=>({lat:c[1],lon:c[0]}));
+      }else if(f.geometry.type==='MultiPolygon'&&f.geometry.coordinates[0]&&f.geometry.coordinates[0][0]){
+        pts=f.geometry.coordinates[0][0].map(c=>({lat:c[1],lon:c[0]}));
+      }
+      if(pts.length>=3){
+        S.roughnessZones.push({lu:`CORINE_${code}`,z0,col:colMap[Math.floor(code/100)]||'#e5e7eb',pts});
+        featureCount++;
+      }
+    });
+    $('roughStat').textContent=`CORINE: ${featureCount} features · z₀ mapped`;
+    redrawCanvas();drawRoughnessCanvas();log(`CORINE roughness: ${featureCount} features mapped to z₀`,'i');
+  }catch(e){
+    $('roughStat').textContent='CORINE WFS unavailable — try OSM or upload';
+    log('CORINE download failed: '+e.message+' — CORS or endpoint issue, try OSM instead','w');
+  }
+}
+
+// ── ESA CCI Land Cover Download via WMS GetFeatureInfo Sampling ──
+async function downloadESA_CCI(){
+  const T=S.terrain;
+  if(!T){alert('Download terrain first');return;}
+  $('roughStat').textContent='Sampling ESA CCI Land Cover...';
+  const nPts=20;
+  S.roughnessZones=[];
+  let sampled=0;
+  for(let i=0;i<nPts;i++){
+    for(let j=0;j<nPts;j++){
+      const lat=T.lat0+i*(T.lat1-T.lat0)/(nPts-1);
+      const lon=T.lon0+j*(T.lon1-T.lon0)/(nPts-1);
+      try{
+        const url=`https://maps.elie.ucl.ac.be/CCI/viewer/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&QUERY_LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&SRS=EPSG:4326&INFO_FORMAT=application/json&WIDTH=1&HEIGHT=1&BBOX=${lon},${lat},${lon+0.001},${lat+0.001}&I=0&J=0`;
+        const r=await fetch(url);
+        if(r.ok){
+          const d=await r.json();
+          const code=parseInt(d?.features?.[0]?.properties?.NB_LAB||d?.features?.[0]?.properties?.value||d?.features?.[0]?.properties?.GRAY_INDEX||0);
+          const z0=ESA_Z0[code]||0.1;
+          const dLat2=(T.lat1-T.lat0)/nPts/2;
+          const dLon2=(T.lon1-T.lon0)/nPts/2;
+          S.roughnessZones.push({
+            lu:`ESA_${code}`,z0,
+            col:z0>1?'#166534':z0>0.05?'#50b43c':z0>0.005?'#86efac':z0>0.001?'#fde68a':'#3b82f6',
+            pts:[{lat:lat-dLat2,lon:lon-dLon2},{lat:lat-dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon-dLon2}]
+          });
+          sampled++;
+        }
+      }catch(e){}
+    }
+    setProg('osm',i/nPts*100,`ESA sampling ${i+1}/${nPts}...`);
+  }
+  $('roughStat').textContent=`ESA CCI: ${sampled} samples · z₀ mapped`;
+  redrawCanvas();drawRoughnessCanvas();log(`ESA CCI roughness: ${sampled} samples mapped to z₀`,'i');
+}
+
+// ── NEWA (New European Wind Atlas) Download ──
+async function downloadNEWA(){
+  const lat=parseFloat($('e5La').value);
+  const lon=parseFloat($('e5Lo').value);
+  const hh=parseFloat($('e5H').value)||100;
+  $('newaStatus').textContent='Querying NEWA...';
+  try{
+    const url=`https://map.neweuropeanwindatlas.eu/api/meteo/wind-climate?lat=${lat.toFixed(2)}&lon=${lon.toFixed(2)}&height=${hh}`;
+    const r=await fetch(url);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    if(d.sector_wise_statistics){
+      const nSectors=d.sector_wise_statistics.length||12;
+      const speeds=[],dirs=[],times=[];
+      const totalHours=8760;
+      d.sector_wise_statistics.forEach((sec,i)=>{
+        const dir=(i*360/nSectors+360/nSectors/2)%360;
+        const nHours=Math.round(sec.frequency*totalHours);
+        const ws=sec.A||sec.mean_wind_speed||5;
+        for(let h=0;h<nHours;h++){
+          const u=Math.random();
+          const v=ws*Math.pow(-Math.log(1-u*(1-Math.exp(-1))),1/(sec.k||2));
+          speeds.push(Math.max(0,Math.min(50,v)));
+          dirs.push(dir+Math.random()*360/nSectors-360/nSectors/2);
+          times.push(new Date(2020,0,1,h*3600000).toISOString());
+        }
+      });
+      S.wind={speeds,dirs,times};
+      const meanWS=speeds.reduce((s,v)=>s+v,0)/speeds.length;
+      const wb=weibullFit(speeds);
+      $('e5WS').textContent=meanWS.toFixed(2);
+      $('e5WA').textContent=wb.A.toFixed(2);
+      $('e5WK').textContent=wb.k.toFixed(2);
+      $('e5RC').textContent=speeds.length;
+      $('e5out').style.display='block';
+      $('newaStatus').textContent=`NEWA: ${speeds.length} hrs, mean=${meanWS.toFixed(1)} m/s`;
+      log(`NEWA wind data: ${speeds.length} hours, mean=${meanWS.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
+    }else{
+      throw new Error('Unexpected NEWA response format');
+    }
+  }catch(e){
+    $('newaStatus').textContent='NEWA unavailable — use ERA5';
+    log('NEWA download failed: '+e.message+' — try ERA5 instead','w');
+  }
+}
+
+// ── NREL Wind Toolkit Download (USA only) ──
+async function downloadNREL(){
+  const lat=parseFloat($('e5La').value);
+  const lon=parseFloat($('e5Lo').value);
+  const apiKey=$('nrelApiKey')?.value||'';
+  if(!apiKey){alert('Enter NREL API key (free at developer.nrel.gov)');return;}
+  $('nrelStatus').textContent='Querying NREL Wind Toolkit...';
+  try{
+    const year=2014;
+    const url=`https://developer.nrel.gov/api/wind-toolkit/v2/wind/wtk-srw-download?year=${year}&lat=${lat.toFixed(2)}&lon=${lon.toFixed(2)}&hubheight=100&api_key=${apiKey}`;
+    const r=await fetch(url);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    if(d.outputs&&d.outputs.length){
+      const speeds=d.outputs.map(o=>o.wind_speed_at_100m||o.wind_speed||0);
+      const dirs=d.outputs.map(o=>o.wind_direction_at_100m||o.wind_direction||0);
+      const times=d.outputs.map((o,i)=>new Date(year,0,1,i*3600000).toISOString());
+      S.wind={speeds,dirs,times};
+      const meanWS=speeds.reduce((s,v)=>s+v,0)/speeds.length;
+      const wb=weibullFit(speeds);
+      $('e5WS').textContent=meanWS.toFixed(2);
+      $('e5WA').textContent=wb.A.toFixed(2);
+      $('e5WK').textContent=wb.k.toFixed(2);
+      $('e5RC').textContent=speeds.length;
+      $('e5out').style.display='block';
+      $('nrelStatus').textContent=`NREL: ${speeds.length} hrs, mean=${meanWS.toFixed(1)} m/s`;
+      log(`NREL wind data: ${speeds.length} hours, mean=${meanWS.toFixed(2)} m/s`,'i');
+    }else{throw new Error('No data in NREL response');}
+  }catch(e){
+    $('nrelStatus').textContent='NREL unavailable — check API key/location';
+    log('NREL download failed: '+e.message,'w');
+  }
+}
+
+// ── Upload Land Cover Classification CSV ──
+function handleLandCoverUpload(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const lines=e.target.result.trim().split('\n');
+      const header=lines[0].toLowerCase();
+      const hasHeader=header.includes('lat')||header.includes('code');
+      const startIdx=hasHeader?1:0;
+      S.roughnessZones=[];
+      const T=S.terrain;
+      if(!T){alert('Download terrain first to define area bounds');return;}
+      const dLat=(T.lat1-T.lat0)/20/2;
+      const dLon=(T.lon1-T.lon0)/20/2;
+      for(let i=startIdx;i<lines.length;i++){
+        const cols=lines[i].split(',');
+        if(cols.length<3)continue;
+        const lat=parseFloat(cols[0]),lon=parseFloat(cols[1]),code=parseInt(cols[2]);
+        if(isNaN(lat)||isNaN(lon)||isNaN(code))continue;
+        const z0=CORINE_Z0[code]!==undefined?CORINE_Z0[code]:(ESA_Z0[code]!==undefined?ESA_Z0[code]:0.1);
+        S.roughnessZones.push({
+          lu:`LC_${code}`,z0,
+          col:z0>1?'#166534':z0>0.05?'#50b43c':z0>0.005?'#86efac':z0>0.001?'#fde68a':'#3b82f6',
+          pts:[{lat:lat-dLat,lon:lon-dLon},{lat:lat-dLat,lon:lon+dLon},{lat:lat+dLat,lon:lon+dLon},{lat:lat+dLat,lon:lon-dLon}]
+        });
+      }
+      $('roughStat').textContent=`Upload: ${S.roughnessZones.length} zones mapped to z₀`;
+      redrawCanvas();drawRoughnessCanvas();log(`Land cover upload: ${S.roughnessZones.length} zones mapped to z₀`,'i');
+    }catch(e){alert('Error parsing file: '+e.message);}
+  };
+  reader.readAsText(file);
+}
+
+// ── SRTM GeoTIFF Download Link ──
+function downloadSRTMGeoTIFF(){
+  const c=getSiteCenter();
+  const radKm=parseFloat($('terrR').value)||10;
+  const apiKey=$('otApiKey')?.value||'';
+  if(!apiKey){alert('Enter OpenTopography API key first (in Step 4 Terrain)');return;}
+  const dLat=radKm/111.32,dLon=radKm/(111.32*Math.cos(c.lat*Math.PI/180));
+  const south=(c.lat-dLat).toFixed(6),north=(c.lat+dLat).toFixed(6);
+  const west=(c.lon-dLon).toFixed(6),east=(c.lon+dLon).toFixed(6);
+  const url=`https://portal.opentopography.org/API/globaldem?demtype=SRTMGL30&south=${south}&north=${north}&west=${west}&east=${east}&outputFormat=GTiff&API_Key=${apiKey}`;
+  window.open(url,'_blank');
+  log('SRTM GeoTIFF download link opened','i');
+}
+
+// ── Export Openwind-compatible Data Package ──
+function exportOpenwindPackage(){
+  if(!S.terrain&&!S.wind){alert('Download terrain and wind data first');return;}
+  let pkg='=== WindFlow Pro 21.2 Openwind Data Package ===\n';
+  pkg+=`Project: ${$('projName')?.value||'Project'}\n`;
+  pkg+=`Date: ${new Date().toISOString()}\n\n`;
+  // Site info
+  const c=getSiteCenter();
+  pkg+=`=== SITE ===\n`;
+  pkg+=`Center Lat: ${c.lat.toFixed(6)}\nCenter Lon: ${c.lon.toFixed(6)}\n`;
+  pkg+=`Elevation: ${$('siteElev')?.value||0} m\n`;
+  pkg+=`Roughness z0: ${$('z0val')?.value||0.03} m\n\n`;
+  // Terrain info
+  if(S.terrain){
+    const T=S.terrain;
+    pkg+=`=== TERRAIN ===\n`;
+    pkg+=`Source: ${T.source==='SRTM30'?'SRTM 30m (OpenTopography)':'Open-Meteo'}\n`;
+    pkg+=`Grid: ${T.nx}×${T.ny}\n`;
+    pkg+=`Bounds: ${T.lat0.toFixed(4)},${T.lon0.toFixed(4)} to ${T.lat1.toFixed(4)},${T.lon1.toFixed(4)}\n`;
+    pkg+=`Elevation: ${T.minE.toFixed(0)}–${T.maxE.toFixed(0)}m (mean ${T.meanE.toFixed(0)}m)\n`;
+    pkg+=`Contour Interval: ${T.ci}m\n`;
+    pkg+=`Levels: ${T.levels.length}\n\n`;
+    // Elevation grid
+    pkg+=`=== ELEVATION GRID (lat,lon,elev_m) ===\n`;
+    for(let i=0;i<T.ny;i++){
+      for(let j=0;j<T.nx;j++){
+        const lat=T.lat0+i*(T.lat1-T.lat0)/(T.ny-1);
+        const lon=T.lon0+j*(T.lon1-T.lon0)/(T.nx-1);
+        pkg+=`${lat.toFixed(6)},${lon.toFixed(6)},${T.grid[i][j]}\n`;
+      }
+    }
+    pkg+='\n';
+  }
+  // Roughness info
+  if(S.roughnessZones&&S.roughnessZones.length){
+    pkg+=`=== ROUGHNESS ZONES ===\n`;
+    pkg+=`Count: ${S.roughnessZones.length}\n`;
+    S.roughnessZones.forEach((z,i)=>{
+      pkg+=`Zone ${i+1}: ${z.lu} z0=${z.z0}m\n`;
+    });
+    pkg+='\n';
+  }
+  // Wind info
+  if(S.wind&&S.wind.speeds){
+    const speeds=S.wind.speeds.filter(v=>v>0.5);
+    const meanWS=speeds.length?speeds.reduce((s,v)=>s+v,0)/speeds.length:0;
+    const wb=weibullFit(speeds);
+    pkg+=`=== WIND DATA ===\n`;
+    pkg+=`Records: ${S.wind.speeds.length}\n`;
+    pkg+=`Mean WS: ${meanWS.toFixed(2)} m/s\n`;
+    pkg+=`Weibull A: ${wb.A.toFixed(3)} m/s\n`;
+    pkg+=`Weibull k: ${wb.k.toFixed(3)}\n`;
+    pkg+=`Power Density: ${(0.5*(parseFloat($('airDen').value)||1.225)*meanWS*meanWS*meanWS).toFixed(0)} W/m2\n`;
+    pkg+=`Source: ERA5/NEWA/NREL/MERRA2\n\n`;
+  }
+  // Turbine info
+  if(S.turbines.length){
+    pkg+=`=== TURBINES ===\n`;
+    pkg+=`Count: ${S.turbines.length}\n`;
+    S.turbines.forEach((t,i)=>{
+      pkg+=`T${i+1}: ${t.lat.toFixed(6)},${t.lon.toFixed(6)} HH=${t.hh||$('hubH').value}m Elev=${t.elev||0}m\n`;
+    });
+    pkg+='\n';
+  }
+  // CORINE z0 lookup table
+  pkg+=`=== CORINE z0 LOOKUP ===\n`;
+  Object.entries(CORINE_Z0).forEach(([code,z0])=>{
+    pkg+=`${code}: ${z0} (${CORINE_NAMES[code]||'Unknown'})\n`;
+  });
+  pkg+='\n';
+  // ESA CCI z0 lookup table
+  pkg+=`=== ESA CCI z0 LOOKUP ===\n`;
+  Object.entries(ESA_Z0).forEach(([code,z0])=>{
+    pkg+=`${code}: ${z0}\n`;
+  });
+  dlFile(pkg,'openwind_data_package.txt','text/plain');
+  log('Openwind data package exported','i');
+}
+
 </script></body></html>
