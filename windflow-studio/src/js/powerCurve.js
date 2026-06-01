@@ -11,12 +11,17 @@ export function parsePowerCtCurve(text){
     if(ws!=null&&p!=null)pts.push({ws,p,ct:ct??null});
   }
   pts.sort((a,b)=>a.ws-b.ws);S.powerCurve={pts};
-  const maxP=Math.max(...pts.map(x=>x.p));if(maxP>0)S.project.ratedKW=maxP;
-  log(`Imported power/CT curve: ${pts.length} points, rated=${maxP.toFixed(0)} kW`);return S.powerCurve;
+  let maxP=Math.max(...pts.map(x=>x.p));
+  // Bug #7 fix: Auto-detect power units (kW, MW, or W)
+  let unitLabel='kW';
+  if(maxP>0&&maxP<500){unitLabel='MW';pts.forEach(p=>p.p*=1000);maxP*=1000;log('Power values appear to be in MW — auto-converted to kW');}
+  else if(maxP>500000){unitLabel='W';pts.forEach(p=>p.p/=1000);maxP/=1000;log('Power values appear to be in W — auto-converted to kW');}
+  if(maxP>0)S.project.ratedKW=maxP;
+  log(`Imported power/CT curve: ${pts.length} points, rated=${maxP.toFixed(0)} kW (${unitLabel} detected)`);return S.powerCurve;
 }
 export function interpCurve(ws){
   const pc=S.powerCurve?.pts;if(!pc?.length)return null;
-  if(ws<pc[0].ws||ws>=pc[pc.length-1].ws)return{power:0,ct:0};
+  if(ws<pc[0].ws||ws>pc[pc.length-1].ws)return{power:0,ct:0};
   for(let i=0;i<pc.length-1;i++)if(ws>=pc[i].ws&&ws<pc[i+1].ws){const t=(ws-pc[i].ws)/(pc[i+1].ws-pc[i].ws||1);const p=pc[i].p+t*(pc[i+1].p-pc[i].p);let ct=0;if(pc[i].ct!=null&&pc[i+1].ct!=null)ct=pc[i].ct+t*(pc[i+1].ct-pc[i].ct);else ct=null;return{power:p,ct}}
   return{power:0,ct:0};
 }

@@ -1,4 +1,4 @@
-import {S,log} from './state.js';import {weibullPdf,rad} from './utils.js';import {activeClimateAtHub} from './mastClimate.js';import {terrainAt} from './terrain.js';import {effectiveZ0Fetch,roughnessChangeRatio} from './roughness.js';import {wakeRun,power} from './wake.js';import {shelterFactor} from './shelter.js';
+import {S,log} from './state.js';import {weibullPdf,rad,siteAirDensity} from './utils.js';import {activeClimateAtHub} from './mastClimate.js';import {terrainAt} from './terrain.js';import {effectiveZ0Fetch,roughnessChangeRatio} from './roughness.js';import {wakeRun,power} from './wake.js';import {shelterFactor} from './shelter.js';
 export function terrainSpeedup(lat,lon,dir,z0){
   if(!S.terrain)return 1;const z=terrainAt(lat,lon);if(z==null)return 1;
   // Advanced clean-mode orography: multi-scale slope + curvature response.
@@ -22,11 +22,15 @@ export function terrainSpeedup(lat,lon,dir,z0){
 export function siteRatio(t,dir){
   const p=S.project;
   const z0eff=effectiveZ0Fetch(t.lat,t.lon,dir,p.z0);
-  const rough=roughnessChangeRatio(t.lat,t.lon,dir,p.hubHeight,p.z0,p.z0);
+  // Bug #4 fix: Use GWA roughness class as reference (zM) when GWA is climate source
+  // The GWA Weibull A/k values correspond to the GWA roughness class, not site z0
+  const climate=activeClimateAtHub();
+  const zM=climate?.roughness||p.z0; // Use GWA roughness if available
+  const rough=roughnessChangeRatio(t.lat,t.lon,dir,p.hubHeight,zM,p.z0);
   const oro=terrainSpeedup(t.lat,t.lon,dir,z0eff);
   const sec=Math.round((((dir%360)+360)%360)/30)%12;
   const cal=S.calibration?.sectorSR?.[sec]??1; // optional validation/calibration multiplier
-  return Math.max(.50,Math.min(1.70,rough*oro*shelterFactor(t,dir)*cal));
+  return Math.max(.40,Math.min(2.0,rough*oro*shelterFactor(t,dir)*cal));
 }
 export function estimateRIX(){if(!S.terrain)return 0;const T=S.terrain,{grid,ny,nx}=T;const dx=((T.lon1-T.lon0)/(nx-1))*111320*Math.cos(rad((T.lat0+T.lat1)/2))||1,dy=((T.lat1-T.lat0)/(ny-1))*111320||1;let steep=0,total=0;for(let i=1;i<ny-1;i++)for(let j=1;j<nx-1;j++){const dzdx=(grid[i][j+1]-grid[i][j-1])/(2*dx),dzdy=(grid[i+1][j]-grid[i-1][j])/(2*dy),s=Math.sqrt(dzdx*dzdx+dzdy*dzdy);if(s>0.30)steep++;total++}return total?100*steep/total:0}
 
@@ -43,22 +47,24 @@ export function runAEP(){
   if(!climate)throw Error('Import LT mast climate or download GWA first');
   if(!S.turbines.length)throw Error('Load/generate layout first');
   const p=S.project,N=S.turbines.length;
+  const rho=siteAirDensity(); // Site-specific air density
+  const densityFactor=rho/1.225; // Air density correction factor
   const gross=new Array(N).fill(0),wake=new Array(N).fill(0),mean=new Array(N).fill(0),probSum=new Array(N).fill(0);
   for(const secObj of climate.sectors){
     const dir=secObj.dir,A=secObj.A,k=secObj.k,freq=secObj.freq;
-    for(let v=.5;v<=32;v+=.5){
+    for(let v=.25;v<=32;v+=.5){ // Bug #11 fix: start at 0.25 (midpoint of first bin)
       const prob=freq*weibullPdf(v,A,k)*.5;if(prob<1e-9)continue;
       const free=S.turbines.map(t=>v*siteRatio(t,dir));
       const wsp=wakeRun(free,dir);
-      for(let i=0;i<N;i++){gross[i]+=power(free[i])*prob*8760;wake[i]+=power(wsp[i])*prob*8760;mean[i]+=free[i]*prob;probSum[i]+=prob}
+      for(let i=0;i<N;i++){gross[i]+=power(free[i],rho)*prob*8760;wake[i]+=power(wsp[i],rho)*prob*8760;mean[i]+=free[i]*prob;probSum[i]+=prob}
     }
   }
   const loss=1-p.lossPct/100;
-  const per=S.turbines.map((t,i)=>({id:t.id,name:t.name,lat:t.lat,lon:t.lon,meanWS:mean[i]/(probSum[i]||1),grossGWh:gross[i]/1e6,wakeLoss:gross[i]?(gross[i]-wake[i])/gross[i]*100:0,netGWh:wake[i]*loss/1e6,cf:wake[i]*loss/(p.ratedKW*8760)*100}));
+  const per=S.turbines.map((t,i)=>({id:t.id,name:t.name,lat:t.lat,lon:t.lon,meanWS:mean[i]/(probSum[i]||1),grossGWh:gross[i]/1e6,wakeLoss:gross[i]?(gross[i]-wake[i])/gross[i]*100:0,netGWh:wake[i]*loss/1e6,cf:wake[i]*loss/(p.ratedKW*8760)*100,airDensity:rho}));
   const grossGWh=per.reduce((s,t)=>s+t.grossGWh,0),netGWh=per.reduce((s,t)=>s+t.netGWh,0),wakeLoss=grossGWh?(grossGWh-per.reduce((s,t)=>s+t.netGWh,0)/loss)/grossGWh*100:0;
   const rix=estimateRIX();
-  S.results={per,grossGWh,netGWh,wakeLoss,cf:netGWh*1000/(N*p.ratedKW/1000*8760)*100,capacityMW:N*p.ratedKW/1000,rix,climateSource:climate.source,climateMean:climate.mean,gwc:buildGwcReport(climate)};
+  S.results={per,grossGWh,netGWh,wakeLoss,cf:netGWh*1000/(N*p.ratedKW/1000*8760)*100,capacityMW:N*p.ratedKW/1000,rix,climateSource:climate.source,climateMean:climate.mean,airDensity:rho,densityFactor,gwc:buildGwcReport(climate)};
   if(rix>5)log(`RIX ${rix.toFixed(1)}%: complex terrain; validate against mast/LiDAR or CFD/WAsP.`,'w');
-  log(`AEP complete (${climate.source}): Net ${netGWh.toFixed(1)} GWh, wake ${wakeLoss.toFixed(1)}%, RIX ${rix.toFixed(1)}%`);
+  log(`AEP complete (${climate.source}): Net ${netGWh.toFixed(1)} GWh, wake ${wakeLoss.toFixed(1)}%, RIX ${rix.toFixed(1)}%, rho=${rho.toFixed(3)} kg/m3`);
   return S.results;
 }

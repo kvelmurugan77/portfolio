@@ -20,7 +20,7 @@ export async function downloadERA5(lat,lon,years,height='100m',era5t=false){
   const now=new Date();
   const currentYear=now.getUTCFullYear();
 
-  const sp=[],dir=[],time=[];
+  const sp=[],dir=[],time=[],temperatures=[],pressures=[];
   for(let y=y1;y<=y2;y++){
     let startDate,endDate;
     if(era5t&&y===currentYear){
@@ -87,12 +87,29 @@ export async function downloadERA5(lat,lon,years,height='100m',era5t=false){
     sp.push(...wsData);
     dir.push(...wdData);
     time.push(...recs);
+    // Store temperature and pressure for air density correction
+    const tempData=d?.hourly?.temperature_2m;
+    const presData=d?.hourly?.surface_pressure;
+    if(tempData)temperatures.push(...tempData);
+    if(presData)pressures.push(...presData);
     log(`${era5t?'ERA5T':'ERA5'} ${y}: ${recs.length} records`);
   }
 
   if(!sp.length)throw Error('No ERA5 data downloaded. Check year range and parameters.');
 
-  S.era5={sp,dir,time,height:height==='10m'?10:100,source:era5t?'ERA5T / Open-Meteo':'ERA5 / Open-Meteo',era5t};
+  S.era5={sp,dir,time,temperatures,pressures,height:height==='10m'?10:100,source:era5t?'ERA5T / Open-Meteo':'ERA5 / Open-Meteo',era5t};
+  // Compute average air density from temperature and pressure if available
+  if(temperatures.length&&pressures.length){
+    const validPairs=temperatures.filter((t,i)=>t!=null&&pressures[i]!=null);
+    if(validPairs.length){
+      const avgT=temperatures.reduce((s,v,i)=>v!=null&&pressures[i]!=null?s+v:s,0)/validPairs.length;
+      const avgP=pressures.reduce((s,v,i)=>v!=null&&temperatures[i]!=null?s+v:s,0)/validPairs.length;
+      S.era5.avgTemperature=avgT; // Kelvin
+      S.era5.avgPressure=avgP; // hPa
+      S.era5.avgAirDensity=avgP*100/(287.05*(avgT||288.15)); // rho = P/(R*T), P in Pa, T in K
+      log(`ERA5 avg air density: ${S.era5.avgAirDensity.toFixed(3)} kg/m3 (T=${(avgT-273.15).toFixed(1)}C, P=${avgP.toFixed(1)} hPa)`);
+    }
+  }
   log(`${era5t?'ERA5T':'ERA5'} complete: ${sp.length.toLocaleString()} records`);
   return S.era5;
 }

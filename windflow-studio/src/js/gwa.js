@@ -84,19 +84,44 @@ export function parseGwc(txt){
 }
 
 export function interpGwc(gwc,h,z0){
-  const r=gwc.rough.reduce((a,b)=>Math.abs(b-z0)<Math.abs(a-z0)?b:a,gwc.rough[0]);
+  // Bug #8 fix: Interpolate between two bracketing roughness classes instead of snapping to nearest
   const hs=gwc.height;
+  const roughs=gwc.rough.sort((a,b)=>a-b);
+  
+  // Find bracketing roughness classes
+  let rLo=roughs[0],rHi=roughs[roughs.length-1];
+  for(let i=0;i<roughs.length-1;i++){
+    if(roughs[i]<=z0&&roughs[i+1]>=z0){rLo=roughs[i];rHi=roughs[i+1];break;}
+    if(roughs[i]>z0){rLo=roughs[Math.max(0,i-1)];rHi=roughs[i];break;}
+  }
+  if(z0>=roughs[roughs.length-1]){rLo=roughs[roughs.length-1];rHi=rLo;}
+  if(z0<=roughs[0]){rLo=roughs[0];rHi=rLo;}
+  
+  // Interpolation weight in log-roughness space
+  const rW=(rLo===rHi)?0:(Math.log(Math.max(z0,0.0001))-Math.log(Math.max(rLo,0.0001)))/(Math.log(Math.max(rHi,0.0001))-Math.log(Math.max(rLo,0.0001)));
+  const effectiveR=rW<0.5?rLo:rHi; // For height interpolation, use the closer roughness class
+  
   let lo=Math.max(...hs.filter(x=>x<=h)),hi=Math.min(...hs.filter(x=>x>=h));
   if(!Number.isFinite(lo))lo=hs[0];if(!Number.isFinite(hi))hi=hs[hs.length-1];
-  const w=lo===hi?0:(Math.log(h)-Math.log(lo))/(Math.log(hi)-Math.log(lo));
+  const wA=lo===hi?0:(Math.log(h)-Math.log(lo))/(Math.log(hi)-Math.log(lo));
+  // Bug #9 fix: Use linear interpolation for k (not log-height)
+  const wK=lo===hi?0:(h-lo)/(hi-lo);
+  
   const A=[],k=[];
   for(let i=0;i<gwc.sector.length;i++){
-    A[i]=(1-w)*gwc.A[r][lo][i]+w*gwc.A[r][hi][i];
-    k[i]=(1-w)*gwc.k[r][lo][i]+w*gwc.k[r][hi][i];
+    // Interpolate A/k at each roughness class and height, then blend roughness classes
+    const aLo=(1-wA)*gwc.A[rLo][lo][i]+wA*gwc.A[rLo][hi][i];
+    const aHi=(1-wA)*gwc.A[rHi][lo][i]+wA*gwc.A[rHi][hi][i];
+    A[i]=(1-rW)*aLo+rW*aHi;
+    const kLo=(1-wK)*gwc.k[rLo][lo][i]+wK*gwc.k[rLo][hi][i];
+    const kHi=(1-wK)*gwc.k[rHi][lo][i]+wK*gwc.k[rHi][hi][i];
+    k[i]=(1-rW)*kLo+rW*kHi;
   }
-  let f=gwc.freq[r].map(x=>x/100);
+  const roughness=z0; // Use the actual site roughness (not snapped class)
+  let f=gwc.freq[rLo].map((fi,i)=>(1-rW)*fi+rW*(gwc.freq[rHi]?.[i]||fi));
+  f=f.map(x=>x/100);
   const fs=f.reduce((a,b)=>a+b,0)||1;f=f.map(x=>x/fs);
   const mean=f.reduce((s,fi,i)=>s+fi*A[i]*gamma(1+1/k[i]),0);
   const pd=f.reduce((s,fi,i)=>s+fi*powerDensity(A[i],k[i]),0);
-  return{roughness:r,height:h,A,k,freq:f,mean,powerDensity:pd,sectors:gwc.sector};
+  return{roughness,height:h,A,k,freq:f,mean,powerDensity:pd,sectors:gwc.sector};
 }

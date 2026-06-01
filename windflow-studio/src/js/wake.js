@@ -1,5 +1,5 @@
-import {S} from './state.js';import {rad,latLonToXY} from './utils.js';import {interpCurve} from './powerCurve.js';
-export function power(ws){const c=interpCurve(ws);if(c)return c.power;const p=S.project;if(ws<3||ws>=25)return 0;if(ws>=10.6)return p.ratedKW;return p.ratedKW*((ws-3)/(10.6-3))**3}
+import {S} from './state.js';import {rad,latLonToXY,siteAirDensity} from './utils.js';import {interpCurve} from './powerCurve.js';
+export function power(ws,rho){const c=interpCurve(ws);if(c){const density=rho||siteAirDensity();return c.power*(density/1.225)}const p=S.project;if(ws<3||ws>=25)return 0;if(ws>=10.6)return p.ratedKW*((rho||siteAirDensity())/1.225);return p.ratedKW*((ws-3)/(10.6-3))**3*((rho||siteAirDensity())/1.225)}
 export function ct(ws){const c=interpCurve(ws);if(c&&c.ct!=null)return c.ct;if(ws<3||ws>=25)return 0;if(ws<8)return .86-.02*(ws-3);if(ws<10.6)return .76-.13*((ws-8)/2.6);if(ws<16)return .42-.22*((ws-10.6)/5.4);return Math.max(.05,.20-.15*((ws-16)/9))}
 function addDeficit(sum,def){return (S.project.wakeCombination||'rss')==='linear'?sum+Math.max(0,def):sum+def*def}
 function finalDeficit(sum){return (S.project.wakeCombination||'rss')==='linear'?Math.min(0.95,sum):Math.sqrt(sum)}

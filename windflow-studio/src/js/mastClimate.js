@@ -1,5 +1,6 @@
 import {S,log} from './state.js';
 import {gamma} from './utils.js';
+import {interpGwc} from './gwa.js';
 function norm(h){return String(h||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')}
 function rows(text){const lines=text.trim().split(/\r?\n/).filter(Boolean);if(!lines.length)return[];const sep=(lines[0].match(/;/g)||[]).length>(lines[0].match(/,/g)||[]).length?';':',';const h=lines[0].split(sep).map(norm);return lines.slice(1).map(l=>{const c=l.split(sep).map(x=>x.trim());const r={};h.forEach((k,i)=>r[k]=c[i]);return r})}
 const num=v=>{const x=Number(String(v??'').replace('%',''));return Number.isFinite(x)?x:null};
@@ -21,6 +22,16 @@ export function activeClimateAtHub(){
     const c=S.windClimate,p=S.project;const z0=Math.max(0.0002,c.z0||p.z0||0.03);const ratio=Math.log(p.hubHeight/z0)/Math.log((c.height||p.mastHeight||100)/z0);
     return {source:c.source,height:p.hubHeight,sectors:c.sectors.map(s=>({dir:s.dir,freq:s.freq,A:s.A*ratio,k:s.k})),mean:c.sectors.reduce((a,s)=>a+s.freq*s.A*ratio*gamma(1+1/s.k),0)};
   }
-  if(S.gwa?.climate){const c=S.gwa.climate;return{source:'GWA point climate',height:c.height,sectors:c.sectors.map((d,i)=>({dir:d,freq:c.freq[i],A:c.A[i],k:c.k[i]})),mean:c.mean}}
+  if(S.gwa?.climate){
+    // Re-interpolate GWA climate at current hub height (Bug #3 fix: was using cached stale values)
+    const p=S.project;
+    const gwc=S.gwa.raw||S.gwa.climate;
+    if(S.gwa.raw){
+      const climate=interpGwc(S.gwa.raw,p.hubHeight,p.z0);
+      return{source:'GWA point climate',height:climate.height,sectors:climate.sectors.map((d,i)=>({dir:d,freq:climate.freq[i],A:climate.A[i],k:climate.k[i]})),mean:climate.mean,roughness:climate.roughness}
+    }
+    const c=S.gwa.climate;
+    return{source:'GWA point climate',height:c.height,sectors:c.sectors.map((d,i)=>({dir:d,freq:c.freq[i],A:c.A[i],k:c.k[i]})),mean:c.mean,roughness:c.roughness||p.z0}
+  }
   return null;
 }
