@@ -1145,7 +1145,7 @@ function drawTerrainCanvas(){
   const ctx=cv.getContext('2d');const W=cv.width,H=cv.height;
   ctx.clearRect(0,0,W,H);ctx.fillStyle='#0d1e30';ctx.fillRect(0,0,W,H);
   const T=S.terrain;
-  if(!T||!T.grid||!T.grid.length||!isFinite(T.minE)||!isFinite(T.maxE)||T.minE>=T.maxE){
+  if(!T||!T.grid||!T.grid.length||!isFinite(T.minE)||!isFinite(T.maxE)){
     ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='12px IBM Plex Mono';ctx.textAlign='center';
     ctx.fillText('No terrain data — click "Download Terrain Grid" first',W/2,H/2);
     return;
@@ -1154,7 +1154,7 @@ function drawTerrainCanvas(){
   const dLat=(lat1-lat0)/(ny-1),dLon=(lon1-lon0)/(nx-1);
   const margin={top:20,right:70,bottom:20,left:40};
   const pw=W-margin.left-margin.right,ph=H-margin.top-margin.bottom;
-  const rangeE=maxE-minE||1;
+  const rangeE=Math.max(maxE-minE, 1); // clamp to 1m for flat terrain
 
   // Draw elevation heatmap
   for(let i=0;i<ny-1;i++){for(let j=0;j<nx-1;j++){
