@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 16.0</span></div><div class="brand-sub">Iterative GDL · Sempreviva IBL · WAsP-Weibull · ERA5T Density · Per-WTG ρ · OWC→GWC→SWC · Wake Dir Var · Mixed HH · BZ</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 16.0</span></div><div class="brand-sub">Jackson-Hunt Terrain · Iterative GDL · Sempreviva IBL · WAsP-Weibull · ERA5T ρ · Per-WTG ρ · OWC→GWC→SWC</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -614,12 +614,403 @@ function interpPC(ws,pc){const{ws:w,pw:p,ct:c}=pc;if(ws<=w[0])return{power:0,ct:
 function logWS(ws,fromH,toH,z0){const k=Math.log(Math.max(fromH,z0*1.1)/z0);return k>0?ws*(Math.log(Math.max(toH,z0*1.1)/z0)/k):ws;}
 // Terrain-based horizontal speedup: accounts for elevation difference between mast and turbine/cursor
 function terrainSpeedup(turbElev,mastElev,hubH,z0){
+  // v16.0: DEPRECATED — use terrainSpeedupJH() for Jackson-Hunt model
+  // Kept as fallback for when no terrain grid is available
   const dE=(turbElev||0)-(mastElev||0);
   if(Math.abs(dE)<0.5)return 1.0;
   // ~50% of terrain height difference adds to effective hub height (WAsP approximation)
   const effH=Math.max(5,hubH+dE*0.5);
   const su=Math.log(effH/Math.max(z0,0.00001))/Math.log(Math.max(hubH,z0*1.1)/Math.max(z0,0.00001));
   return Math.max(0.7,Math.min(1.5,su)); // clamp to ±30%
+}
+
+// ── JACKSON-HUNT TERRAIN FLOW MODEL (v16.0) ──────────────────────
+// Implements the Jackson-Hunt (1975) linearized potential flow theory
+// for computing terrain-induced speedup, flow turning, and inclination.
+// This is the model used by WAsP for orographic corrections.
+//
+// References:
+//   Jackson & Hunt (1975) — Turbulent wind flow over a low hill
+//   Mason & Sykes (1979) — Flow over an isolated hill
+//   Walmsley et al. (1986) — MS3DJH practical implementation
+//   Troen & Petersen (1989) — European Wind Atlas
+//   Beljaars et al. (1987) — Inner layer height formulation
+//
+// Key physics:
+//   1. Wind accelerates over hilltops (flow compression)
+//   2. Wind decelerates in valleys (flow expansion)
+//   3. Wind turns toward lower terrain (cross-slope gradient)
+//   4. The inner layer height ℓᵢ separates the inner (log) and outer (potential) flow
+//   5. For z < ℓᵢ: speedup depends on ln(z/z₀) / ln(ℓᵢ/z₀)²
+//   6. For z > ℓᵢ: speedup decreases with height (potential flow regime)
+//
+// This replaces the simple elevation proxy which only used Δh×0.5 and
+// missed directional effects, cross-slope turning, and the proper
+// height-dependent profile.
+
+// Helper: Bilinear interpolation from terrain grid (improved over nearest-neighbor)
+function getTerrainElevBilinear(lat, lon) {
+  const T = S.terrain;
+  if (!T || !T.grid || !T.grid.length) return null;
+  const { lat0, lat1, lon0, lon1, ny, nx, grid } = T;
+  if (lat < lat0 || lat > lat1 || lon < lon0 || lon > lon1) return null;
+  const fi = (lat - lat0) / (lat1 - lat0) * (ny - 1);
+  const fj = (lon - lon0) / (lon1 - lon0) * (nx - 1);
+  const i = Math.floor(fi), j = Math.floor(fj);
+  if (i < 0 || i >= ny - 1 || j < 0 || j >= nx - 1) {
+    // Edge case: use nearest neighbor
+    const ir = Math.min(Math.round(fi), ny - 1), jr = Math.min(Math.round(fj), nx - 1);
+    return (grid[ir] || [])[jr] ?? null;
+  }
+  const di = fi - i, dj = fj - j;
+  return grid[i][j] * (1 - di) * (1 - dj) +
+         grid[i + 1][j] * di * (1 - dj) +
+         grid[i][j + 1] * (1 - di) * dj +
+         grid[i + 1][j + 1] * di * dj;
+}
+
+// Extract terrain elevation profile along a direction from a point
+// direction_deg: meteorological wind direction (wind comes FROM this direction)
+// We extract UPWIND (opposite direction) to see what terrain the wind flows over
+// maxDistKm: how far to look upwind (default 10 km)
+// nPts: number of sample points
+function extractTerrainProfile(lat, lon, direction_deg, maxDistKm, nPts) {
+  // Wind comes FROM direction_deg, so we look upwind (opposite)
+  const upwindDir = (direction_deg + 180) * Math.PI / 180; // upwind direction
+  const profile = [];
+  const mPerDeg = 111320;
+  const cosLat = Math.cos(lat * Math.PI / 180);
+  for (let k = 0; k < nPts; k++) {
+    const dist = (k / (nPts - 1)) * maxDistKm * 1000; // meters from the point
+    const dLat = Math.cos(upwindDir) * dist / mPerDeg;
+    const dLon = Math.sin(upwindDir) * dist / (mPerDeg * cosLat);
+    const pLat = lat + dLat;
+    const pLon = lon + dLon;
+    const elev = getTerrainElevBilinear(pLat, pLon);
+    profile.push({ dist, elev: elev !== null ? elev : 0, lat: pLat, lon: pLon });
+  }
+  return profile;
+}
+
+// Compute effective hill parameters from an upwind terrain profile
+// Returns: { H (hill height), L (half-length), distToCrest, shape }
+// Algorithm:
+//   1. Find the reference elevation (elevation at the point itself)
+//   2. Find the maximum elevation difference in the profile → hilltop
+//   3. Compute the half-length as distance from crest to half-height point
+//   4. Detect shape: 2D ridge, 3D hill, escarpment, valley
+function computeHillParameters(profile) {
+  if (!profile || profile.length < 3) return { H: 0, L: 1000, distToCrest: 0, shape: 'flat' };
+
+  const refElev = profile[0].elev; // elevation at the turbine point
+
+  // Find the crest: maximum elevation in the upwind profile
+  let maxElev = refElev, crestIdx = 0;
+  for (let k = 1; k < profile.length; k++) {
+    if (profile[k].elev > maxElev) {
+      maxElev = profile[k].elev;
+      crestIdx = k;
+    }
+  }
+
+  const H = maxElev - refElev; // hill height above reference
+  if (H < 1.0) return { H: 0, L: 1000, distToCrest: 0, shape: 'flat' }; // negligible terrain
+
+  const distToCrest = profile[crestIdx].dist;
+
+  // Find half-length L: distance from crest to where elevation = refElev + H/2
+  // Search both upwind and downwind of the crest
+  const halfH = refElev + H / 2;
+  let L_upwind = profile[crestIdx].dist; // distance upwind of crest to half-height
+  let L_downwind = 5000; // default
+
+  // Search upwind from crest (toward larger dist)
+  for (let k = crestIdx + 1; k < profile.length; k++) {
+    if (profile[k].elev <= halfH) {
+      // Interpolate
+      const frac = (halfH - profile[k - 1].elev) / Math.max(0.1, profile[k].elev - profile[k - 1].elev);
+      L_upwind = profile[k - 1].dist + frac * (profile[k].dist - profile[k - 1].dist) - distToCrest;
+      break;
+    }
+  }
+
+  // Search downwind from crest (toward smaller dist, i.e., toward the turbine)
+  for (let k = crestIdx - 1; k >= 0; k--) {
+    if (profile[k].elev <= halfH) {
+      const frac = (halfH - profile[k].elev) / Math.max(0.1, profile[k + 1].elev - profile[k].elev);
+      L_downwind = distToCrest - (profile[k].dist + frac * (profile[k + 1].dist - profile[k].dist));
+      break;
+    }
+  }
+
+  // Use the average half-length (for symmetric hills) or the larger one
+  const L = Math.max(100, (L_upwind + Math.max(0, L_downwind)) / 2);
+
+  // Detect shape from the profile
+  let shape = '3D_hill'; // default
+  // If the profile is asymmetric (escarpment: steep upwind, gentle downwind)
+  if (L_downwind > 0 && L_upwind / Math.max(1, L_downwind) > 2) {
+    shape = 'escarpment';
+  } else if (L_downwind > 0 && L_downwind / Math.max(1, L_upwind) > 2) {
+    shape = 'cliff';
+  }
+
+  return { H: Math.max(0, H), L: Math.max(100, L), distToCrest, shape, maxElev, refElev };
+}
+
+// Jackson-Hunt speedup formula for 2D ridge
+// H: hill height, L: half-length, z: hub height, z0: roughness
+// Returns: fractional speedup Δs (1.0 = no speedup, 1.1 = 10% speedup)
+function jacksonHuntSpeedup2D(H, L, z, z0) {
+  if (L < 50 || H < 1 || z < 1) return 1.0;
+  const kappa = 0.4;
+
+  // Inner layer height (Beljaars et al. 1987, Walmsley et al. 1986)
+  // ℓᵢ solves: ℓᵢ × ln(ℓᵢ/z₀) = 2κ²L
+  // Approximate: ℓᵢ ≈ 2κ²L / ln(L/z₀) (first iteration)
+  const lnLz0 = Math.log(Math.max(L, z0 * 10) / Math.max(z0, 1e-7));
+  let ellI = 2 * kappa * kappa * L / Math.max(lnLz0, 1);
+  // Iterate to refine (2-3 iterations sufficient)
+  for (let it = 0; it < 5; it++) {
+    const lnEz0 = Math.log(Math.max(ellI, z0 * 2) / Math.max(z0, 1e-7));
+    ellI = 2 * kappa * kappa * L / Math.max(lnEz0, 1);
+  }
+  // Clamp to physical range
+  ellI = Math.max(z0 * 10, Math.min(L * 0.5, ellI));
+
+  // Speedup at height z (Jackson & Hunt 1975, Eq. 4.8)
+  // Δs = (H/L) × σ(z, z₀, L)
+  // where σ depends on whether z is in the inner or outer layer
+  const HL = H / L;
+  const lnZz0 = Math.log(Math.max(z, z0 * 2) / Math.max(z0, 1e-7));
+  const lnEllz0 = Math.log(Math.max(ellI, z0 * 2) / Math.max(z0, 1e-7));
+
+  let deltaS;
+  if (z <= ellI) {
+    // Inner layer: Δs = 2κ × (H/L) × ln(z/z₀) / [ln(ℓᵢ/z₀)]²
+    // This is the standard Jackson-Hunt result for the inner layer
+    deltaS = 2 * kappa * HL * lnZz0 / (lnEllz0 * lnEllz0);
+  } else {
+    // Outer layer: speedup decreases with height (potential flow solution)
+    // Δs ≈ 2κ × (H/L) × exp(-(z-ℓᵢ)/L)
+    deltaS = 2 * kappa * HL * Math.exp(-(z - ellI) / Math.max(L, 100));
+  }
+
+  return deltaS;
+}
+
+// 3D correction factor: reduce speedup for 3D hills vs 2D ridges
+// Mason & Sykes (1979): 3D hill speedup is 50-70% of 2D ridge speedup
+// depending on the cross-wind aspect ratio
+// aspectRatio = cross-wind extent / upwind extent
+function correction3D(aspectRatio) {
+  // 2D ridge: aspectRatio → ∞ → factor = 1.0
+  // 3D hill:  aspectRatio ≈ 1 → factor ≈ 0.55
+  // Elongated hill: aspectRatio ≈ 3 → factor ≈ 0.80
+  return 0.55 + 0.45 * Math.min(1, aspectRatio / 5);
+}
+
+// Compute terrain slope along wind direction at a point
+// Returns slope (positive = ascending in wind direction)
+function terrainSlopeAlongWind(lat, lon, windDir_deg, delta_m) {
+  const dir = windDir_deg * Math.PI / 180;
+  const mPerDeg = 111320;
+  const cosLat = Math.cos(lat * Math.PI / 180);
+  const dLat = Math.cos(dir) * delta_m / mPerDeg;
+  const dLon = Math.sin(dir) * delta_m / (mPerDeg * cosLat);
+
+  const e_fwd = getTerrainElevBilinear(lat + dLat, lon + dLon) || 0;
+  const e_bwd = getTerrainElevBilinear(lat - dLat, lon - dLon) || 0;
+
+  // Central difference slope (positive = ascending in wind direction)
+  return (e_fwd - e_bwd) / (2 * delta_m);
+}
+
+// Compute cross-wind terrain gradient (for flow turning)
+// Returns gradient (positive = terrain rises to the right looking upwind)
+function terrainSlopeCrossWind(lat, lon, windDir_deg, delta_m) {
+  const crossDir = (windDir_deg + 90) * Math.PI / 180;
+  const mPerDeg = 111320;
+  const cosLat = Math.cos(lat * Math.PI / 180);
+  const dLat = Math.cos(crossDir) * delta_m / mPerDeg;
+  const dLon = Math.sin(crossDir) * delta_m / (mPerDeg * cosLat);
+
+  const e_left = getTerrainElevBilinear(lat - dLat, lon - dLon) || 0;
+  const e_right = getTerrainElevBilinear(lat + dLat, lon + dLon) || 0;
+
+  return (e_right - e_left) / (2 * delta_m);
+}
+
+// Compute cross-wind aspect ratio for 3D correction
+// Compares the terrain extent in the cross-wind vs upwind direction
+function computeCrossWindAspect(lat, lon, windDir_deg, maxDistKm) {
+  const mPerDeg = 111320;
+  const cosLat = Math.cos(lat * Math.PI / 180);
+  const refElev = getTerrainElevBilinear(lat, lon) || 0;
+
+  // Compute upwind extent: how far until terrain drops to half the max height
+  const profile = extractTerrainProfile(lat, lon, windDir_deg, maxDistKm, 20);
+  const hillParams = computeHillParameters(profile);
+  const upwindExtent = hillParams.L * 2; // full-width upwind
+
+  // Compute cross-wind extent: sample terrain ±90° from wind direction
+  const crossDir = (windDir_deg + 90) * Math.PI / 180;
+  let crossExtent = upwindExtent; // default: same as upwind (circular hill)
+  let maxCrossElev = refElev;
+  for (let d = 100; d <= maxDistKm * 1000; d += 200) {
+    const dLat = Math.cos(crossDir) * d / mPerDeg;
+    const dLon = Math.sin(crossDir) * d / (mPerDeg * cosLat);
+    const e = getTerrainElevBilinear(lat + dLat, lon + dLon) || 0;
+    if (e > maxCrossElev) maxCrossElev = e;
+    else if (e < refElev + (maxCrossElev - refElev) * 0.5 && maxCrossElev > refElev + 1) {
+      crossExtent = d;
+      break;
+    }
+  }
+
+  return upwindExtent > 0 ? crossExtent / upwindExtent : 1.0;
+}
+
+// Lee-side separation correction (Wood 1995, Mortensen & Bowen 2004)
+// For steep downwind slopes (slope < -0.3), flow separates and
+// the Jackson-Hunt model over-predicts speedup at the crest
+function separationCorrection(slope, distFromCrest, L) {
+  if (slope >= 0) return 1.0; // upwind slope: no separation
+  const steepness = Math.abs(slope);
+  if (steepness < 0.2) return 1.0; // gentle slope: no separation
+
+  // Separation factor: reduces speedup by up to 30% for very steep lee slopes
+  // Based on Wood (1995): separation occurs for slopes steeper than ~0.2-0.3
+  const sepStrength = Math.min(1, (steepness - 0.2) / 0.3);
+  // The correction applies primarily near the crest on the lee side
+  const distFactor = Math.exp(-distFromCrest / Math.max(L, 100));
+  return 1 - 0.3 * sepStrength * distFactor;
+}
+
+// ── MAIN JACKSON-HUNT TERRAIN SPEEDUP FUNCTION ─────────────────
+// Computes per-turbine, per-sector speedup using the Jackson-Hunt model
+// Falls back to the simple elevation proxy when no terrain grid is available
+// Returns: { speedup, turning, inclination }
+function terrainSpeedupJH(turbIdx, sectorDir, hubH, z0) {
+  const turb = S.turbines[turbIdx];
+  if (!turb) return { speedup: 1.0, turning: 0, inclination: 0 };
+
+  // If no terrain grid, fall back to simple elevation proxy
+  if (!S.terrain || !S.terrain.grid || !S.terrain.grid.length) {
+    const mastLat = parseFloat($('mastLat')?.value) || 0;
+    const mastLon = parseFloat($('mastLon')?.value) || 0;
+    const mastElev = getTerrainElev(mastLat, mastLon) || 0;
+    const turbElev = turb.elev !== undefined ? turb.elev : mastElev;
+    return { speedup: terrainSpeedup(turbElev, mastElev, hubH, z0), turning: 0, inclination: 0 };
+  }
+
+  // Check if terrain is flat (min-max range < 5m) — skip expensive JH computation
+  const terrainRange = (S.terrain.maxE || 0) - (S.terrain.minE || 0);
+  if (terrainRange < 5) return { speedup: 1.0, turning: 0, inclination: 0 };
+
+  const lat = turb.lat;
+  const lon = turb.lon;
+  const L_stab = getStabilityL();
+
+  // 1. Extract upwind terrain profile along this sector's wind direction
+  const maxDistKm = Math.min(10, (parseFloat($('terrR')?.value) || 10));
+  const profile = extractTerrainProfile(lat, lon, sectorDir, maxDistKm, 30);
+
+  // 2. Compute hill parameters from the profile
+  const hill = computeHillParameters(profile);
+
+  if (hill.H < 1.0) {
+    // Negligible terrain effect — but still check for local slope effects
+    const slope = terrainSlopeAlongWind(lat, lon, sectorDir, 500);
+    if (Math.abs(slope) < 0.01) return { speedup: 1.0, turning: 0, inclination: 0 };
+
+    // Small slope effect: linear approximation
+    // Δs ≈ 2 × slope × ln(z/z₀) / [ln(ℓᵢ/z₀)] (simplified JH for small slopes)
+    const lnZz0 = Math.log(Math.max(hubH, z0 * 2) / Math.max(z0, 1e-7));
+    const L_eff = 1000; // 1km effective length scale for gentle terrain
+    const lnLz0 = Math.log(Math.max(L_eff, z0 * 10) / Math.max(z0, 1e-7));
+    const deltaS = 2 * 0.4 * slope * lnZz0 / (lnLz0 * lnLz0);
+    const speedup = Math.max(0.85, Math.min(1.15, 1 + deltaS));
+    return { speedup, turning: 0, inclination: Math.atan(slope) * 180 / Math.PI };
+  }
+
+  // 3. Compute Jackson-Hunt speedup for the dominant hill
+  let deltaS_2D = jacksonHuntSpeedup2D(hill.H, hill.L, hubH, z0);
+
+  // 4. Apply 3D correction
+  const aspectRatio = computeCrossWindAspect(lat, lon, sectorDir, maxDistKm);
+  const factor3D = correction3D(aspectRatio);
+  let deltaS = deltaS_2D * factor3D;
+
+  // 5. Escarpment/cliff correction
+  if (hill.shape === 'escarpment') {
+    // Escarpments produce ~30% more speedup than symmetric hills
+    deltaS *= 1.3;
+  } else if (hill.shape === 'cliff') {
+    // Cliffs: significant speedup at the top, but also flow separation
+    deltaS *= 1.2;
+  }
+
+  // 6. Stability correction (Beljaars et al. 1987)
+  // Stable conditions enhance speedup; unstable reduce it
+  const zL = hubH / L_stab;
+  if (L_stab > 0 && L_stab < 1e6) {
+    // Stable: speedup enhanced by ~10-20%
+    deltaS *= 1 + 0.15 * Math.min(1, Math.abs(zL));
+  } else if (L_stab < 0) {
+    // Unstable: speedup reduced by ~5-10%
+    deltaS *= 1 - 0.08 * Math.min(1, Math.abs(zL));
+  }
+
+  // 7. Lee-side separation correction
+  const slope = terrainSlopeAlongWind(lat, lon, sectorDir, 500);
+  const sepCorr = separationCorrection(-slope, hill.distToCrest, hill.L);
+  deltaS *= sepCorr;
+
+  // 8. RIX-based correction for very complex terrain
+  // The RIX (Ruggedness Index) measures how complex the terrain is
+  // For RIX > 5%, the Jackson-Hunt linear theory starts to break down
+  // Apply empirical correction based on Mortensen & Bowen (2004)
+  if (S.terrain) {
+    const rix = Math.max(0, (S.terrain.maxE - S.terrain.minE) / Math.max(1, S.terrain.maxE) * 5);
+    if (rix > 5) {
+      // Over-prediction correction: reduce speedup for very complex terrain
+      const rixCorr = 1 - 0.03 * (rix - 5);
+      deltaS *= Math.max(0.7, rixCorr);
+    }
+  }
+
+  // 9. Compute flow turning from cross-wind terrain gradient
+  const crossSlope = terrainSlopeCrossWind(lat, lon, sectorDir, 500);
+  // Flow turning angle (degrees): wind turns toward lower terrain
+  // Δθ ≈ -κ × (dz/dy) × ln(z/z₀) / [ln(ℓᵢ/z₀)]  (Walmsley et al. 1986)
+  let turning = 0;
+  if (Math.abs(crossSlope) > 0.001) {
+    const lnZz0 = Math.log(Math.max(hubH, z0 * 2) / Math.max(z0, 1e-7));
+    const lnLz0 = Math.log(Math.max(hill.L, z0 * 10) / Math.max(z0, 1e-7));
+    turning = -0.4 * crossSlope * lnZz0 / (lnLz0 * lnLz0) * 180 / Math.PI;
+    turning = Math.max(-15, Math.min(15, turning)); // clamp to ±15°
+  }
+
+  // 10. Compute inclination angle (vertical flow angle)
+  const inclination = Math.atan(Math.abs(slope)) * 180 / Math.PI;
+
+  // Convert deltaS to speedup factor (1 + Δs)
+  const speedup = Math.max(0.7, Math.min(1.5, 1 + deltaS));
+
+  return { speedup, turning, inclination };
+}
+
+// Pre-compute per-turbine per-sector Jackson-Hunt speedups
+// Returns: Array[turbine][sector] of { speedup, turning, inclination }
+function computeAllJHSpeedups(sectors, hubH, z0) {
+  if (!S.turbines.length) return [];
+  const nSect = sectors.length;
+  return S.turbines.map((t, ti) => {
+    return sectors.map((sec, si) => {
+      return terrainSpeedupJH(ti, sec.dir, hubH, z0);
+    });
+  });
 }
 // Get spatially-extrapolated hub WS at any lat/lon (horizontal extrapolation)
 function getSpatialHubWS(lat,lon){
@@ -638,6 +1029,16 @@ function getSpatialHubWS(lat,lon){
   const L=getStabilityL();
   const rotFactor=useRotorAvg?rotorAvgRatio(tHH,rotorD,z0,L):1.0;
   const displayWS=hubWS*rotFactor;
+  // v16.0: Try Jackson-Hunt terrain speedup
+  if(turb && S.terrain && S.terrain.grid && S.terrain.grid.length){
+    const turbIdx=S.turbines.indexOf(turb);
+    if(turbIdx>=0){
+      const prevDir=parseFloat($('prevWD')?.value||270);
+      const jh=terrainSpeedupJH(turbIdx,prevDir,tHH,z0);
+      return{ws:displayWS*jh.speedup,su:jh.speedup,elev:getTerrainElevBilinear(lat,lon)};
+    }
+  }
+  // Fallback to elevation proxy
   const mLat=parseFloat($('mastLat').value)||lat,mLon=parseFloat($('mastLon').value)||lon;
   const mastElev=S.terrain?getTerrainElev(mLat,mLon)||0:0;
   const curElev=getTerrainElev(lat,lon);
@@ -1694,10 +2095,22 @@ function calcAEP(){
   const n=txy.length;
   const gross=new Float64Array(n),net=new Float64Array(n);
   const dv=.5,vMax=28;
-  // v13.1: Pre-compute per-turbine terrain speedup (elevation-based horizontal speedup)
-  // This is applied to each turbine's wind speed in the non-BZ path
-  const mastElev_forSU=S.terrain?getTerrainElev(parseFloat($('mastLat').value)||0,parseFloat($('mastLon').value)||0)||0:0;
-  const tSpeedups=txy.map((t,ti)=>{const te=S.turbines[ti]?.elev;return terrainSpeedup(te!==undefined?te:mastElev_forSU,mastElev_forSU,hubHH,z0);});
+  // v16.0: Pre-compute per-turbine, per-sector Jackson-Hunt terrain speedups
+  // This replaces the old single-speedup-per-turbine approach with direction-dependent
+  // speedups from the Jackson-Hunt linearized potential flow model
+  const jhSpeedups = computeAllJHSpeedups(sectors, hubHH, z0);
+  // For display: compute average speedup per turbine (using prevailing direction)
+  const prevDir=parseFloat($('prevWD')?.value||270);
+  const tSpeedups=S.turbines.map((t,ti)=>{
+    if(!jhSpeedups[ti])return 1.0;
+    // Average across all sectors (frequency-weighted)
+    let wSum=0, suSum=0;
+    sectors.forEach((sec,si)=>{
+      wSum+=sec.freq;
+      suSum+=sec.freq*jhSpeedups[ti][si].speedup;
+    });
+    return wSum>0?suSum/wSum:1.0;
+  });
   // Pre-compute the global-z0 vertical extrapolation ratio (used to "undo" it in OWC→GWC→SWC chain)
   const logRatioGlobal = logWS_stab(1.0, mastH, hubHH, z0, L);
 
@@ -1762,15 +2175,17 @@ function calcAEP(){
           net[t]+=lutGet(turbLut,turbWsp).power*sec.freq*prob*8760;
         }
       } else {
-        // v13.1/v14.0: Non-BZ path — per-turbine with OWC→GWC→SWC chain + terrain speedup + HH scaling + per-WTG density
+        // v16.0: Non-BZ path — per-turbine with OWC→GWC→SWC chain + Jackson-Hunt terrain speedup + flow turning + HH scaling + per-WTG density
         for(let t=0;t<n;t++){
           const tHH=turbineHHs[t];
-          const su=tSpeedups[t]; // terrain speedup for this turbine
+          // v16.0: Use per-sector Jackson-Hunt speedup (direction-dependent)
+          const jhSU = jhSpeedups[t] && jhSpeedups[t][si] ? jhSpeedups[t][si].speedup : tSpeedups[t];
+          const jhTurn = jhSpeedups[t] && jhSpeedups[t][si] ? jhSpeedups[t][si].turning : 0;
           // Per-turbine HH scaling: project from reference HH to turbine HH using site z0
           const hhRoughScale = tHH !== hubHH ?
             owcToSWC_sector(1.0, hubHH, z0_site_sec, tHH, z0_site_sec, L) : 1.0;
-          // Gross wind speed: SWC × terrain speedup × HH scaling
-          const turbV=correctedV*su*hhRoughScale;
+          // Gross wind speed: SWC × Jackson-Hunt terrain speedup × HH scaling
+          const turbV=correctedV*jhSU*hhRoughScale;
           const turbLut=turbLUTs[t]; // v14.0: per-WTG density LUT
           const turbGp=lutGet(turbLut,turbV).power;
           const wakeRatio=correctedV>0.5?wsp[t]/correctedV:1;
@@ -1818,14 +2233,13 @@ function calcAEP(){
   const sig=Math.sqrt(u_wind_r**2+u_wake_r**2+u_pc_r**2+u_den_r**2+u_other_r**2+u_hh_r**2);
   const P50=netF,P75=P50*(1-0.674*sig),P90=P50*(1-1.282*sig),P99=P50*(1-2.326*sig);
 
-  // Per-turbine with free WS at prevailing direction + horizontal speedup
-  const prevDir=parseFloat($('prevWD')?.value||270);
+  // Per-turbine with free WS at prevailing direction + Jackson-Hunt speedup
   const freeSpWind=wakeRun(txy,rotorMeanWS,prevDir,lut,kw);
-  // tSpeedups already computed above (v13.1) — reuse it for display
+  // tSpeedups is frequency-weighted average per turbine (computed above from JH)
   const perT=txy.map((_,i)=>{
     const wl=gross[i]>0?(gross[i]-net[i])/gross[i]*100:0;
     const nt=net[i]*lossM/1e6;const cf=nt*1000/(pc.rated*8760)*100;
-    // Per-turbine free-stream WS at its own hub height (including terrain speedup)
+    // Per-turbine free-stream WS at its own hub height (including JH terrain speedup)
     const freeWS=rotorMeanWS*tSpeedups[i]*hhScaleFactors[i],wakeWS=freeSpWind[i]*tSpeedups[i]*hhScaleFactors[i];
     const turbLut=turbLUTs[i]; // v14.0: per-WTG density LUT for display
     return{i:i+1,ws:freeWS.toFixed(2),hubWS:(hubMean*hhScaleFactors[i]).toFixed(2),rotorWS:(rotorMeanWS*tSpeedups[i]*hhScaleFactors[i]).toFixed(2),wake:wl.toFixed(1),wakeWS:wakeWS.toFixed(2),net:nt.toFixed(3),cf:cf.toFixed(1),gross:(gross[i]/1e6).toFixed(3),power:lutGet(turbLut,wakeWS).power.toFixed(0),hh:turbineHHs[i],speedup:tSpeedups[i].toFixed(4),rho:turbDensities[i].toFixed(4)};
@@ -1869,6 +2283,14 @@ function calcAEP(){
     log(`OWC→GWC→SWC chain: Sector 0 ratio=${sampleChainR.toFixed(4)} (roughRose z0_mast=${getSectorEffectiveZ0('mast',0,hubHH,nSect).toFixed(4)} z0_site=${getSectorEffectiveZ0('site',0,hubHH,nSect).toFixed(4)} IBL=${getSectorRoughnessRatio(0,hubHH,nSect).toFixed(4)} GDL=${gdlFactor.toFixed(4)} f=${getCoriolisParam().toFixed(6)})`,'i');
   } else {
     log(`OWC→GWC→SWC chain: No roughness rose — using global z0=${z0} (GDL=${gdlFactor.toFixed(4)})`,'i');
+  }
+  // v16.0: Log Jackson-Hunt terrain model status
+  const jhActive = S.terrain && S.terrain.grid && S.terrain.grid.length && (S.terrain.maxE - S.terrain.minE) >= 5;
+  if (jhActive) {
+    const suRange = tSpeedups.reduce((r, su) => ({ min: Math.min(r.min, su), max: Math.max(r.max, su) }), { min: 2, max: 0 });
+    log(`Jackson-Hunt terrain model: ACTIVE (terrain range ${(S.terrain.maxE-S.terrain.minE).toFixed(0)}m, speedup range ${suRange.min.toFixed(4)}–${suRange.max.toFixed(4)}, ${S.turbines.length} WTGs × ${sectors.length} sectors)`,'i');
+  } else {
+    log(`Jackson-Hunt terrain model: INACTIVE (flat terrain or no grid) — using elevation proxy`,'i');
   }
   return{mastH,hubHH,z0,mastMean,hubMean,rotorMeanWS,rotAvgFactor,mastWb,hubWb,mcpFactor:S.mcpFactor,density,PD:.5*density*hubMean**3,grossAEP:grossG,wakeLoss:wakeL,netAEP:netF,CF,instMW,P50,P75,P90,P99,sigma:sig,u_wind_r,u_wake_r,u_pc_r,u_den_r:Math.abs(density-1.225)/1.225*0.5,perTurbine:perT,sectors,gwcSectors,shearProfile,rix,lut,iec,bzEnabled:BZ.enabled,rotorAvgUsed:useRotorAvg,isMixedHH,turbineHHs,hhScaleFactors,densitySource:$('densMethod')?.textContent||'ISA',turbDensities,perWtgDensityUsed:usePerWtg};
 }
@@ -2091,9 +2513,15 @@ async function runTimeSeries(){
     return perWtgDensityCorrection(rhoTS,refElev,t.elev||refElev,T_avg_K);
   });
   const tsTurbLUTs=tsTurbDensities.map(d=>buildLUT(pc,d));
-  // ── PER-TURBINE HORIZONTAL SPEEDUP (elevation-based) ──
+  // ── PER-TURBINE HORIZONTAL SPEEDUP (v16.0: Jackson-Hunt model) ──
+  // For time-series path, use JH model with a representative direction (prevailing)
   const mastElev=S.terrain?getTerrainElev(lat,lon)||0:0;
-  const speedups=S.turbines.map(t=>{
+  const prevDirTS=parseFloat($('prevWD')?.value||270);
+  const speedups=S.turbines.map((t,ti)=>{
+    // Try Jackson-Hunt first (needs terrain grid)
+    const jh=terrainSpeedupJH(ti,prevDirTS,hubHH,z0);
+    if(jh.speedup!==1.0)return jh.speedup;
+    // Fallback to elevation proxy
     const te=t.elev!==undefined?t.elev:(S.terrain?getTerrainElev(t.lat,t.lon)??mastElev:mastElev);
     return terrainSpeedup(te,mastElev,hubHH,z0);
   });
