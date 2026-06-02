@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 24.1</title>
+<title>WindFlow Pro 25.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 24.1</span></div><div class="brand-sub">SRTM DEM · CORINE · ESA CCI · NEWA · NREL WTK V2 Multi-Height · JH Terrain · Hourly Stability · Auto Roughness Rose · Canopy d0 · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · WAsP-Weibull · ERA5T rho · NREL Profile Fit · Fixed Chain · Fixed CF · Fixed BZ · Fixed ERA5T Height · Synced HH</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 25.0</span></div><div class="brand-sub">① Site → ② Layout → ③ Wind Data (ERA5/NEWA) → ④ Terrain (SRTM) → ⑤ Roughness (ESA CCI) → ⑥ BZ Model → ⑦ MCP → ⑧ Run Analysis → ⑨ Export Report</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -88,6 +88,12 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <button class="btn btn-sm btn-gold" id="drawBtn" onclick="toggleDraw()">✏ Draw Boundary</button>
         <button class="btn btn-sm btn-ghost" onclick="doneDraw()">✓ Close Poly</button>
         <button class="btn btn-sm btn-danger" onclick="clearBoundary()">✕ Clear</button>
+        <button class="btn btn-sm btn-ghost" id="gwaOverlayBtn" onclick="toggleGWAOverlay()">🗺 GWA Overlay</button>
+        <button class="btn btn-sm btn-ghost" onclick="autoFocusMap()">🎯 Focus</button>
+      </div>
+      <div style="display:flex;gap:.4rem;align-items:center;margin-top:.3rem">
+        <label style="font-size:.56rem;color:var(--text3)">GWA Opacity</label>
+        <input class="fi" id="gwaOp" type="range" min="0" max="1" step="0.05" value="0.4" style="width:80px" oninput="if(gwaTileLayer&&leafMap?.hasLayer(gwaTileLayer))gwaTileLayer.setOpacity(parseFloat(this.value))">
       </div>
       <div id="bndStats" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">No boundary defined</div>
     </div>
@@ -247,13 +253,22 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wind Dir (°)</label><input class="fi" id="terrProfDir" type="number" value="270" min="0" max="359" step="1" oninput="drawTerrainProfile()"></div><div class="fg"><label class="fl">Ref Point</label><select class="fs" id="terrProfRef" onchange="drawTerrainProfile()"><option value="center" selected>Site Centre</option><option value="cursor">Cursor Click</option></select></div></div>
         <div id="terrProfRefInfo" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">Click on profile to set reference point · REF marker shows current reference</div>
       </div>
-      <div class="card"><div class="card-title gold">Roughness Data</div>
-        <div class="fg"><label class="fl">Data Source</label><select class="fs" id="roughSource" onchange="onRoughSourceChange()"><option value="osm" selected>OSM (current)</option><option value="corine">CORINE 2018 (EU)</option><option value="esa">ESA CCI (Global)</option><option value="upload">Upload Classification</option></select></div>
+      <div class="card"><div class="card-title gold">Roughness Map</div>
+        <div style="font-size:.56rem;color:var(--muted);margin-bottom:.4rem;line-height:1.4">
+          <b style="color:var(--acc)">Why roughness matters:</b> Surface roughness (z₀) determines wind shear — taller obstacles = slower near-surface wind = higher shear.
+          Different directions have different terrain (forest vs sea vs open fields), so <b>per-sector roughness</b> is needed for accurate WAsP-style OWC→GWC→SWC wind atlas chain.
+        </div>
+        <div class="fg"><label class="fl">Data Source</label><select class="fs" id="roughSource" onchange="onRoughSourceChange()"><option value="esa" selected>ESA CCI 300m (Global, auto)</option><option value="osm">OSM Overpass (Manual)</option><option value="corine">CORINE 2018 (EU only)</option><option value="upload">Upload Classification</option></select></div>
+        <div id="esaOpts" style="margin-top:.3rem"><button class="btn btn-primary" style="width:100%" onclick="downloadESA_CCI_Auto()">🌍 Auto-Download Global Land Cover & Generate Roughness Map + Rose</button><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">ESA Climate Change Initiative · Global 300m · Auto-generates roughness zones + directional rose</div></div>
         <div id="corineOpts" style="display:none;margin-top:.3rem"><button class="btn btn-sm btn-ghost" style="width:100%" onclick="downloadCORINE()">🌍 Download CORINE 2018 WFS</button><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">Copernicus Land Monitoring Service · EU coverage only</div></div>
-        <div id="esaOpts" style="display:none;margin-top:.3rem"><button class="btn btn-sm btn-ghost" style="width:100%" onclick="downloadESA_CCI()">🌍 Download ESA CCI Land Cover</button><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">ESA Climate Change Initiative · Global 300m · Samples grid</div></div>
+        <div id="osmOpts" style="display:none;margin-top:.3rem">
+          <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Lat</label><input class="fi" id="osmLa" type="number" value="55.500" step="0.001"></div><div class="fg"><label class="fl">Lon</label><input class="fi" id="osmLo" type="number" value="7.900" step="0.001"></div></div>
+          <div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="osmRad" type="number" value="20" min="5" max="50"></div>
+          <button class="btn btn-sm btn-ghost" style="margin-top:.3rem;width:100%" onclick="extractOSMRoughness()">🌍 Extract OSM</button>
+          <div class="progress"><div class="progress-bar" id="osmpb" style="width:0"></div></div><div id="osmpt" style="font-size:.52rem;color:var(--text3)">Overpass API may timeout — use ESA CCI for reliability</div>
+        </div>
         <div id="uploadOpts" style="display:none;margin-top:.3rem"><div class="upload-zone" style="padding:.6rem"><input type="file" accept=".csv" onchange="handleLandCoverUpload(event)"><span class="upload-text" style="font-size:.65rem">Upload Land Cover CSV (lat,lon,code)</span><span class="upload-hint">CORINE/ESA codes auto-mapped to z₀</span></div></div>
-        <button class="btn btn-primary" style="width:100%;margin-top:.5rem;margin-bottom:.3rem" onclick="downloadRoughness()">⬇ Generate Roughness Map (OSM)</button>
-        <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.3rem">
+        <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.4rem;margin-bottom:.3rem">
           <button class="btn btn-sm btn-ghost" onclick="exportRoughnessCSV()">📁 Zones CSV</button>
           <button class="btn btn-sm btn-ghost" onclick="exportRoughnessRoseCSV()">📁 Rose CSV</button>
           <button class="btn btn-sm btn-ghost" onclick="exportRoughnessMap()">📁 WAsP .map</button>
@@ -269,20 +284,17 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <div class="metric-item"><div class="metric-val" id="terrCI2">—</div><div class="metric-label">Contour Int m</div></div>
         </div>
       </div>
-      <div class="card"><div class="card-title sky">Roughness Rose</div>
+      <div class="card"><div class="card-title sky">Roughness Rose (Auto-generated)</div>
+        <div style="font-size:.52rem;color:var(--muted);margin-bottom:.3rem;line-height:1.3">
+          <b style="color:var(--acc)">Per-sector z₀</b>: Wind from the N may cross sea (z₀=0.0002) while wind from the S crosses forest (z₀=1.0).
+          The rose captures this directional variation. Auto-populated from ESA CCI land cover.
+        </div>
         <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Site z₀</label><input class="fi" id="rrZ0site" type="number" value="0.0002" step="0.0001"></div><div class="fg"><label class="fl">Mast z₀</label><input class="fi" id="rrZ0mast" type="number" value="0.0002" step="0.0001"></div></div>
         <div class="fg"><label class="fl">Preset</label><select class="fs" id="rrPreset" onchange="applyRoughnessPreset()"><option value="custom">Custom</option><option value="offshore">All Offshore</option><option value="open">All Open</option><option value="agri">All Agricultural</option><option value="mixed">Mixed: Off→Agri</option></select></div>
         <button class="btn btn-sm btn-primary" style="margin-top:.4rem" onclick="applyRoughnessRose()">🗺 Apply Rose</button>
         <div class="tbl-wrap" style="max-height:160px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>z₀¹</th><th>x¹</th><th>z₀²</th><th>x²</th><th>z₀³</th></tr></thead><tbody id="rrBody"></tbody></table></div>
         <div class="canvas-wrap" style="height:140px;margin-top:.4rem"><canvas id="rrChart"></canvas></div>
         <div id="rrStat" style="font-size:.58rem;color:var(--text3);margin-top:.2rem">—</div>
-      </div>
-      <div class="card"><div class="card-title">OSM Roughness Extract</div>
-        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Lat</label><input class="fi" id="osmLa" type="number" value="55.500" step="0.001"></div><div class="fg"><label class="fl">Lon</label><input class="fi" id="osmLo" type="number" value="7.900" step="0.001"></div></div>
-        <div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="osmRad" type="number" value="20" min="5" max="50"></div>
-        <button class="btn btn-sm btn-ghost" style="margin-top:.3rem" onclick="extractOSMRoughness()">🌍 Extract OSM</button>
-        <div class="progress"><div class="progress-bar" id="osmpb" style="width:0"></div></div><div id="osmpt" style="font-size:.52rem;color:var(--text3)">—</div>
-        <div id="osmStat" style="font-size:.58rem;color:var(--text3)">—</div>
       </div>
     </div>
   </div>
@@ -291,6 +303,26 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 
 <!-- ===== STEP 5: WIND FLOW MODELLING ===== -->
 <div class="step-panel" id="step5">
+  <!-- v25.0: Flow Model Pipeline Info Card -->
+  <div class="card" style="margin-bottom:.5rem;border-left:3px solid var(--acc)">
+    <div class="card-title" style="font-size:.72rem">Sequential Flow Model Pipeline</div>
+    <div style="font-size:.62rem;line-height:1.5;color:var(--text2);padding:0 .3rem">
+      <div style="display:flex;flex-wrap:wrap;gap:.2rem .6rem;align-items:center">
+        <span style="color:var(--grn);font-weight:700">① OWC</span><span style="color:var(--muted)">→</span>
+        <span style="color:#58a6ff;font-weight:700">② Log-law</span><span style="color:var(--muted)">→</span>
+        <span style="color:#58a6ff;font-weight:700">③ MCP</span><span style="color:var(--muted)">→</span>
+        <span style="color:#7ee787;font-weight:700">④ Rotor avg</span><span style="color:var(--muted)">→</span>
+        <span style="color:#d2a8ff;font-weight:700">⑤ BZ/JH</span><span style="color:var(--muted)">→</span>
+        <span style="color:#ffa657;font-weight:700">⑥ Roughness</span><span style="color:var(--muted)">→</span>
+        <span style="color:#ffa657;font-weight:700">⑦ GDL</span><span style="color:var(--muted)">→</span>
+        <span style="color:var(--wrn);font-weight:700">⑧ Wake</span><span style="color:var(--muted)">→</span>
+        <span style="color:var(--sky);font-weight:700">⑨ Calibration</span>
+      </div>
+      <div style="margin-top:.3rem;color:var(--muted);font-size:.56rem">
+        OWC=Observed Wind Climate · Log-law=vertical extrapolation · MCP=Measure-Correlate-Predict · BZ=Jackson-Hunt orographic · Roughness=IBL roughness change · GDL=Geostrophic Departure · Wake=Jensen/PARK or Eddy · Calibration=WAsP empirical
+      </div>
+    </div>
+  </div>
   <div class="g2">
     <div>
       <div class="card"><div class="card-title green">BZ Orographic Model</div>
@@ -334,7 +366,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       </div>
       <div class="card"><div class="card-title">P-Exceedance</div><div id="pexc" style="font-size:.7rem;color:var(--text3)">Run analysis</div></div>
       <div class="card"><div class="card-title">Per-Turbine AEP</div>
-        <div class="tbl-wrap" style="max-height:150px"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th><th id="rhoColHdr" style="display:none">ρ</th></tr></thead><tbody id="aepBody"><tr><td colspan="12" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div>
+        <div class="tbl-wrap" style="max-height:150px"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Eff.SU</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="aepBody"><tr><td colspan="12" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div>
       </div>
       <div class="card"><div class="card-title">Wind Rose</div><div class="rose-canvas-wrap"><canvas id="roseCanvas" width="400" height="350"></canvas></div></div>
       <div class="card"><div class="card-title">Sector BZ Speedup</div><div class="canvas-wrap" style="height:150px"><canvas id="bzSectChart"></canvas></div></div>
@@ -343,7 +375,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   </div>
   <div class="tab-bar" style="margin-top:.5rem"><button class="tab-btn active" onclick="showFlowTab(0,this)">Wind Stats</button><button class="tab-btn" onclick="showFlowTab(1,this)">WS Chain</button><button class="tab-btn" onclick="showFlowTab(2,this)">GWC</button><button class="tab-btn" onclick="showFlowTab(3,this)">BZ Detail</button><button class="tab-btn" onclick="showFlowTab(4,this)">Time Series</button><button class="tab-btn" onclick="showFlowTab(5,this)">Calibration</button><button class="tab-btn" onclick="showFlowTab(6,this)">Engine Log</button></div>
   <div class="tab-panel active" id="flowTab0"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val sky" id="wMean">—</div><div class="metric-label">Mean WS m/s</div></div><div class="metric-item"><div class="metric-val" id="wPD">—</div><div class="metric-label">Power W/m²</div></div><div class="metric-item"><div class="metric-val sky" id="wA">—</div><div class="metric-label">Weibull A</div></div><div class="metric-item"><div class="metric-val gold" id="wK">—</div><div class="metric-label">Weibull k</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="wbChart"></canvas></div><div class="tbl-wrap" style="max-height:150px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>Freq%</th><th>A</th><th>k</th><th>WS</th></tr></thead><tbody id="sectBody"></tbody></table></div></div></div>
-  <div class="tab-panel" id="flowTab1"><div class="card"><div id="wscChain">Run analysis</div><div class="tbl-wrap" style="max-height:180px;margin-top:.5rem"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="wscBody"><tr><td colspan="11" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.5rem"><canvas id="wscChart"></canvas></div></div></div>
+  <div class="tab-panel" id="flowTab1"><div class="card"><div id="wscChain">Run analysis</div><div class="tbl-wrap" style="max-height:180px;margin-top:.5rem"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Eff.SU</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="wscBody"><tr><td colspan="12" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.5rem"><canvas id="wscChart"></canvas></div></div></div>
   <div class="tab-panel" id="flowTab2"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="gcZ0">—</div><div class="metric-label">z₀ m</div></div><div class="metric-item"><div class="metric-val sky" id="gcSR">—</div><div class="metric-label">Mean SR</div></div><div class="metric-item"><div class="metric-val" id="gcWS">—</div><div class="metric-label">GWC WS</div></div><div class="metric-item"><div class="metric-val sky" id="gcSW">—</div><div class="metric-label">SWC WS</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>Freq%</th><th>OWC A</th><th>OWC k</th><th>GWC A</th><th>SWC A</th><th>SR</th></tr></thead><tbody id="gwcBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.4rem"><canvas id="shearChart2"></canvas></div></div></div>
   <div class="tab-panel" id="flowTab3"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="bz-maSU">—</div><div class="metric-label">Mast SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-mxSU">—</div><div class="metric-label">Max SU</div></div><div class="metric-item"><div class="metric-val sky" id="bz-miSU">—</div><div class="metric-label">Min SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-rix">—</div><div class="metric-label">RIX %</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>T#</th><th>BZ SU</th><th>δ%</th><th>Turn°</th><th>OWC</th><th>GWC</th><th>SWC</th></tr></thead><tbody id="bzTBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run BZ first</td></tr></tbody></table></div><div class="canvas-wrap" style="height:120px;margin-top:.4rem"><canvas id="bzBesChart"></canvas></div><div id="bzIBLnote" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">—</div><div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="metric-item"><div class="metric-val sky" id="bz-iblH">—</div><div class="metric-label">IBL Height m</div></div><div class="metric-item"><div class="metric-val" id="bz-roughRC">—</div><div class="metric-label">Rough. Corr.</div></div></div></div></div>
   <div class="tab-panel" id="flowTab4"><div class="card"><div class="card-title gold">Time Series</div><div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Start Year</label><input class="fi" id="tsSy" type="number" value="2022"></div><div class="fg"><label class="fl">End Year</label><input class="fi" id="tsEy" type="number" value="2022"></div></div><div class="fg"><label class="fl">Step</label><select class="fs" id="tsStep"><option value="1">1-hour</option><option value="3" selected>3-hour</option><option value="6">6-hour</option></select></div><button class="btn btn-gold" style="width:100%;margin-top:.4rem" onclick="runTimeSeries()">⏱ Run Time Series</button><div class="progress"><div class="progress-bar" id="tspb" style="width:0"></div></div><div id="tspt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div><div id="tsOut" style="display:none;margin-top:.5rem"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="tsRc">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val g" id="tsNt">—</div><div class="metric-label">Net GWh/yr</div></div><div class="metric-item"><div class="metric-val o" id="tsWk">—</div><div class="metric-label">Wake %</div></div><div class="metric-item"><div class="metric-val b" id="tsCf">—</div><div class="metric-label">CF %</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="monthChart"></canvas></div><div class="canvas-wrap" style="height:100px;margin-top:.3rem"><canvas id="diurnChart"></canvas></div><button class="btn btn-sm btn-ghost" style="margin-top:.3rem" onclick="exportTSCSV()">↓ Monthly CSV</button><button class="btn btn-sm btn-gold" style="margin-top:.3rem;width:100%" onclick="exportTSPerTurbineHourly()">↓ Per-WTG Hourly CSV</button></div></div></div>
@@ -2778,16 +2810,41 @@ function calcAEP(){
   const sig=Math.sqrt(u_wind_r**2+u_wake_r**2+u_pc_r**2+u_den_r**2+u_other_r**2+u_hh_r**2);
   const P50=netF,P75=P50*(1-0.674*sig),P90=P50*(1-1.282*sig),P99=P50*(1-2.326*sig);
 
-  // Per-turbine with free WS at prevailing direction + Jackson-Hunt speedup
+  // Per-turbine with free WS using actual flow model corrections
+  // v25.0 FIX: Use BZ speedups (not just JH) in free WS so each turbine shows different values
   const freeSpWind=wakeRun(txy,rotorMeanWS,prevDir,lut,kw);
+  // v25.0: Compute per-turbine effective speedup from the ACTUAL flow model used in AEP
+  // This combines: BZ orographic speedup + roughness change + HH scaling
+  const perTEffSU=S.turbines.map((t,i)=>{
+    if(BZ.enabled&&BZ.speedups.length){
+      const bzSU=BZ.speedups[i]||1;
+      const roughRC=BZ.turbRoughRC?BZ.turbRoughRC[i]:1;
+      const hhS=hhScaleFactors[i];
+      // Full speedup: BZ orographic × roughness change × HH scaling / mast SU
+      // This matches the calcAEP logic: correctedV = rotorV / mastOrSU × turbSU × roughRC × gdlFactor × hhS
+      const mastSU=BZ.mastSU||1;
+      return (bzSU/mastSU)*roughRC*gdlFactor*hhS;
+    }
+    // Non-BZ path: JH terrain speedup + HH scaling + roughness ratio
+    const jhSU=tSpeedups[i];
+    const roughRC=hasRoughRose?getSectorRoughnessRatio(0,hubHH,nSect):1;
+    return jhSU*hhScaleFactors[i]*(hasRoughRose?roughRC*gdlFactor:1);
+  });
   // tSpeedups is frequency-weighted average per turbine (computed above from JH)
   const perT=txy.map((_,i)=>{
     const wl=gross[i]>0?(gross[i]-net[i])/gross[i]*100:0;
     const nt=net[i]*lossM/1e6;const cf=nt*1e6/(pc.rated*8760)*100;
-    // Per-turbine free-stream WS at its own hub height (including JH terrain speedup)
-    const freeWS=rotorMeanWS*tSpeedups[i]*hhScaleFactors[i],wakeWS=freeSpWind[i]*tSpeedups[i]*hhScaleFactors[i];
+    // v25.0 FIX: Per-turbine free-stream WS using ACTUAL effective speedup
+    // This now properly accounts for BZ orographic speedups + roughness + HH scaling
+    // so different turbines at different locations get different free-stream WS
+    const freeWS=rotorMeanWS*perTEffSU[i];
+    // Wake WS = free-stream WS reduced by wake model at prevailing direction
+    // Use the same effective speedup applied to the wake model output
+    const wakeWS=freeSpWind[i]/Math.max(0.1,rotorMeanWS)*freeWS;
     const turbLut=turbLUTs[i]; // v14.0: per-WTG density LUT for display
-    return{i:i+1,ws:freeWS.toFixed(2),hubWS:(hubMean*hhScaleFactors[i]).toFixed(2),rotorWS:(rotorMeanWS*tSpeedups[i]*hhScaleFactors[i]).toFixed(2),wake:wl.toFixed(1),wakeWS:wakeWS.toFixed(2),net:nt.toFixed(3),cf:cf.toFixed(1),gross:(gross[i]/1e6).toFixed(3),power:lutGet(turbLut,wakeWS).power.toFixed(0),hh:turbineHHs[i],speedup:tSpeedups[i].toFixed(4),rho:turbDensities[i].toFixed(4)};
+    // v25.0: Store effective speedup for display in table
+    const effSU=perTEffSU[i];
+    return{i:i+1,ws:freeWS.toFixed(2),hubWS:(hubMean*hhScaleFactors[i]).toFixed(2),rotorWS:(rotorMeanWS*tSpeedups[i]*hhScaleFactors[i]).toFixed(2),wake:wl.toFixed(1),wakeWS:wakeWS.toFixed(2),net:nt.toFixed(3),cf:cf.toFixed(1),gross:(gross[i]/1e6).toFixed(3),power:lutGet(turbLut,wakeWS).power.toFixed(0),hh:turbineHHs[i],speedup:effSU.toFixed(4),rho:turbDensities[i].toFixed(4),effSU:effSU};
   });
 
   // GWC — WAsP-aligned OWC→GWC→SWC per sector
@@ -2846,6 +2903,11 @@ function runAnalysis(){
   if(!S.turbines.length){alert('Add turbines (grid generator or Demo)');return;}
   if(!S.wind){alert('Load wind data (ERA5 tab or Import)');return;}
   setStatus('Running WAsP engine...');$('runBtn').disabled=true;
+  // v25.0: Log the flow model pipeline sequence for transparency
+  log(`── Flow Model Pipeline ──`,'i');
+  log(`  ① Measured OWC → ② Log-law extrapolation (mastH→hubHH) → ③ MCP LT correction (factor=${(S.mcpFactor||1).toFixed(3)})`,'i');
+  log(`  ④ Rotor averaging → ${BZ.enabled?'⑤ BZ orographic (mastSU='+BZ.mastSU?.toFixed(4)+')':'⑤ JH terrain speedup'} → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Wake model`,'i');
+  log(`  ⑨ Site calibration (${S.waspCalibration?'applied':'default'})`,'i');
   setTimeout(()=>{try{
     let R=calcAEP();if(!R){setStatus('Error');$('runBtn').disabled=false;return;}
     // v11.6: Auto-compute default calibration if not already set
@@ -2853,6 +2915,12 @@ function runAnalysis(){
     // Apply site-specific or default WAsP calibration if enabled
     if($('calApplyCB')?.checked && S.waspCalibration) R=applyWaspCalibration(R);
     S.results=R;updateResultsUI(R);updateWindUI(S.wind.speeds,S.wind.dirs);updateWSChain(R);updateGWCTab(R);
+    // v25.0: Log per-turbine free WS transparency
+    if(R.perTurbine.length>1){
+      const freeWSvals=R.perTurbine.map(t=>parseFloat(t.ws));
+      const minFree=Math.min(...freeWSvals).toFixed(2),maxFree=Math.max(...freeWSvals).toFixed(2);
+      log(`  Free-stream WS range: ${minFree}–${maxFree} m/s (Δ=${(Math.max(...freeWSvals)-Math.min(...freeWSvals)).toFixed(2)} m/s across ${freeWSvals.length} WTGs)`,'i');
+    }
     setStatus(`✓ Net AEP: ${R.netAEP.toFixed(2)} GWh | Wake: ${R.wakeLoss.toFixed(1)}% | CF: ${R.CF.toFixed(1)}%${R.bzEnabled?' [BZ]':''}${R.calibrated?' [WAsP Cal]':''}`);
     $('sbAEP').textContent=`${R.netAEP.toFixed(2)} GWh`;
     log(`✓ Gross=${R.grossAEP.toFixed(2)} GWh · Wake=${R.wakeLoss.toFixed(1)}% · Net=${R.netAEP.toFixed(2)} GWh · CF=${R.CF.toFixed(1)}%${R.bzEnabled?' · BZ integrated':''}${R.calibrated?' · WAsP-calibrated':''}`,'i');
@@ -2880,9 +2948,10 @@ function updateResultsUI(R){
     </td></tr>
   </table>`;
   const tb=$('aepBody');tb.innerHTML='';
-  // v14.0: Show/hide per-WTG density column
-  const rhoHdr=$('rhoColHdr');if(rhoHdr)rhoHdr.style.display=R.perWtgDensityUsed?'table-cell':'none';
-  R.perTurbine.forEach(t=>{const tb2=S.turbines[t.i-1]||{};const tr=document.createElement('tr');tr.innerHTML=`<td>T${t.i}</td><td>${(tb2.lat||0).toFixed(4)}</td><td>${(tb2.lon||0).toFixed(4)}</td><td>${(tb2.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${t.ws}</td><td>${t.wake}%</td><td>${t.wakeWS||t.ws}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>${R.perWtgDensityUsed?`<td style="color:var(--sky)">${t.rho||R.density.toFixed(3)}</td>`:''}`;tb.appendChild(tr);});
+  // v25.0: Updated to include Eff.SU column for transparency
+  R.perTurbine.forEach(t=>{const tb2=S.turbines[t.i-1]||{};const tr=document.createElement('tr');
+    const effSU=t.effSU||parseFloat(t.speedup||1);
+    tr.innerHTML=`<td>T${t.i}</td><td>${(tb2.lat||0).toFixed(4)}</td><td>${(tb2.lon||0).toFixed(4)}</td><td>${(tb2.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${t.ws}</td><td>${t.wake}%</td><td>${t.wakeWS||t.ws}</td><td style="color:var(--acc)">${effSU.toFixed(3)}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;tb.appendChild(tr);});
   drawAEPChart(R.perTurbine);drawShearChart(R.shearProfile);
   if (R.calibrated) {
     if ($('calIndicator')) $('calIndicator').style.display = 'block';
@@ -2892,31 +2961,75 @@ function updateResultsUI(R){
 }
 
 // ── WIND SPEED CHAIN ──
+// v25.0: Enhanced with full flow model pipeline transparency
 function updateWSChain(R){
   const shearAdj=(R.hubMean-R.mastMean);const shearPct=R.mastMean>0?shearAdj/R.mastMean*100:0;
   const mcpAdj=R.hubMean*(R.mcpFactor-1);const mcpPct=(R.mcpFactor-1)*100;
   const maxWS=Math.max((R.rotorMeanWS||R.hubMean)*1.1,R.mastMean*1.1);
   const rotAdj=(R.rotorMeanWS||R.hubMean)-R.hubMean;const rotPct=R.hubMean>0?rotAdj/R.hubMean*100:0;
-  function row(step,val,delta,pct,refWS){const w=Math.round(Math.min(100,val/maxWS*100));return`<div class="wsc-row"><div class="wsc-step">${step}</div><div class="wsc-val">${val.toFixed(2)} m/s</div><div class="wsc-delta" style="color:${pct>=0?'var(--grn)':'var(--red)'}">${pct>=0?'+':''}${pct.toFixed(1)}%</div><div class="wsc-bar"><div class="wsc-fill" style="width:${w}%"></div></div></div>`;}
-  let html=`
-    <div style="font-size:9px;color:var(--muted);margin-bottom:6px;padding:4px 6px;background:var(--pan2);border-radius:3px">
-      Heights: Mast <b style="color:var(--acc)">${R.mastH}m</b> → Hub <b style="color:var(--acc)">${R.hubHH}m</b> · z₀ = <b style="color:var(--acc)">${R.z0}</b>m · MCP factor = <b style="color:var(--acc)">${R.mcpFactor.toFixed(3)}</b>${R.rotorAvgUsed?` · Rotor-avg factor = <b style="color:var(--acc)">${(R.rotAvgFactor||1).toFixed(4)}</b>`:''}
-    </div>
-    ${row('① Measured WS (OWC, mast '+R.mastH+'m)',R.mastMean,0,0,maxWS)}
-    ${row('② Hub height ('+R.hubHH+'m, log law)',R.hubMean,shearAdj,shearPct,maxWS)}
-    ${row('③ MCP LT corrected',R.hubMean*R.mcpFactor,mcpAdj,mcpPct,maxWS)}
-    ${R.rotorAvgUsed?row('④ Rotor-averaged WS',R.rotorMeanWS||R.hubMean,rotAdj,rotPct,maxWS):''}
-    ${row(R.rotorAvgUsed?'⑤':'④'+' Weibull mean (hub, free stream)',R.hubWb.A*gamma(1+1/R.hubWb.k),0,0,maxWS)}
+  function row(step,val,delta,pct,refWS,color){
+    const w=Math.round(Math.min(100,val/maxWS*100));
+    const barColor=color||'var(--acc)';
+    return`<div class="wsc-row"><div class="wsc-step">${step}</div><div class="wsc-val">${val.toFixed(2)} m/s</div><div class="wsc-delta" style="color:${pct>=0?'var(--grn)':'var(--red)'}">${pct>=0?'+':''}${pct.toFixed(1)}%</div><div class="wsc-bar"><div class="wsc-fill" style="width:${w}%;background:${barColor}"></div></div></div>`;
+  }
+
+  // v25.0: Build the full flow model pipeline with sequential steps
+  let pipelineHTML=`<div style="font-size:8.5px;color:var(--muted);margin-bottom:6px;padding:4px 6px;background:var(--pan2);border-radius:3px;line-height:1.4">
+    <b style="color:var(--acc)">Flow Model Pipeline (Sequential Order):</b><br>
+    ① Measured OWC → ② Log-law extrapolation → ③ MCP LT correction → ④ Rotor averaging<br>`;
+  if(R.bzEnabled){
+    pipelineHTML+=`⑤ BZ orographic (remove mast SU → apply turbine SU) → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Wake model → ⑨ Site calibration<br>`;
+    pipelineHTML+=`BZ mast SU = <b style="color:var(--acc)">${(BZ.mastSU||1).toFixed(4)}</b> · Mean turb SU = <b style="color:var(--acc)">${(BZ.speedups||[]).length?(BZ.speedups.reduce((s,v)=>s+v,0)/BZ.speedups.length).toFixed(4):'1.0000'}</b>`;
+  } else {
+    pipelineHTML+=`⑤ JH terrain speedup → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Wake model<br>`;
+    pipelineHTML+=`No BZ model — using Jackson-Hunt terrain speedup (directional)`;
+  }
+  pipelineHTML+=`<br>Heights: Mast <b style="color:var(--acc)">${R.mastH}m</b> → Hub <b style="color:var(--acc)">${R.hubHH}m</b> · z₀ = <b style="color:var(--acc)">${R.z0}</b>m · MCP factor = <b style="color:var(--acc)">${R.mcpFactor.toFixed(3)}</b>${R.rotorAvgUsed?` · Rotor-avg = <b style="color:var(--acc)">${(R.rotAvgFactor||1).toFixed(4)}</b>`:''}</div>`;
+
+  let html=pipelineHTML+`
+    ${row('① Measured WS (OWC, mast '+R.mastH+'m)',R.mastMean,0,0,maxWS,'#d29922')}
+    ${row('② Hub height ('+R.hubHH+'m, log law)',R.hubMean,shearAdj,shearPct,maxWS,'#58a6ff')}
+    ${row('③ MCP LT corrected',R.hubMean*R.mcpFactor,mcpAdj,mcpPct,maxWS,'#58a6ff')}
+    ${R.rotorAvgUsed?row('④ Rotor-averaged WS',R.rotorMeanWS||R.hubMean,rotAdj,rotPct,maxWS,'#7ee787'):''}
   `;
+
+  // v25.0: Show BZ/JH correction step in the chain
+  if(R.bzEnabled&&BZ.speedups&&BZ.speedups.length){
+    const meanBZSU=BZ.speedups.reduce((s,v)=>s+v,0)/BZ.speedups.length;
+    const bzPct=(meanBZSU/(BZ.mastSU||1)-1)*100;
+    const bzWS=(R.rotorMeanWS||R.hubMean)*meanBZSU/(BZ.mastSU||1);
+    html+=row('⑤ BZ orographic SU (OWC→SWC)',bzWS,bzWS-(R.rotorMeanWS||R.hubMean),bzPct,maxWS,'#d2a8ff');
+  } else if(R.perTurbine&&R.perTurbine.length) {
+    // Show average JH speedup
+    const meanSU=R.perTurbine.reduce((s,t)=>s+parseFloat(t.speedup||1),0)/R.perTurbine.length;
+    const jhWS=(R.rotorMeanWS||R.hubMean)*meanSU;
+    const jhPct=(meanSU-1)*100;
+    html+=row('⑤ JH terrain speedup',jhWS,jhWS-(R.rotorMeanWS||R.hubMean),jhPct,maxWS,'#d2a8ff');
+  }
+
+  // Roughness + GDL step
+  if(R.bzEnabled&&BZ.turbRoughRC){
+    const meanRC=BZ.turbRoughRC.reduce((s,v)=>s+v,0)/BZ.turbRoughRC.length;
+    const gdlF=gdlCorrectionFactor(getStabilityL(),R.z0,R.hubHH);
+    const roughPct=(meanRC*gdlF-1)*100;
+    html+=row('⑥ Roughness change + GDL',(R.rotorMeanWS||R.hubMean)*meanRC*gdlF,0,roughPct,maxWS,'#ffa657');
+  }
+
+  // Weibull mean (last step)
+  const wbMean=R.hubWb.A*gamma(1+1/R.hubWb.k);
+  html+=row(`${R.bzEnabled?'⑦':'⑥'} Weibull mean (hub, free stream)`,wbMean,0,0,maxWS,'#8b949e');
+
   $('wscChain').innerHTML=html;
 
-  // Per-turbine WS breakdown
+  // Per-turbine WS breakdown — v25.0: add effective speedup column
   const tb=$('wscBody');tb.innerHTML='';
   R.perTurbine.forEach(t=>{
-    const freeWS=parseFloat(t.ws),netWS=parseFloat(t.wakeWS),wkPct=parseFloat(t.wake),power=parseFloat(t.power);
+    const freeWS=parseFloat(t.ws),netWS=parseFloat(t.wakeWS),wkPct=parseFloat(t.wake);
     const turb=S.turbines[t.i-1]||{};
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>T${t.i}</td><td>${(turb.lat||0).toFixed(4)}</td><td>${(turb.lon||0).toFixed(4)}</td><td>${(turb.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${freeWS.toFixed(2)}</td><td style="color:${wkPct>5?'var(--wrn)':'var(--grn)'}">${wkPct.toFixed(1)}%</td><td style="color:var(--acc)">${netWS.toFixed(2)}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;
+    const effSU=t.effSU||parseFloat(t.speedup||1);
+    // v25.0: Show effective speedup that explains WHY free WS differs between WTGs
+    tr.innerHTML=`<td>T${t.i}</td><td>${(turb.lat||0).toFixed(4)}</td><td>${(turb.lon||0).toFixed(4)}</td><td>${(turb.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${freeWS.toFixed(2)}</td><td style="color:${wkPct>5?'var(--wrn)':'var(--grn)'}">${wkPct.toFixed(1)}%</td><td style="color:var(--acc)">${netWS.toFixed(2)}</td><td>${effSU.toFixed(3)}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;
     tb.appendChild(tr);
   });
 
@@ -3022,15 +3135,31 @@ async function runMCP(){
     const cMean=concV.reduce((s,v)=>s+v,0)/Math.max(1,concV.length),ltMean=ltV.reduce((s,v)=>s+v,0)/Math.max(1,ltV.length);
     const cMo=monthlyMeans(S.wind.speeds,S.wind.times||[]),ltMo=monthlyMeans(ltSp,ltTs);
     const pairs=[];for(const[k,v]of Object.entries(cMo))if(ltMo[k])pairs.push([ltMo[k],v]);
-    let factor=1,R2=.8;
+    let factor=1,R2=.8,lrSlope=1,lrIntercept=0;
     if(meth==='linear'&&pairs.length>3){
       const lr=linReg(pairs.map(p=>p[0]),pairs.map(p=>p[1]));
-      factor=ltMean/cMean;
+      lrSlope=lr.slope;lrIntercept=lr.intercept;
+      // v25.0 FIX: Use regression equation for MCP (not simple ratio)
+      // The linear regression gives: conc = slope × lt + intercept
+      // The LT-corrected WS at the concurrent site = slope × ltMean + intercept
+      // Then factor = LT_corrected / concMean
+      const ltCorrByRegression = lrSlope * ltMean + lrIntercept;
+      factor = ltCorrByRegression / Math.max(0.1, cMean);
       R2=Math.max(0,lr.R2);
+      if(pairs.length>3)log(`MCP linear regression: conc = ${lrSlope.toFixed(4)} × lt_ref + ${lrIntercept.toFixed(4)} (R²=${R2.toFixed(3)}, n=${pairs.length} months)`,'i');
     }
-    else if(meth==='weibull'){const cwb=weibullFit(concV),lwb=weibullFit(ltV);factor=lwb.A/cwb.A;R2=.82;}
-    else if(meth==='variance'){factor=(ltMean/cMean)*(1+.1*(stdDev(ltV)/Math.max(.01,stdDev(concV))-1));R2=.78;}
-    else{factor=ltMean/cMean;R2=.85;}
+    else if(meth==='matrix'&&pairs.length>5){
+      // v25.0: Matrix method (2-parameter: slope + offset)
+      const lr=linReg(pairs.map(p=>p[0]),pairs.map(p=>p[1]));
+      lrSlope=lr.slope;lrIntercept=lr.intercept;
+      const ltCorrByRegression = lrSlope * ltMean + lrIntercept;
+      factor = ltCorrByRegression / Math.max(0.1, cMean);
+      R2=Math.max(0,lr.R2);
+      log(`MCP matrix method: conc = ${lrSlope.toFixed(4)} × lt_ref + ${lrIntercept.toFixed(4)} (R²=${R2.toFixed(3)})`,'i');
+    }
+    else if(meth==='weibull'){const cwb=weibullFit(concV),lwb=weibullFit(ltV);factor=lwb.A/cwb.A;R2=.82;log(`MCP Weibull ratio: LT A=${lwb.A.toFixed(2)}, Conc A=${cwb.A.toFixed(2)}, ratio=${factor.toFixed(3)}`,'i');}
+    else if(meth==='variance'){factor=(ltMean/cMean)*(1+.1*(stdDev(ltV)/Math.max(.01,stdDev(concV))-1));R2=.78;log(`MCP variance ratio: factor=${factor.toFixed(3)} (LT σ=${stdDev(ltV).toFixed(2)}, Conc σ=${stdDev(concV).toFixed(2)})`,'i');}
+    else{factor=ltMean/cMean;R2=.85;log(`MCP simple ratio: LT mean=${ltMean.toFixed(2)}, Conc mean=${cMean.toFixed(2)}, factor=${factor.toFixed(3)}`,'i');}
     factor=Math.max(.7,Math.min(1.5,factor));S.mcpFactor=factor;const ltCorr=cMean*factor;
     // v14.0: Derive σ_MCP from regression R² instead of hardcoded 7%
     // σ_MCP = sqrt((1-R²)/R² × (1/n_months)) — wider when R² is low or data is sparse
@@ -3038,8 +3167,11 @@ async function runMCP(){
     const sigMCP=Math.max(0.03,Math.min(0.20,sig)); // clamp 3-20%
     setProg('mcp',100,`✓ Factor=${factor.toFixed(3)}, LT WS=${ltCorr.toFixed(2)} m/s`);
     $('mcpCW').textContent=cMean.toFixed(2);$('mcpLW').textContent=ltCorr.toFixed(2);$('mcpFc').textContent=factor.toFixed(3);$('mcpR2').textContent=R2.toFixed(2);
-    $('mcpPvals').innerHTML=`P50: <b style="color:var(--grn)">${ltCorr.toFixed(2)} m/s</b> &nbsp; P75: <b style="color:var(--acc)">${(ltCorr*(1-.674*sigMCP)).toFixed(2)}</b> &nbsp; P90: <b style="color:var(--wrn)">${(ltCorr*(1-1.282*sigMCP)).toFixed(2)}</b><br>σ_MCP=${(sigMCP*100).toFixed(1)}% (R²=${R2.toFixed(2)}, n=${pairs.length}) · Conc.=${cMean.toFixed(2)} · LT ref=${ltMean.toFixed(2)} m/s`;
-    $('mcpOut').style.display='block';log(`MCP: factor=${factor.toFixed(3)}, R²=${R2.toFixed(2)}, σ_MCP=${(sigMCP*100).toFixed(1)}%`,'i');
+    // v25.0: Enhanced MCP transparency — show full regression details
+    const methLabel={linear:'Linear Regression',matrix:'Matrix (2-param)',weibull:'Weibull Ratio',variance:'Variance Ratio'}[meth]||'Simple Ratio';
+    const regressionEq = (meth==='linear'||meth==='matrix') ? ` · Eq: conc = ${lrSlope.toFixed(4)} × lt + ${lrIntercept.toFixed(4)}` : '';
+    $('mcpPvals').innerHTML=`P50: <b style="color:var(--grn)">${ltCorr.toFixed(2)} m/s</b> &nbsp; P75: <b style="color:var(--acc)">${(ltCorr*(1-.674*sigMCP)).toFixed(2)}</b> &nbsp; P90: <b style="color:var(--wrn)">${(ltCorr*(1-1.282*sigMCP)).toFixed(2)}</b><br>σ_MCP=${(sigMCP*100).toFixed(1)}% · Method: <b style="color:var(--acc)">${methLabel}</b> · R²=${R2.toFixed(2)} · n=${pairs.length} months${regressionEq}<br>Conc. mean = ${cMean.toFixed(2)} m/s · LT ref mean = ${ltMean.toFixed(2)} m/s · Factor = ${factor.toFixed(3)}`;
+    $('mcpOut').style.display='block';log(`MCP: factor=${factor.toFixed(3)}, R²=${R2.toFixed(2)}, σ_MCP=${(sigMCP*100).toFixed(1)}%${regressionEq}`,'i');
   }catch(e){setProg('mcp',0,'❌ '+e.message);log('MCP failed: '+e.message,'e');}
 }
 function monthlyMeans(sp,ts){const s={},c={};for(let i=0;i<sp.length;i++){if(!ts[i]||!sp[i])continue;const k=ts[i].substring(0,7);s[k]=(s[k]||0)+sp[i];c[k]=(c[k]||0)+1;}const r={};for(const k of Object.keys(s))r[k]=s[k]/c[k];return r;}
@@ -3336,7 +3468,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 24.1 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 25.0 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -3377,7 +3509,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 24.1 — SRTM DEM · CORINE · ESA CCI · NEWA · NREL WTK V2 Multi-Height Profile · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · ERA5T Density · Per-WTG ρ · Humidity Correction · Hourly Stability · Auto Roughness Rose · Canopy d0 · Fixed OWC→GWC→SWC Chain · IBL · Jackson-Hunt Terrain · Fixed BZ Orographic · Wake Direction Variability · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · RIX · IEC 61400-12-1 · ERA5T Quality Checks · NREL Profile Fit · Synced Hub Height</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 25.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -3626,7 +3758,7 @@ initMap();calcDensity();
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 24.1 ready. NREL WTK V2 Multi-Height · Profile Fit · Fixed Chain · Fixed CF · Fixed BZ · Fixed ERA5T Height · Synced Hub Height','i');
+log('WindFlow Pro 25.0 ready. Site → Layout → Wind → Terrain → Roughness → BZ → MCP → Analysis → Report','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 
@@ -5936,7 +6068,7 @@ async function runBZModel(){
   const{grid,lat0,lat1,lon0,lon1,ny,nx}=S.terrain;
   const hubH=parseFloat($('hubH').value)||120;
   // v24.0: Downsample large terrain grids for BZ to improve performance
-  const maxBZGrid=200; // max grid dimension for BZ computation
+  const maxBZGrid=150; // v25.0: reduced from 200 for faster computation
   let useGrid=grid,useNy=ny,useNx=nx;
   if(ny>maxBZGrid||nx>maxBZGrid){
     const skipR=Math.ceil(ny/maxBZGrid),skipC=Math.ceil(nx/maxBZGrid);
@@ -6095,18 +6227,27 @@ async function runBZModel(){
   BZ.sectorSU=sectSU;
 
   // Full speedup grid for visualisation
+  // v25.0: Compute on DOWNSAMPLED grid to avoid taking forever on large domains
   setProg('bz',70,'Computing speedup field for map...');
   await new Promise(r=>setTimeout(r,10));
+  const vizMaxGrid=80; // limit visualization grid size for speed
+  const vizSkipR=Math.ceil(ny/vizMaxGrid),vizSkipC=Math.ceil(nx/vizMaxGrid);
+  const vizNy=Math.ceil(ny/vizSkipR),vizNx=Math.ceil(nx/vizSkipC);
   const sgrid=[];
-  for(let i=0;i<ny;i++){
+  for(let i=0;i<vizNy;i++){
     sgrid[i]=[];
-    for(let j=0;j<nx;j++){
-      const px=j/(nx-1)*Lx,py=i/(ny-1)*Ly;
-      const delta=bzDeltaAt(Re,Im,ny,nx,Lx,Ly,px,py,hubH,z0Site,lScale);
+    const ri=Math.min(i*vizSkipR,ny-1);
+    for(let j=0;j<vizNx;j++){
+      const rj=Math.min(j*vizSkipC,nx-1);
+      const px=rj/(nx-1)*Lx,py=ri/(ny-1)*Ly;
+      const delta=bzDeltaAt(Re,Im,useNy,useNx,Lx,Ly,px,py,hubH,z0Site,lScale);
       sgrid[i][j]=1+delta;
     }
+    // Progress update every 10 rows
+    if(i%10===0){setProg('bz',70+20*i/vizNy,`Grid row ${i}/${vizNy}...`);await new Promise(r=>setTimeout(r,0));}
   }
   BZ.grid=sgrid;
+  BZ.gridVizNy=vizNy;BZ.gridVizNx=vizNx; // store for drawBZLayer
 
   // v10.0: Apply empirical calibration factors based on terrain class (RIX)
   const cal = getCalibrationFactors(BZ.rix);
@@ -6257,14 +6398,20 @@ redrawCanvas=function(){
   if(!BZ.showLayer||!BZ.grid||!S.terrain||!leafMap)return;
   const ctx=contCanvas.getContext('2d');
   const{lat0,lat1,lon0,lon1,ny,nx}=S.terrain;
-  const dLat=(lat1-lat0)/(ny-1),dLon=(lon1-lon0)/(nx-1);
+  // v25.0: Use downsampled BZ grid dimensions (not terrain grid dims)
+  const bny=BZ.gridVizNy||BZ.grid.length;
+  const bnx=BZ.gridVizNx||(BZ.grid[0]?BZ.grid[0].length:0);
+  const dLat=(lat1-lat0)/(bny-1),dLon=(lon1-lon0)/(bnx-1);
   const allSU=BZ.grid.flat();
   const minSU=Math.min(...allSU),maxSU=Math.max(...allSU);
   const range=Math.max(0.001,maxSU-minSU);
   const op=parseFloat($('terrOp')?.value||0.6);
-  for(let i=0;i<ny-1;i++){
-    for(let j=0;j<nx-1;j++){
-      const su=(BZ.grid[i][j]+BZ.grid[i+1][j]+BZ.grid[i][j+1]+BZ.grid[i+1][j+1])/4;
+  for(let i=0;i<bny-1;i++){
+    for(let j=0;j<bnx-1;j++){
+      if(!BZ.grid[i]||BZ.grid[i][j]===undefined)continue;
+      const v00=BZ.grid[i][j]||1,v10=BZ.grid[i+1]?BZ.grid[i+1][j]||1:1;
+      const v01=BZ.grid[i][j+1]||1,v11=BZ.grid[i+1]?BZ.grid[i+1][j+1]||1:1;
+      const su=(v00+v10+v01+v11)/4;
       const t=(su-minSU)/range; // 0=min, 1=max
       // Diverging: blue(deceleration) → white(neutral) → red(acceleration)
       let r,g,b;
@@ -6431,17 +6578,30 @@ function goToStep(n){
 
 // ── LEAFLET MAP ──
 var leafMap=null;
+var gwaTileLayer=null; // v25.0: Global Wind Atlas overlay layer
 function initMap(){
   try{
     leafMap=L.map('siteMap',{zoomControl:true,drawControl:false}).setView([55.5,7.9],8);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:19}).addTo(leafMap);
+    // v25.0: Add GWA wind speed overlay (Global Wind Atlas WMS)
+    try{
+      gwaTileLayer=L.tileLayer.wms('https://globalwindatlas.info/api/wms',{
+        layers:'wind_speed_100m',
+        format:'image/png',
+        transparent:true,
+        opacity:0.4,
+        attribution:'Global Wind Atlas 4.0',
+        maxZoom:12
+      });
+      // NOT added by default — user toggles it
+    }catch(e){log('GWA tile layer init failed (non-critical)','d');}
     // Draw control
     try{
       var drawnItems=new L.FeatureGroup();
       leafMap.addLayer(drawnItems);
       var dc=new L.Control.Draw({draw:{polygon:{shapeOptions:{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12}},polyline:false,circle:false,rectangle:false,marker:false,circlemarker:false},edit:{featureGroup:drawnItems,remove:true}});
       leafMap.addControl(dc);
-      leafMap.on(L.Draw.Event.CREATED,function(e){drawnItems.clearLayers();drawnItems.addLayer(e.layer);var lls=e.layer.getLatLngs()[0];S.boundary=lls.map(function(ll){return[ll.lat,ll.lng];});var area=polyArea(S.boundary);$('bndStats').textContent='✓ '+S.boundary.length+' vertices · Area ≈ '+area.toFixed(1)+' km²';});
+      leafMap.on(L.Draw.Event.CREATED,function(e){drawnItems.clearLayers();drawnItems.addLayer(e.layer);var lls=e.layer.getLatLngs()[0];S.boundary=lls.map(function(ll){return[ll.lat,ll.lng];});var area=polyArea(S.boundary);$('bndStats').textContent='✓ '+S.boundary.length+' vertices · Area ≈ '+area.toFixed(1)+' km²';autoFocusMap();});
       leafMap.on(L.Draw.Event.DELETED,function(){S.boundary=[];$('bndStats').textContent='No boundary defined';});
     }catch(drawErr){console.warn('Leaflet Draw not available:',drawErr);}
     // Mouse move for info overlay
@@ -6452,6 +6612,73 @@ function initMap(){
     initCanvas();
     log('Map initialized successfully','i');
   }catch(e){console.error('Map init failed:',e);log('Map init failed: '+e.message,'e');}
+}
+
+// v25.0: Toggle GWA wind speed overlay on map
+function toggleGWAOverlay(){
+  if(!leafMap)return;
+  if(gwaTileLayer&&leafMap.hasLayer(gwaTileLayer)){
+    leafMap.removeLayer(gwaTileLayer);
+    $('gwaOverlayBtn').textContent='🗺 GWA Overlay';
+    $('gwaOverlayBtn').style.background='';
+    log('GWA wind speed overlay removed','i');
+  }else{
+    if(!gwaTileLayer){
+      // Create layer if not yet created
+      try{
+        gwaTileLayer=L.tileLayer.wms('https://globalwindatlas.info/api/wms',{
+          layers:'wind_speed_100m',format:'image/png',transparent:true,
+          opacity:parseFloat($('gwaOp')?.value||0.4),attribution:'GWA 4.0',maxZoom:12
+        });
+      }catch(e){
+        // Fallback: use a static WMS proxy or just show a message
+        log('GWA WMS not available — showing note','w');
+        alert('Global Wind Atlas WMS requires CORS access. Visit https://globalwindatlas.info for wind speed maps.');
+        return;
+      }
+    }
+    gwaTileLayer.setOpacity(parseFloat($('gwaOp')?.value||0.4));
+    gwaTileLayer.addTo(leafMap);
+    $('gwaOverlayBtn').textContent='🗺 GWA Overlay ✓';
+    $('gwaOverlayBtn').style.background='rgba(63,185,80,.18)';
+    log('GWA wind speed overlay enabled (opacity='+(parseFloat($('gwaOp')?.value||0.4)*100).toFixed(0)+'%)','i');
+  }
+}
+
+// v25.0: Auto-focus map to wind farm area + 20km extent
+function autoFocusMap(){
+  if(!leafMap)return;
+  let bounds=null;
+  // Priority 1: Use boundary if defined
+  if(S.boundary&&S.boundary.length>=3){
+    bounds=L.latLngBounds(S.boundary.map(b=>[b[0],b[1]]));
+  }
+  // Priority 2: Use turbine positions
+  else if(S.turbines&&S.turbines.length>0){
+    bounds=L.latLngBounds(S.turbines.map(t=>[t.lat,t.lon]));
+  }
+  // Priority 3: Use mast position
+  else{
+    const mLat=parseFloat($('mastLat')?.value)||55.5;
+    const mLon=parseFloat($('mastLon')?.value)||7.9;
+    leafMap.setView([mLat,mLon],10);
+    return;
+  }
+  if(bounds){
+    // Add 20km padding around the boundary/turbine extent
+    // 20km ≈ 0.18 degrees latitude, longitude varies with latitude
+    const center=bounds.getCenter();
+    const padLat=20/111.32; // 20km in degrees
+    const padLon=20/(111.32*Math.cos(center.lat*Math.PI/180));
+    const expandedBounds=bounds.pad(0); // start with tight bounds
+    // Extend by 20km in each direction
+    const sw=[bounds.getSouth()-padLat,bounds.getWest()-padLon];
+    const ne=[bounds.getNorth()+padLat,bounds.getEast()+padLon];
+    const finalBounds=L.latLngBounds([sw,ne]);
+    leafMap.fitBounds(finalBounds,{padding:[20,20],maxZoom:14});
+    const areaKm2=((finalBounds.getEast()-finalBounds.getWest())*111.32*Math.cos(center.lat*Math.PI/180))*((finalBounds.getNorth()-finalBounds.getSouth())*111.32);
+    log(`Map auto-focused: ${S.boundary.length>0?'boundary':'turbines'} + 20km extent (${areaKm2.toFixed(0)} km²)`,'i');
+  }
 }
 
 // ── POWER CURVE UPLOAD ──
@@ -6849,7 +7076,7 @@ function handleBoundaryUpload(event){
       }
       if(coords.length<3){alert('Need at least 3 coordinate pairs');return;}
       S.boundary=coords;
-      if(leafMap){const p=L.polygon(coords,{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12}).addTo(leafMap);leafMap.fitBounds(p.getBounds(),{padding:[20,20]});}
+      if(leafMap){const p=L.polygon(coords,{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12}).addTo(leafMap);autoFocusMap();}
       $('bndStats').textContent='✓ '+coords.length+' vertices from '+f.name;
       $('boundaryUploadZone').classList.add('loaded');
       log('Boundary uploaded: '+coords.length+' vertices from '+f.name,'i');
@@ -6914,7 +7141,7 @@ function processBoundaryKML(kmlText,fileName){
       // Remove existing boundary polygon
       leafMap.eachLayer(l=>{if(l instanceof L.Polygon&&l.options?.fillColor==='#00d68f')leafMap.removeLayer(l);});
       const p=L.polygon(coords,{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.12}).addTo(leafMap);
-      leafMap.fitBounds(p.getBounds(),{padding:[20,20]});
+      autoFocusMap();
     }
     $('bndStats').textContent='✓ '+coords.length+' vertices from '+fileName;
     $('boundaryUploadZone').classList.add('loaded');
@@ -7022,7 +7249,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 24.1`);
+  lines.push(`WAsP Project Export - WindFlow Pro 25.0`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
@@ -7257,9 +7484,8 @@ function updateMarkers(){
     if(hullPoints.length>=3){
       S.wfExtentLayer=L.polygon(hullPoints,{color:'#00d68f',weight:2,fillColor:'#00d68f',fillOpacity:.06,dashArray:'5,3'}).addTo(leafMap);
     }
-    // Zoom to ~20km extent around wind farm
-    const bounds=L.latLngBounds(S.turbines.map(t=>[t.lat,t.lon]));
-    leafMap.fitBounds(bounds,{padding:[60,60],maxZoom:14});
+    // v25.0: Zoom to wind farm + 20km extent
+    autoFocusMap();
   }else if(S.turbines.length===1){
     // Single turbine — zoom to 10km radius view (zoom ~13)
     leafMap.setView([S.turbines[0].lat,S.turbines[0].lon],13);
@@ -7435,7 +7661,7 @@ function exportRoughnessMap(){
   const z0mast=parseFloat($('rrZ0mast')?.value)||z0site;
   const lat=parseFloat($('e5La')?.value||'55.5');
   const lon=parseFloat($('e5Lo')?.value||'7.9');
-  let map=`! WAsP Roughness Map - exported from WindFlow Pro 24.1\n`;
+  let map=`! WAsP Roughness Map - exported from WindFlow Pro 25.0\n`;
   map+=`! Site: ${$('projName')?.value||'Project'} at ${lat.toFixed(4)}N ${lon.toFixed(4)}E\n`;
   map+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
   map+=`${nSectors} 0\n`; // nSectors, 0 = polar format
@@ -7479,7 +7705,7 @@ function exportCombinedMap(){
   const z0mast=parseFloat($('rrZ0mast')?.value)||z0site;
   const lat=parseFloat($('e5La')?.value||'55.5');
   const lon=parseFloat($('e5Lo')?.value||'7.9');
-  let map=`! WAsP Combined Terrain + Roughness Map - WindFlow Pro 24.1\n`;
+  let map=`! WAsP Combined Terrain + Roughness Map - WindFlow Pro 25.0\n`;
   map+=`! Site: ${$('projName')?.value||'Project'} at ${lat.toFixed(4)}N ${lon.toFixed(4)}E\n`;
   map+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
   map+=`! Elevation: ${T.minE?.toFixed(0)||0}–${T.maxE?.toFixed(0)||0}m ASL\n`;
@@ -7667,7 +7893,7 @@ function exportWRG(){
   if(!S.turbines.length){alert('Add turbines first');return;}
   const nSectors=parseInt($('sects').value)||12;
   const R=S.results;
-  let wrg=`! Wind Resource Grid - WindFlow Pro 24.1\n`;
+  let wrg=`! Wind Resource Grid - WindFlow Pro 25.0\n`;
   wrg+=`! Project: ${$('projName')?.value||'Project'}\n`;
   wrg+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
   wrg+=`! Turbine: ${$('tcls').options[$('tcls').selectedIndex]?.text||'Custom'}\n`;
@@ -7741,7 +7967,7 @@ function exportWindClimateSummary(){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 23.1 — NREL WTK V2 Multi-Height · Profile Fit · Fixed Chain · Fixed CF · Fixed BZ · ERA5T Quality · WAsP Package · Synced Hub Height
+// WINDFLOW PRO 25.0
 // ═══════════════════════════════════════════════════════════════════
 
 // ── UI Toggle Functions ──
@@ -7752,10 +7978,11 @@ function onTerrSourceChange(){
   if(geotiffBtn)geotiffBtn.style.display=src==='srtm'?'inline-flex':'none';
 }
 function onRoughSourceChange(){
-  const src=$('roughSource')?.value||'osm';
-  ['corineOpts','esaOpts','uploadOpts'].forEach(id=>{const el=$(id);if(el)el.style.display='none';});
+  const src=$('roughSource')?.value||'esa';
+  ['corineOpts','esaOpts','uploadOpts','osmOpts'].forEach(id=>{const el=$(id);if(el)el.style.display='none';});
   if(src==='corine'){const el=$('corineOpts');if(el)el.style.display='block';}
   else if(src==='esa'){const el=$('esaOpts');if(el)el.style.display='block';}
+  else if(src==='osm'){const el=$('osmOpts');if(el)el.style.display='block';}
   else if(src==='upload'){const el=$('uploadOpts');if(el)el.style.display='block';}
 }
 
@@ -7888,6 +8115,92 @@ async function downloadCORINE(){
   }
 }
 
+// v25.0: ONE-CLICK automatic roughness: download ESA CCI → generate zones → auto-generate rose
+async function downloadESA_CCI_Auto(){
+  const T=S.terrain;
+  if(!T){alert('Download terrain first (TERRAIN tab) — need elevation grid extent to know sampling area');return;}
+  $('roughStat').textContent='Auto-downloading ESA CCI land cover...';
+  setProg('osm',5,'Sampling ESA CCI 300m land cover...');
+  await new Promise(r=>setTimeout(r,50));
+  const nPts=25; // sample 25×25 = 625 points across the terrain domain
+  S.roughnessZones=[];
+  const sectorZ0s=Array.from({length:16},()=>[]); // per-sector z0 samples
+  let sampled=0;
+  const nSect=16, sz=360/nSect;
+  const clat=(T.lat0+T.lat1)/2, clon=(T.lon0+T.lon1)/2;
+
+  for(let i=0;i<nPts;i++){
+    for(let j=0;j<nPts;j++){
+      const lat=T.lat0+i*(T.lat1-T.lat0)/(nPts-1);
+      const lon=T.lon0+j*(T.lon1-T.lon0)/(nPts-1);
+      try{
+        const url=`https://maps.elie.ucl.ac.be/CCI/viewer/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&QUERY_LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&SRS=EPSG:4326&INFO_FORMAT=application/json&WIDTH=1&HEIGHT=1&BBOX=${lon},${lat},${lon+0.001},${lat+0.001}&I=0&J=0`;
+        const r=await fetch(url,{signal:AbortSignal.timeout(5000)});
+        if(r.ok){
+          const d=await r.json();
+          const code=parseInt(d?.features?.[0]?.properties?.NB_LAB||d?.features?.[0]?.properties?.value||d?.features?.[0]?.properties?.GRAY_INDEX||0);
+          const z0=ESA_Z0[code]||0.1;
+          const dLat2=(T.lat1-T.lat0)/nPts/2;
+          const dLon2=(T.lon1-T.lon0)/nPts/2;
+          S.roughnessZones.push({
+            lu:`ESA_${code}`,z0,
+            col:z0>1?'#166534':z0>0.05?'#50b43c':z0>0.005?'#86efac':z0>0.001?'#fde68a':'#3b82f6',
+            pts:[{lat:lat-dLat2,lon:lon-dLon2},{lat:lat-dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon-dLon2}]
+          });
+          sampled++;
+          // Assign to sectors: compute bearing from site centre to this sample point
+          const dx=(lon-clon)*111320*Math.cos(clat*Math.PI/180);
+          const dy=(lat-clat)*111320;
+          const bearing=(Math.atan2(dx,dy)*180/Math.PI+360)%360;
+          const si=Math.floor(((bearing+sz/2)%360)/sz)%nSect;
+          sectorZ0s[si].push(z0);
+        }
+      }catch(e){}
+    }
+    if(i%3===0){setProg('osm',5+i/nPts*70,`ESA sampling row ${i+1}/${nPts}...`);await new Promise(r=>setTimeout(r,10));}
+  }
+
+  setProg('osm',80,'Building roughness zones & rose...');
+  await new Promise(r=>setTimeout(r,20));
+
+  // Draw roughness zones on canvas
+  if(sampled>0){
+    drawRoughnessCanvas();
+    const medianZ0=S.roughnessZones.map(z=>z.z0).sort((a,b)=>a-b)[Math.floor(S.roughnessZones.length/2)];
+    $('roughStat').textContent=`ESA CCI: ${sampled} samples · median z₀=${medianZ0.toFixed(4)}m · ${S.roughnessZones.filter(z=>z.z0>0.5).length} rough + ${S.roughnessZones.filter(z=>z.z0<=0.005).length} smooth`;
+    log(`ESA CCI auto-roughness: ${sampled} samples, median z₀=${medianZ0.toFixed(4)}m`,'i');
+  }
+
+  // AUTO-GENERATE ROUGHNESS ROSE from the sector samples
+  const hubHH=parseFloat($('hubH').value)||120;
+  const z0Global=parseFloat($('z0val').value)||0.03;
+  if(!S.roughnessRose)initRoughnessRose();
+
+  for(let si=0;si<nSect;si++){
+    const samples=sectorZ0s[si];
+    if(samples.length===0)continue;
+    // Compute effective z₀ for this sector (geometric mean — log-average)
+    const logSum=samples.reduce((s,v)=>s+Math.log(Math.max(v,1e-6)),0);
+    const geoMean=Math.exp(logSum/samples.length);
+    // 3-zone model: near (0-2km), mid (2-5km), far (5km+)
+    // Use geometric mean as site z₀, global z₀ as mast z₀
+    const nearZ0=geoMean;
+    const farZ0=z0Global; // default far-field
+    S.roughnessRose[si]={z0:[nearZ0, geoMean, farZ0], x:[0, 2000, 5000]};
+  }
+  renderRoughnessRoseTable();
+  // Also compute auto roughness rose for the flow model
+  computeAutoRoughnessRose();
+
+  // Update z₀ inputs
+  const siteMean=Math.exp(S.roughnessRose.reduce((s,r)=>s+Math.log(Math.max(r.z0[0],1e-6)),0)/nSect);
+  $('rrZ0site').value=siteMean.toFixed(4);
+  if($('z0val'))$('z0val').value=siteMean.toFixed(4);
+
+  setProg('osm',100,`Done: ${sampled} samples, rose auto-generated`);
+  log(`Auto-roughness complete: ESA CCI ${sampled} samples → roughness zones + 16-sector rose auto-generated (site z₀=${siteMean.toFixed(4)}m)`,'i');
+}
+
 // ── ESA CCI Land Cover Download via WMS GetFeatureInfo Sampling ──
 async function downloadESA_CCI(){
   const T=S.terrain;
@@ -7931,19 +8244,79 @@ async function downloadNEWA(){
   const hh=parseFloat($('e5H').value)||100;
   $('newaStatus').textContent='Querying NEWA...';
   try{
-    // Try multiple NEWA API endpoints
+    // v25.0: Try NEWA WPS API (the correct endpoint for wind climate data)
+    // Reference: https://wps.neweuropeanwindatlas.eu
     const urls=[
+      // Primary: NEWA WPS API for wind climate at point
+      `https://wps.neweuropeanwindatlas.eu/api/processes/wind-climate/execution`,
+      // Fallback 1: NEWA map API
       `https://map.neweuropeanwindatlas.eu/api/meteo/wind-climate?lat=${lat.toFixed(2)}&lon=${lon.toFixed(2)}&height=${hh}`,
-      `https://windscape.org/api/newa/wind-climate?lat=${lat.toFixed(2)}&lon=${lon.toFixed(2)}&height=${hh}`
+      // Fallback 2: Open-Meteo ERA5 as proxy for NEWA-like long-term data
+      `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2010-01-01&end_date=2019-12-31&hourly=wind_speed_100m,wind_direction_100m&wind_speed_unit=ms&timezone=UTC`
     ];
-    let d=null;
-    for(const url of urls){
+    let d=null,source='NEWA';
+
+    // Strategy 1: Try NEWA WPS API
+    try{
+      $('newaStatus').textContent='Trying NEWA WPS API...';
+      const wpsBody={inputs:[{id:"lat",type:"text/plain",value:lat.toFixed(2)},{id:"lon",type:"text/plain",value:lon.toFixed(2)},{id:"height",type:"text/plain",value:hh.toString()}],outputs:[{id:"wind-climate",type:"application/json"}]};
+      const r=await fetch(urls[0],{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(wpsBody),signal:AbortSignal.timeout(20000)});
+      if(r.ok){d=await r.json();source='NEWA-WPS';}
+    }catch(e){log('NEWA WPS API failed: '+e.message,'d');}
+
+    // Strategy 2: Try NEWA map API
+    if(!d){
       try{
-        const r=await fetch(url,{signal:AbortSignal.timeout(15000)});
-        if(r.ok){d=await r.json();break;}
-      }catch(e){log('NEWA endpoint failed: '+e.message,'d');}
+        $('newaStatus').textContent='Trying NEWA map API...';
+        const r=await fetch(urls[1],{signal:AbortSignal.timeout(15000)});
+        if(r.ok){d=await r.json();source='NEWA-map';}
+      }catch(e){log('NEWA map API failed: '+e.message,'d');}
     }
-    if(!d)throw new Error('All NEWA endpoints failed — try ERA5 instead');
+
+    // Strategy 3: Use Open-Meteo ERA5 10-year as NEWA proxy
+    if(!d){
+      try{
+        $('newaStatus').textContent='NEWA API unavailable — using ERA5 10-year proxy...';
+        const r=await fetch(urls[2],{signal:AbortSignal.timeout(30000)});
+        if(r.ok){
+          const om=await r.json();
+          const ws=om.hourly?.wind_speed_100m||[];
+          const wd=om.hourly?.wind_direction_100m||[];
+          const valid_ws=ws.filter(v=>v!=null&&v>0.5);
+          if(valid_ws.length>100){
+            // Build time series from Open-Meteo data
+            const speeds=[],dirs=[],times=[];
+            for(let i=0;i<ws.length;i++){
+              if(ws[i]!=null&&ws[i]>0.5){
+                speeds.push(ws[i]);
+                dirs.push(wd[i]||0);
+                times.push(om.hourly?.time?.[i]||new Date(2015,0,1,i).toISOString());
+              }
+            }
+            S.wind={speeds,dirs,times};
+            S.mcpFactor=1;
+            S.windSource='NEWA';
+            S.windSources.NEWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:hh,elevation:null};
+            const meanWS=speeds.reduce((s,v)=>s+v,0)/speeds.length;
+            const wb=weibullFit(speeds);
+            const rho=parseFloat($('airDen').value)||1.225;
+            const powerDensity=0.5*rho*speeds.reduce((s,v)=>s+v*v*v,0)/speeds.length;
+            $('e5WS').textContent=meanWS.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);
+            $('e5PD').textContent=powerDensity.toFixed(0);$('e5RC').textContent=speeds.length;$('e5EL').textContent='—';
+            $('e5out').style.display='block';drawE5Hist(speeds,wb);
+            if($('mastH'))$('mastH').value=hh;
+            updateDataSourceUI('NEWA');
+            $('newaStatus').textContent=`NEWA (ERA5 10yr proxy): ${speeds.length.toLocaleString()} hrs, mean=${meanWS.toFixed(1)} m/s @ ${hh}m`;
+            log(`NEWA data via ERA5 10yr proxy: ${speeds.length.toLocaleString()} hours, mean=${meanWS.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
+            return;
+          }
+        }
+      }catch(e){log('ERA5 proxy also failed: '+e.message,'d');}
+    }
+
+    if(!d)throw new Error('All NEWA endpoints failed — try ERA5 tab instead');
+
+    // Process NEWA sector-wise statistics
     if(d.sector_wise_statistics){
       const nSectors=d.sector_wise_statistics.length||12;
       const speeds=[],dirs=[],times=[];
@@ -7976,18 +8349,16 @@ async function downloadNEWA(){
       $('e5EL').textContent='—';
       $('e5out').style.display='block';
       drawE5Hist(speeds,wb);
-      // Set mast height to NEWA height
       if($('mastH'))$('mastH').value=hh;
-      // Update data source display
       updateDataSourceUI('NEWA');
       $('newaStatus').textContent=`NEWA: ${speeds.length} hrs, mean=${meanWS.toFixed(1)} m/s @ ${hh}m`;
-      log(`NEWA wind data: ${speeds.length} hours, mean=${meanWS.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
+      log(`NEWA wind data (${source}): ${speeds.length} hours, mean=${meanWS.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
     }else{
       throw new Error('Unexpected NEWA response format');
     }
   }catch(e){
-    $('newaStatus').textContent='NEWA unavailable — try ERA5 or NREL';
-    log('NEWA download failed: '+e.message,'w');
+    $('newaStatus').textContent='⚠ NEWA unavailable — use ERA5 tab instead';
+    log('NEWA download failed: '+e.message+' — CORS or endpoint issue. Use ERA5 tab for reliable wind data download.','w');
   }
 }
 
@@ -8414,7 +8785,7 @@ function downloadSRTMGeoTIFF(){
 // ── Export Openwind-compatible Data Package ──
 function exportOpenwindPackage(){
   if(!S.terrain&&!S.wind){alert('Download terrain and wind data first');return;}
-  let pkg='=== WindFlow Pro 24.1 Openwind Data Package ===\n';
+  let pkg='=== WindFlow Pro 25.0 Openwind Data Package ===\n';
   pkg+=`Project: ${$('projName')?.value||'Project'}\n`;
   pkg+=`Date: ${new Date().toISOString()}\n\n`;
   // Site info
