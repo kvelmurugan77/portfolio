@@ -4624,6 +4624,14 @@ function switchWindDataSource(src){
   const ws=S.windSources[src];
   if(!ws||!ws.speeds||!ws.speeds.length){
     log(`No ${src} data available — download it first`,'w');
+    // v26.0: Show visual feedback that this source has no data
+    const label=$('dataSourceLabel');
+    if(label)label.textContent=src+' (no data)';
+    // Show which sources are available
+    const available=Object.keys(S.windSources||{});
+    if(available.length){
+      log(`Available sources: ${available.join(', ')}`,'i');
+    }
     return;
   }
   // Load selected source's data into S.wind
@@ -4647,14 +4655,19 @@ function switchWindDataSource(src){
   // Update mast height to match source
   if(ws.mastH&&$('mastH'))$('mastH').value=ws.mastH;
   // Redraw the wind speed distribution chart
+  // v26.0: Force chart destruction before redraw to prevent stale charts
+  try{
+    const existingChart = Chart.getChart('e5Chart');
+    if(existingChart) existingChart.destroy();
+  }catch(e){}
   drawE5Hist(sp,wb);
   // Update downstream wind UI (rose, sector table, Weibull chart)
   updateWindUI(sp,S.wind.dirs);
   // Show the results panel
   $('e5out').style.display='block';
   log(`Switched to ${src}: ${sp.length.toLocaleString()} records, mean ${mean.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
-}
-  if ($('stabZL')) $('stabZL').value = isFinite(zL) ? zL.toFixed(3) : '0';
+  // v26.0: Also update the wind status label
+  if($('windStat'))$('windStat').textContent=`${src}: ${sp.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s · A=${wb.A.toFixed(2)} k=${wb.k.toFixed(2)}`;
 }
 
 function iblGrowthConstant(L) {
