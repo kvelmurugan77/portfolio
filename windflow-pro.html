@@ -227,8 +227,8 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
     </div>
     <div>
       <div class="card"><div class="card-title green">Download Terrain</div>
-        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Data Source</label><select class="fs" id="terrSource" onchange="onTerrSourceChange()"><option value="openmeteo" selected>Open-Meteo (current)</option><option value="srtm">SRTM 30m (OpenTopography)</option></select></div><div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="terrR" type="number" value="10" min="2" max="50"></div></div>
-        <div id="srtmOpts" style="display:none"><div class="fg" style="margin-top:.4rem"><label class="fl">OpenTopography API Key</label><input class="fi" id="otApiKey" placeholder="Free key at opentopography.org" style="font-size:.65rem"><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">Get free API key: <a href="https://opentopography.org" target="_blank" style="color:var(--sky)">opentopography.org</a></div></div></div>
+        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Data Source</label><select class="fs" id="terrSource" onchange="onTerrSourceChange()"><option value="openmeteo" selected>Open-Meteo (current)</option><option value="srtm">SRTM (OpenTopography)</option></select></div><div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="terrR" type="number" value="10" min="2" max="50"></div></div>
+        <div id="srtmOpts" style="display:none"><div class="fg" style="margin-top:.4rem"><label class="fl">OpenTopography API Key</label><input class="fi" id="otApiKey" placeholder="Free key at opentopography.org" style="font-size:.65rem"><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">Get free API key: <a href="https://opentopography.org" target="_blank" style="color:var(--sky)">opentopography.org</a></div></div><div class="fg" style="margin-top:.3rem"><label class="fl">SRTM Resolution</label><select class="fs" id="srtmRes"><option value="SRTMGL1" selected>SRTMGL1 ~30m</option><option value="SRTMGL3">SRTMGL3 ~90m</option><option value="SRTMGL1_E">SRTMGL1-E 30m (enhanced)</option><option value="COP30">COP30 ~30m (global)</option><option value="COP90">COP90 ~90m (global)</option></select><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">SRTMGL1/3: USA. COP30/90: global. SRTMGL1-E: USA enhanced.</div></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Grid</label><select class="fs" id="terrG"><option value="20" selected>20×20</option><option value="30">30×30</option><option value="40">40×40</option><option value="50">50×50</option><option value="60">60×60</option><option value="80">80×80</option><option value="100">100×100</option></select></div><div class="fg"><label class="fl">Contour Int</label><select class="fs" id="terrCI"><option value="auto" selected>Auto</option><option value="5">5m</option><option value="10">10m</option><option value="20">20m</option></select></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Lat <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="terrLa" type="number" value="55.500" step="0.001" readonly></div><div class="fg"><label class="fl">Lon <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="terrLo" type="number" value="7.900" step="0.001" readonly></div></div>
         <div class="fg" style="margin-top:.4rem"><label class="fl">Opacity</label><input class="fi" id="terrOp" type="range" min="0" max="1" step="0.05" value="0.5" oninput="redrawCanvas()"></div>
@@ -369,7 +369,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <button class="btn btn-ghost" style="width:100%" onclick="exportTerrainGridCSV()">⛰ Elevation Grid CSV</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportTerrainGRD()">⛰ WAsP .grd Format</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportContourKML()">⛰ Contour KML</button>
-          <button class="btn btn-ghost" style="width:100%" onclick="downloadSRTMGeoTIFF()">⛰ SRTM 30m GeoTIFF (OpenTopography)</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="downloadSRTMGeoTIFF()">⛰ DEM GeoTIFF (OpenTopography)</button>
         </div>
       </div>
       <div class="card"><div class="card-title gold">Roughness Data Downloads</div>
@@ -397,7 +397,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div class="alert alert-info" style="font-size:.58rem;margin-bottom:.5rem">Export all terrain + roughness + wind data for Openwind-compatible workflows</div>
         <div style="display:flex;flex-direction:column;gap:.3rem">
           <button class="btn btn-gold" style="width:100%" onclick="exportOpenwindPackage()">📦 Export Full Data Package</button>
-          <button class="btn btn-ghost" style="width:100%" onclick="downloadSRTMGeoTIFF()">⛰ SRTM GeoTIFF Download</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="downloadSRTMGeoTIFF()">⛰ DEM GeoTIFF Download</button>
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://land.copernicus.eu/pan-european/corine-land-cover/clc2018','_blank')">🗺 CORINE 2018 Data (External)</button>
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://maps.elie.ucl.ac.be/CCI/viewer/','_blank')">🗺 ESA CCI Land Cover (External)</button>
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://map.neweuropeanwindatlas.eu/','_blank')">💨 NEWA Wind Atlas (External)</button>
@@ -1618,7 +1618,17 @@ async function downloadTerrainForArea(clat,clon,radKm,ng,ciSel){
 async function downloadTerrain(){
   // Check if SRTM source is selected
   const src=$('terrSource')?.value||'openmeteo';
-  if(src==='srtm'){await downloadSRTMTerrain();return;}
+  if(src==='srtm'){
+    await downloadSRTMTerrain();
+    // If SRTM failed, offer Open-Meteo fallback
+    if(!S.terrain||!S.terrain.grid){
+      log('SRTM download failed — trying Open-Meteo as fallback','w');
+      showToast('SRTM failed — falling back to Open-Meteo terrain');
+      $('terrSource').value='openmeteo';
+      onTerrSourceChange();
+    }
+    if(S.terrain&&S.terrain.grid)return;
+  }
   const c=getSiteCenter();
   let clat=c.lat,clon=c.lon;
   const radKm=parseFloat($('terrR').value)||10;
@@ -1815,7 +1825,7 @@ function drawTerrainProfile(){
     }
     // Title bar
     ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font='10px IBM Plex Mono';ctx.textAlign='left';
-    const srcLabel=T.source==='SRTM30'?'SRTM 30m':'Open-Meteo';
+    const srcLabel=T.source?.startsWith('SRTM')||T.source?.startsWith('COP')?T.source+' (OpenTopography)':'Open-Meteo';
     ctx.fillText(`Terrain Profile Along Wind Direction: ${prevDir}°  |  Elev: ${Math.min(...elevations).toFixed(0)}–${Math.max(...elevations).toFixed(0)}m  |  Source: ${srcLabel}`,margin.left,14);
     // Plot area border
     ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=1;ctx.strokeRect(margin.left,margin.top,pw,ph);
@@ -7676,14 +7686,22 @@ async function downloadSRTMTerrain(){
   const radKm=parseFloat($('terrR').value)||10;
   const apiKey=$('otApiKey')?.value||'';
   if(!apiKey){alert('Enter OpenTopography API key (free at opentopography.org)');return;}
+  const demType=$('srtmRes')?.value||'SRTMGL1';
   const dLat=radKm/111.32,dLon=radKm/(111.32*Math.cos(c.lat*Math.PI/180));
   const south=(c.lat-dLat).toFixed(6),north=(c.lat+dLat).toFixed(6);
   const west=(c.lon-dLon).toFixed(6),east=(c.lon+dLon).toFixed(6);
-  setProg('terrP',10,'Requesting SRTM 30m DEM from OpenTopography...');
+  setProg('terrP',10,`Requesting ${demType} DEM from OpenTopography...`);
   try{
-    const url=`https://portal.opentopography.org/API/globaldem?demtype=SRTMGL30&south=${south}&north=${north}&west=${west}&east=${east}&outputFormat=AAIGrid&API_Key=${apiKey}`;
+    const url=`https://portal.opentopography.org/API/globaldem?demtype=${demType}&south=${south}&north=${north}&west=${west}&east=${east}&outputFormat=AAIGrid&API_Key=${apiKey}`;
+    log('SRTM URL: '+url.replace(apiKey,'***'),'d');
     const r=await fetch(url);
-    if(!r.ok)throw new Error('HTTP '+r.status+': '+(r.statusText||'Check API key'));
+    if(!r.ok){
+      let errMsg=`HTTP ${r.status}`;
+      try{const errTxt=await r.text();const xmlMatch=errTxt.match(/<error>(.*?)<\/error>/);if(xmlMatch)errMsg+=`: ${xmlMatch[1]}`;}catch(e){}
+      if(r.status===400)errMsg+='. Check DEM type (SRTMGL1 for USA, COP30/COP90 for global) and coordinates.';
+      if(r.status===401)errMsg+='. Check your OpenTopography API key.';
+      throw new Error(errMsg);
+    }
     const txt=await r.text();
     setProg('terrP',40,'Parsing SRTM AAIGrid...');
     // Parse AAIGrid (ESRI ASCII Grid) format
@@ -7734,16 +7752,16 @@ async function downloadSRTMTerrain(){
     setProg('terrP',80,'Computing contours...');
     const contours=marchingSquares(grid,lat0,lat1,lon0,lon1,nrows,ncols,levels);
     S.contoursData=levels.map((lv,li)=>({segs:contours[lv]||[],col:elevCol(lv,minE,maxE),major:li%Math.max(1,Math.round(levels.length/6))===0}));
-    S.terrain={grid,lat0,lat1,lon0,lon1,ny:nrows,nx:ncols,minE,maxE,meanE,ci,levels,source:'SRTM30'};
+    S.terrain={grid,lat0,lat1,lon0,lon1,ny:nrows,nx:ncols,minE,maxE,meanE,ci,levels,source:demType};
     setProg('terrP',95,'Rendering...');
     redrawCanvas();
-    setProg('terrP',100,`SRTM: ${ncols}×${nrows} · ${minE.toFixed(0)}–${maxE.toFixed(0)}m · 30m res`);
+    setProg('terrP',100,`${demType}: ${ncols}×${nrows} · ${minE.toFixed(0)}–${maxE.toFixed(0)}m`);
     $('siteElev').value=meanE.toFixed(0);calcDensity();
     $('terrMin').textContent=minE.toFixed(0);$('terrMax').textContent=maxE.toFixed(0);
     $('terrMn').textContent=meanE.toFixed(0);$('terrCI2').textContent=ci;
     if(S.turbines.length){S.turbines.forEach(t=>{const el=getTerrainElev(t.lat,t.lon);if(el!==null)t.elev=el;});refreshTable();}
     drawTerrainProfile();drawTerrainCanvas();drawRoughnessCanvas();
-    log(`SRTM terrain: ${ncols}×${nrows} pts, ${minE.toFixed(0)}–${maxE.toFixed(0)}m, 30m resolution`,'i');
+    log(`${demType} terrain: ${ncols}×${nrows} pts, ${minE.toFixed(0)}–${maxE.toFixed(0)}m`,'i');
   }catch(e){setProg('terrP',0,'SRTM failed: '+e.message);log('SRTM terrain failed: '+e.message,'e');}
 }
 
@@ -8301,9 +8319,10 @@ function downloadSRTMGeoTIFF(){
   const dLat=radKm/111.32,dLon=radKm/(111.32*Math.cos(c.lat*Math.PI/180));
   const south=(c.lat-dLat).toFixed(6),north=(c.lat+dLat).toFixed(6);
   const west=(c.lon-dLon).toFixed(6),east=(c.lon+dLon).toFixed(6);
-  const url=`https://portal.opentopography.org/API/globaldem?demtype=SRTMGL30&south=${south}&north=${north}&west=${west}&east=${east}&outputFormat=GTiff&API_Key=${apiKey}`;
+  const demType=$('srtmRes')?.value||'SRTMGL1';
+  const url=`https://portal.opentopography.org/API/globaldem?demtype=${demType}&south=${south}&north=${north}&west=${west}&east=${east}&outputFormat=GTiff&API_Key=${apiKey}`;
   window.open(url,'_blank');
-  log('SRTM GeoTIFF download link opened','i');
+  log(`${demType} GeoTIFF download link opened`,'i');
 }
 
 // ── Export Openwind-compatible Data Package ──
@@ -8322,7 +8341,7 @@ function exportOpenwindPackage(){
   if(S.terrain){
     const T=S.terrain;
     pkg+=`=== TERRAIN ===\n`;
-    pkg+=`Source: ${T.source==='SRTM30'?'SRTM 30m (OpenTopography)':'Open-Meteo'}\n`;
+    pkg+=`Source: ${T.source?.startsWith('SRTM')||T.source?.startsWith('COP')?T.source+' (OpenTopography)':'Open-Meteo'}\n`;
     pkg+=`Grid: ${T.nx}×${T.ny}\n`;
     pkg+=`Bounds: ${T.lat0.toFixed(4)},${T.lon0.toFixed(4)} to ${T.lat1.toFixed(4)},${T.lon1.toFixed(4)}\n`;
     pkg+=`Elevation: ${T.minE.toFixed(0)}–${T.maxE.toFixed(0)}m (mean ${T.meanE.toFixed(0)}m)\n`;
