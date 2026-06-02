@@ -243,8 +243,9 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         </div>
       </div>
       <div class="card"><div class="card-title sky">Terrain Profile Along Wind Direction</div>
-        <div class="canvas-wrap"><canvas id="terrainProfileCanvas" width="560" height="200"></canvas></div>
-        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wind Dir (°)</label><input class="fi" id="terrProfDir" type="number" value="270" min="0" max="359" step="1" oninput="drawTerrainProfile()"></div><div class="fg"><label class="fl">&nbsp;</label><button class="btn btn-sm btn-ghost" style="width:100%" onclick="drawTerrainProfile()">↻ Refresh</button></div></div>
+        <div class="canvas-wrap" style="position:relative"><canvas id="terrainProfileCanvas" width="560" height="200" onmousemove="terrainProfileHover(event)" onclick="terrainProfileClick(event)" onmouseleave="terrainProfileLeave()"></canvas><div id="terrProfTooltip" style="display:none;position:absolute;top:0;left:0;background:rgba(13,30,48,.92);border:1px solid rgba(88,166,255,.4);border-radius:4px;padding:3px 8px;font-size:9px;color:#e6edf3;font-family:IBM Plex Mono;pointer-events:none;z-index:10;white-space:nowrap"></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wind Dir (°)</label><input class="fi" id="terrProfDir" type="number" value="270" min="0" max="359" step="1" oninput="drawTerrainProfile()"></div><div class="fg"><label class="fl">Ref Point</label><select class="fs" id="terrProfRef" onchange="drawTerrainProfile()"><option value="center" selected>Site Centre</option><option value="cursor">Cursor Click</option></select></div></div>
+        <div id="terrProfRefInfo" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">Click on profile to set reference point · REF marker shows current reference</div>
       </div>
       <div class="card"><div class="card-title gold">Roughness Data</div>
         <div class="fg"><label class="fl">Data Source</label><select class="fs" id="roughSource" onchange="onRoughSourceChange()"><option value="osm" selected>OSM (current)</option><option value="corine">CORINE 2018 (EU)</option><option value="esa">ESA CCI (Global)</option><option value="upload">Upload Classification</option></select></div>
@@ -1736,23 +1737,31 @@ function drawTerrainProfile(){
     const prevDir=parseFloat($('terrProfDir')?.value||$('prevWD')?.value||270);
     const dirRad=prevDir*Math.PI/180;
     const cLat=(T.lat0+T.lat1)/2,cLon=(T.lon0+T.lon1)/2;
+    // Reference point: site center or cursor-clicked position
+    const refMode=$('terrProfRef')?.value||'center';
+    let refLat=cLat,refLon=cLon;
+    if(refMode==='cursor'&&S._terrProfRef){
+      refLat=S._terrProfRef.lat;refLon=S._terrProfRef.lon;
+    }
     const maxDist=Math.min(T.lat1-T.lat0,T.lon1-T.lon0)*111320/2;
     const nPts=100;
     const distances=[],elevations=[];
     for(let i=-nPts/2;i<=nPts/2;i++){
       const dist=i*maxDist/(nPts/2);
       const dLat=dist*Math.cos(dirRad)/111320;
-      const dLon=dist*Math.sin(dirRad)/(111320*Math.cos(cLat*Math.PI/180));
-      const lat=cLat+dLat,lon=cLon+dLon;
+      const dLon=dist*Math.sin(dirRad)/(111320*Math.cos(refLat*Math.PI/180));
+      const lat=refLat+dLat,lon=refLon+dLon;
       const elev=getTerrainElev(lat,lon);
       distances.push(dist/1000);elevations.push(elev||0);
     }
     const minE=Math.min(...elevations)-10,maxE=Math.max(...elevations)+10;
     const minD=distances[0],maxD=distances[distances.length-1];
     const eRange=Math.max(maxE-minE,1),dRange=Math.max(maxD-minD,1);
-    // Margins for axis labels
-    const margin={top:35,right:55,bottom:30,left:55};
+    // Margins for axis labels (both sides)
+    const margin={top:35,right:60,bottom:30,left:60};
     const pw=W-margin.left-margin.right,ph=H-margin.top-margin.bottom;
+    // Store profile data for hover/click interaction
+    S._terrProfData={distances,elevations,minD,maxD,minE,maxE,margin,pw,ph,refLat,refLon};
     // Grid lines
     ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;
     const eStep=eRange<50?10:eRange<200?25:eRange<500?50:100;
@@ -1760,31 +1769,31 @@ function drawTerrainProfile(){
       const y=margin.top+(1-(e-minE)/eRange)*ph;
       ctx.beginPath();ctx.moveTo(margin.left,y);ctx.lineTo(margin.left+pw,y);ctx.stroke();
       // Left axis labels
-      ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='8px IBM Plex Mono';ctx.textAlign='right';
-      ctx.fillText(e.toFixed(0),margin.left-5,y+3);
+      ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font='8px IBM Plex Mono';ctx.textAlign='right';
+      ctx.fillText(e.toFixed(0)+'m',margin.left-6,y+3);
     }
     // Distance axis labels
     const dStep=dRange<5?1:dRange<20?5:dRange<50?10:20;
     for(let d=Math.ceil(minD/dStep)*dStep;d<=maxD;d+=dStep){
       const x=margin.left+(d-minD)/dRange*pw;
       ctx.beginPath();ctx.moveTo(x,margin.top);ctx.lineTo(x,margin.top+ph);ctx.stroke();
-      ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='8px IBM Plex Mono';ctx.textAlign='center';
+      ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font='8px IBM Plex Mono';ctx.textAlign='center';
       ctx.fillText(d.toFixed(0)+'km',x,margin.top+ph+14);
     }
-    // Right axis (elevation mirror)
+    // Right axis (elevation)
     ctx.textAlign='left';
     for(let e=Math.ceil(minE/eStep)*eStep;e<=maxE;e+=eStep){
       const y=margin.top+(1-(e-minE)/eRange)*ph;
-      ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='8px IBM Plex Mono';
-      ctx.fillText(e.toFixed(0)+'m',margin.left+pw+5,y+3);
+      ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='8px IBM Plex Mono';
+      ctx.fillText(e.toFixed(0)+'m',margin.left+pw+6,y+3);
     }
     // Axis titles
     ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font='9px IBM Plex Mono';
     ctx.textAlign='center';
     ctx.fillText('Distance (km)',margin.left+pw/2,H-3);
-    ctx.save();ctx.translate(12,margin.top+ph/2);ctx.rotate(-Math.PI/2);
+    ctx.save();ctx.translate(14,margin.top+ph/2);ctx.rotate(-Math.PI/2);
     ctx.fillText('Elevation (m)',0,0);ctx.restore();
-    ctx.save();ctx.translate(W-8,margin.top+ph/2);ctx.rotate(Math.PI/2);
+    ctx.save();ctx.translate(W-10,margin.top+ph/2);ctx.rotate(Math.PI/2);
     ctx.fillText('Elevation (m)',0,0);ctx.restore();
     // Profile fill
     ctx.beginPath();ctx.moveTo(margin.left,margin.top+ph);
@@ -1803,35 +1812,112 @@ function drawTerrainProfile(){
       i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
     });
     ctx.strokeStyle='#00d68f';ctx.lineWidth=2;ctx.stroke();
-    // Reference position marker (mast/center)
-    const mastX=margin.left+(0-minD)/dRange*pw;
+    // Reference position marker
+    const refDistKm=0; // reference is always at 0 km in the profile
+    const mastX=margin.left+(refDistKm-minD)/dRange*pw;
     ctx.beginPath();ctx.moveTo(mastX,margin.top);ctx.lineTo(mastX,margin.top+ph);
-    ctx.strokeStyle='rgba(245,166,35,0.6)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
-    // Mast label
+    ctx.strokeStyle='rgba(245,166,35,0.7)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
+    // REF label with elevation
+    const refElev=elevations[nPts/2]||0;
+    const refY=margin.top+(1-(refElev-minE)/eRange)*ph;
     ctx.fillStyle='#f5a623';ctx.font='bold 9px IBM Plex Mono';ctx.textAlign='center';
-    ctx.fillText('REF',mastX,margin.top-4);
-    // Draw turbine positions on profile
-    if(S.turbines&&S.turbines.length){
-      S.turbines.forEach((t,idx)=>{
-        const tDist=(t.lon-cLon)*111320*Math.cos(cLat*Math.PI/180)*Math.sin(dirRad)+(t.lat-cLat)*111320*Math.cos(dirRad);
-        const tDistKm=tDist/1000;
-        if(tDistKm>=minD&&tDistKm<=maxD){
-          const tx=margin.left+(tDistKm-minD)/dRange*pw;
-          const tElev=t.elev||getTerrainElev(t.lat,t.lon)||0;
-          const ty=margin.top+(1-(tElev-minE)/eRange)*ph;
-          ctx.fillStyle='#58a6ff';ctx.beginPath();ctx.arc(tx,ty,3,0,Math.PI*2);ctx.fill();
-        }
-      });
-    }
+    ctx.fillText('REF',mastX,margin.top-8);
+    ctx.fillText(refElev.toFixed(0)+'m',mastX,margin.top-18);
+    // REF dot
+    ctx.beginPath();ctx.arc(mastX,refY,4,0,Math.PI*2);ctx.fillStyle='#f5a623';ctx.fill();
+    ctx.strokeStyle='#0d1e30';ctx.lineWidth=1;ctx.stroke();
+    // REF info text
+    const refLabel=refMode==='cursor'?`REF: ${refLat.toFixed(4)}, ${refLon.toFixed(4)} (${refElev.toFixed(0)}m)`:`REF: Site Centre (${refElev.toFixed(0)}m)`;
+    ctx.fillStyle='rgba(245,166,35,0.5)';ctx.font='8px IBM Plex Mono';ctx.textAlign='right';
+    ctx.fillText(refLabel,margin.left+pw,margin.top-8);
     // Title bar
     ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font='10px IBM Plex Mono';ctx.textAlign='left';
     const srcLabel=T.source?.startsWith('SRTM')||T.source?.startsWith('COP')?T.source+' (OpenTopography)':'Open-Meteo';
-    ctx.fillText(`Terrain Profile Along Wind Direction: ${prevDir}°  |  Elev: ${Math.min(...elevations).toFixed(0)}–${Math.max(...elevations).toFixed(0)}m  |  Source: ${srcLabel}`,margin.left,14);
+    ctx.fillText(`Terrain Profile: ${prevDir}°  |  Elev: ${Math.min(...elevations).toFixed(0)}–${Math.max(...elevations).toFixed(0)}m  |  Source: ${srcLabel}`,margin.left,14);
     // Plot area border
     ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=1;ctx.strokeRect(margin.left,margin.top,pw,ph);
   }
   // Also draw on hidden terrChart for backward compat
   if(T.grid&&T.ny){const row=T.grid[Math.floor(T.ny/2)];mkChart('terrChart','line',{labels:row.map((_,j)=>(T.lon0+j*(T.lon1-T.lon0)/(T.nx-1)).toFixed(3)),datasets:[{data:row,borderColor:'#58a6ff',fill:true,backgroundColor:'rgba(88,166,255,.1)',borderWidth:1.5,pointRadius:0,tension:.3,label:'Mid-row profile'}]},{y:{title:{display:true,text:'Elev(m)',color:'#8b949e',font:{size:8}}}});}
+}
+
+// ── Terrain Profile Hover & Click ──
+function terrainProfileHover(ev){
+  const D=S._terrProfData;if(!D)return;
+  const canvas=$('terrainProfileCanvas');if(!canvas)return;
+  const rect=canvas.getBoundingClientRect();
+  const mx=ev.clientX-rect.left,mxScale=mx*canvas.width/rect.width;
+  const my=ev.clientY-rect.top,myScale=my*canvas.height/rect.height;
+  const {distances,elevations,minD,maxD,minE,maxE,margin,pw,ph,refLat,refLon}=D;
+  const eRange=Math.max(maxE-minE,1),dRange=Math.max(maxD-minD,1);
+  // Check if mouse is within plot area
+  if(mxScale<margin.left||mxScale>margin.left+pw||myScale<margin.top||myScale>margin.top+ph){
+    $('terrProfTooltip').style.display='none';return;
+  }
+  const distFrac=(mxScale-margin.left)/pw;
+  const distKm=minD+distFrac*dRange;
+  const idx=Math.round(distFrac*(distances.length-1));
+  const clampedIdx=Math.max(0,Math.min(idx,distances.length-1));
+  const elev=elevations[clampedIdx];
+  // Show tooltip
+  const tooltip=$('terrProfTooltip');
+  tooltip.style.display='block';
+  tooltip.innerHTML=`${distKm.toFixed(1)} km · ${elev.toFixed(0)} m`;
+  tooltip.style.left=(mx+12)+'px';
+  tooltip.style.top=(my-24)+'px';
+  // Redraw profile with cursor line
+  drawTerrainProfile();
+  const ctx=canvas.getContext('2d');
+  // Vertical cursor line
+  ctx.beginPath();ctx.moveTo(mxScale,margin.top);ctx.lineTo(mxScale,margin.top+ph);
+  ctx.strokeStyle='rgba(88,166,255,0.5)';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
+  // Horizontal cursor line to left axis
+  const cursorY=margin.top+(1-(elev-minE)/eRange)*ph;
+  ctx.beginPath();ctx.moveTo(margin.left,cursorY);ctx.lineTo(mxScale,cursorY);
+  ctx.strokeStyle='rgba(88,166,255,0.3)';ctx.lineWidth=1;ctx.setLineDash([2,2]);ctx.stroke();ctx.setLineDash([]);
+  // Elevation dot on profile
+  ctx.beginPath();ctx.arc(mxScale,cursorY,4,0,Math.PI*2);ctx.fillStyle='#58a6ff';ctx.fill();
+  ctx.strokeStyle='#0d1e30';ctx.lineWidth=1.5;ctx.stroke();
+  // Show elevation label on left axis
+  ctx.fillStyle='#58a6ff';ctx.font='bold 8px IBM Plex Mono';ctx.textAlign='right';
+  ctx.fillText(elev.toFixed(0)+'m',margin.left-6,cursorY+3);
+  // Show elevation label on right axis
+  ctx.textAlign='left';
+  ctx.fillText(elev.toFixed(0)+'m',margin.left+pw+6,cursorY+3);
+}
+
+function terrainProfileClick(ev){
+  const D=S._terrProfData;if(!D)return;
+  const canvas=$('terrainProfileCanvas');if(!canvas)return;
+  const rect=canvas.getBoundingClientRect();
+  const mx=ev.clientX-rect.left,mxScale=mx*canvas.width/rect.width;
+  const {distances,minD,maxD,margin,pw,refLat,refLon}=D;
+  const dRange=Math.max(maxD-minD,1);
+  if(mxScale<margin.left||mxScale>margin.left+pw)return;
+  const distFrac=(mxScale-margin.left)/pw;
+  const distKm=minD+distFrac*dRange;
+  const prevDir=parseFloat($('terrProfDir')?.value||270);
+  const dirRad=prevDir*Math.PI/180;
+  const distM=distKm*1000;
+  const dLat=distM*Math.cos(dirRad)/111320;
+  const dLon=distM*Math.sin(dirRad)/(111320*Math.cos(refLat*Math.PI/180));
+  const clickLat=refLat+dLat,clickLon=refLon+dLon;
+  // Set as reference point
+  S._terrProfRef={lat:clickLat,lon:clickLon};
+  // Switch dropdown to cursor mode
+  const sel=$('terrProfRef');
+  if(sel)sel.value='cursor';
+  // Update info text
+  const info=$('terrProfRefInfo');
+  if(info)info.textContent=`REF set to cursor: ${clickLat.toFixed(4)}, ${clickLon.toFixed(4)} — Click again or switch to Site Centre`;
+  log(`Terrain profile REF set to cursor position: ${clickLat.toFixed(4)}, ${clickLon.toFixed(4)} (${distKm.toFixed(1)} km from centre)`,'i');
+  drawTerrainProfile();
+}
+
+function terrainProfileLeave(){
+  const tooltip=$('terrProfTooltip');
+  if(tooltip)tooltip.style.display='none';
+  drawTerrainProfile();
 }
 
 // ── TERRAIN CANVAS (Step 4 heatmap + contours) ──
@@ -7103,7 +7189,7 @@ function loadProject(event){
 
 function clearAll(){
   if(!confirm('Clear all data?'))return;
-  S.turbines=[];S.wind=null;S.era5Raw=null;S.mcpFactor=1;S.tsData=null;S.results=null;S.terrain=null;S.contoursData=[];S.boundary=[];S.obstacles=[];S.masts=[];S.waspCalibration=null;S.hourlyStability=null;S.autoRoughnessRose=null;S.roughnessZones=null;S.windSources={};S.windSource='ERA5';BZ.enabled=false;BZ.speedups=[];BZ.grid=null;BZ.sectorSU=[];BZ.sectorTurning=[];BZ.sectorRoughRC=[];BZ.turbRoughRC=[];BZ.mastSU=1;BZ.showLayer=false;
+  S.turbines=[];S.wind=null;S.era5Raw=null;S.mcpFactor=1;S.tsData=null;S.results=null;S.terrain=null;S.contoursData=[];S.boundary=[];S.obstacles=[];S.masts=[];S.waspCalibration=null;S.hourlyStability=null;S.autoRoughnessRose=null;S.roughnessZones=null;S.windSources={};S.windSource='ERA5';S._terrProfRef=null;S._terrProfData=null;BZ.enabled=false;BZ.speedups=[];BZ.grid=null;BZ.sectorSU=[];BZ.sectorTurning=[];BZ.sectorRoughRC=[];BZ.turbRoughRC=[];BZ.mastSU=1;BZ.showLayer=false;
   refreshTable();updateMarkers();clearBoundary();renderMastList();log('All data cleared','i');goToStep(1);
 }
 
