@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 23.0</title>
+<title>WindFlow Pro 23.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 23.0</span></div><div class="brand-sub">SRTM DEM · CORINE · ESA CCI · NEWA · NREL WTK V2 Multi-Height · JH Terrain · Hourly Stability · Auto Roughness Rose · Canopy d0 · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · WAsP-Weibull · ERA5T rho · NREL Profile Fit · Fixed Chain · Fixed CF · Fixed BZ · Fixed ERA5T Height</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 23.1</span></div><div class="brand-sub">SRTM DEM · CORINE · ESA CCI · NEWA · NREL WTK V2 Multi-Height · JH Terrain · Hourly Stability · Auto Roughness Rose · Canopy d0 · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · WAsP-Weibull · ERA5T rho · NREL Profile Fit · Fixed Chain · Fixed CF · Fixed BZ · Fixed ERA5T Height · Synced HH</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -143,7 +143,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div id="pcUploadStatus" style="font-size:.6rem;color:var(--text3);margin-top:.3rem"></div>
       </div>
       <div class="card"><div class="card-title sky">Turbine Parameters</div>
-        <div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">Hub Height (m)</label><input class="fi" id="hubH" type="number" value="120"></div><div class="fg"><label class="fl">Rotor Ø (m)</label><input class="fi" id="rotD" type="number" value="150"></div><div class="fg"><label class="fl">Rated (kW)</label><input class="fi" id="ratedPow" type="number" value="4000"></div></div>
+        <div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">Hub Height (m)</label><input class="fi" id="hubH" type="number" value="120" onchange="onHubHeightChange()" oninput="onHubHeightChange()"></div><div class="fg"><label class="fl">Rotor Ø (m)</label><input class="fi" id="rotD" type="number" value="150"></div><div class="fg"><label class="fl">Rated (kW)</label><input class="fi" id="ratedPow" type="number" value="4000" onchange="onHubHeightChange()"></div></div>
         <div class="g3" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wake k</label><input class="fi" id="wakeK" type="number" value="0.04" step="0.005"></div><div class="fg"><label class="fl">Losses %</label><input class="fi" id="otherLoss" type="number" value="5" step="0.5"></div><div class="fg"><label class="fl">Sectors</label><select class="fs" id="sects"><option value="12">12</option><option value="16" selected>16</option><option value="24">24</option></select></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wake Model</label><select class="fs" id="wakeModel"><option value="jensen">Jensen/PARK</option><option value="eddy">Eddy Viscosity</option></select></div><div class="fg"><label class="fl">&nbsp;</label><div style="padding-top:.25rem"><label style="font-size:.62rem;cursor:pointer;display:flex;align-items:center;gap:.3rem"><input type="checkbox" id="rotorAvgCB" checked style="accent-color:var(--mint)"><span>Rotor-averaged WS</span></label></div></div></div>
       </div>
@@ -191,7 +191,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <div class="ds-card" id="ds_merra2"><div class="ds-name">MERRA-2</div><div class="ds-desc">NASA POWER API · Free · 1980→present</div><button class="btn btn-sm btn-ghost" onclick="downloadMERRA2()">⬇ Download</button><div id="merra2Status" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_ncep"><div class="ds-name">NCEP/NCAR</div><div class="ds-desc">Reanalysis · Free · 1948→present</div><button class="btn btn-sm btn-ghost" onclick="downloadNCEP()">⬇ Download</button><div id="ncepStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_newa"><div class="ds-name">NEWA</div><div class="ds-desc">New European Wind Atlas · Free · 200m · EU+surroundings</div><button class="btn btn-sm btn-ghost" onclick="downloadNEWA()">⬇ Download</button><div id="newaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
-          <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit V2</div><div class="ds-desc">USA CONUS · 2007–2014 · Multi-height · Free API key · developer.nlr.gov</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key (developer.nlr.gov)" style="font-size:.6rem"></div><div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Year</label><select class="fs" id="nrelYear" style="font-size:.58rem"><option value="2014" selected>2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Interval</label><select class="fs" id="nrelInterval" style="font-size:.58rem"><option value="60" selected>60 min</option><option value="30">30 min</option><option value="15">15 min</option><option value="5">5 min</option></select></div></div><div style="margin-top:.3rem"><label style="font-size:.52rem;color:var(--text2);display:flex;align-items:center;gap:.3rem;cursor:pointer"><input type="checkbox" id="nrelMultiHeight" checked> Multi-height profile (10–200m)</label></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()" style="margin-top:.3rem">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit V2</div><div class="ds-desc">USA CONUS · 2007–2014 · Multi-height · Free API key · developer.nlr.gov</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key (developer.nlr.gov)" value="XzjKJcfwqjHq2ICBzDFD2jrX2vw2GSOPVgfTVkCW" style="font-size:.6rem"></div><div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Year</label><select class="fs" id="nrelYear" style="font-size:.58rem"><option value="2014" selected>2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Interval</label><select class="fs" id="nrelInterval" style="font-size:.58rem"><option value="60" selected>60 min</option><option value="30">30 min</option><option value="15">15 min</option><option value="5">5 min</option></select></div></div><div style="margin-top:.3rem"><label style="font-size:.52rem;color:var(--text2);display:flex;align-items:center;gap:.3rem;cursor:pointer"><input type="checkbox" id="nrelMultiHeight" checked> Multi-height profile (10–200m)</label></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()" style="margin-top:.3rem">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
         </div>
         <div class="alert alert-info" style="font-size:.62rem;margin-top:.5rem">Country-specific: NEWA (EU) · NREL Wind (USA) · BARRA2 (AU) · CSIR (ZA) · INMET (BR) · CMA (CN) · SARAN (IN)</div>
       </div>
@@ -3176,7 +3176,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 23.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 23.1 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -3217,7 +3217,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 23.0 — SRTM DEM · CORINE · ESA CCI · NEWA · NREL WTK V2 Multi-Height Profile · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · ERA5T Density · Per-WTG ρ · Humidity Correction · Hourly Stability · Auto Roughness Rose · Canopy d0 · Fixed OWC→GWC→SWC Chain · IBL · Jackson-Hunt Terrain · Fixed BZ Orographic · Wake Direction Variability · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · RIX · IEC 61400-12-1 · ERA5T Quality Checks · NREL Profile Fit</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 23.1 — SRTM DEM · CORINE · ESA CCI · NEWA · NREL WTK V2 Multi-Height Profile · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · ERA5T Density · Per-WTG ρ · Humidity Correction · Hourly Stability · Auto Roughness Rose · Canopy d0 · Fixed OWC→GWC→SWC Chain · IBL · Jackson-Hunt Terrain · Fixed BZ Orographic · Wake Direction Variability · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · RIX · IEC 61400-12-1 · ERA5T Quality Checks · NREL Profile Fit · Synced Hub Height</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -3304,31 +3304,31 @@ function processKMLLayout(kmlText,fileName){
         const name=pm.querySelector('name')?.textContent||'T'+(ts.length+1);
         // ── EXTRACT PER-TURBINE HUB HEIGHT ──
         // Priority: ExtendedData → description → name pattern → default
-        let hh=defaultHH;
+        let hh=defaultHH, hhCustom=false;
         // 1. Check KML ExtendedData for hub_height
         const edData=pm.querySelectorAll('ExtendedData Data');
         edData.forEach(d=>{
           const dName=d.getAttribute('name')||'';
           if(dName.toLowerCase().match(/hub.?height|hh|hub_height|hubheight/)){
             const val=d.querySelector('value')?.textContent;
-            if(val&&!isNaN(+val))hh=parseFloat(val);
+            if(val&&!isNaN(+val)){hh=parseFloat(val);hhCustom=true;}
           }
         });
         // 2. Check description for hub height pattern (e.g. "Hub Height: 120m" or "HH=140")
-        if(hh===defaultHH){
+        if(!hhCustom){
           const desc=pm.querySelector('description')?.textContent||'';
           const hhMatch=desc.match(/(?:hub\s*height|HH|hh)[:\s=]+(\d+)/i);
-          if(hhMatch)hh=parseFloat(hhMatch[1]);
+          if(hhMatch){hh=parseFloat(hhMatch[1]);hhCustom=true;}
         }
         // 3. Check name for hub height pattern (e.g. "WTG01_120" or "T05_140m")
-        if(hh===defaultHH){
+        if(!hhCustom){
           const nameMatch=name.match(/[_\s](\d{2,3})m?$/);
           if(nameMatch){
             const parsedHH=parseFloat(nameMatch[1]);
-            if(parsedHH>=50&&parsedHH<=200)hh=parsedHH;
+            if(parsedHH>=50&&parsedHH<=200){hh=parsedHH;hhCustom=true;}
           }
         }
-        ts.push({lat,lon,hh,name});
+        ts.push({lat,lon,hh,_customHH:hhCustom,name});
       }
     }
   });
@@ -3353,28 +3353,28 @@ function processLayoutText(text,fileName){
   const ts=[];const defaultHH=parseFloat($('hubH').value)||120;let isUTM=false,utmZone=null;
   // Helper to extract per-turbine hub height from KML Placemark
   function extractHH(pm,name){
-    let hh=defaultHH;
+    let hh=defaultHH, custom=false;
     // 1. ExtendedData
     const edData=pm.querySelectorAll('ExtendedData Data');
     edData.forEach(d=>{
       const dName=d.getAttribute('name')||'';
       if(dName.toLowerCase().match(/hub.?height|hh|hub_height|hubheight/)){
         const val=d.querySelector('value')?.textContent;
-        if(val&&!isNaN(+val))hh=parseFloat(val);
+        if(val&&!isNaN(+val)){hh=parseFloat(val);custom=true;}
       }
     });
     // 2. Description
-    if(hh===defaultHH){
+    if(!custom){
       const desc=pm.querySelector('description')?.textContent||'';
       const hhMatch=desc.match(/(?:hub\s*height|HH|hh)[:\s=]+(\d+)/i);
-      if(hhMatch)hh=parseFloat(hhMatch[1]);
+      if(hhMatch){hh=parseFloat(hhMatch[1]);custom=true;}
     }
     // 3. Name pattern
-    if(hh===defaultHH){
+    if(!custom){
       const nameMatch=name.match(/[_\s](\d{2,3})m?$/);
-      if(nameMatch){const p=parseFloat(nameMatch[1]);if(p>=50&&p<=200)hh=p;}
+      if(nameMatch){const p=parseFloat(nameMatch[1]);if(p>=50&&p<=200){hh=p;custom=true;}}
     }
-    return hh;
+    return {hh,custom};
   }
   if(fileName.endsWith('.kml')){
     // v19.0: Strip default XML namespace so querySelector works on namespaced KML
@@ -3393,7 +3393,7 @@ function processLayoutText(text,fileName){
         const lon=+vals[0],lat=+vals[1];
         if(!isNaN(lat)&&!isNaN(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180){
           const name=pm.querySelector('name')?.textContent||'T'+(ts.length+1);
-          const hh=extractHH(pm,name);ts.push({lat,lon,hh,name});
+          const r=extractHH(pm,name);ts.push({lat,lon,hh:r.hh,_customHH:r.custom,name});
         }
       }
     });
@@ -3401,9 +3401,10 @@ function processLayoutText(text,fileName){
     try{const geojson=JSON.parse(text);const features=geojson.features||[geojson];
     features.forEach((feat,i)=>{if(feat.geometry){const g=feat.geometry;
       const hh=feat.properties?.hub_height||feat.properties?.hh||feat.properties?.HubHeight||defaultHH;
+      const hasCustomHH=!!(feat.properties?.hub_height||feat.properties?.hh||feat.properties?.HubHeight);
       const name=feat.properties?.name||'T'+(ts.length+1);
-      if(g.type==='Point'){ts.push({lat:g.coordinates[1],lon:g.coordinates[0],hh,name});}
-      else if(g.type==='MultiPoint'){g.coordinates.forEach(c=>ts.push({lat:c[1],lon:c[0],hh,name:'T'+(ts.length+1)}));}
+      if(g.type==='Point'){ts.push({lat:g.coordinates[1],lon:g.coordinates[0],hh,_customHH:hasCustomHH,name});}
+      else if(g.type==='MultiPoint'){g.coordinates.forEach(c=>ts.push({lat:c[1],lon:c[0],hh,_customHH:hasCustomHH,name:'T'+(ts.length+1)}));}
     }});}catch(err){alert('GeoJSON parse error: '+err.message);return;}
   }else{
     const lines=text.split('\n').filter(l=>l.trim());
@@ -3419,7 +3420,8 @@ function processLayoutText(text,fileName){
         if(utmZone){const r=utmToLatLon(x,y,utmZone,false);lat=r.lat;lon=r.lon;}
       }else{const latI=latIdx>=0?latIdx:0;const lonI=lonIdx>=0?lonIdx:1;lat=parseFloat(p[latI]);lon=parseFloat(p[lonI]);}
       const turbineHH=hhIdx>=0?parseFloat(p[hhIdx]):+(p[2]||defaultHH);
-      if(!isNaN(lat)&&!isNaN(lon))ts.push({lat,lon,hh:isNaN(turbineHH)||turbineHH<50?defaultHH:turbineHH,name:'T'+(ts.length+1)});
+      const resolvedHH=isNaN(turbineHH)||turbineHH<50?defaultHH:turbineHH;
+      if(!isNaN(lat)&&!isNaN(lon))ts.push({lat,lon,hh:resolvedHH,_customHH:hhIdx>=0&&resolvedHH!==defaultHH,name:'T'+(ts.length+1)});
     }
     if(isUTM&&utmZone)log(`UTM Zone ${utmZone}N auto-detected and converted to lat/lon`,'i');
   }
@@ -3464,7 +3466,7 @@ initMap();calcDensity();
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 23.0 ready. NREL WTK V2 Multi-Height · Profile Fit · Fixed Chain · Fixed CF · Fixed BZ · Fixed ERA5T Height','i');
+log('WindFlow Pro 23.1 ready. NREL WTK V2 Multi-Height · Profile Fit · Fixed Chain · Fixed CF · Fixed BZ · Fixed ERA5T Height · Synced Hub Height','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 
@@ -6272,12 +6274,43 @@ const PC_PRESETS={
 // Merge presets into PCL
 Object.assign(PCL, PC_PRESETS);
 
+function onHubHeightChange(){
+  // When hub height changes, update all existing turbines that use the default HH
+  const newHH=parseFloat($('hubH').value)||120;
+  // Update turbines that still have the previous default HH (not custom-imported ones)
+  // Also update the turbine table and markers
+  if(S.turbines.length>0){
+    // Track if any turbine HH was matching the old default — update those
+    S.turbines.forEach(t=>{
+      // If turbine has no custom HH (set from KMZ/layout import), update it
+      // We consider a turbine's HH as "default" if it matches one of the preset HH values
+      // or if it was last set by the global hubH input
+      if(!t._customHH) t.hh=newHH;
+    });
+    refreshTable();
+    updateMarkers();
+  }
+  // Update capacity display
+  const rated=parseFloat($('ratedPow')?.value)||4000;
+  $('sbCap').textContent=(S.turbines.length*rated/1000).toFixed(1)+' MW';
+  // If NREL data exists, update the status with the new closest height
+  if(S.nrelData&&S.nrelData.wsHeights){
+    const closestHt=S.nrelData.wsHeights.reduce((best,ht)=>Math.abs(ht-newHH)<Math.abs(best-newHH)?ht:best, S.nrelData.wsHeights[0]);
+    const meanWS=S.wind?.speeds?.length?(S.wind.speeds.reduce((s,v)=>s+v,0)/S.wind.speeds.length):0;
+    const htSummary=S.nrelData.wsHeights.length>1?` · ${S.nrelData.wsHeights.length} heights [${S.nrelData.wsHeights.join(',')}m]`:'';
+    $('nrelStatus').textContent=`NREL V2: ${S.nrelData.rows?.length||0} records @ ${closestHt}m (closest to ${newHH}m HH), mean=${meanWS.toFixed(1)} m/s${htSummary}`;
+    S.nrelData.hubHt=closestHt;
+  }
+  log(`Hub height changed to ${newHH}m — turbines and displays updated`,'i');
+}
+
 function applyPreset(){
   const cls=$('tcls').value;
   if(cls==='custom'){$('customPCCard').style.display='block';return;}
   $('customPCCard').style.display='none';
   const p=getPC();if(!p)return;
   $('hubH').value=p.hh;$('rotD').value=p.D;$('ratedPow').value=p.rated;
+  onHubHeightChange();
   drawPowerCurve();
 }
 
@@ -6742,8 +6775,8 @@ function updateReportingDashboard(){
 // ── SAVE/LOAD PROJECT ──
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
-  const data={version:'23.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0'}};
-  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v23.0)','i');
+  const data={version:'23.1',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0'}};
+  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v23.1)','i');
 }
 
 // v22.0: WAsP-compatible project export
@@ -6768,7 +6801,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 23.0`);
+  lines.push(`WAsP Project Export - WindFlow Pro 23.1`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
@@ -7385,7 +7418,7 @@ function exportWindClimateSummary(){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 23.0 — NREL WTK V2 Multi-Height · Profile Fit · Fixed Chain · Fixed CF · Fixed BZ · ERA5T Quality · WAsP Package
+// WINDFLOW PRO 23.1 — NREL WTK V2 Multi-Height · Profile Fit · Fixed Chain · Fixed CF · Fixed BZ · ERA5T Quality · WAsP Package · Synced Hub Height
 // ═══════════════════════════════════════════════════════════════════
 
 // ── UI Toggle Functions ──
@@ -7819,8 +7852,9 @@ async function downloadNREL(){
       dataRows.push(row);
     }
     if(dataRows.length===0)throw new Error('No data rows parsed from NREL CSV');
-    // Determine hub height (use 100m as default, or closest available)
-    const hubHt=wsHeights.includes(100)?100:(wsHeights.includes(80)?80:wsHeights[wsHeights.length-1]);
+    // Determine hub height: use the user's Hub Height input, find closest available NREL height
+    const userHH=parseFloat($('hubH')?.value)||120;
+    const hubHt=wsHeights.reduce((best,ht)=>Math.abs(ht-userHH)<Math.abs(best-userHH)?ht:best, wsHeights[0]);
     // Extract hub-height wind series for main display
     const speeds=dataRows.map(r=>r.ws[hubHt]).filter(v=>v!==null&&v>0);
     const dirs=dataRows.map(r=>r.wd[hubHt]??0);
@@ -7855,8 +7889,8 @@ async function downloadNREL(){
     $('e5out').style.display='block';
     // Update status
     const htSummary=wsHeights.length>1?` · ${wsHeights.length} heights [${wsHeights.join(',')}m]`:'';
-    $('nrelStatus').textContent=`NREL V2: ${dataRows.length} records @ ${hubHt}m, mean=${meanWS.toFixed(1)} m/s${htSummary}`;
-    log(`NREL WTK V2: ${dataRows.length} records, ${wsHeights.length} heights, hub=${hubHt}m, mean WS=${meanWS.toFixed(2)} m/s, Weibull A=${wb.A.toFixed(2)} k=${wb.k.toFixed(2)}`,'i');
+    $('nrelStatus').textContent=`NREL V2: ${dataRows.length} records @ ${hubHt}m (closest to ${userHH}m HH), mean=${meanWS.toFixed(1)} m/s${htSummary}`;
+    log(`NREL WTK V2: ${dataRows.length} records, ${wsHeights.length} heights, hub=${hubHt}m (closest to user HH=${userHH}m), mean WS=${meanWS.toFixed(2)} m/s, Weibull A=${wb.A.toFixed(2)} k=${wb.k.toFixed(2)}`,'i');
     // Auto-populate temperature from NREL data
     if(dataRows[0]?.temp?.[100]){
       const meanTemp100=dataRows.reduce((s,r)=>s+(r.temp?.[100]||0),0)/dataRows.length;
@@ -7870,7 +7904,7 @@ async function downloadNREL(){
     // Show NREL multi-height export button
     const btnNrel=$('btnNrelExport');
     if(btnNrel&&S.nrelData&&S.nrelData.wsHeights.length>1)btnNrel.style.display='';
-    showToast(`NREL WTK V2: ${dataRows.length} records downloaded at ${hubHt}m hub height`);
+    showToast(`NREL WTK V2: ${dataRows.length} records downloaded at ${hubHt}m (closest to ${userHH}m HH)`);
   }catch(e){
     $('nrelStatus').textContent='NREL failed: '+e.message.substring(0,80);
     log('NREL WTK V2 download failed: '+e.message,'w');
@@ -8004,7 +8038,7 @@ function downloadSRTMGeoTIFF(){
 // ── Export Openwind-compatible Data Package ──
 function exportOpenwindPackage(){
   if(!S.terrain&&!S.wind){alert('Download terrain and wind data first');return;}
-  let pkg='=== WindFlow Pro 23.0 Openwind Data Package ===\n';
+  let pkg='=== WindFlow Pro 23.1 Openwind Data Package ===\n';
   pkg+=`Project: ${$('projName')?.value||'Project'}\n`;
   pkg+=`Date: ${new Date().toISOString()}\n\n`;
   // Site info
