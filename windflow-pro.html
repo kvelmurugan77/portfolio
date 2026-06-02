@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 24.0</title>
+<title>WindFlow Pro 24.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 24.0</span></div><div class="brand-sub">SRTM DEM · CORINE · ESA CCI · NEWA · NREL WTK V2 Multi-Height · JH Terrain · Hourly Stability · Auto Roughness Rose · Canopy d0 · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · WAsP-Weibull · ERA5T rho · NREL Profile Fit · Fixed Chain · Fixed CF · Fixed BZ · Fixed ERA5T Height · Synced HH</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 24.1</span></div><div class="brand-sub">SRTM DEM · CORINE · ESA CCI · NEWA · NREL WTK V2 Multi-Height · JH Terrain · Hourly Stability · Auto Roughness Rose · Canopy d0 · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · WAsP-Weibull · ERA5T rho · NREL Profile Fit · Fixed Chain · Fixed CF · Fixed BZ · Fixed ERA5T Height · Synced HH</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -475,7 +475,9 @@ const S={
   drawMode:false,charts:{},
   roughnessRose:null,
   obstacles:[],
-  waspCalibration:null
+  waspCalibration:null,
+  windSources:{},
+  windSource:'ERA5'
 };
 
 // ── POWER CURVES ──
@@ -2199,6 +2201,7 @@ async function downloadERA5(){
     }
     const sp=allSp.map(v=>v??0),dr=allDr.map(v=>v??0);
     S.era5Raw={sp,dr,ts:allTs,lat,lon,h};S.wind={speeds:[...sp],dirs:[...dr],times:[...allTs]};S.mcpFactor=1;
+    S.windSources.ERA5={speeds:[...sp],dirs:[...dr],times:[...allTs],mcpFactor:1,mastH:parseInt(h)||100,elevation:elev||null};
     // v14.0: Store ERA5 atmospheric data for density calculation
     S.era5Atm={pres:allPres.map(v=>v??null),temp:allTemp.map(v=>v??null),rh:allRH.map(v=>v??null),elev};
     const vs=sp.filter(v=>v>.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);const wb=weibullFit(vs);
@@ -2259,7 +2262,7 @@ async function downloadERA5(){
       }
     }
     $('windStat').textContent=`ERA5 ${sy}–${ey}: ${sp.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s · A=${wb.A.toFixed(2)} k=${wb.k.toFixed(2)}`;
-    drawE5Hist(sp,wb);updateWindUI(sp,dr);
+    drawE5Hist(sp,wb);updateWindUI(sp,dr);updateDataSourceUI('ERA5');
     log(`ERA5 OK: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
   }catch(e){setProg('e5',0,'❌ '+e.message);log('ERA5 failed: '+e.message,'e');}
 }
@@ -3237,7 +3240,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 24.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 24.1 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -3278,7 +3281,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 24.0 — SRTM DEM · CORINE · ESA CCI · NEWA · NREL WTK V2 Multi-Height Profile · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · ERA5T Density · Per-WTG ρ · Humidity Correction · Hourly Stability · Auto Roughness Rose · Canopy d0 · Fixed OWC→GWC→SWC Chain · IBL · Jackson-Hunt Terrain · Fixed BZ Orographic · Wake Direction Variability · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · RIX · IEC 61400-12-1 · ERA5T Quality Checks · NREL Profile Fit · Synced Hub Height</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 24.1 — SRTM DEM · CORINE · ESA CCI · NEWA · NREL WTK V2 Multi-Height Profile · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · ERA5T Density · Per-WTG ρ · Humidity Correction · Hourly Stability · Auto Roughness Rose · Canopy d0 · Fixed OWC→GWC→SWC Chain · IBL · Jackson-Hunt Terrain · Fixed BZ Orographic · Wake Direction Variability · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · RIX · IEC 61400-12-1 · ERA5T Quality Checks · NREL Profile Fit · Synced Hub Height</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -3508,7 +3511,7 @@ function autoCenterMap(){
   const c=getSiteCenter();
   log(`Map centered on layout: ${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`,'i');
 }
-function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)&&ws>=0&&ws<80){sp.push(ws);dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;const vs=sp.filter(v=>v>0.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
+function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)&&ws>=0&&ws<80){sp.push(ws);dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;S.windSources.CSV={speeds:[...sp],dirs:[...dr],times:[...ts],mcpFactor:1,mastH:parseFloat($('mastH').value)||100,elevation:null};const vs=sp.filter(v=>v>0.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);updateDataSourceUI('CSV');log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
 function dlFile(c,f,m){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:m}));a.download=f;a.click();}
 function showToast(msg,dur=3000){const t=document.createElement('div');t.textContent=msg;t.style.cssText='position:fixed;bottom:20px;right:20px;background:#1e293b;color:#f1f5f9;padding:10px 18px;border-radius:8px;font-size:12px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:fadeInUp .3s ease';document.body.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300)},dur);}
 function showTab(id){/* legacy stub */}
@@ -3527,7 +3530,7 @@ initMap();calcDensity();
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 24.0 ready. NREL WTK V2 Multi-Height · Profile Fit · Fixed Chain · Fixed CF · Fixed BZ · Fixed ERA5T Height · Synced Hub Height','i');
+log('WindFlow Pro 24.1 ready. NREL WTK V2 Multi-Height · Profile Fit · Fixed Chain · Fixed CF · Fixed BZ · Fixed ERA5T Height · Synced Hub Height','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 
@@ -4350,6 +4353,43 @@ function onDataSourceChange(){
   const el=$('dataSourceLabel');
   if(el)el.textContent=src;
   log(`Primary data source for modelling set to: ${src}`,'i');
+  // Switch wind data to the selected source and update stats + charts
+  switchWindDataSource(src);
+}
+
+function switchWindDataSource(src){
+  const ws=S.windSources[src];
+  if(!ws||!ws.speeds||!ws.speeds.length){
+    log(`No ${src} data available — download it first`,'w');
+    return;
+  }
+  // Load selected source's data into S.wind
+  S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[]};
+  S.mcpFactor=ws.mcpFactor||1;
+  // Recompute and update statistics
+  const sp=S.wind.speeds;
+  const vs=sp.filter(v=>v>.5);
+  if(!vs.length)return;
+  const mean=vs.reduce((s,v)=>s+v,0)/vs.length;
+  const wb=weibullFit(vs);
+  const rho=parseFloat($('airDen').value)||1.225;
+  const PD=.5*rho*mean**3;
+  const elev=ws.elevation||null;
+  $('e5WS').textContent=mean.toFixed(2);
+  $('e5WA').textContent=wb.A.toFixed(2);
+  $('e5WK').textContent=wb.k.toFixed(2);
+  $('e5PD').textContent=PD.toFixed(0);
+  $('e5RC').textContent=sp.length.toLocaleString();
+  $('e5EL').textContent=elev?elev.toFixed(0):'—';
+  // Update mast height to match source
+  if(ws.mastH&&$('mastH'))$('mastH').value=ws.mastH;
+  // Redraw the wind speed distribution chart
+  drawE5Hist(sp,wb);
+  // Update downstream wind UI (rose, sector table, Weibull chart)
+  updateWindUI(sp,S.wind.dirs);
+  // Show the results panel
+  $('e5out').style.display='block';
+  log(`Switched to ${src}: ${sp.length.toLocaleString()} records, mean ${mean.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
 }
   if ($('stabZL')) $('stabZL').value = isFinite(zL) ? zL.toFixed(3) : '0';
 }
@@ -6634,7 +6674,7 @@ function gamma(z){
   return Math.sqrt(2*Math.PI)*Math.pow(t,z+0.5)*Math.exp(-t)*x;
 }
 
-async function downloadMERRA2(){$('merra2Status').textContent='Querying NASA POWER...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();const ws=Object.values(d.properties?.parameter?.WS50M||{}).filter(v=>v>0);const mean=ws.length?ws.reduce((s,v)=>s+v,0)/ws.length:0;$('merra2Status').textContent='✓ MERRA-2: '+ws.length.toLocaleString()+' records, mean WS50m='+mean.toFixed(2)+' m/s';log('MERRA-2 data downloaded: '+ws.length+' records','i');}catch(e){$('merra2Status').textContent='⚠ MERRA-2 unavailable: '+e.message;log('MERRA-2 failed: '+e.message,'w');}}
+async function downloadMERRA2(){$('merra2Status').textContent='Querying NASA POWER...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();const ws10=Object.values(d.properties?.parameter?.WS10M||{});const ws50=Object.values(d.properties?.parameter?.WS50M||{});const wd10=Object.values(d.properties?.parameter?.WD10M||{});const speeds=ws50.filter(v=>v>=0&&v<80);const dirs=wd10.filter(v=>!isNaN(v)).map(v=>(v%360+360)%360);const times=[];const param=d.properties?.parameter?.WS50M||{};Object.keys(param).forEach(k=>{if(param[k]>=0&&param[k]<80)times.push(k);});if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times};S.mcpFactor=1;S.windSources.MERRA2={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:50,elevation:null};const vs=speeds.filter(v=>v>.5);const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;const wb=weibullFit(vs);const rho=parseFloat($('airDen').value)||1.225;const PD=.5*rho*mean**3;$('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);$('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';$('e5out').style.display='block';drawE5Hist(speeds,wb);if($('mastH'))$('mastH').value=50;updateDataSourceUI('MERRA2');$('merra2Status').textContent='✓ MERRA-2: '+speeds.length.toLocaleString()+' records, mean WS50m='+mean.toFixed(2)+' m/s';log('MERRA-2 data downloaded: '+speeds.length+' records, mean='+mean.toFixed(2)+' m/s','i');}catch(e){$('merra2Status').textContent='⚠ MERRA-2 unavailable: '+e.message;log('MERRA-2 failed: '+e.message,'w');}}
 
 async function downloadNCEP(){$('ncepStatus').textContent='NCEP/NCAR via Open-Meteo...';try{$('ncepStatus').textContent='⚠ Use ERA5 tab for NCEP-equivalent data (Open-Meteo includes NCEP backfill)';}catch(e){$('ncepStatus').textContent='⚠ NCEP unavailable';}}
 
@@ -6860,7 +6900,7 @@ function updateReportingDashboard(){
 // ── SAVE/LOAD PROJECT ──
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
-  const data={version:'24.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0'}};
+  const data={version:'24.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0'}};
   const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v24.0)','i');
 }
 
@@ -6886,7 +6926,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 24.0`);
+  lines.push(`WAsP Project Export - WindFlow Pro 24.1`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
@@ -7009,6 +7049,10 @@ function loadProject(event){
       const data=JSON.parse(e.target.result);
       if(data.turbines){S.turbines=data.turbines;refreshTable();updateMarkers();}
       if(data.wind){S.wind=data.wind;S.mcpFactor=data.mcpFactor||1;}
+      if(data.windSource)S.windSource=data.windSource;
+      if(data.windSources)S.windSources=data.windSources;
+      if(data.nrelData)S.nrelData=data.nrelData;
+      if(data.nrelProfile)S.nrelProfile=data.nrelProfile;
       if(data.terrain)S.terrain=data.terrain;
       if(data.boundary){S.boundary=data.boundary;if(S.boundary.length>=3&&leafMap){if(S.boundaryLayer)S.boundaryLayer.remove();S.boundaryLayer=L.polygon(S.boundary,{color:'#d29922',weight:2.5,fillOpacity:.08,dashArray:'6,3'}).addTo(leafMap);const area=polyArea(S.boundary);$('bndStats').textContent=`✓ ${S.boundary.length} vertices · Area ≈ ${area.toFixed(1)} km²`;}}
       if(data.obstacles)S.obstacles=data.obstacles;
@@ -7030,6 +7074,18 @@ function loadProject(event){
       if(S.obstacles&&S.obstacles.length&&typeof renderObstacleTable==='function')renderObstacleTable();
       if(S.masts&&S.masts.length&&typeof renderMastList==='function')renderMastList();
       syncSiteCoordinates();
+      // Restore data source UI after loading
+      if(S.wind&&S.wind.speeds&&S.wind.speeds.length){
+        updateDataSourceUI(S.windSource||'ERA5');
+        const vs=S.wind.speeds.filter(v=>v>.5);if(vs.length){
+          const mean=vs.reduce((s,v)=>s+v,0)/vs.length;const wb=weibullFit(vs);
+          $('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);
+          const rho=parseFloat($('airDen').value)||1.225;
+          $('e5PD').textContent=(.5*rho*mean**3).toFixed(0);$('e5RC').textContent=S.wind.speeds.length.toLocaleString();
+          $('e5out').style.display='block';
+          drawE5Hist(S.wind.speeds,wb);
+        }
+      }
       log('Project loaded: '+f.name+' (v'+data.version+', '+(data.wind?data.wind.speeds.length:0)+' wind records)','i');goToStep(1);
     }catch(err){log('Project load failed: '+err.message,'e');alert('Load failed: '+err.message);}
   };r.readAsText(f);event.target.value='';
@@ -7037,7 +7093,7 @@ function loadProject(event){
 
 function clearAll(){
   if(!confirm('Clear all data?'))return;
-  S.turbines=[];S.wind=null;S.era5Raw=null;S.mcpFactor=1;S.tsData=null;S.results=null;S.terrain=null;S.contoursData=[];S.boundary=[];S.obstacles=[];S.masts=[];S.waspCalibration=null;S.hourlyStability=null;S.autoRoughnessRose=null;S.roughnessZones=null;BZ.enabled=false;BZ.speedups=[];BZ.grid=null;BZ.sectorSU=[];BZ.sectorTurning=[];BZ.sectorRoughRC=[];BZ.turbRoughRC=[];BZ.mastSU=1;BZ.showLayer=false;
+  S.turbines=[];S.wind=null;S.era5Raw=null;S.mcpFactor=1;S.tsData=null;S.results=null;S.terrain=null;S.contoursData=[];S.boundary=[];S.obstacles=[];S.masts=[];S.waspCalibration=null;S.hourlyStability=null;S.autoRoughnessRose=null;S.roughnessZones=null;S.windSources={};S.windSource='ERA5';BZ.enabled=false;BZ.speedups=[];BZ.grid=null;BZ.sectorSU=[];BZ.sectorTurning=[];BZ.sectorRoughRC=[];BZ.turbRoughRC=[];BZ.mastSU=1;BZ.showLayer=false;
   refreshTable();updateMarkers();clearBoundary();renderMastList();log('All data cleared','i');goToStep(1);
 }
 
@@ -7283,7 +7339,7 @@ function exportRoughnessMap(){
   const z0mast=parseFloat($('rrZ0mast')?.value)||z0site;
   const lat=parseFloat($('e5La')?.value||'55.5');
   const lon=parseFloat($('e5Lo')?.value||'7.9');
-  let map=`! WAsP Roughness Map - exported from WindFlow Pro 24.0\n`;
+  let map=`! WAsP Roughness Map - exported from WindFlow Pro 24.1\n`;
   map+=`! Site: ${$('projName')?.value||'Project'} at ${lat.toFixed(4)}N ${lon.toFixed(4)}E\n`;
   map+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
   map+=`${nSectors} 0\n`; // nSectors, 0 = polar format
@@ -7327,7 +7383,7 @@ function exportCombinedMap(){
   const z0mast=parseFloat($('rrZ0mast')?.value)||z0site;
   const lat=parseFloat($('e5La')?.value||'55.5');
   const lon=parseFloat($('e5Lo')?.value||'7.9');
-  let map=`! WAsP Combined Terrain + Roughness Map - WindFlow Pro 24.0\n`;
+  let map=`! WAsP Combined Terrain + Roughness Map - WindFlow Pro 24.1\n`;
   map+=`! Site: ${$('projName')?.value||'Project'} at ${lat.toFixed(4)}N ${lon.toFixed(4)}E\n`;
   map+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
   map+=`! Elevation: ${T.minE?.toFixed(0)||0}–${T.maxE?.toFixed(0)||0}m ASL\n`;
@@ -7515,7 +7571,7 @@ function exportWRG(){
   if(!S.turbines.length){alert('Add turbines first');return;}
   const nSectors=parseInt($('sects').value)||12;
   const R=S.results;
-  let wrg=`! Wind Resource Grid - WindFlow Pro 24.0\n`;
+  let wrg=`! Wind Resource Grid - WindFlow Pro 24.1\n`;
   wrg+=`! Project: ${$('projName')?.value||'Project'}\n`;
   wrg+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
   wrg+=`! Turbine: ${$('tcls').options[$('tcls').selectedIndex]?.text||'Custom'}\n`;
@@ -7803,13 +7859,19 @@ async function downloadNEWA(){
       S.wind={speeds,dirs,times};
       S.mcpFactor=1; // NEWA is already a long-term wind atlas
       S.windSource='NEWA';
+      S.windSources.NEWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:hh,elevation:null};
       const meanWS=speeds.reduce((s,v)=>s+v,0)/speeds.length;
       const wb=weibullFit(speeds);
+      const rho=parseFloat($('airDen').value)||1.225;
+      const powerDensity=0.5*rho*speeds.reduce((s,v)=>s+v*v*v,0)/speeds.length;
       $('e5WS').textContent=meanWS.toFixed(2);
       $('e5WA').textContent=wb.A.toFixed(2);
       $('e5WK').textContent=wb.k.toFixed(2);
+      $('e5PD').textContent=powerDensity.toFixed(0);
       $('e5RC').textContent=speeds.length;
+      $('e5EL').textContent='—';
       $('e5out').style.display='block';
+      drawE5Hist(speeds,wb);
       // Set mast height to NEWA height
       if($('mastH'))$('mastH').value=hh;
       // Update data source display
@@ -7827,12 +7889,21 @@ async function downloadNEWA(){
 
 // ── Data Source Selector ──
 // Track which data source is the primary source for modelling
+// Also update dropdown to only show available (downloaded) sources
 function updateDataSourceUI(source){
   S.windSource=source||S.windSource||'ERA5';
   const el=$('dataSourceLabel');
   if(el)el.textContent=S.windSource;
   const sel=$('primaryDataSource');
-  if(sel)sel.value=S.windSource;
+  if(sel){
+    // Enable/disable options based on which sources have data
+    const available=Object.keys(S.windSources||{});
+    Array.from(sel.options).forEach(opt=>{
+      opt.disabled=!available.includes(opt.value);
+      opt.style.color=available.includes(opt.value)?'':'#484f58';
+    });
+    sel.value=S.windSource;
+  }
 }
 
 // ── NREL Wind Toolkit V2 Download (USA CONUS, Multi-height) ──
@@ -8072,6 +8143,7 @@ async function downloadNREL(){
     };
     // Set main wind data
     S.wind={speeds,dirs,times};
+    S.windSources.NREL={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:hubHt,elevation:null};
     // Compute and display results
     const meanWS=speeds.reduce((s,v)=>s+v,0)/speeds.length;
     const wb=weibullFit(speeds);
@@ -8082,7 +8154,10 @@ async function downloadNREL(){
     $('e5WK').textContent=wb.k.toFixed(2);
     $('e5PD').textContent=powerDensity.toFixed(1);
     $('e5RC').textContent=speeds.length;
+    $('e5EL').textContent='—';
     $('e5out').style.display='block';
+    drawE5Hist(speeds,wb);
+    updateDataSourceUI('NREL');
     // Update status
     const htSummary=wsHeights.length>1?` · ${wsHeights.length} heights [${wsHeights.join(',')}m]`:'';
     $('nrelStatus').textContent=`NREL V2: ${dataRows.length} records @ ${hubHt}m (closest to ${userHH}m HH), mean=${meanWS.toFixed(1)} m/s${htSummary}`;
@@ -8234,7 +8309,7 @@ function downloadSRTMGeoTIFF(){
 // ── Export Openwind-compatible Data Package ──
 function exportOpenwindPackage(){
   if(!S.terrain&&!S.wind){alert('Download terrain and wind data first');return;}
-  let pkg='=== WindFlow Pro 24.0 Openwind Data Package ===\n';
+  let pkg='=== WindFlow Pro 24.1 Openwind Data Package ===\n';
   pkg+=`Project: ${$('projName')?.value||'Project'}\n`;
   pkg+=`Date: ${new Date().toISOString()}\n\n`;
   // Site info
