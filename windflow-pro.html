@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 22.0</title>
+<title>WindFlow Pro 22.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 22.0</span></div><div class="brand-sub">SRTM DEM · CORINE · ESA CCI · NEWA · NREL · JH Terrain · Hourly Stability · Auto Roughness Rose · Canopy d0 · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · WAsP-Weibull · ERA5T rho · Fixed Chain · Fixed CF · Fixed BZ</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 22.1</span></div><div class="brand-sub">SRTM DEM · CORINE · ESA CCI · NEWA · NREL · JH Terrain · Hourly Stability · Auto Roughness Rose · Canopy d0 · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · WAsP-Weibull · ERA5T rho · Fixed Chain · Fixed CF · Fixed BZ · Fixed ERA5T Height</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -2173,6 +2173,16 @@ async function downloadERA5(){
     $('e5out').style.display='block';
     // v15.0: Sync all coordinate fields from site center
     syncSiteCoordinates();
+    // v22.1 FIX: Auto-sync mast height to match ERA5 download height
+    // ERA5 data is at the height specified in the dropdown (100m or 10m).
+    // If mast height doesn't match, the log-law extrapolation will be wrong.
+    const era5Height = parseInt(h); // h = '100' or '10'
+    const currentMastH = parseInt($('mastH').value) || 100;
+    if (currentMastH !== era5Height) {
+      const oldMastH = currentMastH;
+      $('mastH').value = era5Height;
+      log(`ERA5 height sync: Mast height updated from ${oldMastH}m → ${era5Height}m to match ERA5 download height`,'i');
+    }
     $('tsSy').value=sy;$('tsEy').value=sy; // default TS to first year of ERA5
     // Auto-shear based on z0 and stability
     autoShear();
@@ -2443,11 +2453,12 @@ function calcAEP(){
     // Since Weibull A is already at hub height with global z0,
     // the chain ratio should only convert from global z0 to per-sector z0
     let chainRatio;
+    // v22.1 FIX: Define roughRatioIBL and z0_site_sec outside hasRoughRose block
+    // so they're available in the BZ per-turbine path below
+    const z0_mast_sec = hasRoughRose ? getSectorEffectiveZ0('mast', si, hubHH, nSect) : z0;
+    const z0_site_sec = hasRoughRose ? getSectorEffectiveZ0('site', si, hubHH, nSect) : z0;
+    const roughRatioIBL = hasRoughRose ? getSectorRoughnessRatio(si, hubHH, nSect) : 1.0;
     if (hasRoughRose) {
-      // Per-sector roughness rose available: compute full roughness conversion
-      const z0_mast_sec = getSectorEffectiveZ0('mast', si, hubHH, nSect);
-      const z0_site_sec = getSectorEffectiveZ0('site', si, hubHH, nSect);
-      const roughRatioIBL = getSectorRoughnessRatio(si, hubHH, nSect);
       // Full OWC→GWC→SWC chain: mast height + mast z0 → hub height + site z0
       // But Weibull is already at hub height, so we need to undo the initial
       // vertical extrapolation (mastH → hubHH with global z0) then apply
@@ -2581,17 +2592,19 @@ function calcAEP(){
     const grossMinusCalNet = grossG - (grossG - netWake) * cal.wakeCorrection;
     calNetWake = Math.max(0, grossMinusCalNet);
   }
-  const netF=calNetWake*lossM;
   let wakeL=grossG>0?(grossG-calNetWake)/grossG*100:0;
   // v11.0: WAsP wake efficiency proxy
   wakeL = waspWakeEfficiency(wakeL, n, z0);
   // v11.0: Offshore calibration correction (Lange et al. 2006)
   // Offshore sites have lower roughness and different wake characteristics
+  // v22.1 FIX: Moved offshore correction BEFORE netF/CF calculation
   if (z0 <= 0.001) {
     // Offshore: reduce wake losses by ~5% (offshore wakes are shorter due to lower TI)
     calNetWake = calNetWake + (grossG - calNetWake) * 0.05;
     calNetWake = Math.min(grossG, calNetWake);
   }
+  // v22.1 FIX: netF computed AFTER all corrections (offshore, wake efficiency)
+  const netF=calNetWake*lossM;
   // Installed capacity: sum per-turbine rated power (same for all, but future-proof)
   const instMW=n*pc.rated/1000,CF=netF*1000/(instMW*8760)*100;
   // Component uncertainty model (RSS)
@@ -2937,20 +2950,36 @@ async function runTimeSeries(){
     if(hubMean<0.1){setProg('ts',0,'\u274c Hub WS ~0 \u2014 check mast height/z0');log('TS: hub WS too low. Mast height or z0 may be wrong.','e');return;}
     // ── PRE-BIN wind states ──
     setProg('ts',46,'Pre-binning wind states...');
-    // v13.1: Compute per-sector OWC→GWC→SWC chain ratios for proper wind atlas conversion
+    // v22.1 FIX: Compute per-sector OWC→GWC→SWC chain ratios (same logic as calcAEP v22.0)
+    // The Weibull is already fitted at HUB HEIGHT (not mast height).
+    // Therefore the chain should only apply the ROUGHNESS CHANGE from global z0
+    // to per-sector z0 — NOT the vertical extrapolation from mastH to hubHH.
     const nSectTS = parseInt($('sects').value) || 16;
     const szTS = 360 / nSectTS;
     const tsL = getStabilityL();
-    const tsLogRatioGlobal = logWS_stab(1.0, mastH, hubHH, z0, tsL);
-    const tsGdlFactor = gdlCorrectionFactor(tsL, z0, hubHH);
+    let tsGdlFactor = gdlCorrectionFactor(tsL, z0, hubHH);
+    if (!isFinite(tsGdlFactor) || isNaN(tsGdlFactor)) tsGdlFactor = 1.0; // NaN guard
+    const tsHasRoughRose = (S.autoRoughnessRose && S.autoRoughnessRose.length) ||
+                     (S.roughnessRose && S.roughnessRose.length);
     const tsRoughRatios = [];
     for (let si = 0; si < nSectTS; si++) {
-      const z0_mast_s = getSectorEffectiveZ0('mast', si, hubHH, nSectTS);
-      const z0_site_s = getSectorEffectiveZ0('site', si, hubHH, nSectTS);
-      const roughR = getSectorRoughnessRatio(si, hubHH, nSectTS);
-      const owcGwcR = owcToGWC(1.0, mastH, z0_mast_s, hubHH, 0.03, tsL);
-      const gwcSwcR = gwcToSWC(1.0, hubHH, 0.03, hubHH, z0_site_s, tsL);
-      const chainR = (owcGwcR * gwcSwcR * roughR * tsGdlFactor) / tsLogRatioGlobal;
+      let chainR;
+      if (tsHasRoughRose) {
+        const z0_mast_s = getSectorEffectiveZ0('mast', si, hubHH, nSectTS);
+        const z0_site_s = getSectorEffectiveZ0('site', si, hubHH, nSectTS);
+        const roughR = getSectorRoughnessRatio(si, hubHH, nSectTS);
+        const owcGwcR = owcToGWC(1.0, mastH, z0_mast_s, hubHH, 0.03, tsL);
+        const gwcSwcR = gwcToSWC(1.0, hubHH, 0.03, hubHH, z0_site_s, tsL);
+        const undoExtrapolation = logWS_stab(1.0, mastH, hubHH, z0, tsL);
+        chainR = (owcGwcR * gwcSwcR * roughR * tsGdlFactor) / Math.max(undoExtrapolation, 0.01);
+        if (!isFinite(chainR) || isNaN(chainR)) chainR = 1.0;
+        chainR = Math.max(0.7, Math.min(1.3, chainR));
+      } else {
+        // No roughness rose: uniform z0, chain ratio is just GDL correction
+        chainR = tsGdlFactor;
+        if (!isFinite(chainR) || isNaN(chainR)) chainR = 1.0;
+        chainR = Math.max(0.95, Math.min(1.05, chainR));
+      }
       tsRoughRatios.push(chainR);
     }
     const stateBins=new Map();
@@ -3146,7 +3175,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 22.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 22.1 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -3187,7 +3216,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 22.0 — SRTM DEM · CORINE · ESA CCI · NEWA · NREL · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · ERA5T Density · Per-WTG ρ · Humidity Correction · Hourly Stability · Auto Roughness Rose · Canopy d0 · Fixed OWC→GWC→SWC Chain · IBL · Jackson-Hunt Terrain · Fixed BZ Orographic · Wake Direction Variability · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · RIX · IEC 61400-12-1 · ERA5T Quality Checks</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 22.1 — SRTM DEM · CORINE · ESA CCI · NEWA · NREL · Data Export: .grd .map .lib .tab OWC WRG KML WAsP · ERA5T Density · Per-WTG ρ · Humidity Correction · Hourly Stability · Auto Roughness Rose · Canopy d0 · Fixed OWC→GWC→SWC Chain · IBL · Jackson-Hunt Terrain · Fixed BZ Orographic · Wake Direction Variability · Deep-Array Wake · Flow Inclination · GDL Stability · Mixed Hub Height · RIX · IEC 61400-12-1 · ERA5T Quality Checks</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -3433,7 +3462,7 @@ initMap();calcDensity();
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 22.0 ready. Fixed Chain · Fixed CF · Fixed BZ · ERA5T Quality · WAsP Package Export','i');
+log('WindFlow Pro 22.1 ready. Fixed Chain · Fixed CF · Fixed BZ · Fixed ERA5T Height · TS Chain Fix · CF Offshore Fix','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 
@@ -6711,8 +6740,8 @@ function updateReportingDashboard(){
 // ── SAVE/LOAD PROJECT ──
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
-  const data={version:'22.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0'}};
-  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v22.0)','i');
+  const data={version:'22.1',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0'}};
+  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v22.1)','i');
 }
 
 // v22.0: WAsP-compatible project export
@@ -6737,7 +6766,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 22.0`);
+  lines.push(`WAsP Project Export - WindFlow Pro 22.1`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
@@ -7354,7 +7383,7 @@ function exportWindClimateSummary(){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 22.0 — Fixed Chain · Fixed CF · Fixed BZ · ERA5T Quality · WAsP Package
+// WINDFLOW PRO 22.1 — Fixed Chain · Fixed CF · Fixed BZ · ERA5T Quality · WAsP Package
 // ═══════════════════════════════════════════════════════════════════
 
 // ── UI Toggle Functions ──
@@ -7660,7 +7689,7 @@ function downloadSRTMGeoTIFF(){
 // ── Export Openwind-compatible Data Package ──
 function exportOpenwindPackage(){
   if(!S.terrain&&!S.wind){alert('Download terrain and wind data first');return;}
-  let pkg='=== WindFlow Pro 22.0 Openwind Data Package ===\n';
+  let pkg='=== WindFlow Pro 22.1 Openwind Data Package ===\n';
   pkg+=`Project: ${$('projName')?.value||'Project'}\n`;
   pkg+=`Date: ${new Date().toISOString()}\n\n`;
   // Site info
