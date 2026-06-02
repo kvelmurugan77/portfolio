@@ -191,7 +191,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <div class="ds-card" id="ds_merra2"><div class="ds-name">MERRA-2</div><div class="ds-desc">NASA POWER API · Free · 1980→present</div><button class="btn btn-sm btn-ghost" onclick="downloadMERRA2()">⬇ Download</button><div id="merra2Status" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_ncep"><div class="ds-name">NCEP/NCAR</div><div class="ds-desc">Reanalysis · Free · 1948→present</div><button class="btn btn-sm btn-ghost" onclick="downloadNCEP()">⬇ Download</button><div id="ncepStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_newa"><div class="ds-name">NEWA</div><div class="ds-desc">New European Wind Atlas · Free · 200m · EU+surroundings</div><button class="btn btn-sm btn-ghost" onclick="downloadNEWA()">⬇ Download</button><div id="newaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
-          <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit V2</div><div class="ds-desc">USA CONUS · 2007–2014 · Multi-height · Free API key</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key (developer.nrel.gov)" style="font-size:.6rem"></div><div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Year</label><select class="fs" id="nrelYear" style="font-size:.58rem"><option value="2014" selected>2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Interval</label><select class="fs" id="nrelInterval" style="font-size:.58rem"><option value="60" selected>60 min</option><option value="30">30 min</option><option value="15">15 min</option><option value="5">5 min</option></select></div></div><div style="margin-top:.3rem"><label style="font-size:.52rem;color:var(--text2);display:flex;align-items:center;gap:.3rem;cursor:pointer"><input type="checkbox" id="nrelMultiHeight" checked> Multi-height profile (10–200m)</label></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()" style="margin-top:.3rem">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit V2</div><div class="ds-desc">USA CONUS · 2007–2014 · Multi-height · Free API key · developer.nlr.gov</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key (developer.nlr.gov)" style="font-size:.6rem"></div><div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Year</label><select class="fs" id="nrelYear" style="font-size:.58rem"><option value="2014" selected>2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Interval</label><select class="fs" id="nrelInterval" style="font-size:.58rem"><option value="60" selected>60 min</option><option value="30">30 min</option><option value="15">15 min</option><option value="5">5 min</option></select></div></div><div style="margin-top:.3rem"><label style="font-size:.52rem;color:var(--text2);display:flex;align-items:center;gap:.3rem;cursor:pointer"><input type="checkbox" id="nrelMultiHeight" checked> Multi-height profile (10–200m)</label></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()" style="margin-top:.3rem">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
         </div>
         <div class="alert alert-info" style="font-size:.62rem;margin-top:.5rem">Country-specific: NEWA (EU) · NREL Wind (USA) · BARRA2 (AU) · CSIR (ZA) · INMET (BR) · CMA (CN) · SARAN (IN)</div>
       </div>
@@ -399,7 +399,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://maps.elie.ucl.ac.be/CCI/viewer/','_blank')">🗺 ESA CCI Land Cover (External)</button>
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://map.neweuropeanwindatlas.eu/','_blank')">💨 NEWA Wind Atlas (External)</button>
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://www.nrel.gov/grid/wind-toolkit.html','_blank')">💨 NREL Wind Toolkit (External)</button>
-          <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://developer.nrel.gov/signup/','_blank')">🔑 Get NREL API Key (Free)</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://developer.nlr.gov/signup/','_blank')">🔑 Get NREL API Key (Free)</button>
         </div>
       </div>
       <div class="card"><div class="card-title sky">Save / Load Project</div>
@@ -7607,15 +7607,17 @@ async function downloadNEWA(){
 }
 
 // ── NREL Wind Toolkit V2 Download (USA CONUS, Multi-height) ──
-// Uses wtk-download.csv endpoint for direct CSV download
-// API docs: https://developer.nrel.gov/docs/wind/wind-toolkit/wtk-download/
+// API docs: https://developer.nlr.gov/docs/wind/wind-toolkit/wtk-download/
+// Domain migrated: developer.nrel.gov → developer.nlr.gov
 // Heights: 10, 40, 60, 80, 100, 120, 140, 160, 200m
 // Years: 2007-2014, Intervals: 5, 15, 30, 60 min
+// NOTE: .csv endpoint redirects to S3 which lacks CORS → use JSON endpoint
+// to get downloadUrl, then fetch S3 via XMLHttpRequest or direct download
 async function downloadNREL(){
   const lat=parseFloat($('e5La').value);
   const lon=parseFloat($('e5Lo').value);
   const apiKey=$('nrelApiKey')?.value||'';
-  if(!apiKey){alert('Enter your NREL API key (free at developer.nrel.gov — sign up takes 1 min)');return;}
+  if(!apiKey){alert('Enter your NREL API key (free at developer.nlr.gov/signup — sign up takes 1 min)');return;}
   if(isNaN(lat)||isNaN(lon)){alert('Enter latitude/longitude first');return;}
   // Validate USA CONUS bounds (approximately)
   if(lat<24||lat>50||lon<-125||lon>-65){
@@ -7644,7 +7646,7 @@ async function downloadNREL(){
     }else{
       attributes='windspeed_100m,winddirection_100m,temperature_100m,pressure_100m,relativehumidity_2m';
     }
-    // Build CSV download URL (direct download, single point, single year)
+    // Build common params
     const params=new URLSearchParams({
       api_key:apiKey,
       wkt:wkt,
@@ -7652,28 +7654,75 @@ async function downloadNREL(){
       interval:interval,
       utc:'true',
       leap_day:'false',
-      email:'windflow-pro@local',
+      email:'windflow@local.dev',
       reason:'WindFlow Pro analysis',
       affiliation:'WindFlow Pro User'
     });
     if(attributes)params.set('attributes',attributes);
-    const url=`https://developer.nrel.gov/api/wind-toolkit/v2/wind/wtk-download.csv?${params.toString()}`;
-    log('NREL API URL: '+url.replace(apiKey,'***'),'d');
-    $('nrelStatus').textContent='Downloading CSV data...';
-    const r=await fetch(url);
-    if(!r.ok){
-      const errText=await r.text().catch(()=>'');
-      throw new Error(`HTTP ${r.status}: ${errText.substring(0,200)}`);
+    // ── Strategy: Try .csv first (may work in some browsers), fall back to JSON + S3 download ──
+    // The .csv endpoint on developer.nlr.gov redirects to S3 (no CORS).
+    // We try fetch with redirect:'follow' first, which may work if browser
+    // doesn't enforce CORS on the redirect target. If that fails, we use
+    // the JSON endpoint to get the S3 download URL and open it for the user.
+    let csvText=null;
+    const apiBase='https://developer.nlr.gov/api/wind-toolkit/v2/wind/wtk-download';
+    // Attempt 1: Direct CSV fetch (may work if CORS redirect is allowed)
+    $('nrelStatus').textContent='Downloading CSV (attempt 1)...';
+    try{
+      const csvUrl=`${apiBase}.csv?${params.toString()}`;
+      log('NREL CSV URL: '+csvUrl.replace(apiKey,'***'),'d');
+      const r=await fetch(csvUrl,{redirect:'follow',mode:'cors'});
+      if(r.ok){
+        const ct=r.headers.get('content-type')||'';
+        if(ct.includes('text/csv')||ct.includes('text/plain')||ct.includes('octet-stream')){
+          csvText=await r.text();
+          log('NREL CSV downloaded directly ('+csvText.length+' chars)','i');
+        }
+      }
+    }catch(e1){
+      log('NREL direct CSV fetch failed (CORS on S3 redirect): '+e1.message,'d');
     }
-    const csvText=await r.text();
-    // Check for API error responses (sometimes returns JSON errors with 200 status)
+    // Attempt 2: If CSV fetch failed, use JSON endpoint to get download URL
+    if(!csvText){
+      $('nrelStatus').textContent='Getting download link (attempt 2)...';
+      const jsonUrl=`${apiBase}.json?${params.toString()}`;
+      log('NREL JSON URL: '+jsonUrl.replace(apiKey,'***'),'d');
+      const jr=await fetch(jsonUrl,{mode:'cors'});
+      if(!jr.ok)throw new Error('NREL API HTTP '+jr.status);
+      const jd=await jr.json();
+      if(jd.errors&&jd.errors.length)throw new Error('NREL: '+jd.errors.join('; '));
+      const downloadUrl=jd.outputs?.downloadUrl;
+      if(!downloadUrl)throw new Error('NREL: no download URL in response. Message: '+(jd.outputs?.message||'unknown'));
+      log('NREL download URL: '+downloadUrl,'d');
+      // Try to fetch from S3 (may fail due to CORS)
+      $('nrelStatus').textContent='Downloading from NREL S3...';
+      try{
+        const sr=await fetch(downloadUrl,{mode:'cors'});
+        if(sr.ok){
+          csvText=await sr.text();
+          log('NREL S3 CSV downloaded ('+csvText.length+' chars)','i');
+        }
+      }catch(e2){
+        log('NREL S3 fetch failed (CORS): '+e2.message,'d');
+      }
+      // If S3 fetch also failed, prompt user to download manually
+      if(!csvText){
+        $('nrelStatus').innerHTML=`⬇ <a href="${downloadUrl}" target="_blank" style="color:var(--mint);text-decoration:underline">Click here to download NREL CSV</a>, then import via Wind CSV button`;
+        // Also open the download link automatically
+        window.open(downloadUrl,'_blank');
+        showToast('NREL CSV download opened in new tab — import it via the ↓ CSV button');
+        log('NREL: Opened S3 download URL in new tab for manual import','i');
+        return;
+      }
+    }
+    // ── Parse NREL WTK CSV ──
+    // Check for API error responses
     if(csvText.trim().startsWith('{')){
       try{
         const errJson=JSON.parse(csvText);
         if(errJson.errors&&errJson.errors.length)throw new Error(errJson.errors.join('; '));
       }catch(pe){if(pe.message&&!pe.message.includes('JSON'))throw pe;}
     }
-    // Parse NREL WTK CSV format
     // Row 1: SiteID, <id>, Site Timezone, <tz>, Data Timezone, <dtz>, Longitude, <lon>, Latitude, <lat>
     // Row 2: Column headers (Year,Month,Day,Hour,Minute,...attributes...)
     // Row 3+: Data rows
@@ -7695,22 +7744,15 @@ async function downloadNREL(){
     // Parse header row to find column indices
     const headers=lines[1].split(',').map(h=>h.trim().toLowerCase());
     const colIdx={};
-    const heightLabels=[];
     const wsHeights=[];
     const wdHeights=[];
     headers.forEach((h,i)=>{
       colIdx[h]=i;
-      // Detect wind speed columns and extract heights
       const wsMatch=h.match(/wind speed at (\d+)m/);
-      if(wsMatch){
-        const ht=parseInt(wsMatch[1]);
-        wsHeights.push(ht);
-        heightLabels.push(ht);
-      }
+      if(wsMatch)wsHeights.push(parseInt(wsMatch[1]));
       const wdMatch=h.match(/wind direction at (\d+)m/);
       if(wdMatch)wdHeights.push(parseInt(wdMatch[1]));
     });
-    // Ensure year, month, day, hour, minute columns exist
     const idxYear=colIdx['year'], idxMonth=colIdx['month'], idxDay=colIdx['day'];
     const idxHour=colIdx['hour'], idxMinute=colIdx['minute'];
     if(idxYear===undefined)throw new Error('NREL CSV missing time columns');
@@ -7726,13 +7768,16 @@ async function downloadNREL(){
       const hr=parseInt(cols[idxHour])||0;
       const mn=parseInt(cols[idxMinute])||0;
       const row={year:yr,month:mo,day:dy,hour:hr,minute:mn,ws:{},wd:{},temp:{},pres:{}};
-      // Extract wind speeds at each height
+      // Extract wind speeds at each height (handle N/A values)
       for(const ht of wsHeights){
         const key=`wind speed at ${ht}m`;
         const idx=colIdx[key];
         if(idx!==undefined){
-          const v=parseFloat(cols[idx]);
-          row.ws[ht]=isNaN(v)?null:v;
+          const raw=cols[idx]?.trim();
+          if(raw&&raw!=='N/A'&&raw!=='NaN'){
+            const v=parseFloat(raw);
+            row.ws[ht]=isNaN(v)?null:v;
+          }
         }
       }
       // Extract wind directions at each height
@@ -7740,8 +7785,11 @@ async function downloadNREL(){
         const key=`wind direction at ${ht}m`;
         const idx=colIdx[key];
         if(idx!==undefined){
-          const v=parseFloat(cols[idx]);
-          row.wd[ht]=isNaN(v)?null:v;
+          const raw=cols[idx]?.trim();
+          if(raw&&raw!=='N/A'&&raw!=='NaN'){
+            const v=parseFloat(raw);
+            row.wd[ht]=isNaN(v)?null:v;
+          }
         }
       }
       // Extract temperatures
@@ -7749,8 +7797,11 @@ async function downloadNREL(){
         const key=`air temperature at ${ht}m`;
         const idx=colIdx[key];
         if(idx!==undefined){
-          const v=parseFloat(cols[idx]);
-          if(!isNaN(v))row.temp[ht]=v;
+          const raw=cols[idx]?.trim();
+          if(raw&&raw!=='N/A'&&raw!=='NaN'){
+            const v=parseFloat(raw);
+            if(!isNaN(v))row.temp[ht]=v;
+          }
         }
       }
       // Extract pressures
@@ -7758,8 +7809,11 @@ async function downloadNREL(){
         const key=ht===0?'surface air pressure':`air pressure at ${ht}m`;
         const idx=colIdx[key];
         if(idx!==undefined){
-          const v=parseFloat(cols[idx]);
-          if(!isNaN(v))row.pres[ht]=v;
+          const raw=cols[idx]?.trim();
+          if(raw&&raw!=='N/A'&&raw!=='NaN'){
+            const v=parseFloat(raw);
+            if(!isNaN(v))row.pres[ht]=v;
+          }
         }
       }
       dataRows.push(row);
@@ -7773,7 +7827,7 @@ async function downloadNREL(){
     const times=dataRows.map(r=>{
       try{return new Date(r.year,r.month-1,r.day,r.hour,r.minute).toISOString();}catch(e){return '';}
     });
-    // Store full NREL data in state for multi-height analysis
+    // Store full NREL data in state
     S.nrelData={
       rows:dataRows,
       wsHeights:wsHeights,
@@ -7786,12 +7840,12 @@ async function downloadNREL(){
       year:parseInt(year),
       interval:parseInt(interval)
     };
-    // Set main wind data (hub-height series)
+    // Set main wind data
     S.wind={speeds,dirs,times};
     // Compute and display results
     const meanWS=speeds.reduce((s,v)=>s+v,0)/speeds.length;
     const wb=weibullFit(speeds);
-    const rho=1.225; // will be updated if pressure/temp available
+    const rho=1.225;
     const powerDensity=0.5*rho*speeds.reduce((s,v)=>s+v*v*v,0)/speeds.length;
     $('e5WS').textContent=meanWS.toFixed(2);
     $('e5WA').textContent=wb.A.toFixed(2);
@@ -7799,11 +7853,11 @@ async function downloadNREL(){
     $('e5PD').textContent=powerDensity.toFixed(1);
     $('e5RC').textContent=speeds.length;
     $('e5out').style.display='block';
-    // Update status with multi-height info
+    // Update status
     const htSummary=wsHeights.length>1?` · ${wsHeights.length} heights [${wsHeights.join(',')}m]`:'';
     $('nrelStatus').textContent=`NREL V2: ${dataRows.length} records @ ${hubHt}m, mean=${meanWS.toFixed(1)} m/s${htSummary}`;
     log(`NREL WTK V2: ${dataRows.length} records, ${wsHeights.length} heights, hub=${hubHt}m, mean WS=${meanWS.toFixed(2)} m/s, Weibull A=${wb.A.toFixed(2)} k=${wb.k.toFixed(2)}`,'i');
-    // Auto-populate temperature/elevation from NREL data if available
+    // Auto-populate temperature from NREL data
     if(dataRows[0]?.temp?.[100]){
       const meanTemp100=dataRows.reduce((s,r)=>s+(r.temp?.[100]||0),0)/dataRows.length;
       $('siteTemp').value=meanTemp100.toFixed(1);
@@ -7816,7 +7870,6 @@ async function downloadNREL(){
     // Show NREL multi-height export button
     const btnNrel=$('btnNrelExport');
     if(btnNrel&&S.nrelData&&S.nrelData.wsHeights.length>1)btnNrel.style.display='';
-    // Toast notification
     showToast(`NREL WTK V2: ${dataRows.length} records downloaded at ${hubHt}m hub height`);
   }catch(e){
     $('nrelStatus').textContent='NREL failed: '+e.message.substring(0,80);
