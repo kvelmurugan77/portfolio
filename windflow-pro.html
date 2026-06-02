@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 26.0</title>
+<title>WindFlow Pro 27.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 26.0</span></div><div class="brand-sub">① Site → ② Layout → ③ Wind Data (ERA5/NEWA) → ④ Terrain (SRTM) → ⑤ Roughness (ESA CCI) → ⑥ BZ Model → ⑦ MCP → ⑧ Run Analysis → ⑨ Export Report</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 27.0</span></div><div class="brand-sub">① Site → ② Layout → ③ Wind Data (ERA5/NEWA) → ④ Terrain (SRTM) → ⑤ Roughness (ESA CCI) → ⑥ BZ Model → ⑦ MCP → ⑧ Run Analysis → ⑨ Export Report</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -465,6 +465,22 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <div class="card"><div class="card-title">Shear Profile</div><div class="canvas-wrap" style="height:160px"><canvas id="shearChart"></canvas></div></div>
     </div>
   </div>
+
+  <!-- v27.0: Bankability-Style Map Overview -->
+  <div class="card" style="margin-top:.5rem"><div class="card-title sky">Map Overview — Bankability Report</div>
+    <div class="alert alert-info" style="font-size:.58rem;margin-bottom:.5rem">Site overview maps similar to DNV/UL bankability assessment reports. Each panel shows a key spatial dataset for the wind farm area.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+      <div style="text-align:center"><div style="font-size:.6rem;color:var(--mint);margin-bottom:.2rem;font-weight:600">Wind Farm Layout</div><canvas id="bankLayoutMap" style="width:100%;border:1px solid var(--border);border-radius:6px;background:#0d1e30"></canvas></div>
+      <div style="text-align:center"><div style="font-size:.6rem;color:var(--sky);margin-bottom:.2rem;font-weight:600">Terrain Elevation &amp; Contours</div><canvas id="bankTerrainMap" style="width:100%;border:1px solid var(--border);border-radius:6px;background:#0d1e30"></canvas></div>
+      <div style="text-align:center"><div style="font-size:.6rem;color:var(--gold);margin-bottom:.2rem;font-weight:600">Roughness Map</div><canvas id="bankRoughnessMap" style="width:100%;border:1px solid var(--border);border-radius:6px;background:#0d1e30"></canvas></div>
+      <div style="text-align:center"><div style="font-size:.6rem;color:var(--acc);margin-bottom:.2rem;font-weight:600">Wind Speed Map</div><canvas id="bankWindSpeedMap" style="width:100%;border:1px solid var(--border);border-radius:6px;background:#0d1e30"></canvas></div>
+    </div>
+    <div style="margin-top:.5rem;display:flex;gap:.4rem;flex-wrap:wrap">
+      <button class="btn btn-sm btn-sky" onclick="drawBankabilityMaps()">🗺 Generate Map Overview</button>
+      <button class="btn btn-sm btn-ghost" onclick="exportBankabilityReport()">📄 Export Bankability Report (HTML)</button>
+    </div>
+  </div>
+
   <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(5)">← Flow Model</button><div></div></div>
 </div>
 
@@ -3506,7 +3522,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 26.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 27.0 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -3547,7 +3563,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 26.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 27.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Bankability report</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -3793,9 +3809,516 @@ initMap();calcDensity();
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 26.0 ready. Site → Layout → Wind → Terrain → Roughness → BZ → MCP → Analysis → Report','i');
+log('WindFlow Pro 27.0 ready. Site → Layout → Wind → Terrain → Roughness → BZ → MCP → Analysis → Report','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
+
+// ══════════════════════════════════════════════════════════════════════
+// v27.0: BANKABILITY-STYLE MAP OVERVIEW & REPORT
+// Similar to DNV/UL bankability reports with layout, terrain, roughness, wind speed maps
+// ══════════════════════════════════════════════════════════════════════
+
+function drawBankabilityMaps(){
+  log('Generating bankability map overview...','i');
+  const mapSize=480;
+  // ── 1. WIND FARM LAYOUT MAP ──
+  const lc=$('bankLayoutMap');
+  if(lc){
+    lc.width=mapSize;lc.height=mapSize*0.8;
+    const ctx=lc.getContext('2d');const W=lc.width,H=lc.height;
+    ctx.fillStyle='#0d1e30';ctx.fillRect(0,0,W,H);
+    if(!S.turbines.length){
+      ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='12px IBM Plex Mono';ctx.textAlign='center';
+      ctx.fillText('No turbine layout loaded',W/2,H/2);
+    } else {
+      const margin={top:30,right:30,bottom:30,left:45};
+      const pw=W-margin.left-margin.right,ph=H-margin.top-margin.bottom;
+      // Compute bounds
+      const lats=S.turbines.map(t=>t.lat),lons=S.turbines.map(t=>t.lon);
+      let lat0=Math.min(...lats)-0.01,lat1=Math.max(...lats)+0.01;
+      let lon0=Math.min(...lons)-0.01,lon1=Math.max(...lons)+0.01;
+      // Keep aspect ratio
+      const latRange=lat1-lat0,lonRange=lon1-lon0;
+      const scale=Math.max(lonRange/latRange,1);
+      if(lonRange>latRange){lat0-=(lonRange/latRange-1)*latRange/2;lat1+=(lonRange/latRange-1)*latRange/2;}
+      else{lon0-=(latRange/lonRange-1)*lonRange/2;lon1+=(latRange/lonRange-1)*lonRange/2;}
+      // Draw grid lines
+      ctx.strokeStyle='#21262d';ctx.lineWidth=0.5;
+      for(let i=0;i<=5;i++){
+        const y=margin.top+i*ph/5;
+        ctx.beginPath();ctx.moveTo(margin.left,y);ctx.lineTo(margin.left+pw,y);ctx.stroke();
+        const lat=lat1-i*(lat1-lat0)/5;
+        ctx.fillStyle='#8b949e';ctx.font='7px Consolas';ctx.textAlign='right';
+        ctx.fillText(lat.toFixed(2)+'°',margin.left-3,y+3);
+      }
+      for(let i=0;i<=5;i++){
+        const x=margin.left+i*pw/5;
+        ctx.beginPath();ctx.moveTo(x,margin.top);ctx.lineTo(x,margin.top+ph);ctx.stroke();
+        const lon=lon0+i*(lon1-lon0)/5;
+        ctx.fillStyle='#8b949e';ctx.font='7px Consolas';ctx.textAlign='center';
+        ctx.fillText(lon.toFixed(2)+'°',x,margin.top+ph+12);
+      }
+      // Draw boundary if available
+      if(S.boundary&&S.boundary.length>=3){
+        ctx.strokeStyle='#00d68f';ctx.lineWidth=1.5;ctx.globalAlpha=0.7;
+        ctx.beginPath();
+        S.boundary.forEach((b,i)=>{
+          const x=margin.left+(b[1]-lon0)/(lon1-lon0)*pw;
+          const y=margin.top+(1-(b[0]-lat0)/(lat1-lat0))*ph;
+          if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+        });
+        ctx.closePath();ctx.stroke();ctx.globalAlpha=1;
+      }
+      // Draw turbines
+      S.turbines.forEach((t,i)=>{
+        const x=margin.left+(t.lon-lon0)/(lon1-lon0)*pw;
+        const y=margin.top+(1-(t.lat-lat0)/(lat1-lat0))*ph;
+        // WTG symbol (circle + cross)
+        ctx.fillStyle='#58a6ff';ctx.beginPath();ctx.arc(x,y,4,0,2*Math.PI);ctx.fill();
+        ctx.strokeStyle='#58a6ff';ctx.lineWidth=0.8;
+        ctx.beginPath();ctx.moveTo(x-6,y);ctx.lineTo(x+6,y);ctx.moveTo(x,y-6);ctx.lineTo(x,y+6);ctx.stroke();
+        // Label
+        if(S.turbines.length<=30){
+          ctx.fillStyle='#e6edf3';ctx.font='6px Consolas';ctx.textAlign='left';
+          ctx.fillText('T'+(i+1),x+5,y-3);
+        }
+      });
+      // Draw mast position
+      const mLat=parseFloat($('mastLat')?.value)||(lat0+lat1)/2;
+      const mLon=parseFloat($('mastLon')?.value)||(lon0+lon1)/2;
+      const mx=margin.left+(mLon-lon0)/(lon1-lon0)*pw;
+      const my=margin.top+(1-(mLat-lat0)/(lat1-lat0))*ph;
+      ctx.fillStyle='#f59e0b';ctx.beginPath();
+      ctx.moveTo(mx,my-6);ctx.lineTo(mx+4,my+4);ctx.lineTo(mx-4,my+4);ctx.closePath();ctx.fill();
+      // Title
+      ctx.fillStyle='#e6edf3';ctx.font='bold 10px IBM Plex Mono';ctx.textAlign='center';
+      ctx.fillText(`Wind Farm Layout — ${S.turbines.length} WTGs`,W/2,16);
+      // Scale bar
+      const scaleKm=5; // 5km scale bar
+      const scaleDegLat=scaleKm/111.32;
+      const scalePx=scaleDegLat/(lat1-lat0)*ph;
+      ctx.fillStyle='#8b949e';ctx.fillRect(margin.left+10,margin.top+ph-15,Math.min(scalePx,pw*0.3),2);
+      ctx.font='7px Consolas';ctx.textAlign='left';ctx.fillText(`${scaleKm} km`,margin.left+12,margin.top+ph-18);
+    }
+    log('Layout map drawn','i');
+  }
+
+  // ── 2. TERRAIN ELEVATION & CONTOUR MAP ──
+  const tc=$('bankTerrainMap');
+  if(tc){
+    tc.width=mapSize;tc.height=mapSize*0.8;
+    const ctx=tc.getContext('2d');const W=tc.width,H=tc.height;
+    ctx.fillStyle='#0d1e30';ctx.fillRect(0,0,W,H);
+    const T=S.terrain;
+    if(!T||!T.grid||!T.grid.length){
+      ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='12px IBM Plex Mono';ctx.textAlign='center';
+      ctx.fillText('No terrain data — download terrain first',W/2,H/2);
+    } else {
+      const{grid,lat0,lat1,lon0,lon1,ny,nx,minE,maxE}=T;
+      const margin={top:30,right:60,bottom:30,left:45};
+      const pw=W-margin.left-margin.right,ph=H-margin.top-margin.bottom;
+      const rangeE=Math.max(maxE-minE,1);
+      // Draw elevation heatmap
+      for(let i=0;i<ny-1;i++){for(let j=0;j<nx-1;j++){
+        const z=(grid[i][j]+grid[i+1][j]+grid[i][j+1]+grid[i+1][j+1])/4;
+        const x1=margin.left+j*pw/(nx-1),y1=margin.top+i*ph/(ny-1);
+        ctx.fillStyle=elevCol(z,minE,maxE);
+        ctx.fillRect(x1,y1,pw/(nx-1)+1,ph/(ny-1)+1);
+      }}
+      // Draw contours
+      if(S.contoursData&&S.contoursData.length){
+        S.contoursData.forEach(({segs,col,major})=>{
+          ctx.strokeStyle=col;ctx.lineWidth=major?1.2:.5;ctx.globalAlpha=.8;
+          segs.forEach(seg=>{
+            if(!seg||seg.length<2)return;
+            ctx.beginPath();
+            seg.forEach((pt,k)=>{
+              const fx=(pt.lon-lon0)/(lon1-lon0),fy=(pt.lat-lat0)/(lat1-lat0);
+              const px=margin.left+fx*pw,py=margin.top+(1-fy)*ph;
+              if(k===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+            });
+            ctx.stroke();
+          });
+        });ctx.globalAlpha=1;
+      }
+      // Draw turbine positions
+      if(S.turbines.length){
+        S.turbines.forEach(t=>{
+          const x=margin.left+(t.lon-lon0)/(lon1-lon0)*pw;
+          const y=margin.top+(1-(t.lat-lat0)/(lat1-lat0))*ph;
+          ctx.fillStyle='#000';ctx.beginPath();ctx.arc(x,y,3,0,2*Math.PI);ctx.fill();
+          ctx.strokeStyle='#fff';ctx.lineWidth=0.8;ctx.stroke();
+        });
+      }
+      // Colour scale bar
+      const barX=W-margin.right+8,barY=margin.top,barW=12,barH=ph;
+      for(let i=0;i<barH;i++){
+        const z=maxE-(i/barH)*rangeE;
+        ctx.fillStyle=elevCol(z,minE,maxE);
+        ctx.fillRect(barX,barY+i,barW,1);
+      }
+      ctx.fillStyle='#e6edf3';ctx.font='7px Consolas';ctx.textAlign='left';
+      for(let i=0;i<=5;i++){
+        const z=minE+i*rangeE/5;
+        ctx.fillText(z.toFixed(0)+'m',barX+barW+2,barY+barH-i*barH/5+3);
+      }
+      // Title
+      ctx.fillStyle='#e6edf3';ctx.font='bold 10px IBM Plex Mono';ctx.textAlign='center';
+      ctx.fillText(`Terrain Elevation — ${minE.toFixed(0)}–${maxE.toFixed(0)}m ASL`,W/2,16);
+    }
+    log('Terrain map drawn','i');
+  }
+
+  // ── 3. ROUGHNESS MAP ──
+  const rc=$('bankRoughnessMap');
+  if(rc){
+    rc.width=mapSize;rc.height=mapSize*0.8;
+    const ctx=rc.getContext('2d');const W=rc.width,H=rc.height;
+    ctx.fillStyle='#0d1e30';ctx.fillRect(0,0,W,H);
+    const T=S.terrain;
+    const hasTerrain=T&&T.grid&&T.grid.length&&isFinite(T.minE)&&isFinite(T.maxE);
+    // Determine bounds
+    let lat0,lat1,lon0,lon1;
+    if(hasTerrain){lat0=T.lat0;lat1=T.lat1;lon0=T.lon0;lon1=T.lon1;}
+    else if(S.turbines.length){
+      const lats=S.turbines.map(t=>t.lat),lons=S.turbines.map(t=>t.lon);
+      lat0=Math.min(...lats)-0.02;lat1=Math.max(...lats)+0.02;
+      lon0=Math.min(...lons)-0.02;lon1=Math.max(...lons)+0.02;
+    } else{lat0=44.0;lat1=44.5;lon0=28.0;lon1=28.5;}
+    const margin={top:30,right:60,bottom:30,left:45};
+    const pw=W-margin.left-margin.right,ph=H-margin.top-margin.bottom;
+    function toPixel(lat,lon){
+      return{x:margin.left+(lon-lon0)/(lon1-lon0)*pw,y:margin.top+(1-(lat-lat0)/(lat1-lat0))*ph};
+    }
+    // Draw terrain background
+    if(hasTerrain){
+      const{grid,ny,nx,minE,maxE}=T;
+      ctx.globalAlpha=.3;
+      for(let i=0;i<ny-1;i++){for(let j=0;j<nx-1;j++){
+        const z=(grid[i][j]+grid[i+1][j]+grid[i][j+1]+grid[i+1][j+1])/4;
+        const latPt=T.lat0+i*(T.lat1-T.lat0)/(ny-1);
+        const lonPt=T.lon0+j*(T.lon1-T.lon0)/(nx-1);
+        const p1=toPixel(latPt,lonPt);
+        const p2=toPixel(latPt+(T.lat1-T.lat0)/(ny-1),lonPt+(T.lon1-T.lon0)/(nx-1));
+        ctx.fillStyle=elevCol(z,minE,maxE);
+        ctx.fillRect(Math.min(p1.x,p2.x),Math.min(p1.y,p2.y),Math.abs(p2.x-p1.x)+1,Math.abs(p2.y-p1.y)+1);
+      }}ctx.globalAlpha=1;
+    }
+    // Draw roughness zones
+    if(S.roughnessZones&&S.roughnessZones.length){
+      S.roughnessZones.forEach(z=>{
+        if(!z.pts||z.pts.length<3)return;
+        ctx.fillStyle=z.col;ctx.globalAlpha=.45;
+        ctx.beginPath();
+        z.pts.forEach((pt,i)=>{const p=toPixel(pt.lat,pt.lon);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});
+        ctx.closePath();ctx.fill();
+        ctx.strokeStyle=z.col;ctx.lineWidth=.5;ctx.globalAlpha=.6;ctx.stroke();
+      });ctx.globalAlpha=1;
+    } else if(S.autoRoughnessRose&&S.autoRoughnessRose.length){
+      // Draw auto roughness rose
+      const mastLat=parseFloat($('mastLat')?.value)||(lat0+lat1)/2;
+      const mastLon=parseFloat($('mastLon')?.value)||(lon0+lon1)/2;
+      const mastP=toPixel(mastLat,mastLon);
+      const maxR=Math.min(pw,ph)*0.4;
+      const nSectors=S.autoRoughnessRose.length;
+      S.autoRoughnessRose.forEach((sector,si)=>{
+        const dirRad=sector.dir*Math.PI/180;
+        const halfWidth=Math.PI/nSectors;
+        const z0=sector.z0||0.03;
+        let col=z0<0.01?'#3b82f6':z0<0.05?'#86efac':z0<0.2?'#fde68a':z0<0.5?'#c97a2e':'#7c3aed';
+        const t=Math.min(1,z0/1.0);
+        const r=maxR*(0.3+0.7*t);
+        ctx.fillStyle=col;ctx.globalAlpha=.35;
+        ctx.beginPath();ctx.moveTo(mastP.x,mastP.y);
+        ctx.arc(mastP.x,mastP.y,r,dirRad-halfWidth-Math.PI/2,dirRad+halfWidth-Math.PI/2);
+        ctx.closePath();ctx.fill();
+        // Label z0
+        const labelR=r*0.7;
+        const lx=mastP.x+labelR*Math.cos(dirRad-Math.PI/2);
+        const ly=mastP.y+labelR*Math.sin(dirRad-Math.PI/2);
+        ctx.fillStyle='#e6edf3';ctx.font='6px Consolas';ctx.textAlign='center';ctx.globalAlpha=1;
+        ctx.fillText(z0.toFixed(3),lx,ly);
+      });ctx.globalAlpha=1;
+    }
+    // Draw turbines
+    if(S.turbines.length){
+      S.turbines.forEach(t=>{
+        const p=toPixel(t.lat,t.lon);
+        ctx.fillStyle='#000';ctx.beginPath();ctx.arc(p.x,p.y,3,0,2*Math.PI);ctx.fill();
+        ctx.strokeStyle='#fff';ctx.lineWidth=0.8;ctx.stroke();
+      });
+    }
+    // Roughness class legend
+    const legendX=W-margin.right+6,legendY=margin.top;
+    const z0Classes=[
+      {z0:0.0002,name:'Water',col:'#3b82f6'},
+      {z0:0.005,name:'Sand',col:'#86efac'},
+      {z0:0.03,name:'Grass',col:'#4ade80'},
+      {z0:0.10,name:'Farmland',col:'#fde68a'},
+      {z0:0.40,name:'Forest',col:'#c97a2e'},
+      {z0:1.0,name:'Urban',col:'#7c3aed'}
+    ];
+    ctx.font='7px Consolas';ctx.textAlign='left';
+    z0Classes.forEach((c,i)=>{
+      ctx.fillStyle=c.col;ctx.fillRect(legendX,legendY+i*14,10,10);
+      ctx.fillStyle='#e6edf3';ctx.fillText(c.name,legendX+13,legendY+i*14+8);
+    });
+    // Title
+    ctx.fillStyle='#e6edf3';ctx.font='bold 10px IBM Plex Mono';ctx.textAlign='center';
+    ctx.fillText('Roughness Map',W/2,16);
+    log('Roughness map drawn','i');
+  }
+
+  // ── 4. WIND SPEED MAP ──
+  const wc=$('bankWindSpeedMap');
+  if(wc){
+    wc.width=mapSize;wc.height=mapSize*0.8;
+    const ctx=wc.getContext('2d');const W=wc.width,H=wc.height;
+    ctx.fillStyle='#0d1e30';ctx.fillRect(0,0,W,H);
+    const T=S.terrain;
+    const hasTerrain=T&&T.grid&&T.grid.length;
+    const hasBZ=BZ&&BZ.enabled&&BZ.grid&&BZ.grid.length;
+    // Determine bounds
+    let lat0,lat1,lon0,lon1;
+    if(hasTerrain){lat0=T.lat0;lat1=T.lat1;lon0=T.lon0;lon1=T.lon1;}
+    else if(S.turbines.length){
+      const lats=S.turbines.map(t=>t.lat),lons=S.turbines.map(t=>t.lon);
+      lat0=Math.min(...lats)-0.02;lat1=Math.max(...lats)+0.02;
+      lon0=Math.min(...lons)-0.02;lon1=Math.max(...lons)+0.02;
+    } else{lat0=44.0;lat1=44.5;lon0=28.0;lon1=28.5;}
+    const margin={top:30,right:60,bottom:30,left:45};
+    const pw=W-margin.left-margin.right,ph=H-margin.top-margin.bottom;
+
+    if(hasBZ){
+      // Draw wind speed grid using BZ speedup × mean wind speed
+      const{grid:sgrid,gridVizNy,gridVizNx}=BZ;
+      const hubMean=S.results?S.results.hubMean:0;
+      const baseWS=hubMean||parseFloat($('e5WS')?.textContent)||7;
+      // Find min/max for colour scale
+      let wsMin=Infinity,wsMax=-Infinity;
+      for(let i=0;i<gridVizNy;i++){for(let j=0;j<gridVizNx;j++){
+        const ws=baseWS*sgrid[i][j];
+        if(ws<wsMin)wsMin=ws;if(ws>wsMax)wsMax=ws;
+      }}
+      wsMin=Math.max(0,wsMin);const wsRange=Math.max(wsMax-wsMin,0.1);
+      // Wind speed colour scale (blue → green → yellow → red)
+      function wsCol(ws){
+        const t=Math.max(0,Math.min(1,(ws-wsMin)/wsRange));
+        if(t<0.25)return `rgb(${Math.round(t*4*100)},${Math.round(t*4*200+50)},${Math.round(255-t*4*200)})`;
+        if(t<0.5){const s=(t-0.25)*4;return `rgb(${Math.round(100+s*155)},${Math.round(200+s*55)},${Math.round(55-s*55)})`;}
+        if(t<0.75){const s=(t-0.5)*4;return `rgb(255,${Math.round(255-s*130)},0)`;}
+        const s=(t-0.75)*4;return `rgb(255,${Math.round(125-s*125)},0)`;
+      }
+      for(let i=0;i<gridVizNy;i++){for(let j=0;j<gridVizNx;j++){
+        const ws=baseWS*sgrid[i][j];
+        const fx=j/(gridVizNx-1),fy=i/(gridVizNy-1);
+        const x=margin.left+fx*pw,y=margin.top+(1-fy)*ph;
+        const cw=pw/(gridVizNx-1)+1,ch=ph/(gridVizNy-1)+1;
+        ctx.fillStyle=wsCol(ws);ctx.fillRect(x,y,cw,ch);
+      }}
+      // Colour scale
+      const barX=W-margin.right+8,barY=margin.top,barW=12,barH=ph;
+      for(let i=0;i<barH;i++){
+        const ws=wsMax-(i/barH)*wsRange;
+        ctx.fillStyle=wsCol(ws);ctx.fillRect(barX,barY+i,barW,1);
+      }
+      ctx.fillStyle='#e6edf3';ctx.font='7px Consolas';ctx.textAlign='left';
+      for(let i=0;i<=5;i++){
+        const ws=wsMin+i*wsRange/5;
+        ctx.fillText(ws.toFixed(1),barX+barW+2,barY+barH-i*barH/5+3);
+      }
+      // Turbines
+      if(S.turbines.length){
+        S.turbines.forEach(t=>{
+          const x=margin.left+(t.lon-lon0)/(lon1-lon0)*pw;
+          const y=margin.top+(1-(t.lat-lat0)/(lat1-lat0))*ph;
+          ctx.fillStyle='#000';ctx.beginPath();ctx.arc(x,y,3,0,2*Math.PI);ctx.fill();
+          ctx.strokeStyle='#fff';ctx.lineWidth=0.8;ctx.stroke();
+        });
+      }
+      ctx.fillStyle='#e6edf3';ctx.font='bold 10px IBM Plex Mono';ctx.textAlign='center';
+      ctx.fillText(`Wind Speed Map — ${wsMin.toFixed(1)}–${wsMax.toFixed(1)} m/s @ hub`,W/2,16);
+    } else {
+      // No BZ data — show per-WTG wind speeds as coloured circles
+      if(S.turbines.length&&S.results&&S.results.perTurbine){
+        const perT=S.results.perTurbine;
+        const wsArr=perT.map(t=>parseFloat(t.wakeWS)||0);
+        const wsMin=Math.min(...wsArr),wsMax=Math.max(...wsArr);
+        const wsRange=Math.max(wsMax-wsMin,0.1);
+        S.turbines.forEach((t,i)=>{
+          const x=margin.left+(t.lon-lon0)/(lon1-lon0)*pw;
+          const y=margin.top+(1-(t.lat-lat0)/(lat1-lat0))*ph;
+          const ws=wsArr[i]||0;
+          const t_n=(ws-wsMin)/wsRange;
+          // Simple blue→red colour
+          ctx.fillStyle=`rgb(${Math.round(t_n*255)},${Math.round((1-Math.abs(t_n-0.5)*2)*200)},${Math.round((1-t_n)*255)})`;
+          ctx.beginPath();ctx.arc(x,y,6,0,2*Math.PI);ctx.fill();
+          ctx.strokeStyle='#fff';ctx.lineWidth=0.5;ctx.stroke();
+          if(S.turbines.length<=40){
+            ctx.fillStyle='#fff';ctx.font='6px Consolas';ctx.textAlign='center';
+            ctx.fillText(ws.toFixed(1),x,y+2);
+          }
+        });
+        ctx.fillStyle='#e6edf3';ctx.font='bold 10px IBM Plex Mono';ctx.textAlign='center';
+        ctx.fillText(`Per-WTG Wind Speed — ${wsMin.toFixed(1)}–${wsMax.toFixed(1)} m/s`,W/2,16);
+      } else {
+        ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='12px IBM Plex Mono';ctx.textAlign='center';
+        ctx.fillText('Run BZ model and analysis first',W/2,H/2);
+      }
+    }
+    log('Wind speed map drawn','i');
+  }
+
+  log('Bankability map overview generated','i');
+  showToast('Map overview generated successfully');
+}
+
+// v27.0: Export bankability-style HTML report with embedded map images
+function exportBankabilityReport(){
+  const pn=$('projName')?.value||'Wind Farm Assessment';
+  const now=new Date().toLocaleString();
+  const turbineModel=$('tcls').options[$('tcls').selectedIndex]?.text||'Custom';
+  const rotorD=parseFloat($('rotD').value)||150;
+  const ratedPow=parseFloat($('ratedPow').value)||4000;
+  const R=S.results;
+
+  // Generate map images (ensure they're drawn)
+  drawBankabilityMaps();
+
+  // Capture canvas images
+  const layoutImg=$('bankLayoutMap')?.toDataURL('image/png')||'';
+  const terrainImg=$('bankTerrainMap')?.toDataURL('image/png')||'';
+  const roughnessImg=$('bankRoughnessMap')?.toDataURL('image/png')||'';
+  const windSpeedImg=$('bankWindSpeedMap')?.toDataURL('image/png')||'';
+  // Also capture existing terrain and roughness canvases
+  const terrCanvasImg=document.getElementById('terrainCanvas')?.toDataURL('image/png')||'';
+  const roughCanvasImg=document.getElementById('roughnessCanvas')?.toDataURL('image/png')||'';
+  // Rose canvas
+  const roseImg=document.getElementById('roseCanvas')?.toDataURL('image/png')||'';
+
+  // Build per-turbine table
+  const hhCounts={};S.turbines.forEach(t=>{const h=t.hh||parseFloat($('hubH').value)||120;hhCounts[h]=(hhCounts[h]||0)+1;});
+  const hhSummary=Object.entries(hhCounts).map(([h,c])=>`${c}x${h}m`).join(', ');
+  const isMixedHH=Object.keys(hhCounts).length>1;
+  const instMW=(S.turbines.length*ratedPow/1000).toFixed(1);
+
+  const resRows=R?`
+    <tr><td>Mean Wind Speed (mast height)</td><td><b>${R.mastMean.toFixed(2)} m/s</b></td><td>Observed at ${R.mastH}m</td></tr>
+    <tr><td>Mean Wind Speed (hub height)</td><td><b>${R.hubMean.toFixed(2)} m/s</b></td><td>Log-law extrapolation to ${R.hubHH}m, z0=${R.z0}m</td></tr>
+    <tr><td>MCP Long-Term Correction</td><td>${R.mcpFactor.toFixed(3)}</td><td>Measure-Correlate-Predict factor</td></tr>
+    <tr><td>Weibull Distribution</td><td>A=${R.hubWb.A.toFixed(2)}, k=${R.hubWb.k.toFixed(2)}</td><td>MLE fit at hub height</td></tr>
+    <tr><td>Wind Resource Class</td><td>${R.iec?R.iec.cls:'N/A'}</td><td>IEC 61400-1</td></tr>
+    <tr><td>Air Density</td><td>${R.density.toFixed(3)} kg/m3</td><td>${R.densitySource||'ISA barometric'}</td></tr>
+    <tr><td>Uncertainty (1-sigma)</td><td>${(R.sigma*100).toFixed(1)}%</td><td>Wind + Wake + Power Curve (RSS)</td></tr>`:'';
+
+  const turbRows=R?R.perTurbine.map(t=>{
+    const tb=S.turbines[t.i-1]||{};
+    return `<tr><td>T${t.i}</td>${isMixedHH?`<td>${tb.hh||$('hubH').value}</td>`:''}<td>${tb.lat?.toFixed(5)||''}</td><td>${tb.lon?.toFixed(5)||''}</td><td>${tb.elev?.toFixed(0)||'-'}</td><td>${t.ws}</td><td>${t.wake}%</td><td><b>${t.wakeWS}</b></td><td>${t.gross}</td><td><b>${t.net}</b></td><td>${t.cf}%</td></tr>`;
+  }).join(''):'';
+
+  const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Wind Energy Assessment — ${pn}</title>
+<style>
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;max-width:1100px;margin:0 auto;padding:30px;background:#fff;color:#1a1a2e;line-height:1.5}
+  h1{color:#0f3460;font-size:22px;border-bottom:3px solid #0f3460;padding-bottom:8px;margin-top:30px}
+  h2{color:#16537e;font-size:17px;border-bottom:1px solid #e0e7ee;padding-bottom:4px;margin-top:24px}
+  h3{color:#1a56db;font-size:14px;margin-top:18px}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px}
+  th{background:#0f3460;color:#fff;padding:6px 8px;text-align:left;font-weight:600}
+  td{padding:5px 8px;border-bottom:1px solid #e0e7ee}
+  tr:nth-child(even){background:#f8fafc}
+  .cover{text-align:center;padding:40px 0 20px;border-bottom:3px solid #0f3460;margin-bottom:20px}
+  .cover h1{font-size:28px;border:none;margin:0}
+  .cover p{color:#555;font-size:13px;margin:6px 0}
+  .kpi-row{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}
+  .kpi-box{flex:1;min-width:140px;background:#f0f4ff;border:1px solid #c7d5f5;border-radius:8px;padding:14px;text-align:center}
+  .kpi-val{font-size:22px;font-weight:700;color:#0f3460}
+  .kpi-label{font-size:10px;color:#6b7280;margin-top:3px;text-transform:uppercase;letter-spacing:0.5px}
+  .map-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+  .map-panel{text-align:center}
+  .map-panel img{max-width:100%;border:1px solid #d1d5db;border-radius:6px}
+  .map-panel .map-title{font-size:11px;font-weight:600;color:#0f3460;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px}
+  .section-note{font-size:10px;color:#888;margin:4px 0 12px;font-style:italic}
+  .page-break{page-break-before:always}
+  @media print{body{max-width:100%}.page-break{page-break-before:always}}
+</style></head><body>
+
+<div class="cover">
+  <h1>${pn}</h1>
+  <p>Wind Energy Assessment Report</p>
+  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 27.0 &mdash; ${now}</p>
+</div>
+
+<h2>1. Executive Summary</h2>
+<div class="kpi-row">
+  <div class="kpi-box"><div class="kpi-val">${R?R.netAEP.toFixed(2):'—'} GWh</div><div class="kpi-label">Net Annual Energy (P50)</div></div>
+  <div class="kpi-box"><div class="kpi-val">${R?R.CF.toFixed(1):'—'}%</div><div class="kpi-label">Capacity Factor</div></div>
+  <div class="kpi-box"><div class="kpi-val">${R?R.wakeLoss.toFixed(1):'—'}%</div><div class="kpi-label">Wake Loss</div></div>
+  <div class="kpi-box"><div class="kpi-val">${instMW} MW</div><div class="kpi-label">Installed Capacity</div></div>
+  <div class="kpi-box"><div class="kpi-val">${R?R.hubMean.toFixed(2):'—'} m/s</div><div class="kpi-label">Mean Hub Height WS</div></div>
+  <div class="kpi-box"><div class="kpi-val">${S.turbines.length}</div><div class="kpi-label">Turbines</div></div>
+</div>
+
+${R?`<h2>2. P-Exceedance Analysis</h2>
+<table><tr><th>Exceedance Level</th><th>AEP (GWh)</th><th>vs P50</th></tr>
+<tr><td>P50</td><td><b>${R.P50.toFixed(2)}</b></td><td>Baseline</td></tr>
+<tr><td>P75</td><td>${R.P75.toFixed(2)}</td><td>${((R.P75/R.P50-1)*100).toFixed(1)}%</td></tr>
+<tr><td>P90</td><td>${R.P90.toFixed(2)}</td><td>${((R.P90/R.P50-1)*100).toFixed(1)}%</td></tr>
+<tr><td>P99</td><td>${R.P99.toFixed(2)}</td><td>${((R.P99/R.P50-1)*100).toFixed(1)}%</td></tr></table>`:''}
+
+<h2>3. Project Specifications</h2>
+<table><tr><th>Parameter</th><th>Value</th></tr>
+<tr><td>Turbine Model</td><td><b>${turbineModel}</b></td></tr>
+<tr><td>Rotor Diameter</td><td>${rotorD} m</td></tr>
+<tr><td>Rated Power</td><td>${ratedPow.toLocaleString()} kW (${(ratedPow/1000).toFixed(1)} MW)</td></tr>
+<tr><td>Hub Height(s)</td><td>${hhSummary}</td></tr>
+<tr><td>Number of WTGs</td><td>${S.turbines.length}</td></tr>
+<tr><td>Installed Capacity</td><td>${instMW} MW</td></tr>
+<tr><td>Data Source</td><td>${S.windSource||'ERA5'}</td></tr>
+<tr><td>Wake Model</td><td>${$('wakeModel').options[$('wakeModel').selectedIndex]?.text||'Jensen/PARK'}</td></tr>
+</table>
+
+<h2>4. Site &amp; Wind Resource Chain</h2>
+<p class="section-note">The wind resource assessment follows the WAsP-aligned flow model: OWC &rarr; GWC &rarr; SWC, incorporating orographic speedup (BZ), roughness change (IBL), and stability correction (GDL).</p>
+<table><tr><th>Step</th><th>Value</th><th>Method</th></tr>
+<tr><td>Mast Location</td><td>${$('mastLat').value}, ${$('mastLon').value}</td><td>${S.windSource||'ERA5'} data point</td></tr>
+<tr><td>Mast Height &rarr; Hub Height</td><td>${$('mastH').value}m &rarr; ${$('hubH').value}m</td><td>Stability-corrected log wind profile</td></tr>
+<tr><td>Roughness z0</td><td>${$('z0val').value} m</td><td>Auto from terrain/land-use</td></tr>
+<tr><td>Air Density</td><td>${$('airDen').value} kg/m3</td><td>${$('densMethod')?.textContent||'ISA barometric'}</td></tr>
+<tr><td>Stability</td><td>${$('stab').options[$('stab').selectedIndex]?.text||'Auto'}</td><td>Monin-Obukhov L</td></tr>
+${resRows}</table>
+
+<div class="page-break"></div>
+<h2>5. Site Overview Maps</h2>
+<p class="section-note">Spatial overview of the wind farm site showing key environmental datasets used in the resource assessment.</p>
+<div class="map-grid">
+  <div class="map-panel"><div class="map-title">Wind Farm Layout</div>${layoutImg?`<img src="${layoutImg}" alt="Layout">`:'<p style="color:#999;font-size:11px">No layout data</p>'}</div>
+  <div class="map-panel"><div class="map-title">Terrain Elevation &amp; Contours</div>${terrainImg?`<img src="${terrainImg}" alt="Terrain">`:'<p style="color:#999;font-size:11px">No terrain data</p>'}</div>
+  <div class="map-panel"><div class="map-title">Roughness Map</div>${roughnessImg?`<img src="${roughnessImg}" alt="Roughness">`:'<p style="color:#999;font-size:11px">No roughness data</p>'}</div>
+  <div class="map-panel"><div class="map-title">Wind Speed Map</div>${windSpeedImg?`<img src="${windSpeedImg}" alt="Wind Speed">`:'<p style="color:#999;font-size:11px">Run BZ model first</p>'}</div>
+</div>
+
+${roseImg?`<h3>Wind Rose</h3><div style="text-align:center"><img src="${roseImg}" style="max-width:350px;border:1px solid #d1d5db;border-radius:6px" alt="Wind Rose"></div>`:''}
+
+<div class="page-break"></div>
+<h2>6. Per-Turbine Wind Speed Chain &amp; Energy Yield</h2>
+<table><tr><th>WTG</th>${isMixedHH?'<th>HH(m)</th>':''}<th>Lat</th><th>Lon</th><th>Elev(m)</th><th>Free WS(m/s)</th><th>Wake%</th><th>Net WS(m/s)</th><th>Gross(GWh)</th><th>Net(GWh)</th><th>CF%</th></tr>
+${turbRows}</table>
+
+<h2>7. Turbine Layout Coordinates</h2>
+<table><tr><th>WTG</th><th>Latitude</th><th>Longitude</th><th>Hub Height(m)</th><th>Elevation(m)</th></tr>
+${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh||$('hubH').value}</td><td>${t.elev?.toFixed(0)||'-'}</td></tr>`).join('')}</table>
+
+${terrCanvasImg?`<h2>8. Detailed Terrain Elevation Map</h2><p><img src="${terrCanvasImg}" style="max-width:100%;border:1px solid #d1d5db;border-radius:6px" alt="Terrain"></p>`:''}
+${roughCanvasImg?`<h2>9. Detailed Roughness Map</h2><p><img src="${roughCanvasImg}" style="max-width:100%;border:1px solid #d1d5db;border-radius:6px" alt="Roughness"></p>`:''}
+
+<p style="color:#9ca3af;font-size:9px;margin-top:30px;border-top:1px solid #e5e7eb;padding-top:10px">
+Generated by WindFlow Pro 27.0 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; Bankability report format</p>
+</body></html>`;
+
+  dlFile(h,`WindAssessment_${pn.replace(/\s+/g,'_')}.html`,'text/html');
+  log('Bankability HTML report exported','i');
+  showToast('Bankability report exported');
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // WINDFLOW PRO 15.0  — ERA5T Density · Per-WTG ρ · Humidity · WAsP-Aligned · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Auto-Calibration · BZ · GDL Stability · Centralized Coords
@@ -4616,36 +5139,54 @@ function onDataSourceChange(){
   const el=$('dataSourceLabel');
   if(el)el.textContent=src;
   log(`Primary data source for modelling set to: ${src}`,'i');
+  // v27.0: Show switching feedback
+  showToast(`Switching to ${src}...`);
   // Switch wind data to the selected source and update stats + charts
   switchWindDataSource(src);
 }
 
 function switchWindDataSource(src){
+  // v27.0: Comprehensive data source switching with full UI update
   const ws=S.windSources[src];
   if(!ws||!ws.speeds||!ws.speeds.length){
     log(`No ${src} data available — download it first`,'w');
-    // v26.0: Show visual feedback that this source has no data
     const label=$('dataSourceLabel');
     if(label)label.textContent=src+' (no data)';
-    // Show which sources are available
     const available=Object.keys(S.windSources||{});
     if(available.length){
       log(`Available sources: ${available.join(', ')}`,'i');
+      showToast(`No ${src} data. Available: ${available.join(', ')}`);
+    } else {
+      showToast(`No wind data downloaded yet. Download data first.`);
+    }
+    // v27.0: Revert dropdown to current active source
+    const sel=$('primaryDataSource');
+    if(sel && S.windSources[S.windSource]){
+      sel.value=S.windSource;
     }
     return;
   }
   // Load selected source's data into S.wind
   S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[]};
   S.mcpFactor=ws.mcpFactor||1;
+  // v27.0: Also update ERA5 raw data reference for density calculations
+  if(src==='ERA5'&&ws.speeds){
+    S.era5Raw=S.era5Raw||{sp:ws.speeds,dr:ws.dirs,ts:ws.times||[]};
+  }
   // Recompute and update statistics
   const sp=S.wind.speeds;
+  const dr=S.wind.dirs;
   const vs=sp.filter(v=>v>.5);
-  if(!vs.length)return;
+  if(!vs.length){
+    log(`Switched to ${src} but no valid wind speeds found`,'w');
+    return;
+  }
   const mean=vs.reduce((s,v)=>s+v,0)/vs.length;
   const wb=weibullFit(vs);
   const rho=parseFloat($('airDen').value)||1.225;
   const PD=.5*rho*mean**3;
   const elev=ws.elevation||null;
+  // Update primary stats display
   $('e5WS').textContent=mean.toFixed(2);
   $('e5WA').textContent=wb.A.toFixed(2);
   $('e5WK').textContent=wb.k.toFixed(2);
@@ -4654,12 +5195,22 @@ function switchWindDataSource(src){
   $('e5EL').textContent=elev?elev.toFixed(0):'—';
   // Update mast height to match source
   if(ws.mastH&&$('mastH'))$('mastH').value=ws.mastH;
+  // v27.0: Ensure e5out is visible
+  if($('e5out'))$('e5out').style.display='block';
   // Redraw the wind speed distribution chart
-  // v26.0: Force chart destruction before redraw to prevent stale charts
+  // v27.0: Robust chart destruction with multiple fallbacks
   try{
-    const existingChart = Chart.getChart('e5Chart');
-    if(existingChart) existingChart.destroy();
-  }catch(e){}
+    const canvasEl=$('e5Chart');
+    if(canvasEl){
+      const existingChart=Chart.getChart(canvasEl);
+      if(existingChart) existingChart.destroy();
+    }
+  }catch(e){console.warn('Chart cleanup:',e);}
+  // Also clean up from S.charts tracking
+  if(S.charts&&S.charts['e5Chart']){
+    try{S.charts['e5Chart'].destroy();}catch(e){}
+    delete S.charts['e5Chart'];
+  }
   drawE5Hist(sp,wb);
   // Update downstream wind UI (rose, sector table, Weibull chart)
   updateWindUI(sp,S.wind.dirs);
@@ -6231,8 +6782,12 @@ async function runBZModel(){
 
   const{grid,lat0,lat1,lon0,lon1,ny,nx}=S.terrain;
   const hubH=parseFloat($('hubH').value)||120;
-  // v24.0: Downsample large terrain grids for BZ to improve performance
-  const maxBZGrid=150; // v25.0: reduced from 200 for faster computation
+  // v27.0: Adaptive BZ grid size based on turbine count for performance
+  const nWTG=S.turbines.length;
+  // v27.0: For large layouts (>30 WTGs), use smaller grid to keep computation fast
+  // BZ time ≈ O(grid²) for FFT + O(nSect × nWTG × spectrum) for evaluation
+  // With pre-computed spectrum, evaluation is fast — FFT is the bottleneck
+  const maxBZGrid = nWTG > 40 ? 100 : nWTG > 20 ? 120 : 150;
   let useGrid=grid,useNy=ny,useNx=nx;
   if(ny>maxBZGrid||nx>maxBZGrid){
     const skipR=Math.ceil(ny/maxBZGrid),skipC=Math.ceil(nx/maxBZGrid);
@@ -6407,10 +6962,11 @@ async function runBZModel(){
   BZ.sectorSU=sectSU;
 
   // Full speedup grid for visualisation
-  // v26.0: Using precomputed spectrum — much faster than calling bzDeltaAt per grid point
+  // v27.0: Using precomputed spectrum — much faster than calling bzDeltaAt per grid point
+  // v27.0: Adaptive visualization grid based on layout size
   setProg('bz',70,'Computing speedup field for map...');
   await new Promise(r=>setTimeout(r,10));
-  const vizMaxGrid=80; // limit visualization grid size for speed
+  const vizMaxGrid = nWTG > 40 ? 50 : nWTG > 20 ? 60 : 80; // v27.0: smaller viz grid for large layouts
   const vizSkipR=Math.ceil(ny/vizMaxGrid),vizSkipC=Math.ceil(nx/vizMaxGrid);
   const vizNy=Math.ceil(ny/vizSkipR),vizNx=Math.ceil(nx/vizSkipC);
   const sgrid=[];
@@ -7406,13 +7962,17 @@ function updateReportingDashboard(){
     const u=R.sigma*100;
     $('uncResults').innerHTML=`<div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val g">${R.P50.toFixed(2)}</div><div class="metric-label">P50 GWh</div></div><div class="metric-item"><div class="metric-val sky">${R.P75.toFixed(2)}</div><div class="metric-label">P75 GWh</div></div><div class="metric-item"><div class="metric-val gold">${R.P90.toFixed(2)}</div><div class="metric-label">P90 GWh</div></div><div class="metric-item"><div class="metric-val bad">${R.P99.toFixed(2)}</div><div class="metric-label">P99 GWh</div></div><div class="metric-item"><div class="metric-val sky">${u.toFixed(1)}%</div><div class="metric-label">σ (1σ)</div></div><div class="metric-item"><div class="metric-val">${R.iec?R.iec.cls:'—'}</div><div class="metric-label">IEC Class</div></div></div>`;
   }
+  // v27.0: Auto-generate bankability maps when entering reporting step
+  if(S.turbines.length > 0){
+    setTimeout(()=>{try{drawBankabilityMaps();}catch(e){log('Map overview: '+e.message,'w');}},500);
+  }
 }
 
 // ── SAVE/LOAD PROJECT ──
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
-  const data={version:'24.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0'}};
-  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v24.0)','i');
+  const data={version:'27.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0'}};
+  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v27.0)','i');
 }
 
 // v22.0: WAsP-compatible project export
@@ -7437,7 +7997,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 26.0`);
+  lines.push(`WAsP Project Export - WindFlow Pro 27.0`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
