@@ -7970,26 +7970,11 @@ async function fetchLayoutWSSummary(){
     const maxWS=Math.max(...wtgWS);
     const minWS=Math.min(...wtgWS);
 
-    // v30.0: Apply GWA correction if available (ERA5 underestimates by ~10-30% in complex terrain)
-    let correctedAvg=avg, correctedMax=maxWS, correctedMin=minWS;
-    let gwaCorrFactor=1.0;
-    if(S.gwaData&&S.gwaData.meanWS>0){
-      // GWA provides a corrected mean WS — use it to derive a correction factor
-      // Scale all WTG WS values by the ratio of GWA mean to ERA5 mean
-      gwaCorrFactor=S.gwaData.meanWS/avg;
-      // Clamp correction factor to reasonable range (0.8–1.5)
-      gwaCorrFactor=Math.max(0.8,Math.min(1.5,gwaCorrFactor));
-      correctedAvg=avg*gwaCorrFactor;
-      correctedMax=maxWS*gwaCorrFactor;
-      correctedMin=minWS*gwaCorrFactor;
-    }
-
-    $('wsAvg').textContent=correctedAvg.toFixed(2)+' m/s';
-    $('wsMax').textContent=correctedMax.toFixed(2)+' m/s';
-    $('wsMin').textContent=correctedMin.toFixed(2)+' m/s';
-    const gwaNote=gwaCorrFactor>1.001?` | GWA correction ×${gwaCorrFactor.toFixed(2)}`:'';
-    $('wsSummaryNote').textContent=`ERA5 ${startYear}–${endYear} daily @ 100m → ${targetHH}m (α=${shearAlpha.toFixed(3)}${gwaNote})`;
-    log(`Layout WS summary @ ${targetHH}m: avg=${correctedAvg.toFixed(2)}, max=${correctedMax.toFixed(2)}, min=${correctedMin.toFixed(2)} m/s (shear α=${shearAlpha.toFixed(3)}${gwaNote})`,'i');
+    $('wsAvg').textContent=avg.toFixed(2)+' m/s';
+    $('wsMax').textContent=maxWS.toFixed(2)+' m/s';
+    $('wsMin').textContent=minWS.toFixed(2)+' m/s';
+    $('wsSummaryNote').textContent=`ERA5 ${startYear}–${endYear} daily @ 100m → ${targetHH}m (α=${shearAlpha.toFixed(3)}) — Raw ERA5; apply MCP for site-corrected WS`;
+    log(`Layout WS summary @ ${targetHH}m: avg=${avg.toFixed(2)}, max=${maxWS.toFixed(2)}, min=${minWS.toFixed(2)} m/s (shear α=${shearAlpha.toFixed(3)})`,'i');
 
     // Also fetch elevation summary for WTGs
     fetchElevationSummary();
@@ -8399,8 +8384,6 @@ async function downloadGWA(){
         $('gwaStatus').textContent=`✓ GWA proxy (ERA5 5yr): mean=${mean.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`;
         log(`GWA proxy via Open-Meteo (5yr): ${valid.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
         S.gwaData={meanWS:mean,weibullA:wb.A,weibullK:wb.k,sectors:0,source:'ERA5-5yr-proxy'};
-        // Re-trigger layout WS summary with GWA correction if turbines exist
-        if(S.turbines&&S.turbines.length>0)fetchLayoutWSSummary();
         return;
       }
     }
@@ -8424,8 +8407,6 @@ async function downloadGWA(){
         $('gwaStatus').textContent=`✓ GWA proxy (Climate API): mean=${mean.toFixed(2)} m/s, A≈${estA.toFixed(2)}, k≈2.0`;
         log(`GWA proxy via Climate API: ${valid.length} monthly values, mean=${mean.toFixed(2)}, A≈${estA.toFixed(2)}`,'i');
         S.gwaData={meanWS:mean,weibullA:estA,weibullK:2.0,sectors:0,source:'Climate-API-proxy'};
-        // Re-trigger layout WS summary with GWA correction if turbines exist
-        if(S.turbines&&S.turbines.length>0)fetchLayoutWSSummary();
         return;
       }
     }
