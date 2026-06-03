@@ -354,7 +354,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   </div>
   <div class="g2">
     <div>
-      <div class="card"><div class="card-title green">BZ Orographic Model</div>
+      <div class="card"><div class="card-title green">BZ Orographic Model <span id="bzBadge" style="font-size:.52rem;padding:1px 6px;border-radius:3px;background:rgba(100,100,100,.2);color:var(--muted);margin-left:.3rem">OFF</span></div>
         <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Mast z₀ (m)</label><input class="fi" id="bzMz0" type="number" value="0.0002" step="0.0001"></div><div class="fg"><label class="fl">Site z₀ (m)</label><input class="fi" id="bzSz0" type="number" value="0.0002" step="0.0001"></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Inner Layer Scale</label><select class="fs" id="bzLscale"><option value="1.0" selected>1.0 (WAsP)</option><option value="0.5">0.5×</option><option value="1.5">1.5×</option><option value="2.0">2.0×</option></select></div><div class="fg"><label class="fl">RIX Threshold</label><input class="fi" id="bzRixThr" type="number" value="0.3" step="0.05" min="0.05" max="0.5"></div></div>
         <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="runBZModel()">⚙ Compute BZ Speedups</button>
@@ -410,7 +410,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   <div class="tab-panel" id="flowTab2"><div class="card"><div class="card-title sky">GWC — Generalized Wind Climate <span style="font-size:.52rem;color:var(--muted);font-weight:400">(computed from OWC via WAsP wind atlas chain, not fetched externally)</span></div>
         <div style="font-size:.56rem;color:var(--text2);margin-bottom:.3rem;line-height:1.4">GWC removes site-specific orographic and roughness effects from the OWC to produce a generalized (free-atmosphere) wind climate. SWC re-applies the site conditions at each turbine location. This is the WAsP OWC→GWC→SWC wind atlas methodology.</div>
         <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="gcZ0">—</div><div class="metric-label">z₀ m</div></div><div class="metric-item"><div class="metric-val sky" id="gcSR">—</div><div class="metric-label">Mean SR</div></div><div class="metric-item"><div class="metric-val" id="gcWS">—</div><div class="metric-label">GWC WS</div></div><div class="metric-item"><div class="metric-val sky" id="gcSW">—</div><div class="metric-label">SWC WS</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>Freq%</th><th>OWC A</th><th>OWC k</th><th>GWC A</th><th>SWC A</th><th>SR</th></tr></thead><tbody id="gwcBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.4rem"><canvas id="shearChart2"></canvas></div></div></div>
-  <div class="tab-panel" id="flowTab3"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="bz-maSU">—</div><div class="metric-label">Mast SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-mxSU">—</div><div class="metric-label">Max SU</div></div><div class="metric-item"><div class="metric-val sky" id="bz-miSU">—</div><div class="metric-label">Min SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-rix">—</div><div class="metric-label">RIX %</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>T#</th><th>BZ SU</th><th>δ%</th><th>Turn°</th><th>OWC</th><th>GWC</th><th>SWC</th></tr></thead><tbody id="bzTBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run BZ first</td></tr></tbody></table></div><div class="canvas-wrap" style="height:120px;margin-top:.4rem"><canvas id="bzBesChart"></canvas></div><div id="bzIBLnote" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">—</div><div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="metric-item"><div class="metric-val sky" id="bz-iblH">—</div><div class="metric-label">IBL Height m</div></div><div class="metric-item"><div class="metric-val" id="bz-roughRC">—</div><div class="metric-label">Rough. Corr.</div></div></div></div></div>
+  <div class="tab-panel" id="flowTab3"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="bz-maSU">—</div><div class="metric-label">Mast SU</div></div><div class="metric-item"><div class="metric-val" id="bz-mastSU" style="display:none">—</div><div class="metric-label" style="display:none">Mast SU (dup)</div></div><div class="metric-item"><div class="metric-val gold" id="bz-mxSU">—</div><div class="metric-label">Max SU</div></div><div class="metric-item"><div class="metric-val sky" id="bz-miSU">—</div><div class="metric-label">Min SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-rix">—</div><div class="metric-label">RIX %</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>T#</th><th>BZ SU</th><th>δ%</th><th>Turn°</th><th>OWC</th><th>GWC</th><th>SWC</th></tr></thead><tbody id="bzTBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run BZ first</td></tr></tbody></table></div><div class="canvas-wrap" style="height:120px;margin-top:.4rem"><canvas id="bzBesChart"></canvas></div><div id="bzIBLnote" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">—</div><div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="metric-item"><div class="metric-val sky" id="bz-iblH">—</div><div class="metric-label">IBL Height m</div></div><div class="metric-item"><div class="metric-val" id="bz-roughRC">—</div><div class="metric-label">Rough. Corr.</div></div></div></div></div>
   <div class="tab-panel" id="flowTab4"><div class="card"><div class="card-title gold">Time Series</div><div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Start Year</label><input class="fi" id="tsSy" type="number" value="2022"></div><div class="fg"><label class="fl">End Year</label><input class="fi" id="tsEy" type="number" value="2022"></div></div><div class="fg"><label class="fl">Step</label><select class="fs" id="tsStep"><option value="1">1-hour</option><option value="3" selected>3-hour</option><option value="6">6-hour</option></select></div><button class="btn btn-gold" style="width:100%;margin-top:.4rem" onclick="runTimeSeries()">⏱ Run Time Series</button><div class="progress"><div class="progress-bar" id="tspb" style="width:0"></div></div><div id="tspt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div><div id="tsOut" style="display:none;margin-top:.5rem"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="tsRc">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val g" id="tsNt">—</div><div class="metric-label">Net GWh/yr</div></div><div class="metric-item"><div class="metric-val o" id="tsWk">—</div><div class="metric-label">Wake %</div></div><div class="metric-item"><div class="metric-val b" id="tsCf">—</div><div class="metric-label">CF %</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="monthChart"></canvas></div><div class="canvas-wrap" style="height:100px;margin-top:.3rem"><canvas id="diurnChart"></canvas></div><button class="btn btn-sm btn-ghost" style="margin-top:.3rem" onclick="exportTSCSV()">↓ Monthly CSV</button><button class="btn btn-sm btn-gold" style="margin-top:.3rem;width:100%" onclick="exportTSPerTurbineHourly()">↓ Per-WTG Hourly CSV</button></div></div></div>
   <div class="tab-panel" id="flowTab5"><div class="card"><div class="card-title green">WAsP Site Calibration</div><div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">WAsP Gross (GWh)</label><input class="fi" id="calWaspGross" type="number" step="0.01"></div><div class="fg"><label class="fl">WAsP Net (GWh)</label><input class="fi" id="calWaspNet" type="number" step="0.01"></div><div class="fg"><label class="fl">WAsP Wake %</label><input class="fi" id="calWaspWake" type="number" step="0.1"></div></div><div class="g3" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">WAsP WS</label><input class="fi" id="calWaspWS" type="number" step="0.01"></div><div class="fg"><label class="fl">WAsP CF %</label><input class="fi" id="calWaspCF" type="number" step="0.1"></div><div class="fg"><label class="fl">WAsP RIX %</label><input class="fi" id="calWaspRIX" type="number" step="0.1"></div></div><button class="btn btn-primary" style="margin-top:.5rem" onclick="runWaspCalibration()">🎯 Compute</button><div id="calResult" style="display:none;margin-top:.5rem" class="alert alert-ok"><div id="calResultContent">—</div></div><div style="display:flex;align-items:center;gap:.4rem;margin-top:.5rem"><input type="checkbox" id="calApplyCB" checked style="accent-color:var(--mint)" onchange="onCalApplyChange()"><label for="calApplyCB" style="font-size:.65rem;cursor:pointer">Apply calibration (default ON)</label></div><div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">AEP Mult</label><input class="fi" id="calAepMult" value="1.000" step="0.001" readonly></div><div class="fg"><label class="fl">WS Mult</label><input class="fi" id="calWsMult" value="1.000" step="0.001" readonly></div></div><div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Wake Adj</label><input class="fi" id="calWakeAdj" value="1.000" step="0.001" readonly></div><div class="fg"><label class="fl">Confidence</label><input class="fi" id="calConf" value="—" readonly></div></div><div style="display:flex;gap:.3rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" onclick="exportCalibration()">↓ Export .json</button><button class="btn btn-sm btn-ghost" onclick="$('impCalFile').click()">↑ Import</button><input id="impCalFile" type="file" accept=".json" style="display:none" onchange="importCalibration(event)"><button class="btn btn-sm btn-danger" onclick="clearCalibration()">🗑 Clear</button></div></div></div>
   <div class="tab-panel" id="flowTab6"><div class="card"><div class="card-title">Engine Log <button class="btn btn-sm btn-ghost" style="padding:.15rem .4rem;font-size:.5rem" onclick="$('elog').innerHTML=''">Clr</button></div><div id="elog"></div></div></div>
@@ -7236,30 +7236,26 @@ async function runBZModel(){
   // v20.0: Guard against NaN/Infinity in GWC display
   const gwcWSsafe=isFinite(gwcWS)&&gwcWS>0?gwcWS:0;
 
-  $('bzMaSU').textContent=BZ.mastSU.toFixed(4);
-  $('bzMnSU').textContent=meanSU.toFixed(4);
-  $('bzRixV').textContent=BZ.rix.toFixed(1)+'%';
-  $('bzGws').textContent=gwcWSsafe.toFixed(2);
-  $('bzOut').style.display='block';
-  $('bzBadge').textContent='ACTIVE';
-  $('bzBadge').style.background='rgba(63,185,80,.18)';
-  $('bzBadge').style.color='var(--grn)';
-  if(BZ.rix>5)$('bzRixWarn').style.display='block';
-  if(BZ.rix>5){
-    $('bzRixWarn').innerHTML=`⚠ RIX=${BZ.rix.toFixed(1)}%: Steep terrain correction applied (Mortensen-Wood). Linear BZ speedups adjusted by ${(0.02*Math.max(0,BZ.rix-5)*100).toFixed(1)}% on windward slopes.`;
-  }
+  if($('bzMaSU'))$('bzMaSU').textContent=BZ.mastSU.toFixed(4);
+  if($('bzMnSU'))$('bzMnSU').textContent=meanSU.toFixed(4);
+  if($('bzRixV'))$('bzRixV').textContent=BZ.rix.toFixed(1)+'%';
+  if($('bzGws'))$('bzGws').textContent=gwcWSsafe.toFixed(2);
+  if($('bzOut'))$('bzOut').style.display='block';
+  if($('bzBadge')){$('bzBadge').textContent='ACTIVE';$('bzBadge').style.background='rgba(63,185,80,.18)';$('bzBadge').style.color='var(--grn)';}
+  if(BZ.rix>5&&$('bzRixWarn')){$('bzRixWarn').style.display='block';$('bzRixWarn').innerHTML=`⚠ RIX=${BZ.rix.toFixed(1)}%: Steep terrain correction applied (Mortensen-Wood). Linear BZ speedups adjusted by ${(0.02*Math.max(0,BZ.rix-5)*100).toFixed(1)}% on windward slopes.`;}
 
   // Right panel results
-  $('bz-maSU').textContent=BZ.mastSU.toFixed(4);$('bz-mastSU').textContent=BZ.mastSU.toFixed(4);
-  $('bz-mxSU').textContent=Math.max(...BZ.speedups).toFixed(4);
-  $('bz-miSU').textContent=Math.min(...BZ.speedups).toFixed(4);
-  $('bz-rix').textContent=BZ.rix.toFixed(1)+'%';
-  $('bz-iblH').textContent=iblHeight.toFixed(1);
-  $('bz-roughRC').textContent=roughRC.toFixed(4);
-  $('bzIBLnote').textContent=`z₀_mast=${z0Mast}m → z₀_site=${z0Site}m, fetch=${meanDistM.toFixed(0)}m, IBL at ${iblHeight.toFixed(0)}m (hub=${hubH}m: ${hubH<iblHeight?'within IBL':'above IBL'})`;
+  if($('bz-maSU'))$('bz-maSU').textContent=BZ.mastSU.toFixed(4);
+  if($('bz-mastSU'))$('bz-mastSU').textContent=BZ.mastSU.toFixed(4);
+  if($('bz-mxSU'))$('bz-mxSU').textContent=Math.max(...BZ.speedups).toFixed(4);
+  if($('bz-miSU'))$('bz-miSU').textContent=Math.min(...BZ.speedups).toFixed(4);
+  if($('bz-rix'))$('bz-rix').textContent=BZ.rix.toFixed(1)+'%';
+  if($('bz-iblH'))$('bz-iblH').textContent=iblHeight.toFixed(1);
+  if($('bz-roughRC'))$('bz-roughRC').textContent=roughRC.toFixed(4);
+  if($('bzIBLnote'))$('bzIBLnote').textContent=`z₀_mast=${z0Mast}m → z₀_site=${z0Site}m, fetch=${meanDistM.toFixed(0)}m, IBL at ${iblHeight.toFixed(0)}m (hub=${hubH}m: ${hubH<iblHeight?'within IBL':'above IBL'})`;
 
   // Per-turbine table (omnidirectional BZ SU + mean flow turning for quick reference)
-  const tb=$('bzTBody');tb.innerHTML='';
+  const tb=$('bzTBody');if(tb)tb.innerHTML='';
   const nSect2=parseInt($('sects').value)||16;
   const sectors=S.results?S.results.sectors:[];
   BZ.speedups.forEach((su,i)=>{
@@ -7272,7 +7268,7 @@ async function runBZModel(){
     const meanTurn=BZ.sectorTurning.length?BZ.sectorTurning.reduce((s,secT)=>s+(secT[i]||0),0)/Math.max(1,BZ.sectorTurning.length):0;
     const tr=document.createElement('tr');
     tr.innerHTML=`<td>T${i+1}</td><td style="color:${su>1?'var(--grn)':'var(--red)'}">${su.toFixed(4)}</td><td style="color:${delta>0?'var(--grn)':'var(--red)'}">${delta>=0?'+':''}${delta.toFixed(2)}%</td><td style="color:${Math.abs(meanTurn)>0.5?'var(--wrn)':'var(--muted)'}">${meanTurn>=0?'+':''}${meanTurn.toFixed(2)}°</td><td>${owcWS.toFixed(2)}</td><td>${gcWS.toFixed(2)}</td><td style="color:var(--acc);font-weight:700">${swcWS.toFixed(2)}</td>`;
-    tb.appendChild(tr);
+    if(tb)tb.appendChild(tr);
   });
 
   // GWC table — now uses per-sector directional BZ speedups
@@ -7295,7 +7291,7 @@ async function runBZModel(){
     gwcHtml+=`<tr><td>${dn}</td><td>${owcA}</td><td>${thisMastSU.toFixed(3)}</td><td>${thisTurbSU.toFixed(3)}</td><td>${gwcA}</td><td>${thisRC.toFixed(3)}</td><td>${swcA}</td></tr>`;
   }
   gwcHtml+='</tbody></table>';
-  $('bzGWCTbl').innerHTML=gwcHtml;
+  if($('bzGWCTbl'))$('bzGWCTbl').innerHTML=gwcHtml;
 
   // Draw speedup map
   if(BZ.showLayer)drawBZLayer();
