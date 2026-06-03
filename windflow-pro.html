@@ -67,8 +67,8 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 29.0</span></div><div class="brand-sub">① OWC → ② MCP → ③ Log-law → ④ Rotor avg → ⑤ BZ/JH → ⑥ Roughness → ⑦ GDL → ⑧ Wake → ⑨ Calibration</div></div></div>
-  <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 29.0</span></div></div></div></div>
+  <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" id="presetBadge" onclick="applyPreset()"></button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
   <div class="step-item active" data-step="1" onclick="goToStep(1)"><div class="step-num">1</div><span class="step-label">Site</span></div><div class="step-connector"></div>
@@ -127,10 +127,10 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div class="upload-zone" id="boundaryUploadZone"><input type="file" accept=".kml,.kmz,.geojson,.json" onchange="handleBoundaryUpload(event)"><span class="upload-icon">📂</span><span class="upload-text">Drop KML / KMZ / GeoJSON boundary</span><span class="upload-hint">.kml .kmz .geojson .json</span></div>
       </div>
       <div class="card"><div class="card-title green">Upload Turbine Layout</div>
-        <div class="upload-zone" id="layoutUploadZone"><input id="impCSV" type="file" accept=".csv,.kml,.kmz,.geojson,.json,.shp" onchange="importLayout(event)"><span class="upload-icon">📍</span><span class="upload-text">Drop CSV / KML / KMZ / GeoJSON / SHP layout</span><span class="upload-hint">CSV: lat,lon | KML/KMZ: Points | GeoJSON: Points | UTM auto-detect</span></div>
+        <div class="upload-zone" id="layoutUploadZone"><input id="impCSV" type="file" accept=".csv,.kml,.kmz,.geojson,.json" onchange="importLayout(event)"><span class="upload-icon">📍</span><span class="upload-text">Drop CSV / KML / KMZ / GeoJSON layout</span><span class="upload-hint">CSV: lat,lon | KML/KMZ: Points | GeoJSON: Points | UTM auto-detect</span></div>
       </div>
       <div class="card"><div class="card-title gold">Turbine Grid Generator</div>
-        <div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">Rows</label><input class="fi" id="gR" type="number" value="2" min="1" max="15"></div><div class="fg"><label class="fl">Cols</label><input class="fi" id="gC" type="number" value="5" min="1" max="15"></div><div class="fg"><label class="fl">Spac(D)</label><input class="fi" id="gS" type="number" value="7" min="3" max="20" step="0.5"></div></div>
+        <div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">Rows</label><input class="fi" id="gR" type="number" value="2" min="1" max="15"></div><div class="fg"><label class="fl">Cols</label><input class="fi" id="gC" type="number" value="5" min="1" max="15"></div><div class="fg"><label class="fl">Spacing (D)</label><input class="fi" id="gS" type="number" value="7" min="3" max="20" step="0.5"></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Center Lat</label><input class="fi" id="gLat" type="number" value="55.500" step="0.001"></div><div class="fg"><label class="fl">Center Lon</label><input class="fi" id="gLon" type="number" value="7.900" step="0.001"></div></div>
         <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="generateGrid()">⊞ Generate Grid</button>
       </div>
@@ -160,7 +160,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <optgroup label="Generic"><option value="2mw">IEC-IIA 2MW D=80m HH=80m</option><option value="4mw" selected>IEC-IIA 4MW D=150m HH=120m</option><option value="6mw">IEC-IIIA 6MW D=180m HH=140m</option></optgroup>
           <optgroup label="Vestas"><option value="v90">V90-2.0MW</option><option value="v110">V110-2.0MW</option><option value="v136">V136-4.2MW</option><option value="v150">V150-5.6MW</option><option value="v163_45">V163-4.5MW 113m HH</option><option value="v164">V164-9.5MW</option><option value="v174">V174-9.5MW</option></optgroup>
           <optgroup label="Siemens Gamesa"><option value="sg108">SG 108-4.5MW</option><option value="sg132">SG 132-6.6MW</option><option value="sg170">SG 170-7.0MW</option><option value="sg222">SG 222-13.0MW</option></optgroup>
-          <optgroup label="Nordex"><option value="n117">N117/3600</option><option value="n133">N133/4800</option><option value="n149">N149/5700</option><option value="n163">N163/6800</option><option value="n163_7mw">N163/7000 138m HH</option></optgroup>
+          <optgroup label="Nordex"><option value="n117">N117/3600</option><option value="n133">N133/4800</option><option value="n149">N149/5700</option><option value="n163">N163/6800 IEC-IIA</option><option value="n163_7mw">N163/7000 138m HH IEC-S</option></optgroup>
           <optgroup label="GE"><option value="ge136">GE 136-4.8MW</option><option value="ge158">GE 158-6.1MW</option><option value="ge220">GE 220-14.0MW</option></optgroup>
           <optgroup label="Enercon"><option value="e115">E-115 EP3 4.2MW</option><option value="e126">E-126 7.58MW</option><option value="e160">E-160 EP5 5.5MW</option></optgroup>
           <optgroup label="Envision"><option value="en156_120">EN-156/3.3MW 120m HH</option><option value="en156_140">EN-156/3.3MW 140m HH</option></optgroup>
@@ -182,9 +182,11 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
     <div>
       <div class="card"><div class="card-title green">Power Curve Visualization</div>
         <div class="pc-chart-wrap"><canvas id="pcChart"></canvas></div>
+        <div id="pcFootnote" style="font-size:.5rem;color:var(--text3);margin-top:.2rem">Indicative power curve — verify with manufacturer NDA data for bankability</div>
       </div>
       <div class="card"><div class="card-title gold">Thrust Coefficient Curve</div>
         <div class="pc-chart-wrap"><canvas id="ctChart"></canvas></div>
+        <div style="font-size:.5rem;color:var(--text3);margin-top:.2rem">Ct values are consistent with selected power curve preset. Changing preset updates both P and Ct.</div>
       </div>
     </div>
   </div>
@@ -218,17 +220,18 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div class="g2" style="gap:.4rem;margin-bottom:.5rem"><div class="fg"><label class="fl">Lat <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="e5La" type="number" value="55.50" step="0.01" readonly></div><div class="fg"><label class="fl">Lon <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="e5Lo" type="number" value="7.90" step="0.01" readonly></div></div>
         <div class="ds-grid">
           <div class="ds-card" id="ds_era5"><div class="ds-name">ERA5 / ERA5T</div><div class="ds-desc">Open-Meteo API · Free · 1940→present</div><button class="btn btn-sm btn-primary" onclick="downloadERA5()">⬇ Download</button><div class="progress" id="e5pb_wrap"><div class="progress-bar" id="e5pb" style="width:0"></div></div><div id="e5pt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
-          <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 4.0</div><div class="ds-desc">Global Wind Atlas · Free · 250m · WAsP .lib + WS map</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 4.0</div><div class="ds-desc">Global Wind Atlas · Free · 250m · WAsP .lib + WS map</div><div style="font-size:.5rem;color:var(--wrn);margin-top:.1rem">⚠ Single-point resource — no spatial variation for large layouts</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_merra2"><div class="ds-name">MERRA-2</div><div class="ds-desc">NASA POWER API · Free · 1980→present</div><button class="btn btn-sm btn-ghost" onclick="downloadMERRA2()">⬇ Download</button><div id="merra2Status" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_ncep"><div class="ds-name">NCEP/NCAR</div><div class="ds-desc">Reanalysis · Free · 1948→present</div><button class="btn btn-sm btn-ghost" onclick="downloadNCEP()">⬇ Download</button><div id="ncepStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_newa"><div class="ds-name">NEWA</div><div class="ds-desc">New European Wind Atlas · Free · 200m · EU+surroundings</div><button class="btn btn-sm btn-ghost" onclick="downloadNEWA()">⬇ Download</button><div id="newaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
-          <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit V2</div><div class="ds-desc">USA CONUS · 2007–2014 · Multi-height · Free API key · developer.nlr.gov</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key (developer.nlr.gov)" value="XzjKJcfwqjHq2ICBzDFD2jrX2vw2GSOPVgfTVkCW" style="font-size:.6rem"></div><div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Year</label><select class="fs" id="nrelYear" style="font-size:.58rem"><option value="2014" selected>2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Interval</label><select class="fs" id="nrelInterval" style="font-size:.58rem"><option value="60" selected>60 min</option><option value="30">30 min</option><option value="15">15 min</option><option value="5">5 min</option></select></div></div><div style="margin-top:.3rem"><label style="font-size:.52rem;color:var(--text2);display:flex;align-items:center;gap:.3rem;cursor:pointer"><input type="checkbox" id="nrelMultiHeight" checked> Multi-height profile (10–200m)</label></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()" style="margin-top:.3rem">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit V2</div><div class="ds-desc">USA CONUS · 2007–2014 · Multi-height · Free API key · developer.nrel.gov</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key (developer.nrel.gov)" value="XzjKJcfwqjHq2ICBzDFD2jrX2vw2GSOPVgfTVkCW" style="font-size:.6rem"></div><div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Year</label><select class="fs" id="nrelYear" style="font-size:.58rem"><option value="2014" selected>2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Interval</label><select class="fs" id="nrelInterval" style="font-size:.58rem"><option value="60" selected>60 min</option><option value="30">30 min</option><option value="15">15 min</option><option value="5">5 min</option></select></div></div><div style="margin-top:.3rem"><label style="font-size:.52rem;color:var(--text2);display:flex;align-items:center;gap:.3rem;cursor:pointer"><input type="checkbox" id="nrelMultiHeight" checked> Multi-height profile (10–200m)</label></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()" style="margin-top:.3rem">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
         </div>
         <div class="alert alert-info" style="font-size:.62rem;margin-top:.5rem">Country-specific: NEWA (EU) · NREL Wind (USA) · BARRA2 (AU) · CSIR (ZA) · INMET (BR) · CMA (CN) · SARAN (IN)</div>
       </div>
       <div id="e5out" style="display:none"><div class="card"><div class="card-title sky">Wind Data Results <span id="dataSourceLabel" style="color:var(--mint);font-size:.6rem;margin-left:.3rem">ERA5</span></div>
         <div style="margin-bottom:.4rem"><div class="fg" style="max-width:220px"><label class="fl" style="font-size:.52rem">Primary Data Source for Modelling</label><select class="fs" id="primaryDataSource" style="font-size:.58rem" onchange="onDataSourceChange()"><option value="ERA5">ERA5 / ERA5T</option><option value="NEWA">NEWA</option><option value="NREL">NREL WTK V2</option><option value="MERRA2">MERRA-2</option><option value="GWA">GWA 4.0</option><option value="CSV">Uploaded CSV</option></select></div></div>
         <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="e5WS">—</div><div class="metric-label">Mean WS m/s</div></div><div class="metric-item"><div class="metric-val sky" id="e5WA">—</div><div class="metric-label">Weibull A</div></div><div class="metric-item"><div class="metric-val gold" id="e5WK">—</div><div class="metric-label">Weibull k</div></div><div class="metric-item"><div class="metric-val sky" id="e5PD">—</div><div class="metric-label">Power W/m²</div></div><div class="metric-item"><div class="metric-val" id="e5RC">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val gold" id="e5EL">—</div><div class="metric-label">Elevation m</div></div></div>
+        <div id="shearExtrapolationNote" style="font-size:.52rem;color:var(--sky);margin-top:.3rem;display:none">📏 WS at hub height extrapolated from <span id="shearFromH">100</span>m → <span id="shearToH">138</span>m using log-law (α=<span id="shearAlpha">0.14</span>)</div>
         <div class="canvas-wrap" style="height:180px;margin-top:.5rem"><canvas id="e5Chart"></canvas></div>
         <div style="display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap"><button class="btn btn-sm btn-ghost" onclick="exportWindCSV()">↓ CSV</button><button class="btn btn-sm btn-ghost" onclick="exportWindTab()">↓ WAsP .tab</button><button class="btn btn-sm btn-ghost" onclick="exportWindOWC()">↓ OWC .tab</button><button class="btn btn-sm btn-ghost" onclick="exportWindLib()">↓ WAsP .lib</button><button class="btn btn-sm btn-ghost" onclick="exportNRELMultiHeight()" id="btnNrelExport" style="display:none">↓ NREL Multi-Height CSV</button></div>
       </div></div>
@@ -258,7 +261,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
     </div>
     <div>
       <div class="card"><div class="card-title green">Download Terrain</div>
-        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Data Source</label><select class="fs" id="terrSource" onchange="onTerrSourceChange()"><option value="openmeteo" selected>Open-Meteo (current)</option><option value="srtm">SRTM (OpenTopography)</option></select></div><div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="terrR" type="number" value="10" min="2" max="50"></div></div>
+        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Data Source</label><select class="fs" id="terrSource" onchange="onTerrSourceChange()"><option value="openmeteo" selected>Open-Meteo ERA5 (elevation)</option><option value="srtm">SRTM/COP30 (OpenTopography)</option></select><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">Open-Meteo provides ERA5-model elevation. For BZ orographic modelling, SRTM/COP30 DEM is recommended.</div></div><div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="terrR" type="number" value="10" min="2" max="50"></div></div>
         <div id="srtmOpts" style="display:none"><div class="fg" style="margin-top:.4rem"><label class="fl">OpenTopography API Key</label><input class="fi" id="otApiKey" placeholder="Free key at opentopography.org" style="font-size:.65rem"><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">Get free API key: <a href="https://opentopography.org" target="_blank" style="color:var(--sky)">opentopography.org</a></div></div><div class="fg" style="margin-top:.3rem"><label class="fl">SRTM Resolution</label><select class="fs" id="srtmRes"><option value="SRTMGL1" selected>SRTMGL1 ~30m</option><option value="SRTMGL3">SRTMGL3 ~90m</option><option value="SRTMGL1_E">SRTMGL1-E 30m (enhanced)</option><option value="COP30">COP30 ~30m (global)</option><option value="COP90">COP90 ~90m (global)</option></select><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">SRTMGL1/3: USA. COP30/90: global. SRTMGL1-E: USA enhanced.</div></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Grid</label><select class="fs" id="terrG"><option value="20" selected>20×20</option><option value="30">30×30</option><option value="40">40×40</option><option value="50">50×50</option><option value="60">60×60</option><option value="80">80×80</option><option value="100">100×100</option></select></div><div class="fg"><label class="fl">Contour Int</label><select class="fs" id="terrCI"><option value="auto" selected>Auto</option><option value="5">5m</option><option value="10">10m</option><option value="20">20m</option></select></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Lat <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="terrLa" type="number" value="55.500" step="0.001" readonly></div><div class="fg"><label class="fl">Lon <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="terrLo" type="number" value="7.900" step="0.001" readonly></div></div>
@@ -354,7 +357,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Mast z₀ (m)</label><input class="fi" id="bzMz0" type="number" value="0.0002" step="0.0001"></div><div class="fg"><label class="fl">Site z₀ (m)</label><input class="fi" id="bzSz0" type="number" value="0.0002" step="0.0001"></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Inner Layer Scale</label><select class="fs" id="bzLscale"><option value="1.0" selected>1.0 (WAsP)</option><option value="0.5">0.5×</option><option value="1.5">1.5×</option><option value="2.0">2.0×</option></select></div><div class="fg"><label class="fl">RIX Threshold</label><input class="fi" id="bzRixThr" type="number" value="0.3" step="0.05" min="0.05" max="0.5"></div></div>
         <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="runBZModel()">⚙ Compute BZ Speedups</button>
-        <div class="progress"><div class="progress-bar" id="bzpb" style="width:0"></div></div><div id="bzpt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">Download terrain first, then run BZ</div>
+        <div class="progress"><div class="progress-bar" id="bzpb" style="width:0"></div></div><div id="bzpt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">⚠ Requires terrain data — download from Terrain tab first</div>
       </div>
       <div id="bzOut" style="display:none"><div class="card"><div class="card-title sky">BZ Results</div>
         <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="bzMaSU">—</div><div class="metric-label">Mast Speedup</div></div><div class="metric-item"><div class="metric-val" id="bzMnSU">—</div><div class="metric-label">Mean Turb SU</div></div><div class="metric-item"><div class="metric-val gold" id="bzRixV">—</div><div class="metric-label">RIX %</div></div><div class="metric-item"><div class="metric-val sky" id="bzGws">—</div><div class="metric-label">GWC WS</div></div></div>
@@ -364,6 +367,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <div class="card"><div class="card-title gold">MCP Long-term Correction</div>
         <div class="g2" style="gap:.4rem;margin-bottom:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Target Data (Short-term)</label><select class="fs" id="mcpTarget" style="font-size:.58rem" onchange="checkMCPSourceMatch()"><option value="wind">Current Wind Data</option><option value="ERA5">ERA5 / ERA5T</option><option value="NEWA">NEWA</option><option value="NREL">NREL WTK</option><option value="MERRA2">MERRA-2</option><option value="GWA">GWA 4.0</option><option value="csv">Uploaded CSV</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Reference Data (Long-term)</label><select class="fs" id="mcpReference" style="font-size:.58rem" onchange="checkMCPSourceMatch()"><option value="era5">ERA5 (1940–present)</option><option value="era5t">ERA5T (Recent months)</option><option value="merra2">MERRA-2</option><option value="newa_lt">NEWA LT</option><option value="gwa_lt">GWA 4.0</option></select></div></div>
         <div style="font-size:.52rem;color:var(--wrn);margin-bottom:.3rem;display:none" id="mcpSameSourceWarn">⚠ Target and Reference are the same source — MCP factor will be 1.0 (no correction)</div>
+        <div id="mcpR2Warn" style="font-size:.52rem;color:var(--wrn);margin-bottom:.3rem;display:none">⚠ R² < 0.7 — MCP correlation is weak. LT correction may be unreliable.</div>
         <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">LT Start</label><input class="fi" id="mcpSy" type="number" value="1991"></div><div class="fg"><label class="fl">LT End</label><input class="fi" id="mcpEy" type="number" value="2020"></div></div>
         <div class="fg"><label class="fl">Method</label><select class="fs" id="mcpMeth"><option value="linear">Linear Regression</option><option value="matrix">Matrix</option><option value="variance">Variance Ratio</option><option value="weibull">Weibull Ratio</option></select></div>
         <button class="btn btn-gold" style="width:100%;margin-top:.4rem" onclick="runMCP()">↺ Download LT Reference + MCP</button>
@@ -463,7 +467,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://maps.elie.ucl.ac.be/CCI/viewer/','_blank')">🗺 ESA CCI Land Cover (External)</button>
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://map.neweuropeanwindatlas.eu/','_blank')">💨 NEWA Wind Atlas (External)</button>
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://www.nrel.gov/grid/wind-toolkit.html','_blank')">💨 NREL Wind Toolkit (External)</button>
-          <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://developer.nlr.gov/signup/','_blank')">🔑 Get NREL API Key (Free)</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://developer.nrel.gov/signup/','_blank')">🔑 Get NREL API Key (Free)</button>
         </div>
       </div>
       <div class="card"><div class="card-title sky">Save / Load Project</div>
@@ -486,6 +490,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div id="uncResults" style="font-size:.7rem;color:var(--text3)">Run analysis first</div>
       </div>
       <div class="card"><div class="card-title sky">Noise Assessment</div>
+        <div style="font-size:.52rem;color:var(--wrn);margin-bottom:.3rem">⚠ Single-source model — for multi-turbine layouts, cumulative noise from all WTGs must be summed logarithmically at each receptor. This calculator estimates a single turbine contribution only.</div>
         <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Source Level dB(A)</label><input class="fi" id="noiseSL" type="number" value="105"></div><div class="fg"><label class="fl">Receiver Dist (m)</label><input class="fi" id="noiseDist" type="number" value="500"></div></div>
         <button class="btn btn-sm btn-sky" onclick="calcNoise()">🔊 Calculate</button>
         <div id="noiseResult" style="font-size:.68rem;color:var(--text3);margin-top:.3rem"></div>
@@ -3307,6 +3312,9 @@ async function runMCP(){
     const sigMCP=Math.max(0.03,Math.min(0.20,sig)); // clamp 3-20%
     setProg('mcp',100,`✓ Factor=${factor.toFixed(3)}, LT WS=${ltCorr.toFixed(2)} m/s`);
     $('mcpCW').textContent=cMean.toFixed(2);$('mcpLW').textContent=ltCorr.toFixed(2);$('mcpFc').textContent=factor.toFixed(3);$('mcpR2').textContent=R2.toFixed(2);
+    // v29: R² quality warning (Issue 20)
+    const r2warn=$('mcpR2Warn');
+    if(r2warn)r2warn.style.display=R2<0.7?'block':'none';
     // v25.0: Enhanced MCP transparency — show full regression details
     const methLabel={linear:'Linear Regression',matrix:'Matrix (2-param)',weibull:'Weibull Ratio',variance:'Variance Ratio'}[meth]||'Simple Ratio';
     const regressionEq = (meth==='linear'||meth==='matrix') ? ` · Eq: conc = ${lrSlope.toFixed(4)} × lt + ${lrIntercept.toFixed(4)}` : '';
@@ -5321,6 +5329,21 @@ function switchWindDataSource(src){
   $('e5EL').textContent=elev?elev.toFixed(0):'—';
   // Update mast height to match source
   if(ws.mastH&&$('mastH'))$('mastH').value=ws.mastH;
+  // v29: Show shear extrapolation note if data height ≠ hub height (Issue 7)
+  const hubH=parseFloat($('hubH')?.value)||120;
+  const srcH=ws.mastH||100;
+  const shearNote=$('shearExtrapolationNote');
+  if(shearNote){
+    if(Math.abs(srcH-hubH)>1){
+      const alpha=parseFloat($('shearA')?.value)||0.14;
+      if($('shearFromH'))$('shearFromH').textContent=srcH;
+      if($('shearToH'))$('shearToH').textContent=hubH;
+      if($('shearAlpha'))$('shearAlpha').textContent=alpha.toFixed(2);
+      shearNote.style.display='block';
+    }else{
+      shearNote.style.display='none';
+    }
+  }
   // v27.0: Ensure e5out is visible
   if($('e5out'))$('e5out').style.display='block';
   // Redraw the wind speed distribution chart
@@ -8077,6 +8100,13 @@ function applyPreset(){
   $('customPCCard').style.display='none';
   const p=getPC();if(!p)return;
   $('hubH').value=p.hh;$('rotD').value=p.D;$('ratedPow').value=p.rated;
+  // v29: Update preset badge in header dynamically
+  const badge=$('presetBadge');
+  if(badge){
+    const sel=$('tcls');
+    const label=sel?.options[sel.selectedIndex]?.text||cls;
+    badge.textContent=label.length>16?label.substring(0,16)+'…':label;
+  }
   onHubHeightChange();
   drawPowerCurve();
 }
@@ -9929,8 +9959,8 @@ function updateDataSourceUI(source){
 }
 
 // ── NREL Wind Toolkit V2 Download (USA CONUS, Multi-height) ──
-// API docs: https://developer.nlr.gov/docs/wind/wind-toolkit/wtk-download/
-// Domain migrated: developer.nrel.gov → developer.nlr.gov
+// API docs: https://developer.nrel.gov/docs/wind/wind-toolkit/wtk-download/
+// NREL WTK V2 API endpoint
 // Heights: 10, 40, 60, 80, 100, 120, 140, 160, 200m
 // Years: 2007-2014, Intervals: 5, 15, 30, 60 min
 // NOTE: .csv endpoint redirects to S3 which lacks CORS → use JSON endpoint
@@ -9939,7 +9969,7 @@ async function downloadNREL(){
   const lat=parseFloat($('e5La').value);
   const lon=parseFloat($('e5Lo').value);
   const apiKey=$('nrelApiKey')?.value||'';
-  if(!apiKey){alert('Enter your NREL API key (free at developer.nlr.gov/signup — sign up takes 1 min)');return;}
+  if(!apiKey){alert('Enter your NREL API key (free at developer.nrel.gov/signup — sign up takes 1 min)');return;}
   if(isNaN(lat)||isNaN(lon)){alert('Enter latitude/longitude first');return;}
   // Validate USA CONUS bounds (approximately)
   if(lat<24||lat>50||lon<-125||lon>-65){
@@ -9982,12 +10012,12 @@ async function downloadNREL(){
     });
     if(attributes)params.set('attributes',attributes);
     // ── Strategy: Try .csv first (may work in some browsers), fall back to JSON + S3 download ──
-    // The .csv endpoint on developer.nlr.gov redirects to S3 (no CORS).
+    // The .csv endpoint on developer.nrel.gov redirects to S3 (no CORS).
     // We try fetch with redirect:'follow' first, which may work if browser
     // doesn't enforce CORS on the redirect target. If that fails, we use
     // the JSON endpoint to get the S3 download URL and open it for the user.
     let csvText=null;
-    const apiBase='https://developer.nlr.gov/api/wind-toolkit/v2/wind/wtk-download';
+    const apiBase='https://developer.nrel.gov/api/wind-toolkit/v2/wind/wtk-download';
     // Attempt 1: Direct CSV fetch (may work if CORS redirect is allowed)
     $('nrelStatus').textContent='Downloading CSV (attempt 1)...';
     try{
