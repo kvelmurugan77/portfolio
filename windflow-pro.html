@@ -7586,14 +7586,11 @@ function initMap(){
       leafMap.on(L.Draw.Event.CREATED,function(e){drawnItems.clearLayers();drawnItems.addLayer(e.layer);var lls=e.layer.getLatLngs()[0];S.boundary=lls.map(function(ll){return[ll.lat,ll.lng];});var area=polyArea(S.boundary);$('bndStats').textContent='✓ '+S.boundary.length+' vertices · Area ≈ '+area.toFixed(1)+' km²';autoFocusMap();});
       leafMap.on(L.Draw.Event.DELETED,function(){S.boundary=[];$('bndStats').textContent='No boundary defined';});
     }catch(drawErr){console.warn('Leaflet Draw not available:',drawErr);}
-    // Mouse move for info overlay — v30.0: enhanced with cursor WS + elevation from Open-Meteo
+    // Mouse move for info overlay — v30.1: always fetch cursor-specific WS + Elev from API
     leafMap.on('mousemove',function(e){
       if($('ovLat')){$('ovLat').textContent=e.latlng.lat.toFixed(4);$('ovLon').textContent=e.latlng.lng.toFixed(4);$('sbXY').textContent=e.latlng.lat.toFixed(4)+', '+e.latlng.lng.toFixed(4);}
-      // Try internal spatial model first
-      var su=getSpatialHubWS(e.latlng.lat,e.latlng.lng);
-      if(su&&$('ovWS')){$('ovWS').textContent=su.ws.toFixed(2);$('ovSU').textContent=su.su.toFixed(4);$('ovEl').textContent=su.elev!==null?su.elev.toFixed(0)+'m':'—';}
-      // Debounced API fetch for cursor hover WS + elevation
-      cursorHoverDebounce(e.latlng.lat,e.latlng.lng);
+      // Fetch cursor-specific WS + Elev (debounced API calls)
+      cursorHoverFetch(e.latlng.lat,e.latlng.lng);
     });
     // Click to add turbine
     leafMap.on('click',function(e){if(S.drawMode){S.boundary.push([e.latlng.lat,e.latlng.lng]);S.boundaryMarkers.push(L.circleMarker(e.latlng,{radius:4,color:'#d29922',fillColor:'#d29922',fillOpacity:1}).addTo(leafMap));$('bndStats').textContent=S.boundary.length+' vertices';}});
@@ -8065,65 +8062,61 @@ function solveZ0(h1,h2,ratio){
 
 
 
-// v30.0: Cursor hover — debounced wind speed + elevation from Open-Meteo APIs
-// Shows WS and Elev at cursor position when moving the mouse over the map
-let _cursorHoverTimer=null;
-let _cursorHoverCache={}; // simple cache keyed by rounded lat/lon
-const CURSOR_HOVER_DELAY=600; // ms debounce
-const CURSOR_HOVER_ROUND=3; // round to 3 decimal places (~111m) for caching
+// v30.1: Cursor hover — live wind speed + elevation at cursor position
+// Fetches from Open-Meteo APIs with debouncing + caching for responsiveness
+let _hoverTimer=null;
+let _hoverCache={}; // keyed by rounded lat,lon (~111m grid)
+let _hoverPending=null; // track in-flight request to avoid stale overwrites
+const HOVER_DELAY=400; // ms debounce
+const HOVER_ROUND=3; // decimal places for cache key (~111m)
 
-function cursorHoverDebounce(lat,lon){
-  if(_cursorHoverTimer)clearTimeout(_cursorHoverTimer);
-  _cursorHoverTimer=setTimeout(()=>fetchCursorWS(lat,lon),CURSOR_HOVER_DELAY);
-}
+function cursorHoverFetch(lat,lon){
+  // Round for cache lookup
+  const rLat=lat.toFixed(HOVER_ROUND);
+  const rLon=lon.toFixed(HOVER_ROUND);
+  const key=rLat+','+rLon;
 
-async function fetchCursorWS(lat,lon){
-  const rLat=lat.toFixed(CURSOR_HOVER_ROUND);
-  const rLon=lon.toFixed(CURSOR_HOVER_ROUND);
-  const cacheKey=rLat+','+rLon;
-
-  // Check cache first
-  if(_cursorHoverCache[cacheKey]){
-    const c=_cursorHoverCache[cacheKey];
-    if(c.ws>0&&$('ovWS'))$('ovWS').textContent=c.ws.toFixed(2);
-    if(c.elev!=null&&$('ovEl'))$('ovEl').textContent=c.elev.toFixed(0)+'m';
-    if(c.su!=null&&$('ovSU'))$('ovSU').textContent=c.su.toFixed(4);
+  // Immediate cache hit — show right away, no delay
+  if(_hoverCache[key]){
+    const c=_hoverCache[key];
+    if($('ovWS'))$('ovWS').textContent=c.ws!=null?c.ws.toFixed(2):'—';
+    if($('ovEl'))$('ovEl').textContent=c.elev!=null?c.elev.toFixed(0)+'m':'—';
+    if($('ovSU'))$('ovSU').textContent=c.su!=null?c.su.toFixed(4):'—';
     return;
   }
 
-  // Check what data we already have from internal model
-  const currentWS=$('ovWS')?.textContent;
-  const currentEl=$('ovEl')?.textContent;
-  const hasWS=currentWS&&currentWS!=='—'&&currentWS!=='';
-  const hasEl=currentEl&&currentEl!=='—'&&currentEl!=='';
-  // If both WS and Elev are already populated, no need for API call
-  if(hasWS&&hasEl)return;
+  // Debounce — only fire API after cursor pauses
+  if(_hoverTimer)clearTimeout(_hoverTimer);
+  _hoverTimer=setTimeout(async()=>{
+    const reqKey=lat.toFixed(4)+','+lon.toFixed(4);
+    _hoverPending=reqKey;
 
-  try{
-    // Only fetch what we need — saves API calls
-    const fetches=[];
-    if(!hasEl)fetches.push(fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}`).then(r=>r.ok?r.json():null).catch(()=>null));
-    else fetches.push(Promise.resolve(null));
-    if(!hasWS)fetches.push(fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=wind_speed_100m&wind_speed_unit=ms&timezone=auto`).then(r=>r.ok?r.json():null).catch(()=>null));
-    else fetches.push(Promise.resolve(null));
+    try{
+      // Fetch elevation + wind speed in parallel
+      const [elevData,wsData]=await Promise.all([
+        fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}`).then(r=>r.ok?r.json():null).catch(()=>null),
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=wind_speed_100m&wind_speed_unit=ms&timezone=auto`).then(r=>r.ok?r.json():null).catch(()=>null)
+      ]);
 
-    const [elevData,wsData]=await Promise.all(fetches);
+      // Discard if cursor has moved to a different position since request started
+      if(_hoverPending!==reqKey)return;
 
-    let elev=null, ws=null;
-    if(elevData&&elevData.elevation&&elevData.elevation.length)elev=elevData.elevation[0];
-    if(wsData&&wsData.current)ws=wsData.current.wind_speed_100m;
+      let elev=null, ws=null;
+      if(elevData&&elevData.elevation&&elevData.elevation.length)elev=elevData.elevation[0];
+      if(wsData&&wsData.current)ws=wsData.current.wind_speed_100m;
 
-    // Cache the result (merge with existing internal data)
-    const cachedWs=hasWS?parseFloat(currentWS):(ws||0);
-    _cursorHoverCache[cacheKey]={ws:cachedWs,elev:elev,su:null};
-    const keys=Object.keys(_cursorHoverCache);
-    if(keys.length>500)delete _cursorHoverCache[keys[0]];
+      // Cache
+      _hoverCache[key]={ws:ws,elev:elev,su:null};
+      const ck=Object.keys(_hoverCache);
+      if(ck.length>500)delete _hoverCache[ck[0]];
 
-    if(ws!==null&&!hasWS&&$('ovWS'))$('ovWS').textContent=ws.toFixed(2);
-    if(elev!==null&&!hasEl&&$('ovEl'))$('ovEl').textContent=elev.toFixed(0)+'m';
-  }catch(e){
-    // Silently fail
-  }
+      // Update display
+      if($('ovWS'))$('ovWS').textContent=ws!=null?ws.toFixed(2):'—';
+      if($('ovEl'))$('ovEl').textContent=elev!=null?elev.toFixed(0)+'m':'—';
+    }catch(e){
+      // Silently fail
+    }
+  },HOVER_DELAY);
 }
 
 // v29.0: Auto-focus map to wind farm area + 20km extent
