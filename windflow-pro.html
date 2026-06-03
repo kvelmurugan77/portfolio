@@ -233,6 +233,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div style="margin-bottom:.4rem"><div class="fg" style="max-width:220px"><label class="fl" style="font-size:.52rem">Primary Data Source for Modelling</label><select class="fs" id="primaryDataSource" style="font-size:.58rem" onchange="onDataSourceChange()"><option value="ERA5">ERA5 / ERA5T</option><option value="NEWA">NEWA</option><option value="NREL">NREL WTK V2</option><option value="MERRA2">MERRA-2</option><option value="GWA">GWA 4.0</option><option value="CSV">Uploaded CSV</option></select></div></div>
         <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="e5WS">—</div><div class="metric-label">Mean WS m/s</div></div><div class="metric-item"><div class="metric-val sky" id="e5WA">—</div><div class="metric-label">Weibull A</div></div><div class="metric-item"><div class="metric-val gold" id="e5WK">—</div><div class="metric-label">Weibull k</div></div><div class="metric-item"><div class="metric-val sky" id="e5PD">—</div><div class="metric-label">Power W/m²</div></div><div class="metric-item"><div class="metric-val" id="e5RC">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val gold" id="e5EL">—</div><div class="metric-label">Elevation m</div></div></div>
         <div id="shearExtrapolationNote" style="font-size:.52rem;color:var(--sky);margin-top:.3rem;display:none">📏 WS at hub height extrapolated from <span id="shearFromH">100</span>m → <span id="shearToH">138</span>m using power law (α=<span id="shearAlpha">0.14</span>)</div>
+        <div id="dataCoordNote" style="font-size:.52rem;color:var(--muted);margin-top:.2rem;display:none">📍 Data point: <span id="dataCoordLat">—</span>°, <span id="dataCoordLon">—</span>° · Height: <span id="dataCoordH">—</span>m · <span id="dataCoordDist">—</span></div>
         <div class="canvas-wrap" style="height:180px;margin-top:.5rem"><canvas id="e5Chart"></canvas></div>
         <div style="display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap"><button class="btn btn-sm btn-ghost" onclick="exportWindCSV()">↓ CSV</button><button class="btn btn-sm btn-ghost" onclick="exportWindTab()">↓ WAsP .tab</button><button class="btn btn-sm btn-ghost" onclick="exportWindOWC()">↓ OWC .tab</button><button class="btn btn-sm btn-ghost" onclick="exportWindLib()">↓ WAsP .lib</button><button class="btn btn-sm btn-ghost" onclick="exportNRELMultiHeight()" id="btnNrelExport" style="display:none">↓ NREL Multi-Height CSV</button></div>
       </div></div>
@@ -2388,8 +2389,8 @@ async function downloadERA5(){
       setProg('e5',5+88*(i+BATCH)/years.length,`${Math.min(i+BATCH,years.length)}/${years.length} years done...`);
     }
     const sp=allSp.map(v=>v??0),dr=allDr.map(v=>v??0);
-    S.era5Raw={sp,dr,ts:allTs,lat,lon,h};S.wind={speeds:[...sp],dirs:[...dr],times:[...allTs]};S.mcpFactor=1;
-    S.windSources.ERA5={speeds:[...sp],dirs:[...dr],times:[...allTs],mcpFactor:1,mastH:parseInt(h)||100,elevation:elev||null};
+    S.era5Raw={sp,dr,ts:allTs,lat,lon,h};S.wind={speeds:[...sp],dirs:[...dr],times:[...allTs],dataLat:lat,dataLon:lon,dataHeight:parseInt(h)||100,dataSource:'ERA5'};S.mcpFactor=1;
+    S.windSources.ERA5={speeds:[...sp],dirs:[...dr],times:[...allTs],mcpFactor:1,mastH:parseInt(h)||100,elevation:elev||null,lat,lon};
     // v26.0: Show ERA5 data point on map
     if(leafMap && !S.era5Marker){
       S.era5Marker = L.marker([lat, lon], {
@@ -2629,7 +2630,8 @@ function calcAEP(){
   }
 
   // v17.0 Fix 4: Auto-tune BZ inner-layer scale
-  const autoLScale = autoTuneLScale();
+  // v31.2: Use BZ downsampled terrain if available (avoids O(N) on full-res grid)
+  const autoLScale = autoTuneLScale(BZ.dsTerrain || undefined);
   if (autoLScale > 1.05 && S.terrain && S.terrain.grid) {
     log(`v17.0: Auto lScale=${autoLScale.toFixed(3)} (from terrain statistics: RMS height, RIX, dominant wavelength)`,'i');
     // Update the UI if the BZ lScale field exists
@@ -3040,6 +3042,9 @@ function runAnalysis(){
     // Apply site-specific or default WAsP calibration if enabled
     if($('calApplyCB')?.checked && S.waspCalibration) R=applyWaspCalibration(R);
     S.results=R;updateResultsUI(R);updateWindUI(S.wind.speeds,S.wind.dirs);updateWSChain(R);updateGWCTab(R);
+    // v31.2: Store data source coordinates in results for reporting/export
+    R.dataLat=S.wind?.dataLat;R.dataLon=S.wind?.dataLon;R.dataHeight=S.wind?.dataHeight;
+    R.dataSource=S.wind?.dataSource||S.windSource;R.dataDistKm=S.wind?.dataDistKm;
     // v25.0: Log per-turbine free WS transparency
     if(R.perTurbine.length>1){
       const freeWSvals=R.perTurbine.map(t=>parseFloat(t.ws));
@@ -3959,7 +3964,7 @@ function autoCenterMap(){
   setTimeout(()=>{fetchLayoutWSSummary();},500);
   log(`Map focused on layout: ${S.turbines.length} turbines`,'i');
 }
-function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)&&ws>=0&&ws<80){sp.push(ws);dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;S.windSources.CSV={speeds:[...sp],dirs:[...dr],times:[...ts],mcpFactor:1,mastH:parseFloat($('mastH').value)||100,elevation:null};const vs=sp.filter(v=>v>0.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);updateDataSourceUI('CSV');addDataPointMarker('CSV',parseFloat($('mastLat')?.value||$('e5La')?.value||55.5),parseFloat($('mastLon')?.value||$('e5Lo')?.value||7.9),'Uploaded CSV · Mast height: '+(parseFloat($('mastH').value)||100)+'m');log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
+function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)&&ws>=0&&ws<80){sp.push(ws);dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}const csvLat=parseFloat($('mastLat')?.value||$('e5La')?.value||55.5),csvLon=parseFloat($('mastLon')?.value||$('e5Lo')?.value||7.9),csvH=parseFloat($('mastH').value)||100;S.wind={speeds:sp,dirs:dr,times:ts,dataLat:csvLat,dataLon:csvLon,dataHeight:csvH,dataSource:'CSV'};S.mcpFactor=1;S.windSources.CSV={speeds:[...sp],dirs:[...dr],times:[...ts],mcpFactor:1,mastH:csvH,elevation:null,lat:csvLat,lon:csvLon};const vs=sp.filter(v=>v>0.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);updateDataSourceUI('CSV');addDataPointMarker('CSV',parseFloat($('mastLat')?.value||$('e5La')?.value||55.5),parseFloat($('mastLon')?.value||$('e5Lo')?.value||7.9),'Uploaded CSV · Mast height: '+(parseFloat($('mastH').value)||100)+'m');log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
 function dlFile(c,f,m){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:m}));a.download=f;a.click();}
 function showToast(msg,dur=3000){const t=document.createElement('div');t.textContent=msg;t.style.cssText='position:fixed;bottom:20px;right:20px;background:#1e293b;color:#f1f5f9;padding:10px 18px;border-radius:8px;font-size:12px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:fadeInUp .3s ease';document.body.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300)},dur);}
 function showTab(id){/* legacy stub */}
@@ -5291,20 +5296,28 @@ function displacementCorrectedLogWS(ws, fromH, toH, z0, d0, L) {
 //   Beljaars et al. (1987) — Inner-layer height formulation
 //   Mortensen et al. (2009) — RIX-based correction factors
 
-function autoTuneLScale() {
-  if (!S.terrain || !S.terrain.grid || !S.terrain.grid.length) return 1.0;
+function autoTuneLScale(downsampledTerrain) {
+  // v30.0 FIX: Accept optional downsampled terrain to avoid O(N) on full-res grid
+  const terrain = downsampledTerrain || S.terrain;
+  if (!terrain || !terrain.grid || !terrain.grid.length) return 1.0;
 
-  const { grid, ny, nx, minE, maxE } = S.terrain;
+  const { grid, ny, nx, minE, maxE } = terrain;
   const range = (maxE || 0) - (minE || 0);
 
   if (range < 10) return 1.0; // flat terrain → default
 
-  // 1. Compute terrain RMS height
-  const hmean = grid.flat().reduce((s, v) => s + v, 0) / (ny * nx);
-  const h_rms = Math.sqrt(grid.flat().reduce((s, v) => s + (v - hmean) ** 2, 0) / (ny * nx));
+  // 1. Compute terrain RMS height — cache flat() to avoid repeated allocation
+  const flat = grid.flat();
+  const n = flat.length;
+  let sumH = 0;
+  for (let i = 0; i < n; i++) sumH += flat[i];
+  const hmean = sumH / n;
+  let sumSq = 0;
+  for (let i = 0; i < n; i++) sumSq += (flat[i] - hmean) ** 2;
+  const h_rms = Math.sqrt(sumSq / n);
 
   // 2. Compute RIX
-  const rix = BZ.rix || computeRIX(S.terrain, 0.3);
+  const rix = BZ.rix || computeRIX(terrain, 0.3);
 
   // 3. Estimate dominant terrain wavelength from spectral peak
   // (simplified: use domain size / dominant spatial frequency from autocorrelation)
@@ -5318,14 +5331,14 @@ function autoTuneLScale() {
         countAC++;
       }
     }
-    const variance = grid.flat().reduce((s, v) => s + (v - hmean) ** 2, 0) / (ny * nx);
+    const variance = sumSq / n;
     if (variance > 0 && countAC > 0) {
       const ac1 = sumAC / countAC / variance; // lag-1 autocorrelation
       // Dominant wavelength ≈ 2 × grid_spacing / (1 - ac1) for ac1 < 1
       // This follows from the relation between autocorrelation and power spectrum
       if (ac1 > 0 && ac1 < 0.99) {
-        const clat = (S.terrain.lat0 + S.terrain.lat1) / 2;
-        const gridSpacing = (S.terrain.lon1 - S.terrain.lon0) / (nx - 1) * 111320 * Math.cos(clat * Math.PI / 180);
+        const clat = (terrain.lat0 + terrain.lat1) / 2;
+        const gridSpacing = (terrain.lon1 - terrain.lon0) / (nx - 1) * 111320 * Math.cos(clat * Math.PI / 180);
         dominantWavelength = 2 * gridSpacing / (1 - ac1);
         dominantWavelength = Math.max(500, Math.min(50000, dominantWavelength));
       }
@@ -5410,7 +5423,7 @@ function switchWindDataSource(src){
     return;
   }
   // Load selected source's data into S.wind
-  S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[]};
+  S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[],dataLat:ws.lat,dataLon:ws.lon,dataHeight:ws.mastH,dataSource:src};
   S.mcpFactor=ws.mcpFactor||1;
   // v27.0: Also update ERA5 raw data reference for density calculations
   if(src==='ERA5'&&ws.speeds){
@@ -5438,6 +5451,8 @@ function switchWindDataSource(src){
   if($('e5EL'))$('e5EL').textContent=elev?elev.toFixed(0):'—';
   // Update mast height to match source
   if(ws.mastH&&$('mastH'))$('mastH').value=ws.mastH;
+  // v31.2: Sync data coordinates and warn about mesoscale distance
+  syncDataCoordinates();
   // v29: Show shear extrapolation note if data height ≠ hub height (Issue 7)
   const hubH=parseFloat($('hubH')?.value)||120;
   const srcH=ws.mastH||100;
@@ -7071,9 +7086,6 @@ async function runBZModel(){
   const z0Site=parseFloat($('bzSz0').value)||parseFloat($('z0val').value)||0.0002;
   const z0Mast=parseFloat($('bzMz0').value)||parseFloat($('z0val').value)||0.0002;
   const lScale_input=parseFloat($('bzLscale').value)||1.0;
-  // v17.0 Fix 4: Use auto-tuned lScale if it's higher than the input value
-  const lScale_auto = autoTuneLScale();
-  const lScale = Math.max(lScale_input, lScale_auto);
   const rixThr=parseFloat($('bzRixThr').value)||0.3;
 
   // Domain size in metres
@@ -7081,10 +7093,9 @@ async function runBZModel(){
   const Ly=(lat1-lat0)*111320;
   const Lx=(lon1-lon0)*111320*Math.cos(clat*Math.PI/180);
 
-  setProg('bz',5,'Subtracting terrain mean...');
-
-  // Terrain perturbation h' = h - <h>
-  const hmean=useGrid.flat().reduce((s,v)=>s+v,0)/(useNy*useNx);
+  setProg('bz',3,'Downsampling terrain...');
+  await new Promise(r=>setTimeout(r,0)); // v30.0 FIX: yield before expensive ops
+  checkTimeout();
 
   // v29.0: Further reduce BZ grid for large FFT sizes
   // If FFT padded size > 512×512, downsample terrain further to prevent hangs
@@ -7102,6 +7113,28 @@ async function runBZModel(){
     useNy=newNy;useNx=newNx;
     log(`BZ: Further downsampled to ${useNy}×${useNx} (FFT would exceed ${maxFFTSize}×${maxFFTSize})`,'i');
   }
+
+  // v30.0 FIX: Build a lightweight terrain-like object from the DOWNSAMPLED grid
+  // so autoTuneLScale() and computeRIX() operate on the small grid, not the full-res original.
+  // Previously these functions used S.terrain directly (potentially 3000×3000+ cells),
+  // doing grid.flat().reduce() 3× and nested loops — blocking the event loop for 10-60 seconds.
+  const dsTerrain = {
+    grid: useGrid, ny: useNy, nx: useNx,
+    lat0, lat1, lon0, lon1,
+    minE: S.terrain.minE, maxE: S.terrain.maxE
+  };
+  BZ.dsTerrain = dsTerrain; // v31.2: cache for reuse in AEP analysis
+
+  setProg('bz',5,'Auto-tuning lScale...');
+  // v30.0 FIX: autoTuneLScale now receives downsampled terrain — was the #1 hang cause
+  const lScale_auto = autoTuneLScale(dsTerrain);
+  const lScale = Math.max(lScale_input, lScale_auto);
+  checkTimeout();
+
+  setProg('bz',8,'Subtracting terrain mean...');
+
+  // Terrain perturbation h' = h - <h>
+  const hmean=useGrid.flat().reduce((s,v)=>s+v,0)/(useNy*useNx);
 
   const h=useGrid.map(row=>row.map(v=>v-hmean));
 
@@ -7122,15 +7155,23 @@ async function runBZModel(){
   // we compute all valid (Kx, Ky, G, hRe, hIm) tuples in one pass, filtering out
   // insignificant wavenumbers. Subsequent evaluations are just dot products (O(M) vs O(N²)).
   const precompSite = precomputeBZSpectrum(Re, Im, useNy, useNx, Lx, Ly, hubH, z0Site, lScale);
+  checkTimeout(); // v30.0 FIX: check after first precompute
   const precompMast = (z0Mast !== z0Site)
     ? precomputeBZSpectrum(Re, Im, useNy, useNx, Lx, Ly, hubH, z0Mast, lScale)
     : precompSite; // reuse if same z0
   // v26.0: Also pre-compute cross-wind (turning) spectrum
   const precompTurnSite = precomputeTurningSpectrum(Re, Im, useNy, useNx, Lx, Ly, hubH, z0Site, lScale);
+  checkTimeout(); // v30.0 FIX: check after turning spectrum
   const precompTurnMast = (z0Mast !== z0Site)
     ? precomputeTurningSpectrum(Re, Im, useNy, useNx, Lx, Ly, hubH, z0Mast, lScale)
     : precompTurnSite;
   log(`v26.0 BZ: Pre-computed spectrum — ${precompSite.spectrum.length} speedup + ${precompTurnSite.spectrum.length} turning wavenumbers (from ${fftPx}×${fftPy} FFT grid)`,'i');
+
+  // v30.0 FIX: Yield between precompute and RIX/mast computation
+  // Previously the entire block from precompute through computeRIX was synchronous,
+  // blocking the event loop for seconds on large grids
+  await new Promise(r=>setTimeout(r,0));
+  checkTimeout();
 
   // Speedup at mast
   const mLat=parseFloat($('mastLat').value)||clat;
@@ -7151,7 +7192,7 @@ async function runBZModel(){
   const isFlat = terrainRange < 10; // v22.0: more conservative flat terrain threshold
   const isModerate = terrainRange >= 10 && terrainRange < 50;
   const BZ_prevRix = BZ.rix;
-  BZ.rix=computeRIX(S.terrain,rixThr);
+  BZ.rix=computeRIX(dsTerrain,rixThr); // v30.0 FIX: use downsampled terrain, not S.terrain
   const isFlatByRIX = BZ.rix < 5;
   const nSect=parseInt($('sects').value)||16; // v26.0: define nSect early so flat terrain path can use it
 
@@ -7188,6 +7229,7 @@ async function runBZModel(){
     if (isModerate) rawSU = Math.max(0.85, Math.min(1.15, rawSU));
     return rawSU;
   });
+  checkTimeout(); // v30.0 FIX: check after per-turbine speedups
 
   // Sector-specific speedups (directional, using bzDeltaFast with precomputed spectrum)
   setProg('bz',60,'FFT Engine: Computing directional sector speedups + flow turning...');
@@ -7253,21 +7295,24 @@ async function runBZModel(){
   // v27.0: Adaptive visualization grid based on layout size
   setProg('bz',70,'Computing speedup field for map...');
   await new Promise(r=>setTimeout(r,10));
-  const vizMaxGrid = nWTG > 40 ? 50 : nWTG > 20 ? 60 : 80; // v27.0: smaller viz grid for large layouts
-  const vizSkipR=Math.ceil(ny/vizMaxGrid),vizSkipC=Math.ceil(nx/vizMaxGrid);
-  const vizNy=Math.ceil(ny/vizSkipR),vizNx=Math.ceil(nx/vizSkipC);
+  // v31.2 FIX: Use DOWNAMPLED grid dims (useNy/useNx), NOT full-res (ny/nx)
+  // Previously used ny/nx from S.terrain which could be 3000×3000, making viz grid massive
+  const vizMaxGrid = nWTG > 40 ? 40 : nWTG > 20 ? 50 : 60;
+  const vizSkipR=Math.max(1,Math.ceil(useNy/vizMaxGrid)),vizSkipC=Math.max(1,Math.ceil(useNx/vizMaxGrid));
+  const vizNy=Math.ceil(useNy/vizSkipR),vizNx=Math.ceil(useNx/vizSkipC);
+  log(`BZ viz grid: ${vizNy}×${vizNx} (from downsampled ${useNy}×${useNx})`,'i');
   const sgrid=[];
   for(let i=0;i<vizNy;i++){
     sgrid[i]=[];
-    const ri=Math.min(i*vizSkipR,ny-1);
+    const ri=Math.min(i*vizSkipR,useNy-1);
     for(let j=0;j<vizNx;j++){
-      const rj=Math.min(j*vizSkipC,nx-1);
-      const px=rj/(nx-1)*Lx,py=ri/(ny-1)*Ly;
+      const rj=Math.min(j*vizSkipC,useNx-1);
+      const px=rj/(useNx-1)*Lx,py=ri/(useNy-1)*Ly;
       const delta=bzDeltaFast(precompSite,px,py,null);
       sgrid[i][j]=1+delta;
     }
-    // Progress update every 10 rows
-    if(i%10===0){setProg('bz',70+20*i/vizNy,`Grid row ${i}/${vizNy}...`);await new Promise(r=>setTimeout(r,0));checkTimeout();}
+    // Progress update every 5 rows — frequent yields prevent browser hang
+    if(i%5===0){setProg('bz',70+20*i/vizNy,`Grid row ${i}/${vizNy}...`);await new Promise(r=>setTimeout(r,0));checkTimeout();}
   }
   BZ.grid=sgrid;
   BZ.gridVizNy=vizNy;BZ.gridVizNx=vizNx; // store for drawBZLayer
@@ -8464,7 +8509,7 @@ async function downloadGWA(){
         const wb=weibullFit(valid);
         $('gwaStatus').textContent=`✓ GWA proxy (ERA5 5yr): mean=${mean.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`;
         log(`GWA proxy via Open-Meteo (5yr): ${valid.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
-        S.gwaData={meanWS:mean,weibullA:wb.A,weibullK:wb.k,sectors:0,source:'ERA5-5yr-proxy'};
+        S.gwaData={meanWS:mean,weibullA:wb.A,weibullK:wb.k,sectors:0,source:'ERA5-5yr-proxy',lat,lon,height:100};
         return;
       }
     }
@@ -8487,7 +8532,7 @@ async function downloadGWA(){
         const estA=mean/0.886; // mean/A ≈ Γ(1+1/2) ≈ 0.886
         $('gwaStatus').textContent=`✓ GWA proxy (Climate API): mean=${mean.toFixed(2)} m/s, A≈${estA.toFixed(2)}, k≈2.0`;
         log(`GWA proxy via Climate API: ${valid.length} monthly values, mean=${mean.toFixed(2)}, A≈${estA.toFixed(2)}`,'i');
-        S.gwaData={meanWS:mean,weibullA:estA,weibullK:2.0,sectors:0,source:'Climate-API-proxy'};
+        S.gwaData={meanWS:mean,weibullA:estA,weibullK:2.0,sectors:0,source:'Climate-API-proxy',lat,lon,height:100};
         return;
       }
     }
@@ -8570,7 +8615,7 @@ function gamma(z){
   return Math.sqrt(2*Math.PI)*Math.pow(t,z+0.5)*Math.exp(-t)*x;
 }
 
-async function downloadMERRA2(){$('merra2Status').textContent='Querying NASA POWER...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();const ws10=Object.values(d.properties?.parameter?.WS10M||{});const ws50=Object.values(d.properties?.parameter?.WS50M||{});const wd10=Object.values(d.properties?.parameter?.WD10M||{});const speeds=ws50.filter(v=>v>=0&&v<80);const dirs=wd10.filter(v=>!isNaN(v)).map(v=>(v%360+360)%360);const times=[];const param=d.properties?.parameter?.WS50M||{};Object.keys(param).forEach(k=>{if(param[k]>=0&&param[k]<80)times.push(k);});if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times};S.mcpFactor=1;S.windSources.MERRA2={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:50,elevation:null};const vs=speeds.filter(v=>v>.5);const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;const wb=weibullFit(vs);const rho=parseFloat($('airDen').value)||1.225;const PD=.5*rho*mean**3;$('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);$('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';$('e5out').style.display='block';drawE5Hist(speeds,wb);if($('mastH'))$('mastH').value=50;updateDataSourceUI('MERRA2');addDataPointMarker('MERRA2',lat,lon,'NASA POWER MERRA-2 · Height: 50m');$('merra2Status').textContent='✓ MERRA-2: '+speeds.length.toLocaleString()+' records, mean WS50m='+mean.toFixed(2)+' m/s';log('MERRA-2 data downloaded: '+speeds.length+' records, mean='+mean.toFixed(2)+' m/s','i');}catch(e){$('merra2Status').textContent='⚠ MERRA-2 unavailable: '+e.message;log('MERRA-2 failed: '+e.message,'w');}}
+async function downloadMERRA2(){$('merra2Status').textContent='Querying NASA POWER...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();const ws10=Object.values(d.properties?.parameter?.WS10M||{});const ws50=Object.values(d.properties?.parameter?.WS50M||{});const wd10=Object.values(d.properties?.parameter?.WD10M||{});const speeds=ws50.filter(v=>v>=0&&v<80);const dirs=wd10.filter(v=>!isNaN(v)).map(v=>(v%360+360)%360);const times=[];const param=d.properties?.parameter?.WS50M||{};Object.keys(param).forEach(k=>{if(param[k]>=0&&param[k]<80)times.push(k);});if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times,dataLat:lat,dataLon:lon,dataHeight:50,dataSource:'MERRA2'};S.mcpFactor=1;S.windSources.MERRA2={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:50,elevation:null,lat,lon};const vs=speeds.filter(v=>v>.5);const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;const wb=weibullFit(vs);const rho=parseFloat($('airDen').value)||1.225;const PD=.5*rho*mean**3;$('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);$('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';$('e5out').style.display='block';drawE5Hist(speeds,wb);if($('mastH'))$('mastH').value=50;updateDataSourceUI('MERRA2');addDataPointMarker('MERRA2',lat,lon,'NASA POWER MERRA-2 · Height: 50m');$('merra2Status').textContent='✓ MERRA-2: '+speeds.length.toLocaleString()+' records, mean WS50m='+mean.toFixed(2)+' m/s';log('MERRA-2 data downloaded: '+speeds.length+' records, mean='+mean.toFixed(2)+' m/s','i');}catch(e){$('merra2Status').textContent='⚠ MERRA-2 unavailable: '+e.message;log('MERRA-2 failed: '+e.message,'w');}}
 
 async function downloadNCEP(){$('ncepStatus').textContent='NCEP/NCAR via Open-Meteo...';try{$('ncepStatus').textContent='⚠ Use ERA5 tab for NCEP-equivalent data (Open-Meteo includes NCEP backfill)';}catch(e){$('ncepStatus').textContent='⚠ NCEP unavailable';}}
 
@@ -10110,10 +10155,10 @@ async function downloadNEWA(){
                 times.push(om.hourly?.time?.[i]||new Date(2015,0,1,i).toISOString());
               }
             }
-            S.wind={speeds,dirs,times};
+            S.wind={speeds,dirs,times,dataLat:lat,dataLon:lon,dataHeight:hh,dataSource:'NEWA'};
             S.mcpFactor=1;
             S.windSource='NEWA';
-            S.windSources.NEWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:hh,elevation:null};
+            S.windSources.NEWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:hh,elevation:null,lat,lon};
             const meanWS=speeds.reduce((s,v)=>s+v,0)/speeds.length;
             const wb=weibullFit(speeds);
             const rho=parseFloat($('airDen').value)||1.225;
@@ -10152,10 +10197,10 @@ async function downloadNEWA(){
           times.push(new Date(2020,0,1,h*3600000).toISOString());
         }
       });
-      S.wind={speeds,dirs,times};
+      S.wind={speeds,dirs,times,dataLat:lat,dataLon:lon,dataHeight:hh,dataSource:'NEWA'};
       S.mcpFactor=1; // NEWA is already a long-term wind atlas
       S.windSource='NEWA';
-      S.windSources.NEWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:hh,elevation:null};
+      S.windSources.NEWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:hh,elevation:null,lat,lon};
       const meanWS=speeds.reduce((s,v)=>s+v,0)/speeds.length;
       const wb=weibullFit(speeds);
       const rho=parseFloat($('airDen').value)||1.225;
@@ -10183,6 +10228,85 @@ async function downloadNEWA(){
   }
 }
 
+// ── v31.2: Data Coordinate Sync & Mesoscale Distance Warning ──
+// When wind data is downloaded from any source, the lat/lon/height of the data
+// grid point must be synced to the mast position inputs AND checked against
+// the WTG layout center. Large offsets (>5 km) mean mesoscale spatial variation
+// is not captured — the horizontal extrapolation may be inaccurate.
+function syncDataCoordinates(){
+  const src = S.windSources && S.windSource ? S.windSources[S.windSource] : null;
+  if(!src) return;
+
+  // Sync data coordinates to mast inputs
+  if(src.lat != null && src.lon != null){
+    if($('mastLat')) $('mastLat').value = src.lat.toFixed(4);
+    if($('mastLon')) $('mastLon').value = src.lon.toFixed(4);
+    // Also sync ERA5 lat/lon inputs
+    if($('e5La')) $('e5La').value = src.lat.toFixed(4);
+    if($('e5Lo')) $('e5Lo').value = src.lon.toFixed(4);
+  }
+
+  // Sync data height to mast height input
+  if(src.mastH != null){
+    if($('mastH')) $('mastH').value = src.mastH;
+  }
+
+  // Mesoscale distance warning: check distance from data point to WTG layout center
+  if(S.turbines.length > 0 && src.lat != null && src.lon != null){
+    const centerLat = S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
+    const centerLon = S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
+    const dLat = (centerLat - src.lat) * 111320; // metres
+    const dLon = (centerLon - src.lon) * 111320 * Math.cos((centerLat+src.lat)/2 * Math.PI/180);
+    const distKm = Math.sqrt(dLat*dLat + dLon*dLon) / 1000;
+
+    // Find farthest WTG from data point
+    let maxDistKm = 0;
+    S.turbines.forEach(t => {
+      const dt = (t.lat - src.lat) * 111320;
+      const dn = (t.lon - src.lon) * 111320 * Math.cos((t.lat+src.lat)/2 * Math.PI/180);
+      maxDistKm = Math.max(maxDistKm, Math.sqrt(dt*dt + dn*dn) / 1000);
+    });
+
+    if(distKm > 5){
+      log(`⚠ Data point (${src.lat.toFixed(3)}°, ${src.lon.toFixed(3)}°) is ${distKm.toFixed(1)} km from layout center, ${maxDistKm.toFixed(1)} km to farthest WTG — mesoscale variation may not be captured. Consider downloading data closer to the site.`, 'w');
+    } else {
+      log(`Data point coordinates: (${src.lat.toFixed(3)}°, ${src.lon.toFixed(3)}°) — ${distKm.toFixed(1)} km from layout center (OK)`, 'i');
+    }
+
+    // Store distance info in S.wind for use in BZ/extrapolation
+    if(S.wind){
+      S.wind.dataDistKm = distKm;
+      S.wind.maxWtgDistKm = maxDistKm;
+    }
+
+    // Update UI data coordinate display
+    if($('dataCoordNote')){
+      $('dataCoordNote').style.display='block';
+      if($('dataCoordLat'))$('dataCoordLat').textContent=src.lat.toFixed(4);
+      if($('dataCoordLon'))$('dataCoordLon').textContent=src.lon.toFixed(4);
+      if($('dataCoordH'))$('dataCoordH').textContent=src.mastH||'—';
+      if($('dataCoordDist')){
+        if(distKm > 5){
+          $('dataCoordDist').textContent=`${distKm.toFixed(1)} km to layout center (⚠ far)`;
+          $('dataCoordDist').style.color='var(--wrn)';
+        } else {
+          $('dataCoordDist').textContent=`${distKm.toFixed(1)} km to layout center (OK)`;
+          $('dataCoordDist').style.color='var(--grn)';
+        }
+      }
+    }
+  } else if(src.lat != null && src.lon != null){
+    // No turbines yet, just show coordinates
+    if($('dataCoordNote')){
+      $('dataCoordNote').style.display='block';
+      if($('dataCoordLat'))$('dataCoordLat').textContent=src.lat.toFixed(4);
+      if($('dataCoordLon'))$('dataCoordLon').textContent=src.lon.toFixed(4);
+      if($('dataCoordH'))$('dataCoordH').textContent=src.mastH||'—';
+      if($('dataCoordDist'))$('dataCoordDist').textContent='No layout yet';
+    }
+  }
+}
+
 // ── Data Source Selector ──
 // Track which data source is the primary source for modelling
 // Also update dropdown to only show available (downloaded) sources
@@ -10200,6 +10324,8 @@ function updateDataSourceUI(source){
     });
     sel.value=S.windSource;
   }
+  // v31.2: Sync mast coordinates from data source and warn about distance
+  syncDataCoordinates();
 }
 
 // ── NREL Wind Toolkit V2 Download (USA CONUS, Multi-height) ──
@@ -10438,8 +10564,8 @@ async function downloadNREL(){
       interval:parseInt(interval)
     };
     // Set main wind data
-    S.wind={speeds,dirs,times};
-    S.windSources.NREL={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:hubHt,elevation:null};
+    S.wind={speeds,dirs,times,dataLat:S.nrelData.siteLat,dataLon:S.nrelData.siteLon,dataHeight:hubHt,dataSource:'NREL'};
+    S.windSources.NREL={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:hubHt,elevation:null,lat:S.nrelData.siteLat,lon:S.nrelData.siteLon};
     // Compute and display results
     const meanWS=speeds.reduce((s,v)=>s+v,0)/speeds.length;
     const wb=weibullFit(speeds);
