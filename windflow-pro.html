@@ -7370,8 +7370,8 @@ async function runBZModel(){
   for(let i=0;i<nsd;i++){
     const sec=S.results?S.results.sectors[i]:null;
     const owcA=sec?sec.A.toFixed(2):'—';
-    const thisMastSU=BZ.mastSectorSU?BZ.mastSectorSU[i]:BZ.mastSU;
-    const thisTurbSU=sectSU[i]||meanSU;
+    const thisMastSU=(BZ.mastSectorSU&&BZ.mastSectorSU[i])||BZ.mastSU;
+    const thisTurbSU=(BZ.sectorSU&&BZ.sectorSU[i])||meanSU;
     const thisRC=sectorRoughRC[i]||roughRC;
     // WAsP GWC→SWC chain per sector:
     // GWC_A = OWC_A / mast_oro_SU[sector] / mast_roughness_ratio[sector]
@@ -7390,7 +7390,7 @@ async function runBZModel(){
   else{BZ.showLayer=true;drawBZLayer();}
 
   // Draw sector chart
-  drawBZSectorChart(sectSU);
+  drawBZSectorChart(BZ.sectorSU||[]);
   // Draw Bessel verification chart
   drawBesselChart();
 
