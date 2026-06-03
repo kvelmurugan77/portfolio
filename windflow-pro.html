@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 27.0</title>
+<title>WindFlow Pro 28.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -63,7 +63,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 27.0</span></div><div class="brand-sub">① Site → ② Layout → ③ Wind Data (ERA5/NEWA) → ④ Terrain (SRTM) → ⑤ Roughness (ESA CCI) → ⑥ BZ Model → ⑦ MCP → ⑧ Run Analysis → ⑨ Export Report</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 28.0</span></div><div class="brand-sub">① OWC → ② MCP → ③ Log-law → ④ Rotor avg → ⑤ BZ/JH → ⑥ Roughness → ⑦ GDL → ⑧ Wake → ⑨ Calibration</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -310,23 +310,23 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 
 <!-- ===== STEP 5: WIND FLOW MODELLING ===== -->
 <div class="step-panel" id="step5">
-  <!-- v25.0: Flow Model Pipeline Info Card -->
+  <!-- v28.0: Flow Model Pipeline Info Card - CORRECTED step order -->
   <div class="card" style="margin-bottom:.5rem;border-left:3px solid var(--acc)">
-    <div class="card-title" style="font-size:.72rem">Sequential Flow Model Pipeline</div>
+    <div class="card-title" style="font-size:.72rem">Sequential Flow Model Pipeline <span style="font-size:.52rem;color:var(--muted);font-weight:400">(auto-runs on RUN FULL ANALYSIS)</span></div>
     <div style="font-size:.62rem;line-height:1.5;color:var(--text2);padding:0 .3rem">
       <div style="display:flex;flex-wrap:wrap;gap:.2rem .6rem;align-items:center">
-        <span style="color:var(--grn);font-weight:700">① OWC</span><span style="color:var(--muted)">→</span>
-        <span style="color:#58a6ff;font-weight:700">② Log-law</span><span style="color:var(--muted)">→</span>
-        <span style="color:#58a6ff;font-weight:700">③ MCP</span><span style="color:var(--muted)">→</span>
-        <span style="color:#7ee787;font-weight:700">④ Rotor avg</span><span style="color:var(--muted)">→</span>
-        <span style="color:#d2a8ff;font-weight:700">⑤ BZ/JH</span><span style="color:var(--muted)">→</span>
-        <span style="color:#ffa657;font-weight:700">⑥ Roughness</span><span style="color:var(--muted)">→</span>
-        <span style="color:#ffa657;font-weight:700">⑦ GDL</span><span style="color:var(--muted)">→</span>
-        <span style="color:var(--wrn);font-weight:700">⑧ Wake</span><span style="color:var(--muted)">→</span>
-        <span style="color:var(--sky);font-weight:700">⑨ Calibration</span>
+        <span style="color:var(--grn);font-weight:700;cursor:pointer" onclick="showFlowTab(0,this)" title="Wind Stats tab">① OWC</span><span style="color:var(--muted)">→</span>
+        <span style="color:#58a6ff;font-weight:700;cursor:pointer" onclick="$('mcpMeth')?.focus()" title="MCP card">② MCP</span><span style="color:var(--muted)">→</span>
+        <span style="color:#58a6ff;font-weight:700" title="Log-law extrapolation from mastH to hubHH">③ Log-law</span><span style="color:var(--muted)">→</span>
+        <span style="color:#7ee787;font-weight:700" title="9-point Gaussian rotor average">④ Rotor avg</span><span style="color:var(--muted)">→</span>
+        <span style="color:#d2a8ff;font-weight:700;cursor:pointer" onclick="showFlowTab(3,this)" title="BZ Detail tab">⑤ BZ/JH</span><span style="color:var(--muted)">→</span>
+        <span style="color:#ffa657;font-weight:700" title="IBL roughness change correction">⑥ Roughness</span><span style="color:var(--muted)">→</span>
+        <span style="color:#ffa657;font-weight:700" title="Geostrophic Departure Law">⑦ GDL</span><span style="color:var(--muted)">→</span>
+        <span style="color:var(--wrn);font-weight:700" title="Jensen/PARK wake model">⑧ Wake</span><span style="color:var(--muted)">→</span>
+        <span style="color:var(--sky);font-weight:700;cursor:pointer" onclick="showFlowTab(5,this)" title="Calibration tab">⑨ Calibration</span>
       </div>
       <div style="margin-top:.3rem;color:var(--muted);font-size:.56rem">
-        OWC=Observed Wind Climate · Log-law=vertical extrapolation · MCP=Measure-Correlate-Predict · BZ=Jackson-Hunt orographic · Roughness=IBL roughness change · GDL=Geostrophic Departure · Wake=Jensen/PARK or Eddy · Calibration=WAsP empirical
+        OWC=Observed Wind Climate · MCP=Measure-Correlate-Predict (applied at mast height) · Log-law=vertical extrapolation · BZ=Bastankhah-Porté-Agel orographic · Roughness=IBL roughness change · GDL=Geostrophic Departure · Wake=Jensen/PARK or Eddy · Calibration=WAsP empirical
       </div>
     </div>
   </div>
@@ -344,7 +344,8 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div style="display:flex;gap:.4rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" onclick="toggleBZLayer()">🗺 Toggle SU Map</button></div>
       </div></div>
       <div class="card"><div class="card-title gold">MCP Long-term Correction</div>
-        <div class="g2" style="gap:.4rem;margin-bottom:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Target Data (Short-term)</label><select class="fs" id="mcpTarget" style="font-size:.58rem"><option value="wind">Current Wind Data (ERA5/NEWA)</option><option value="csv">Uploaded CSV</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Reference Data (Long-term)</label><select class="fs" id="mcpReference" style="font-size:.58rem"><option value="era5">ERA5 (1940–present)</option><option value="era5t">ERA5T (Recent months)</option><option value="merra2">MERRA-2</option></select></div></div>
+        <div class="g2" style="gap:.4rem;margin-bottom:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Target Data (Short-term)</label><select class="fs" id="mcpTarget" style="font-size:.58rem" onchange="checkMCPSourceMatch()"><option value="wind">Current Wind Data</option><option value="ERA5">ERA5 / ERA5T</option><option value="NEWA">NEWA</option><option value="NREL">NREL WTK</option><option value="MERRA2">MERRA-2</option><option value="csv">Uploaded CSV</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Reference Data (Long-term)</label><select class="fs" id="mcpReference" style="font-size:.58rem" onchange="checkMCPSourceMatch()"><option value="era5">ERA5 (1940–present)</option><option value="era5t">ERA5T (Recent months)</option><option value="merra2">MERRA-2</option><option value="newa_lt">NEWA LT</option></select></div></div>
+        <div style="font-size:.52rem;color:var(--wrn);margin-bottom:.3rem;display:none" id="mcpSameSourceWarn">⚠ Target and Reference are the same source — MCP factor will be 1.0 (no correction)</div>
         <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">LT Start</label><input class="fi" id="mcpSy" type="number" value="1991"></div><div class="fg"><label class="fl">LT End</label><input class="fi" id="mcpEy" type="number" value="2020"></div></div>
         <div class="fg"><label class="fl">Method</label><select class="fs" id="mcpMeth"><option value="linear">Linear Regression</option><option value="matrix">Matrix</option><option value="variance">Variance Ratio</option><option value="weibull">Weibull Ratio</option></select></div>
         <button class="btn btn-gold" style="width:100%;margin-top:.4rem" onclick="runMCP()">↺ Download LT Reference + MCP</button>
@@ -383,7 +384,9 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   <div class="tab-bar" style="margin-top:.5rem"><button class="tab-btn active" onclick="showFlowTab(0,this)">Wind Stats</button><button class="tab-btn" onclick="showFlowTab(1,this)">WS Chain</button><button class="tab-btn" onclick="showFlowTab(2,this)">GWC</button><button class="tab-btn" onclick="showFlowTab(3,this)">BZ Detail</button><button class="tab-btn" onclick="showFlowTab(4,this)">Time Series</button><button class="tab-btn" onclick="showFlowTab(5,this)">Calibration</button><button class="tab-btn" onclick="showFlowTab(6,this)">Engine Log</button></div>
   <div class="tab-panel active" id="flowTab0"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val sky" id="wMean">—</div><div class="metric-label">Mean WS m/s</div></div><div class="metric-item"><div class="metric-val" id="wPD">—</div><div class="metric-label">Power W/m²</div></div><div class="metric-item"><div class="metric-val sky" id="wA">—</div><div class="metric-label">Weibull A</div></div><div class="metric-item"><div class="metric-val gold" id="wK">—</div><div class="metric-label">Weibull k</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="wbChart"></canvas></div><div class="tbl-wrap" style="max-height:150px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>Freq%</th><th>A</th><th>k</th><th>WS</th></tr></thead><tbody id="sectBody"></tbody></table></div></div></div>
   <div class="tab-panel" id="flowTab1"><div class="card"><div id="wscChain">Run analysis</div><div class="tbl-wrap" style="max-height:180px;margin-top:.5rem"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Eff.SU</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="wscBody"><tr><td colspan="12" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.5rem"><canvas id="wscChart"></canvas></div></div></div>
-  <div class="tab-panel" id="flowTab2"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="gcZ0">—</div><div class="metric-label">z₀ m</div></div><div class="metric-item"><div class="metric-val sky" id="gcSR">—</div><div class="metric-label">Mean SR</div></div><div class="metric-item"><div class="metric-val" id="gcWS">—</div><div class="metric-label">GWC WS</div></div><div class="metric-item"><div class="metric-val sky" id="gcSW">—</div><div class="metric-label">SWC WS</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>Freq%</th><th>OWC A</th><th>OWC k</th><th>GWC A</th><th>SWC A</th><th>SR</th></tr></thead><tbody id="gwcBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.4rem"><canvas id="shearChart2"></canvas></div></div></div>
+  <div class="tab-panel" id="flowTab2"><div class="card"><div class="card-title sky">GWC — Generalized Wind Climate <span style="font-size:.52rem;color:var(--muted);font-weight:400">(computed from OWC via WAsP wind atlas chain, not fetched externally)</span></div>
+        <div style="font-size:.56rem;color:var(--text2);margin-bottom:.3rem;line-height:1.4">GWC removes site-specific orographic and roughness effects from the OWC to produce a generalized (free-atmosphere) wind climate. SWC re-applies the site conditions at each turbine location. This is the WAsP OWC→GWC→SWC wind atlas methodology.</div>
+        <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="gcZ0">—</div><div class="metric-label">z₀ m</div></div><div class="metric-item"><div class="metric-val sky" id="gcSR">—</div><div class="metric-label">Mean SR</div></div><div class="metric-item"><div class="metric-val" id="gcWS">—</div><div class="metric-label">GWC WS</div></div><div class="metric-item"><div class="metric-val sky" id="gcSW">—</div><div class="metric-label">SWC WS</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>Freq%</th><th>OWC A</th><th>OWC k</th><th>GWC A</th><th>SWC A</th><th>SR</th></tr></thead><tbody id="gwcBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.4rem"><canvas id="shearChart2"></canvas></div></div></div>
   <div class="tab-panel" id="flowTab3"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="bz-maSU">—</div><div class="metric-label">Mast SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-mxSU">—</div><div class="metric-label">Max SU</div></div><div class="metric-item"><div class="metric-val sky" id="bz-miSU">—</div><div class="metric-label">Min SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-rix">—</div><div class="metric-label">RIX %</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>T#</th><th>BZ SU</th><th>δ%</th><th>Turn°</th><th>OWC</th><th>GWC</th><th>SWC</th></tr></thead><tbody id="bzTBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run BZ first</td></tr></tbody></table></div><div class="canvas-wrap" style="height:120px;margin-top:.4rem"><canvas id="bzBesChart"></canvas></div><div id="bzIBLnote" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">—</div><div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="metric-item"><div class="metric-val sky" id="bz-iblH">—</div><div class="metric-label">IBL Height m</div></div><div class="metric-item"><div class="metric-val" id="bz-roughRC">—</div><div class="metric-label">Rough. Corr.</div></div></div></div></div>
   <div class="tab-panel" id="flowTab4"><div class="card"><div class="card-title gold">Time Series</div><div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Start Year</label><input class="fi" id="tsSy" type="number" value="2022"></div><div class="fg"><label class="fl">End Year</label><input class="fi" id="tsEy" type="number" value="2022"></div></div><div class="fg"><label class="fl">Step</label><select class="fs" id="tsStep"><option value="1">1-hour</option><option value="3" selected>3-hour</option><option value="6">6-hour</option></select></div><button class="btn btn-gold" style="width:100%;margin-top:.4rem" onclick="runTimeSeries()">⏱ Run Time Series</button><div class="progress"><div class="progress-bar" id="tspb" style="width:0"></div></div><div id="tspt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div><div id="tsOut" style="display:none;margin-top:.5rem"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="tsRc">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val g" id="tsNt">—</div><div class="metric-label">Net GWh/yr</div></div><div class="metric-item"><div class="metric-val o" id="tsWk">—</div><div class="metric-label">Wake %</div></div><div class="metric-item"><div class="metric-val b" id="tsCf">—</div><div class="metric-label">CF %</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="monthChart"></canvas></div><div class="canvas-wrap" style="height:100px;margin-top:.3rem"><canvas id="diurnChart"></canvas></div><button class="btn btn-sm btn-ghost" style="margin-top:.3rem" onclick="exportTSCSV()">↓ Monthly CSV</button><button class="btn btn-sm btn-gold" style="margin-top:.3rem;width:100%" onclick="exportTSPerTurbineHourly()">↓ Per-WTG Hourly CSV</button></div></div></div>
   <div class="tab-panel" id="flowTab5"><div class="card"><div class="card-title green">WAsP Site Calibration</div><div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">WAsP Gross (GWh)</label><input class="fi" id="calWaspGross" type="number" step="0.01"></div><div class="fg"><label class="fl">WAsP Net (GWh)</label><input class="fi" id="calWaspNet" type="number" step="0.01"></div><div class="fg"><label class="fl">WAsP Wake %</label><input class="fi" id="calWaspWake" type="number" step="0.1"></div></div><div class="g3" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">WAsP WS</label><input class="fi" id="calWaspWS" type="number" step="0.01"></div><div class="fg"><label class="fl">WAsP CF %</label><input class="fi" id="calWaspCF" type="number" step="0.1"></div><div class="fg"><label class="fl">WAsP RIX %</label><input class="fi" id="calWaspRIX" type="number" step="0.1"></div></div><button class="btn btn-primary" style="margin-top:.5rem" onclick="runWaspCalibration()">🎯 Compute</button><div id="calResult" style="display:none;margin-top:.5rem" class="alert alert-ok"><div id="calResultContent">—</div></div><div style="display:flex;align-items:center;gap:.4rem;margin-top:.5rem"><input type="checkbox" id="calApplyCB" checked style="accent-color:var(--mint)" onchange="onCalApplyChange()"><label for="calApplyCB" style="font-size:.65rem;cursor:pointer">Apply calibration (default ON)</label></div><div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">AEP Mult</label><input class="fi" id="calAepMult" value="1.000" step="0.001" readonly></div><div class="fg"><label class="fl">WS Mult</label><input class="fi" id="calWsMult" value="1.000" step="0.001" readonly></div></div><div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Wake Adj</label><input class="fi" id="calWakeAdj" value="1.000" step="0.001" readonly></div><div class="fg"><label class="fl">Confidence</label><input class="fi" id="calConf" value="—" readonly></div></div><div style="display:flex;gap:.3rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" onclick="exportCalibration()">↓ Export .json</button><button class="btn btn-sm btn-ghost" onclick="$('impCalFile').click()">↑ Import</button><input id="impCalFile" type="file" accept=".json" style="display:none" onchange="importCalibration(event)"><button class="btn btn-sm btn-danger" onclick="clearCalibration()">🗑 Clear</button></div></div></div>
@@ -2961,9 +2964,9 @@ function runAnalysis(){
   if(!S.turbines.length){alert('Add turbines (grid generator or Demo)');return;}
   if(!S.wind){alert('Load wind data (ERA5 tab or Import)');return;}
   setStatus('Running WAsP engine...');$('runBtn').disabled=true;
-  // v25.0: Log the flow model pipeline sequence for transparency
+  // v28.0: Log the flow model pipeline sequence for transparency (CORRECTED order)
   log(`── Flow Model Pipeline ──`,'i');
-  log(`  ① Measured OWC → ② Log-law extrapolation (mastH→hubHH) → ③ MCP LT correction (factor=${(S.mcpFactor||1).toFixed(3)})`,'i');
+  log(`  ① Measured OWC → ② MCP LT correction (factor=${(S.mcpFactor||1).toFixed(3)}) → ③ Log-law extrapolation (mastH→hubHH)`,'i');
   log(`  ④ Rotor averaging → ${BZ.enabled?'⑤ BZ orographic (mastSU='+BZ.mastSU?.toFixed(4)+')':'⑤ JH terrain speedup'} → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Wake model`,'i');
   log(`  ⑨ Site calibration (${S.waspCalibration?'applied':'default'})`,'i');
   setTimeout(()=>{try{
@@ -3021,9 +3024,20 @@ function updateResultsUI(R){
 // ── WIND SPEED CHAIN ──
 // v25.0: Enhanced with full flow model pipeline transparency
 function updateWSChain(R){
-  const shearAdj=(R.hubMean-R.mastMean);const shearPct=R.mastMean>0?shearAdj/R.mastMean*100:0;
-  const mcpAdj=R.hubMean*(R.mcpFactor-1);const mcpPct=(R.mcpFactor-1)*100;
-  const maxWS=Math.max((R.rotorMeanWS||R.hubMean)*1.1,R.mastMean*1.1);
+  // v28.0 FIX: The WS Chain was DOUBLE-COUNTING MCP!
+  // hubMean = mean of logWS_stab(v * mcpFactor, mastH, hubHH, z0, L)
+  // So MCP is ALREADY inside hubMean. Showing hubMean * mcpFactor was wrong.
+  // Now we decompose correctly:
+  //   ① OWC at mast height (raw, no MCP)
+  //   ② OWC at mast height (with MCP applied) — MCP correction at measurement height
+  //   ③ Hub height (log-law extrapolation of MCP-corrected speeds)
+  //   ④ Rotor-averaged WS
+  const mcpMeanAtMast = R.mastMean * R.mcpFactor; // MCP corrected at mast height
+  const mcpAdj = mcpMeanAtMast - R.mastMean;
+  const mcpPct = R.mastMean > 0 ? (R.mcpFactor - 1) * 100 : 0;
+  const shearFromMcp = R.hubMean - mcpMeanAtMast; // pure log-law shear effect
+  const shearPct = mcpMeanAtMast > 0 ? shearFromMcp / mcpMeanAtMast * 100 : 0;
+  const maxWS=Math.max((R.rotorMeanWS||R.hubMean)*1.1,R.mastMean*1.1,mcpMeanAtMast*1.1);
   const rotAdj=(R.rotorMeanWS||R.hubMean)-R.hubMean;const rotPct=R.hubMean>0?rotAdj/R.hubMean*100:0;
   function row(step,val,delta,pct,refWS,color){
     const w=Math.round(Math.min(100,val/maxWS*100));
@@ -3031,10 +3045,10 @@ function updateWSChain(R){
     return`<div class="wsc-row"><div class="wsc-step">${step}</div><div class="wsc-val">${val.toFixed(2)} m/s</div><div class="wsc-delta" style="color:${pct>=0?'var(--grn)':'var(--red)'}">${pct>=0?'+':''}${pct.toFixed(1)}%</div><div class="wsc-bar"><div class="wsc-fill" style="width:${w}%;background:${barColor}"></div></div></div>`;
   }
 
-  // v25.0: Build the full flow model pipeline with sequential steps
+  // v28.0: Build the full flow model pipeline with CORRECT sequential steps
   let pipelineHTML=`<div style="font-size:8.5px;color:var(--muted);margin-bottom:6px;padding:4px 6px;background:var(--pan2);border-radius:3px;line-height:1.4">
     <b style="color:var(--acc)">Flow Model Pipeline (Sequential Order):</b><br>
-    ① Measured OWC → ② Log-law extrapolation → ③ MCP LT correction → ④ Rotor averaging<br>`;
+    ① OWC (measured) → ② MCP LT correction → ③ Log-law extrapolation → ④ Rotor averaging<br>`;
   if(R.bzEnabled){
     pipelineHTML+=`⑤ BZ orographic (remove mast SU → apply turbine SU) → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Wake model → ⑨ Site calibration<br>`;
     pipelineHTML+=`BZ mast SU = <b style="color:var(--acc)">${(BZ.mastSU||1).toFixed(4)}</b> · Mean turb SU = <b style="color:var(--acc)">${(BZ.speedups||[]).length?(BZ.speedups.reduce((s,v)=>s+v,0)/BZ.speedups.length).toFixed(4):'1.0000'}</b>`;
@@ -3044,10 +3058,11 @@ function updateWSChain(R){
   }
   pipelineHTML+=`<br>Heights: Mast <b style="color:var(--acc)">${R.mastH}m</b> → Hub <b style="color:var(--acc)">${R.hubHH}m</b> · z₀ = <b style="color:var(--acc)">${R.z0}</b>m · MCP factor = <b style="color:var(--acc)">${R.mcpFactor.toFixed(3)}</b>${R.rotorAvgUsed?` · Rotor-avg = <b style="color:var(--acc)">${(R.rotAvgFactor||1).toFixed(4)}</b>`:''}</div>`;
 
+  // v28.0 FIX: Correct step order — MCP applied FIRST at mast height, THEN log-law extrapolation
   let html=pipelineHTML+`
-    ${row('① Measured WS (OWC, mast '+R.mastH+'m)',R.mastMean,0,0,maxWS,'#d29922')}
-    ${row('② Hub height ('+R.hubHH+'m, log law)',R.hubMean,shearAdj,shearPct,maxWS,'#58a6ff')}
-    ${row('③ MCP LT corrected',R.hubMean*R.mcpFactor,mcpAdj,mcpPct,maxWS,'#58a6ff')}
+    ${row('① Measured WS (OWC, '+R.mastH+'m)',R.mastMean,0,0,maxWS,'#d29922')}
+    ${row('② MCP LT corrected ('+R.mastH+'m)',mcpMeanAtMast,mcpAdj,mcpPct,maxWS,'#58a6ff')}
+    ${row('③ Hub height ('+R.hubHH+'m, log law)',R.hubMean,shearFromMcp,shearPct,maxWS,'#58a6ff')}
     ${R.rotorAvgUsed?row('④ Rotor-averaged WS',R.rotorMeanWS||R.hubMean,rotAdj,rotPct,maxWS,'#7ee787'):''}
   `;
 
@@ -3171,9 +3186,56 @@ function drawMonthlyChart(mG,mN){const mn=['Jan','Feb','Mar','Apr','May','Jun','
 function drawDiurnalChart(byH){mkChart('diurnChart','line',{labels:Array.from({length:24},(_,i)=>i+':00'),datasets:[{data:byH.map(v=>v.toFixed(0)),borderColor:'#d29922',fill:true,backgroundColor:'rgba(210,153,34,.07)',borderWidth:1.5,pointRadius:0,tension:.3,label:'Mean Power kW'}]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}}});}
 
 // ── MCP ──
+// v28.0: Check if target and reference are the same source and warn
+function checkMCPSourceMatch(){
+  const target=$('mcpTarget')?.value||'wind';
+  const ref=$('mcpReference')?.value||'era5';
+  const isSame=(target==='ERA5'&&(ref==='era5'||ref==='era5t'))||
+               (target==='MERRA2'&&ref==='merra2')||
+               (target==='NEWA'&&ref==='newa_lt');
+  const warn=$('mcpSameSourceWarn');
+  if(warn)warn.style.display=isSame?'block':'none';
+}
+
 async function runMCP(){
   if(!S.wind||S.wind.speeds.length<100){alert('Load wind data first (ERA5 tab or Import)');return;}
-  const concMonths=new Set((S.wind.times||[]).map(t=>t?t.substring(0,7):null).filter(Boolean)).size;
+  // v28.0: Determine target data based on dropdown selection
+  const targetSel=$('mcpTarget').value;
+  let targetSpeeds, targetTimes;
+  if(targetSel==='wind'){
+    // Current active wind data
+    targetSpeeds=S.wind.speeds;
+    targetTimes=S.wind.times||[];
+  } else if(targetSel==='csv'){
+    if(!S.csvWind||!S.csvWind.speeds?.length){alert('Upload a CSV first (Wind Data tab)');return;}
+    targetSpeeds=S.csvWind.speeds;
+    targetTimes=S.csvWind.times||[];
+  } else {
+    // Check if the selected source has data
+    const srcData=S.windSources[targetSel];
+    if(!srcData||!srcData.speeds?.length){alert(`No ${targetSel} data available — download it first`);return;}
+    targetSpeeds=srcData.speeds;
+    targetTimes=srcData.times||[];
+  }
+  // v28.0: Check if target and reference are the same source
+  const refSel=$('mcpReference').value;
+  const isSameSource=(targetSel==='ERA5'&&(refSel==='era5'||refSel==='era5t'))||
+                     (targetSel==='MERRA2'&&refSel==='merra2')||
+                     (targetSel==='NEWA'&&refSel==='newa_lt');
+  if(isSameSource){
+    log('MCP: Target and Reference are the same source — setting MCP factor to 1.0 (no correction needed)','w');
+    S.mcpFactor=1.0;
+    $('mcpCW').textContent=(targetSpeeds.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0)).toFixed(2);
+    $('mcpLW').textContent=(targetSpeeds.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0)).toFixed(2);
+    $('mcpFc').textContent='1.000';$('mcpR2').textContent='1.00';
+    $('mcpPvals').innerHTML=`P50: <b style="color:var(--grn)">${(targetSpeeds.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0)).toFixed(2)} m/s</b><br><span style="color:var(--wrn)">⚠ Same source for target and reference — no MCP correction applied (factor=1.000)</span>`;
+    $('mcpSameSourceWarn').style.display='block';
+    $('mcpOut').style.display='block';
+    setProg('mcp',100,'✓ Same source — MCP factor=1.000');
+    return;
+  }
+  $('mcpSameSourceWarn').style.display='none';
+  const concMonths=new Set(targetTimes.map(t=>t?t.substring(0,7):null).filter(Boolean)).size;
   if(concMonths<3)log(`MCP warning: only ${concMonths} month(s) of concurrent data — MCP accuracy may be low (recommend ≥12 months)`,'w');
   if(concMonths>=3&&concMonths<12)log(`MCP note: ${concMonths} months concurrent. Longer periods give better regression.`,'i');
   const sy=parseInt($('mcpSy').value)||1991,ey=parseInt($('mcpEy').value)||2020;
@@ -3189,9 +3251,9 @@ async function runMCP(){
       setProg('mcp',5+70*(i+BATCH)/years.length,`${Math.min(i+BATCH,years.length)}/${years.length} years...`);
     }
     setProg('mcp',78,'Computing MCP...');
-    const ltV=ltSp.filter(v=>v>.5),concV=S.wind.speeds.filter(v=>v>.5);
+    const ltV=ltSp.filter(v=>v>.5),concV=targetSpeeds.filter(v=>v>.5);
     const cMean=concV.reduce((s,v)=>s+v,0)/Math.max(1,concV.length),ltMean=ltV.reduce((s,v)=>s+v,0)/Math.max(1,ltV.length);
-    const cMo=monthlyMeans(S.wind.speeds,S.wind.times||[]),ltMo=monthlyMeans(ltSp,ltTs);
+    const cMo=monthlyMeans(targetSpeeds,targetTimes),ltMo=monthlyMeans(ltSp,ltTs);
     const pairs=[];for(const[k,v]of Object.entries(cMo))if(ltMo[k])pairs.push([ltMo[k],v]);
     let factor=1,R2=.8,lrSlope=1,lrIntercept=0;
     if(meth==='linear'&&pairs.length>3){
@@ -6801,6 +6863,16 @@ async function runBZModel(){
   }
   if(!S.turbines.length){alert('Add turbines first');return;}
 
+  // v28.0: BZ computation timeout protection
+  const BZ_TIMEOUT_MS = 120000; // 2 minute hard timeout
+  const bzStartTime = Date.now();
+  const checkTimeout = () => {
+    if (Date.now() - bzStartTime > BZ_TIMEOUT_MS) {
+      throw new Error('BZ computation timed out (2 min). Try smaller terrain domain or fewer turbines.');
+    }
+  };
+
+  try { // v28.0: Wrap BZ computation in try-catch for timeout protection
   const{grid,lat0,lat1,lon0,lon1,ny,nx}=S.terrain;
   const hubH=parseFloat($('hubH').value)||120;
   // v27.0: Adaptive BZ grid size based on turbine count for performance
@@ -6843,6 +6915,7 @@ async function runBZModel(){
   setProg('bz',15,`FFT Engine: 2D FFT on ${useNy}×${useNx} terrain grid (Hanning + 2× zero-pad)...`);
   // Small pause to let UI update
   await new Promise(r=>setTimeout(r,10));
+  checkTimeout(); // v28.0: timeout check
 
   const fftResult=fft2D(h,useNy,useNx);
   const{Re,Im,py:fftPy,px:fftPx}=fftResult;
@@ -6850,6 +6923,7 @@ async function runBZModel(){
 
   setProg('bz',40,'FFT Engine: Pre-computing BZ spectrum...');
   await new Promise(r=>setTimeout(r,10));
+  checkTimeout(); // v28.0: timeout check
 
   // v26.0: Pre-compute the BZ spectrum ONCE — this is the key optimization
   // Instead of calling bzG() (with expensive Bessel K0/K1) for every point × sector,
@@ -6939,7 +7013,7 @@ async function runBZModel(){
   for(let si=0;si<nSect;si++){
     const dirDeg=(si+.5)*360/nSect; // center of sector
     // Progress update for large layouts
-    if(si%4===0){setProg('bz',60+si/nSect*30,`FFT Engine: Sector ${si+1}/${nSect}...`);await new Promise(r=>setTimeout(r,0));}
+    if(si%4===0){setProg('bz',60+si/nSect*30,`FFT Engine: Sector ${si+1}/${nSect}...`);await new Promise(r=>setTimeout(r,0));checkTimeout();}
     // Directional speedup at mast for this sector (v26.0: fast version)
     const mastDeltaDir=bzDeltaFast(precompMast,mx,my,dirDeg);
     // v20.0: Clamp mast sector speedup to physical range [0.5, 2.0]
@@ -7001,7 +7075,7 @@ async function runBZModel(){
       sgrid[i][j]=1+delta;
     }
     // Progress update every 10 rows
-    if(i%10===0){setProg('bz',70+20*i/vizNy,`Grid row ${i}/${vizNy}...`);await new Promise(r=>setTimeout(r,0));}
+    if(i%10===0){setProg('bz',70+20*i/vizNy,`Grid row ${i}/${vizNy}...`);await new Promise(r=>setTimeout(r,0));checkTimeout();}
   }
   BZ.grid=sgrid;
   BZ.gridVizNy=vizNy;BZ.gridVizNx=vizNx; // store for drawBZLayer
@@ -7137,6 +7211,15 @@ async function runBZModel(){
 
   // Hook into AEP if results exist
   if(S.results)log('Re-run analysis to apply BZ speedups to AEP calculation','w');
+  }catch(bzErr){
+    // v28.0: Catch BZ timeout or computation errors
+    setProg('bz',0,'BZ failed: '+bzErr.message);
+    log('BZ model error: '+bzErr.message,'e');
+    $('bzpt').textContent='Error: '+bzErr.message;
+    if(bzErr.message.includes('timed out')){
+      log('Tip: Reduce terrain domain size or use fewer turbines to speed up BZ computation','w');
+    }
+  }
 }
 
 // ── BZ SPEEDUP MAP (canvas) ────────────────────────────────────────────
@@ -9065,11 +9148,25 @@ async function downloadCORINE(){
   if(!T){alert('Download terrain first to define area bounds');return;}
   $('roughStat').textContent='Querying CORINE 2018 WFS...';
   const bbox=`${T.lon0.toFixed(4)},${T.lat0.toFixed(4)},${T.lon1.toFixed(4)},${T.lat1.toFixed(4)}`;
+  const origUrl=`https://land.copernicus.eu/mts/wfs/CLC2018?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=CLC2018&OUTPUTFORMAT=application/json&BBOX=${bbox},EPSG:4326&COUNT=1000`;
+  // v28.0: Try multiple CORS proxies as fallback
+  const corsProxies=[
+    '', // direct first
+    'https://corsproxy.io/?',
+    'https://api.allorigins.win/raw?url=',
+  ];
+  let r=null,usedProxy='';
+  for(const proxy of corsProxies){
+    try{
+      const url=proxy?proxy+encodeURIComponent(origUrl):origUrl;
+      r=await fetch(url,{signal:AbortSignal.timeout(15000)});
+      if(r.ok){usedProxy=proxy||'direct';break;}
+    }catch(e){continue;}
+  }
   try{
-    const url=`https://land.copernicus.eu/mts/wfs/CLC2018?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=CLC2018&OUTPUTFORMAT=application/json&BBOX=${bbox},EPSG:4326&COUNT=1000`;
-    const r=await fetch(url);
-    if(!r.ok)throw new Error('HTTP '+r.status);
+    if(!r||!r.ok)throw new Error('All CORS proxies failed (HTTP '+(r?r.status:'timeout')+')');
     const d=await r.json();
+    if(usedProxy!=='direct')log(`CORINE: Used CORS proxy (${usedProxy.substring(0,30)}...)`,'i');
     const colMap={1:'#fca5a5',2:'#fde68a',3:'#86efac',4:'#fef08a',5:'#166534',6:'#50b43c',7:'#9ca3af',8:'#3b82f6',9:'#1e64c8'};
     S.roughnessZones=[];
     let featureCount=0;
@@ -9109,36 +9206,59 @@ async function downloadESA_CCI_Auto(){
   let sampled=0;
   const nSect=16, sz=360/nSect;
   const clat=(T.lat0+T.lat1)/2, clon=(T.lon0+T.lon1)/2;
+  const points=[]; // v28.0: collect points for batch processing
 
   for(let i=0;i<nPts;i++){
     for(let j=0;j<nPts;j++){
       const lat=T.lat0+i*(T.lat1-T.lat0)/(nPts-1);
       const lon=T.lon0+j*(T.lon1-T.lon0)/(nPts-1);
-      try{
-        const url=`https://maps.elie.ucl.ac.be/CCI/viewer/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&QUERY_LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&SRS=EPSG:4326&INFO_FORMAT=application/json&WIDTH=1&HEIGHT=1&BBOX=${lon},${lat},${lon+0.001},${lat+0.001}&I=0&J=0`;
-        const r=await fetch(url,{signal:AbortSignal.timeout(5000)});
-        if(r.ok){
-          const d=await r.json();
-          const code=parseInt(d?.features?.[0]?.properties?.NB_LAB||d?.features?.[0]?.properties?.value||d?.features?.[0]?.properties?.GRAY_INDEX||0);
-          const z0=ESA_Z0[code]||0.1;
-          const dLat2=(T.lat1-T.lat0)/nPts/2;
-          const dLon2=(T.lon1-T.lon0)/nPts/2;
-          S.roughnessZones.push({
-            lu:`ESA_${code}`,z0,
-            col:z0>1?'#166534':z0>0.05?'#50b43c':z0>0.005?'#86efac':z0>0.001?'#fde68a':'#3b82f6',
-            pts:[{lat:lat-dLat2,lon:lon-dLon2},{lat:lat-dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon-dLon2}]
-          });
-          sampled++;
-          // Assign to sectors: compute bearing from site centre to this sample point
-          const dx=(lon-clon)*111320*Math.cos(clat*Math.PI/180);
-          const dy=(lat-clat)*111320;
-          const bearing=(Math.atan2(dx,dy)*180/Math.PI+360)%360;
-          const si=Math.floor(((bearing+sz/2)%360)/sz)%nSect;
-          sectorZ0s[si].push(z0);
-        }
-      }catch(e){}
+      // v28.0: Build point URL for batch processing
+      points.push({lat,lon,i,j});
     }
-    if(i%3===0){setProg('osm',5+i/nPts*70,`ESA sampling row ${i+1}/${nPts}...`);await new Promise(r=>setTimeout(r,10));}
+  }
+  // v28.0: Batch parallel sampling with CORS proxy fallback
+  const esaWmsBase='https://maps.elie.ucl.ac.be/CCI/viewer/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&QUERY_LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&SRS=EPSG:4326&INFO_FORMAT=application/json&WIDTH=1&HEIGHT=1';
+  const corsProxies=['','https://corsproxy.io/?','https://api.allorigins.win/raw?url='];
+  let corsProxyIdx=0; // start with direct, fallback to proxies
+  const BATCH_SIZE=10; // parallel requests per batch
+  for(let b=0;b<points.length;b+=BATCH_SIZE){
+    const batch=points.slice(b,b+BATCH_SIZE);
+    const results=await Promise.allSettled(batch.map(async(pt)=>{
+      const wmsUrl=`${esaWmsBase}&BBOX=${pt.lon},${pt.lat},${pt.lon+0.001},${pt.lat+0.001}&I=0&J=0`;
+      // Try with current CORS proxy
+      for(let cp=corsProxyIdx;cp<corsProxies.length;cp++){
+        try{
+          const url=corsProxies[cp]?corsProxies[cp]+encodeURIComponent(wmsUrl):wmsUrl;
+          const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+          if(r.ok){
+            if(cp!==corsProxyIdx)corsProxyIdx=cp; // remember working proxy
+            return{pt,data:await r.json()};
+          }
+        }catch(e){continue;}
+      }
+      return{pt,data:null};
+    }));
+    // Process results
+    for(const res of results){
+      if(res.status!=='fulfilled'||!res.value||!res.value.data)continue;
+      const{pt,data}=res.value;
+      const code=parseInt(data?.features?.[0]?.properties?.NB_LAB||data?.features?.[0]?.properties?.value||data?.features?.[0]?.properties?.GRAY_INDEX||0);
+      const z0=ESA_Z0[code]||0.1;
+      const dLat2=(T.lat1-T.lat0)/nPts/2;
+      const dLon2=(T.lon1-T.lon0)/nPts/2;
+      S.roughnessZones.push({
+        lu:`ESA_${code}`,z0,
+        col:z0>1?'#166534':z0>0.05?'#50b43c':z0>0.005?'#86efac':z0>0.001?'#fde68a':'#3b82f6',
+        pts:[{lat:pt.lat-dLat2,lon:pt.lon-dLon2},{lat:pt.lat-dLat2,lon:pt.lon+dLon2},{lat:pt.lat+dLat2,lon:pt.lon+dLon2},{lat:pt.lat+dLat2,lon:pt.lon-dLon2}]
+      });
+      sampled++;
+      const dx=(pt.lon-clon)*111320*Math.cos(clat*Math.PI/180);
+      const dy=(pt.lat-clat)*111320;
+      const bearing=(Math.atan2(dx,dy)*180/Math.PI+360)%360;
+      const si=Math.floor(((bearing+sz/2)%360)/sz)%nSect;
+      sectorZ0s[si].push(z0);
+    }
+    if(b%BATCH_SIZE===0){setProg('osm',5+b/points.length*70,`ESA sampling ${b}/${points.length}...`);await new Promise(r=>setTimeout(r,5));}
   }
 
   setProg('osm',80,'Building roughness zones & rose...');
@@ -9190,29 +9310,41 @@ async function downloadESA_CCI(){
   const nPts=20;
   S.roughnessZones=[];
   let sampled=0;
-  for(let i=0;i<nPts;i++){
-    for(let j=0;j<nPts;j++){
-      const lat=T.lat0+i*(T.lat1-T.lat0)/(nPts-1);
-      const lon=T.lon0+j*(T.lon1-T.lon0)/(nPts-1);
-      try{
-        const url=`https://maps.elie.ucl.ac.be/CCI/viewer/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&QUERY_LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&SRS=EPSG:4326&INFO_FORMAT=application/json&WIDTH=1&HEIGHT=1&BBOX=${lon},${lat},${lon+0.001},${lat+0.001}&I=0&J=0`;
-        const r=await fetch(url);
-        if(r.ok){
-          const d=await r.json();
-          const code=parseInt(d?.features?.[0]?.properties?.NB_LAB||d?.features?.[0]?.properties?.value||d?.features?.[0]?.properties?.GRAY_INDEX||0);
-          const z0=ESA_Z0[code]||0.1;
-          const dLat2=(T.lat1-T.lat0)/nPts/2;
-          const dLon2=(T.lon1-T.lon0)/nPts/2;
-          S.roughnessZones.push({
-            lu:`ESA_${code}`,z0,
-            col:z0>1?'#166534':z0>0.05?'#50b43c':z0>0.005?'#86efac':z0>0.001?'#fde68a':'#3b82f6',
-            pts:[{lat:lat-dLat2,lon:lon-dLon2},{lat:lat-dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon-dLon2}]
-          });
-          sampled++;
-        }
-      }catch(e){}
+  // v28.0: Batch parallel with CORS proxy fallback
+  const esaWmsBase='https://maps.elie.ucl.ac.be/CCI/viewer/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&QUERY_LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&SRS=EPSG:4326&INFO_FORMAT=application/json&WIDTH=1&HEIGHT=1';
+  const corsProxies=['','https://corsproxy.io/?','https://api.allorigins.win/raw?url='];
+  let corsProxyIdx=0;
+  const pts=[];
+  for(let i=0;i<nPts;i++)for(let j=0;j<nPts;j++)pts.push({lat:T.lat0+i*(T.lat1-T.lat0)/(nPts-1),lon:T.lon0+j*(T.lon1-T.lon0)/(nPts-1)});
+  const BATCH=10;
+  for(let b=0;b<pts.length;b+=BATCH){
+    const batch=pts.slice(b,b+BATCH);
+    const results=await Promise.allSettled(batch.map(async(pt)=>{
+      const wmsUrl=`${esaWmsBase}&BBOX=${pt.lon},${pt.lat},${pt.lon+0.001},${pt.lat+0.001}&I=0&J=0`;
+      for(let cp=corsProxyIdx;cp<corsProxies.length;cp++){
+        try{
+          const url=corsProxies[cp]?corsProxies[cp]+encodeURIComponent(wmsUrl):wmsUrl;
+          const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+          if(r.ok){if(cp!==corsProxyIdx)corsProxyIdx=cp;return{pt,data:await r.json()};}
+        }catch(e){continue;}
+      }
+      return{pt,data:null};
+    }));
+    for(const res of results){
+      if(res.status!=='fulfilled'||!res.value||!res.value.data)continue;
+      const{pt,data}=res.value;
+      const code=parseInt(data?.features?.[0]?.properties?.NB_LAB||data?.features?.[0]?.properties?.value||data?.features?.[0]?.properties?.GRAY_INDEX||0);
+      const z0=ESA_Z0[code]||0.1;
+      const dLat2=(T.lat1-T.lat0)/nPts/2;
+      const dLon2=(T.lon1-T.lon0)/nPts/2;
+      S.roughnessZones.push({
+        lu:`ESA_${code}`,z0,
+        col:z0>1?'#166534':z0>0.05?'#50b43c':z0>0.005?'#86efac':z0>0.001?'#fde68a':'#3b82f6',
+        pts:[{lat:pt.lat-dLat2,lon:pt.lon-dLon2},{lat:pt.lat-dLat2,lon:pt.lon+dLon2},{lat:pt.lat+dLat2,lon:pt.lon+dLon2},{lat:pt.lat+dLat2,lon:pt.lon-dLon2}]
+      });
+      sampled++;
     }
-    setProg('osm',i/nPts*100,`ESA sampling ${i+1}/${nPts}...`);
+    setProg('osm',b/pts.length*100,`ESA sampling ${b}/${pts.length}...`);
   }
   $('roughStat').textContent=`ESA CCI: ${sampled} samples · z₀ mapped`;
   redrawCanvas();drawRoughnessCanvas();log(`ESA CCI roughness: ${sampled} samples mapped to z₀`,'i');
