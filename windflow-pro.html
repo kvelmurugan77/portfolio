@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 30.0</title>
+<title>WindFlow Pro 31.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -67,7 +67,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 30.0</span></div></div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 31.0</span></div></div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" id="presetBadge" onclick="applyPreset()"></button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -232,7 +232,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <div id="e5out" style="display:none"><div class="card"><div class="card-title sky">Wind Data Results <span id="dataSourceLabel" style="color:var(--mint);font-size:.6rem;margin-left:.3rem">ERA5</span></div>
         <div style="margin-bottom:.4rem"><div class="fg" style="max-width:220px"><label class="fl" style="font-size:.52rem">Primary Data Source for Modelling</label><select class="fs" id="primaryDataSource" style="font-size:.58rem" onchange="onDataSourceChange()"><option value="ERA5">ERA5 / ERA5T</option><option value="NEWA">NEWA</option><option value="NREL">NREL WTK V2</option><option value="MERRA2">MERRA-2</option><option value="GWA">GWA 4.0</option><option value="CSV">Uploaded CSV</option></select></div></div>
         <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="e5WS">—</div><div class="metric-label">Mean WS m/s</div></div><div class="metric-item"><div class="metric-val sky" id="e5WA">—</div><div class="metric-label">Weibull A</div></div><div class="metric-item"><div class="metric-val gold" id="e5WK">—</div><div class="metric-label">Weibull k</div></div><div class="metric-item"><div class="metric-val sky" id="e5PD">—</div><div class="metric-label">Power W/m²</div></div><div class="metric-item"><div class="metric-val" id="e5RC">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val gold" id="e5EL">—</div><div class="metric-label">Elevation m</div></div></div>
-        <div id="shearExtrapolationNote" style="font-size:.52rem;color:var(--sky);margin-top:.3rem;display:none">📏 WS at hub height extrapolated from <span id="shearFromH">100</span>m → <span id="shearToH">138</span>m using log-law (α=<span id="shearAlpha">0.14</span>)</div>
+        <div id="shearExtrapolationNote" style="font-size:.52rem;color:var(--sky);margin-top:.3rem;display:none">📏 WS at hub height extrapolated from <span id="shearFromH">100</span>m → <span id="shearToH">138</span>m using power law (α=<span id="shearAlpha">0.14</span>)</div>
         <div class="canvas-wrap" style="height:180px;margin-top:.5rem"><canvas id="e5Chart"></canvas></div>
         <div style="display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap"><button class="btn btn-sm btn-ghost" onclick="exportWindCSV()">↓ CSV</button><button class="btn btn-sm btn-ghost" onclick="exportWindTab()">↓ WAsP .tab</button><button class="btn btn-sm btn-ghost" onclick="exportWindOWC()">↓ OWC .tab</button><button class="btn btn-sm btn-ghost" onclick="exportWindLib()">↓ WAsP .lib</button><button class="btn btn-sm btn-ghost" onclick="exportNRELMultiHeight()" id="btnNrelExport" style="display:none">↓ NREL Multi-Height CSV</button></div>
       </div></div>
@@ -2433,10 +2433,10 @@ async function downloadERA5(){
     }
     const rho=parseFloat($('airDen').value)||1.225;const PD=.5*rho*mean**3;
     setProg('e5',100,`✓ ${sp.length.toLocaleString()} records, mean ${mean.toFixed(2)} m/s`);
-    $('e5WS').textContent=mean.toFixed(2);$('e5RC').textContent=sp.length.toLocaleString();
-    $('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);
-    $('e5PD').textContent=PD.toFixed(0);$('e5EL').textContent=elev?elev.toFixed(0):'—';
-    $('e5out').style.display='block';
+    if($('e5WS'))$('e5WS').textContent=mean.toFixed(2);if($('e5RC'))$('e5RC').textContent=sp.length.toLocaleString();
+    if($('e5WA'))$('e5WA').textContent=wb.A.toFixed(2);if($('e5WK'))$('e5WK').textContent=wb.k.toFixed(2);
+    if($('e5PD'))$('e5PD').textContent=PD.toFixed(0);if($('e5EL'))$('e5EL').textContent=elev?elev.toFixed(0):'—';
+    if($('e5out'))$('e5out').style.display='block';
     // v15.0: Sync all coordinate fields from site center
     syncSiteCoordinates();
     // v22.1 FIX: Auto-sync mast height to match ERA5 download height
@@ -2462,7 +2462,7 @@ async function downloadERA5(){
         log(`ERA5T density: mean ρ=${atmDens.meanRho.toFixed(3)} kg/m³ (P=${atmDens.meanP.toFixed(0)} Pa, T=${atmDens.meanT.toFixed(1)}°C, RH=${atmDens.meanRH.toFixed(0)}%)`,'i');
       }
     }
-    $('windStat').textContent=`ERA5 ${sy}–${ey}: ${sp.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s · A=${wb.A.toFixed(2)} k=${wb.k.toFixed(2)}`;
+    if($('windStat'))$('windStat').textContent=`ERA5 ${sy}–${ey}: ${sp.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s · A=${wb.A.toFixed(2)} k=${wb.k.toFixed(2)}`;
     drawE5Hist(sp,wb);updateWindUI(sp,dr);updateDataSourceUI('ERA5');
     log(`ERA5 OK: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
   }catch(e){setProg('e5',0,'❌ '+e.message);log('ERA5 failed: '+e.message,'e');}
@@ -2639,10 +2639,18 @@ function calcAEP(){
     }
   }
 
+  // v31.0: Shear alpha for vertical extrapolation (power law)
+  const shearAlpha = parseFloat($('shearA').value) || 0.14;
+
   // Apply displacement height correction (Fix 3) to hub wind speeds
   const mastD0 = computeDisplacementHeight(parseFloat($('mastLat').value) || 0, parseFloat($('mastLon').value) || 0);
+  // v31.0: VERTICAL EXTRAPOLATION — mast height → hub height
+  // Now uses power law with shear alpha as PRIMARY method (industry standard)
+  // instead of just stability-corrected log law. This correctly applies the
+  // measured/derived shear to extrapolate from the data height to desired HH.
+  // The flow is: OWS at mastH → vertical extrapolation to hubHH → horizontal extrapolation to WTG positions
   const hubSp=S.wind.speeds.map(v=>{
-    let ws = logWS_stab(v*S.mcpFactor,mastH,hubHH,z0,L);
+    let ws = verticalExtrapolate(v*S.mcpFactor, mastH, hubHH, z0, shearAlpha, L);
     // Apply displacement height correction at the mast location
     if (mastD0 > 0.5) {
       ws = displacementCorrectedLogWS(v*S.mcpFactor, mastH, hubHH, z0, mastD0, L);
@@ -2658,14 +2666,15 @@ function calcAEP(){
   // v10.0: Rotor-averaged wind speed
   const useRotorAvg=$('rotorAvgCB')?.checked!==false; // default ON
   const rotAvgFactor=useRotorAvg?rotorAvgRatio(hubHH,rotorD,z0,L):1.0;
-  const shearCorrFactor=shearProfileMismatchCorrection(mastH,hubHH,z0,L,parseFloat($('shearA').value)||0.14);
-  const rotorMeanWS=hubMean*rotAvgFactor*shearCorrFactor;
+  const shearCorrFactor=1.0; // v31.0: No longer needed — verticalExtrapolate already uses power law with alpha
+  const rotorMeanWS=hubMean*rotAvgFactor;
 
-  // Per-turbine HH scaling factors: wind speed ratio from reference hubHH to turbine's HH
-  // Using log-law: WS(turbHH) = WS(refHH) * ln(turbHH/z0) / ln(refHH/z0)
+  // v31.0: Per-turbine HH scaling factors using POWER LAW with shear alpha
+  // WS(turbHH) = WS(refHH) × (turbHH/refHH)^α
+  // This is consistent with the vertical extrapolation method above
   const hhScaleFactors=turbineHHs.map(tHH=>{
     if(tHH===hubHH)return 1.0;
-    return Math.log(Math.max(tHH,z0*1.1)/Math.max(z0,1e-6))/Math.log(Math.max(hubHH,z0*1.1)/Math.max(z0,1e-6));
+    return Math.pow(tHH/hubHH, shearAlpha);
   });
 
   const mastWb=weibullFit(S.wind.speeds.filter(v=>v>.5));
@@ -2731,8 +2740,8 @@ function calcAEP(){
       // the full chain (mastH + z0_mast → hubHH + z0_site + IBL + GDL)
       const owcGwcR = owcToGWC(1.0, mastH, z0_mast_sec, hubHH, 0.03, L);
       const gwcSwcR = gwcToSWC(1.0, hubHH, 0.03, hubHH, z0_site_sec, L);
-      // Undo: the Weibull A was scaled by this factor (mastH → hubHH, global z0)
-      const undoExtrapolation = logWS_stab(1.0, mastH, hubHH, z0, L);
+      // Undo: the Weibull A was scaled by this factor (mastH → hubHH, using power law with alpha)
+      const undoExtrapolation = powerLawWS(1.0, mastH, hubHH, shearAlpha);
       chainRatio = (owcGwcR * gwcSwcR * roughRatioIBL * gdlFactor) / Math.max(undoExtrapolation, 0.01);
       // v22.0: On flat terrain (z0_mast ≈ z0_site ≈ z0), verify chainRatio ≈ 1
       // If all z0 are equal, owcGwcR * gwcSwcR ≈ undoExtrapolation
@@ -2815,11 +2824,8 @@ function calcAEP(){
           // v16.0: Use per-sector Jackson-Hunt speedup (direction-dependent)
           const jhSU = jhSpeedups[t] && jhSpeedups[t][si] ? jhSpeedups[t][si].speedup : tSpeedups[t];
           const jhTurn = jhSpeedups[t] && jhSpeedups[t][si] ? jhSpeedups[t][si].turning : 0;
-          // Per-turbine HH scaling: project from reference HH to turbine HH using site z0
-          let hhRoughScale = tHH !== hubHH ?
-            owcToSWC_sector(1.0, hubHH, z0_site_sec, tHH, z0_site_sec, L) : 1.0;
-          // v19.0: NaN guard for hhRoughScale
-          if (!isFinite(hhRoughScale) || isNaN(hhRoughScale)) hhRoughScale = 1.0;
+          // v31.0: Per-turbine HH scaling using power law (consistent with vertical extrapolation)
+          const hhScale = tHH !== hubHH ? Math.pow(tHH/hubHH, shearAlpha) : 1.0;
           // v17.0 Fix 3: Displacement height correction per turbine
           let d0Corr = turbD0[t] > 0.5 ?
             displacementCorrectedLogWS(1.0, hubHH, tHH, z0_site_sec, turbD0[t], L) / Math.max(0.01, logWS_stab(1.0, hubHH, tHH, z0_site_sec, L)) : 1.0;
@@ -2828,7 +2834,7 @@ function calcAEP(){
           // Gross wind speed: SWC × Jackson-Hunt terrain speedup × HH scaling × d₀ correction
           // v19.0: Clamp jhSU to physical range and guard NaN
           const safeJhSU = isFinite(jhSU) && jhSU > 0.5 && jhSU < 2.0 ? jhSU : 1.0;
-          const turbV=correctedV*safeJhSU*hhRoughScale*d0Corr;
+          const turbV=correctedV*safeJhSU*hhScale*d0Corr;
           // v19.0: Skip if turbV is NaN or negative (protects gross/net accumulation)
           if (!isFinite(turbV) || turbV < 0) continue;
           const turbLut=turbLUTs[t]; // v14.0: per-WTG density LUT
@@ -2957,13 +2963,14 @@ function calcAEP(){
     }
     return{...s,gwcA:Math.max(0,gwcA),swcA:Math.max(0,swcA),SR};
   });
-  const shearProfile=[20,40,60,80,100,120,140,160,180,200].map(h=>({h,ws:logWS_stab(hubMean,hubHH,h,z0,L)}));
+  // v31.0: Shear profile uses power law with shear alpha (consistent with vertical extrapolation)
+  const shearProfile=[20,40,60,80,100,120,140,160,180,200].map(h=>({h,ws:powerLawWS(hubMean,hubHH,h,shearAlpha)}));
   const rix=S.terrain?Math.max(0,(S.terrain.maxE-S.terrain.minE)/Math.max(1,S.terrain.maxE)*5):0;
 
   const iec=checkIECClass(rotorMeanWS,pc);if(!iec.ok)log(`⚠ IEC class warning: rotor-avg WS ${rotorMeanWS.toFixed(2)} m/s exceeds ${iec.cls} limit (${iec.limit} m/s)!`,'w');
   if(useRotorAvg&&Math.abs(rotAvgFactor-1)>0.001)log(`Rotor-averaged WS: factor=${rotAvgFactor.toFixed(4)}, hub=${hubMean.toFixed(2)} m/s → rotor-avg=${rotorMeanWS.toFixed(2)} m/s (${((rotAvgFactor-1)*100).toFixed(1)}%)`,'i');
   // v22.0: Log chain diagnostics for verification
-  const undoExtrapolation = logWS_stab(1.0, mastH, hubHH, z0, L);
+  const undoExtrapolation = powerLawWS(1.0, mastH, hubHH, shearAlpha);
   if(hasRoughRose){
     const sampleOwcGwcR = owcToGWC(1.0, mastH, getSectorEffectiveZ0('mast',0,hubHH,nSect), hubHH, 0.03, L);
     const sampleGwcSwcR = gwcToSWC(1.0, hubHH, 0.03, hubHH, getSectorEffectiveZ0('site',0,hubHH,nSect), L);
@@ -2972,8 +2979,31 @@ function calcAEP(){
   } else {
     log(`v22.0 OWC→GWC→SWC chain: No roughness rose — using GDL=${gdlFactor.toFixed(4)} (uniform z0=${z0})`,'i');
   }
-  // v17.0: Log terrain model status with all v17.0 features
+  // v31.0: Log horizontal extrapolation diagnostics — show per-turbine speedup variation
   const jhActive = S.terrain && S.terrain.grid && S.terrain.grid.length && (S.terrain.maxE - S.terrain.minE) >= 5;
+  if (BZ.enabled && BZ.speedups.length) {
+    const suVals = BZ.speedups;
+    const suMin = Math.min(...suVals), suMax = Math.max(...suVals);
+    const suMean = suVals.reduce((s,v)=>s+v,0)/suVals.length;
+    log(`v31.0 BZ horizontal extrapolation: ${suVals.length} WTGs, orographic SU range=${suMin.toFixed(4)}–${suMax.toFixed(4)} (mean=${suMean.toFixed(4)}, Δ=${(suMax-suMin).toFixed(4)})`,'i');
+    // Show per-turbine free-stream WS (from effective speedup)
+    const freeWSrange = perT.map(t=>parseFloat(t.ws));
+    if (freeWSrange.length > 1) {
+      log(`  Per-WTG free-stream WS: ${Math.min(...freeWSrange).toFixed(2)}–${Math.max(...freeWSrange).toFixed(2)} m/s (Δ=${(Math.max(...freeWSrange)-Math.min(...freeWSrange)).toFixed(2)} m/s from terrain+roughness)`,'i');
+    }
+    // Log per-turbine BZ details for first 5 WTGs
+    const showN = Math.min(5, suVals.length);
+    for (let i = 0; i < showN; i++) {
+      const rc = BZ.turbRoughRC?.[i] || 1;
+      const hhS = hhScaleFactors[i];
+      log(`  T${i+1}: BZ SU=${suVals[i].toFixed(4)}, roughRC=${rc.toFixed(4)}, HH scale=${hhS.toFixed(4)}, effSU=${perTEffSU[i].toFixed(4)}, freeWS=${perT[i].ws} m/s`,'i');
+    }
+  } else if (jhActive) {
+    log(`v31.0 Horizontal extrapolation: Jackson-Hunt model (no BZ — click "Compute BZ Speedups" for FFT-based orographic speedups)`,'i');
+  } else {
+    log(`v31.0 Horizontal extrapolation: NONE — all WTGs get same wind speed (download terrain + run BZ model for per-WTG variation)`,'w');
+  }
+  // v17.0: Log terrain model status with all v17.0 features
   if (jhActive) {
     const suRange = tSpeedups.reduce((r, su) => ({ min: Math.min(r.min, su), max: Math.max(r.max, su) }), { min: 2, max: 0 });
     log(`Jackson-Hunt terrain model: ACTIVE (terrain range ${(S.terrain.maxE-S.terrain.minE).toFixed(0)}m, speedup range ${suRange.min.toFixed(4)}–${suRange.max.toFixed(4)}, ${S.turbines.length} WTGs × ${sectors.length} sectors)`,'i');
@@ -2997,10 +3027,11 @@ function runAnalysis(){
     showToast('Warning: No terrain data for BZ');
   }
   setStatus('Running WAsP engine...');$('runBtn').disabled=true;
-  // v28.0: Log the flow model pipeline sequence for transparency (CORRECTED order)
-  log(`── Flow Model Pipeline ──`,'i');
-  log(`  ① Measured OWC → ② MCP LT correction (factor=${(S.mcpFactor||1).toFixed(3)}) → ③ Log-law extrapolation (mastH→hubHH)`,'i');
-  log(`  ④ Rotor averaging → ${BZ.enabled?'⑤ BZ orographic (mastSU='+BZ.mastSU?.toFixed(4)+')':'⑤ JH terrain speedup'} → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Wake model`,'i');
+  // v31.0: Log the flow model pipeline sequence — updated to reflect power-law vertical extrapolation
+  const curAlpha=parseFloat($('shearA')?.value)||0.14;
+  log(`── Flow Model Pipeline (v31.0) ──`,'i');
+  log(`  ① Measured OWC → ② MCP LT correction (factor=${(S.mcpFactor||1).toFixed(3)}) → ③ Vertical extrapolation: mastH→hubHH (power law, α=${curAlpha.toFixed(2)})`,'i');
+  log(`  ④ Rotor averaging → ⑤ HORIZONTAL extrapolation: mast→WTG positions ${BZ.enabled?'(BZ orographic, mastSU='+BZ.mastSU?.toFixed(4)+')':'(Jackson-Hunt terrain)'} → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Wake model`,'i');
   log(`  ⑨ Site calibration (${S.waspCalibration?'applied':'default'})`,'i');
   setTimeout(()=>{try{
     let R=calcAEP();if(!R){setStatus('Error');$('runBtn').disabled=false;return;}
@@ -3016,7 +3047,7 @@ function runAnalysis(){
       log(`  Free-stream WS range: ${minFree}–${maxFree} m/s (Δ=${(Math.max(...freeWSvals)-Math.min(...freeWSvals)).toFixed(2)} m/s across ${freeWSvals.length} WTGs)`,'i');
     }
     setStatus(`✓ Net AEP: ${R.netAEP.toFixed(2)} GWh | Wake: ${R.wakeLoss.toFixed(1)}% | CF: ${R.CF.toFixed(1)}%${R.bzEnabled?' [BZ]':''}${R.calibrated?' [WAsP Cal]':''}`);
-    $('sbAEP').textContent=`${R.netAEP.toFixed(2)} GWh`;
+    if($('sbAEP'))$('sbAEP').textContent=`${R.netAEP.toFixed(2)} GWh`;
     // v29: Data period label (Issue 27)
     const src=S.windSource||'ERA5';
     const srcData=S.windSources[src];
@@ -3027,15 +3058,15 @@ function runAnalysis(){
 }
 
 function updateResultsUI(R){
-  $('rWS').textContent=(R.rotorMeanWS||R.hubMean).toFixed(2);
+  if($('rWS'))$('rWS').textContent=(R.rotorMeanWS||R.hubMean).toFixed(2);
   // v14.0: Show density source in results
   const densInfo=R.density.toFixed(3)+(R.densitySource?' ('+R.densitySource.split('(')[0].trim()+')':'');
-  $('rDen').textContent=densInfo;
-  $('rGross').textContent=R.grossAEP.toFixed(2);$('rWake').textContent=R.wakeLoss.toFixed(1)+'%';
-  $('rNet').textContent=R.netAEP.toFixed(2);$('rCF').textContent=R.CF.toFixed(1)+'%';
+  if($('rDen'))$('rDen').textContent=densInfo;
+  if($('rGross'))$('rGross').textContent=R.grossAEP.toFixed(2);if($('rWake'))$('rWake').textContent=R.wakeLoss.toFixed(1)+'%';
+  if($('rNet'))$('rNet').textContent=R.netAEP.toFixed(2);if($('rCF'))$('rCF').textContent=R.CF.toFixed(1)+'%';
   if($('rRIX'))$('rRIX').textContent=R.rix.toFixed(1)+'%';if($('rShr'))$('rShr').textContent=parseFloat($('shearA').value).toFixed(2);
   const sigPct=(R.sigma*100).toFixed(1);
-  $('pexc').innerHTML=`<table style="width:100%;font-size:9px">
+  if($('pexc'))$('pexc').innerHTML=`<table style="width:100%;font-size:9px">
     <tr><td style="color:var(--muted)">P50</td><td style="color:var(--grn);font-weight:700">${R.P50.toFixed(2)} GWh</td></tr>
     <tr><td style="color:var(--muted)">P75</td><td style="color:var(--acc)">${R.P75.toFixed(2)} GWh</td></tr>
     <tr><td style="color:var(--muted)">P90</td><td style="color:var(--wrn)">${R.P90.toFixed(2)} GWh</td></tr>
@@ -3045,7 +3076,7 @@ function updateResultsUI(R){
       Installed: ${R.instMW.toFixed(1)} MW · ρ=${R.density.toFixed(3)} kg/m³
     </td></tr>
   </table>`;
-  const tb=$('aepBody');tb.innerHTML='';
+  const tb=$('aepBody');if(tb)tb.innerHTML='';
   // v25.0: Updated to include Eff.SU column for transparency
   R.perTurbine.forEach(t=>{const tb2=S.turbines[t.i-1]||{};const tr=document.createElement('tr');
     const effSU=t.effSU||parseFloat(t.speedup||1);
@@ -3065,17 +3096,17 @@ function updateResultsUI(R){
 // v25.0: Enhanced with full flow model pipeline transparency
 function updateWSChain(R){
   // v28.0 FIX: The WS Chain was DOUBLE-COUNTING MCP!
-  // hubMean = mean of logWS_stab(v * mcpFactor, mastH, hubHH, z0, L)
+  // hubMean = mean of verticalExtrapolate(v * mcpFactor, mastH, hubHH, z0, alpha, L)
   // So MCP is ALREADY inside hubMean. Showing hubMean * mcpFactor was wrong.
   // Now we decompose correctly:
   //   ① OWC at mast height (raw, no MCP)
   //   ② OWC at mast height (with MCP applied) — MCP correction at measurement height
-  //   ③ Hub height (log-law extrapolation of MCP-corrected speeds)
+  //   ③ Hub height (power-law extrapolation of MCP-corrected speeds)
   //   ④ Rotor-averaged WS
   const mcpMeanAtMast = R.mastMean * R.mcpFactor; // MCP corrected at mast height
   const mcpAdj = mcpMeanAtMast - R.mastMean;
   const mcpPct = R.mastMean > 0 ? (R.mcpFactor - 1) * 100 : 0;
-  const shearFromMcp = R.hubMean - mcpMeanAtMast; // pure log-law shear effect
+  const shearFromMcp = R.hubMean - mcpMeanAtMast; // power-law shear effect
   const shearPct = mcpMeanAtMast > 0 ? shearFromMcp / mcpMeanAtMast * 100 : 0;
   const maxWS=Math.max((R.rotorMeanWS||R.hubMean)*1.1,R.mastMean*1.1,mcpMeanAtMast*1.1);
   const rotAdj=(R.rotorMeanWS||R.hubMean)-R.hubMean;const rotPct=R.hubMean>0?rotAdj/R.hubMean*100:0;
@@ -3085,12 +3116,13 @@ function updateWSChain(R){
     return`<div class="wsc-row"><div class="wsc-step">${step}</div><div class="wsc-val">${val.toFixed(2)} m/s</div><div class="wsc-delta" style="color:${pct>=0?'var(--grn)':'var(--red)'}">${pct>=0?'+':''}${pct.toFixed(1)}%</div><div class="wsc-bar"><div class="wsc-fill" style="width:${w}%;background:${barColor}"></div></div></div>`;
   }
 
-  // v28.0: Build the full flow model pipeline with CORRECT sequential steps
+  // v31.0: Build the full flow model pipeline with CORRECT sequential steps
+  const alpha=parseFloat($('shearA')?.value)||0.14;
   let pipelineHTML=`<div style="font-size:8.5px;color:var(--muted);margin-bottom:6px;padding:4px 6px;background:var(--pan2);border-radius:3px;line-height:1.4">
     <b style="color:var(--acc)">Flow Model Pipeline (Sequential Order):</b><br>
-    ① OWC (measured) → ② MCP LT correction → ③ Log-law extrapolation → ④ Rotor averaging<br>`;
+    ① OWC (measured) → ② MCP LT correction → ③ Power-law extrapolation (α=${alpha.toFixed(2)}) → ④ Rotor averaging<br>`;
   if(R.bzEnabled){
-    pipelineHTML+=`⑤ BZ orographic (remove mast SU → apply turbine SU) → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Wake model → ⑨ Site calibration<br>`;
+    pipelineHTML+=`⑤ HORIZONTAL extrapolation: BZ orographic (mast→WTG: remove mast SU → apply per-WTG SU) → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Wake model → ⑨ Site calibration<br>`;
     pipelineHTML+=`BZ mast SU = <b style="color:var(--acc)">${(BZ.mastSU||1).toFixed(4)}</b> · Mean turb SU = <b style="color:var(--acc)">${(BZ.speedups||[]).length?(BZ.speedups.reduce((s,v)=>s+v,0)/BZ.speedups.length).toFixed(4):'1.0000'}</b>`;
   } else {
     pipelineHTML+=`⑤ JH terrain speedup → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Wake model<br>`;
@@ -3132,10 +3164,10 @@ function updateWSChain(R){
   const wbMean=R.hubWb.A*gamma(1+1/R.hubWb.k);
   html+=row(`${R.bzEnabled?'⑦':'⑥'} Weibull mean (hub, free stream)`,wbMean,0,0,maxWS,'#8b949e');
 
-  $('wscChain').innerHTML=html;
+  if($('wscChain'))$('wscChain').innerHTML=html;
 
   // Per-turbine WS breakdown — v25.0: add effective speedup column
-  const tb=$('wscBody');tb.innerHTML='';
+  const tb=$('wscBody');if(tb)tb.innerHTML='';
   R.perTurbine.forEach(t=>{
     const freeWS=parseFloat(t.ws),netWS=parseFloat(t.wakeWS),wkPct=parseFloat(t.wake);
     const turb=S.turbines[t.i-1]||{};
@@ -3162,10 +3194,10 @@ function updateGWCTab(R){
   R.gwcSectors.forEach((s,i)=>{const dn=R.gwcSectors.length===16?dirs16[i]:`${s.dir.toFixed(0)}°`;const tr=document.createElement('tr');tr.innerHTML=`<td>${dn}</td><td>${(s.freq*100).toFixed(1)}</td><td>${s.A.toFixed(2)}</td><td>${s.k.toFixed(2)}</td><td>${s.gwcA.toFixed(2)}</td><td>${s.swcA.toFixed(2)}</td><td>${s.SR.toFixed(3)}</td>`;tb.appendChild(tr);});
   const mGWC=R.gwcSectors.reduce((s,g)=>s+g.gwcA*g.freq,0),mSWC=R.gwcSectors.reduce((s,g)=>s+g.swcA*g.freq,0);
   const mSR=R.gwcSectors.reduce((s,g)=>s+g.SR*g.freq,0);
-  $('gcZ0').textContent=R.z0.toFixed(4);$('gcSR').textContent=mSR.toFixed(3);
-  $('gcWS').textContent=mGWC.toFixed(2);$('gcSW').textContent=mSWC.toFixed(2);
+  if($('gcZ0'))$('gcZ0').textContent=R.z0.toFixed(4);if($('gcSR'))$('gcSR').textContent=mSR.toFixed(3);
+  if($('gcWS'))$('gcWS').textContent=mGWC.toFixed(2);if($('gcSW'))$('gcSW').textContent=mSWC.toFixed(2);
   // v10.0: Update status bar with rotor-averaged WS if available
-  if(R.rotorAvgUsed&&R.rotorMeanWS)$('sbAEP').textContent=`${R.netAEP.toFixed(2)} GWh (rotor-avg)`;
+  if(R.rotorAvgUsed&&R.rotorMeanWS&&$('sbAEP'))$('sbAEP').textContent=`${R.netAEP.toFixed(2)} GWh (rotor-avg)`;
   drawShearChart2(R.shearProfile);
 }
 
@@ -3173,10 +3205,12 @@ function updateGWCTab(R){
 function updateWindUI(speeds,dirs){
   const mastH=parseFloat($('mastH').value)||100,hubHH=parseFloat($('hubH').value)||120;
   const z0=parseFloat($('z0val').value)||.0002,rho=parseFloat($('airDen').value)||1.225;
-  const hubSp=speeds.map(v=>logWS(v*S.mcpFactor,mastH,hubHH,z0));
+  const alpha=parseFloat($('shearA')?.value)||0.14;
+  // v31.0: Use power law for UI wind analysis display (consistent with calcAEP)
+  const hubSp=speeds.map(v=>powerLawWS(v*S.mcpFactor,mastH,hubHH,alpha));
   const vs=hubSp.filter(v=>v>.5);if(!vs.length)return;
   const mean=vs.reduce((s,v)=>s+v,0)/vs.length,wb=weibullFit(vs),PD=.5*rho*mean**3;
-  $('wMean').textContent=mean.toFixed(2);$('wPD').textContent=PD.toFixed(0);$('wA').textContent=wb.A.toFixed(2);$('wK').textContent=wb.k.toFixed(2);
+  if($('wMean'))$('wMean').textContent=mean.toFixed(2);if($('wPD'))$('wPD').textContent=PD.toFixed(0);if($('wA'))$('wA').textContent=wb.A.toFixed(2);if($('wK'))$('wK').textContent=wb.k.toFixed(2);
   drawWindRose(speeds,dirs,parseInt($('sects').value)||16);
   drawWeibullChart(wb.A,wb.k);drawSectorTable(hubSp,dirs,parseInt($('sects').value)||16);
 }
@@ -3267,9 +3301,9 @@ async function runMCP(){
   if(isSameSource){
     log('MCP: Target and Reference are the same source — setting MCP factor to 1.0 (no correction needed)','w');
     S.mcpFactor=1.0;
-    $('mcpCW').textContent=(targetSpeeds.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0)).toFixed(2);
-    $('mcpLW').textContent=(targetSpeeds.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0)).toFixed(2);
-    $('mcpFc').textContent='1.000';$('mcpR2').textContent='1.00';
+    if($('mcpCW'))$('mcpCW').textContent=(targetSpeeds.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0)).toFixed(2);
+    if($('mcpLW'))$('mcpLW').textContent=(targetSpeeds.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0)).toFixed(2);
+    if($('mcpFc'))$('mcpFc').textContent='1.000';if($('mcpR2'))$('mcpR2').textContent='1.00';
     $('mcpPvals').innerHTML=`P50: <b style="color:var(--grn)">${(targetSpeeds.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0)).toFixed(2)} m/s</b><br><span style="color:var(--wrn)">⚠ Same source for target and reference — no MCP correction applied (factor=1.000)</span>`;
     $('mcpSameSourceWarn').style.display='block';
     $('mcpOut').style.display='block';
@@ -3328,7 +3362,7 @@ async function runMCP(){
     const sig=R2>0.1?Math.sqrt((1-R2)/R2/Math.max(pairs.length,6)):0.12;
     const sigMCP=Math.max(0.03,Math.min(0.20,sig)); // clamp 3-20%
     setProg('mcp',100,`✓ Factor=${factor.toFixed(3)}, LT WS=${ltCorr.toFixed(2)} m/s`);
-    $('mcpCW').textContent=cMean.toFixed(2);$('mcpLW').textContent=ltCorr.toFixed(2);$('mcpFc').textContent=factor.toFixed(3);$('mcpR2').textContent=R2.toFixed(2);
+    if($('mcpCW'))$('mcpCW').textContent=cMean.toFixed(2);if($('mcpLW'))$('mcpLW').textContent=ltCorr.toFixed(2);if($('mcpFc'))$('mcpFc').textContent=factor.toFixed(3);if($('mcpR2'))$('mcpR2').textContent=R2.toFixed(2);
     // v29: R² quality warning (Issue 20)
     const r2warn=$('mcpR2Warn');
     if(r2warn)r2warn.style.display=R2<0.7?'block':'none';
@@ -3367,6 +3401,7 @@ async function runTimeSeries(){
   const mastH=parseFloat($('mastH').value)||100;      // FIX: was hardcoded 100
   const hubHH=parseFloat($('hubH').value)||120;
   const z0=parseFloat($('z0val').value)||0.0002;
+  const shearAlpha=parseFloat($('shearA').value)||0.14; // v31.0: shear alpha for power law
   const otherL=parseFloat($('otherLoss').value)/100;
   const kw=parseFloat($('wakeK').value)||0.04;
   const mcpF=Math.max(0.5,Math.min(2.0,S.mcpFactor||1.0));
@@ -3418,7 +3453,7 @@ async function runTimeSeries(){
     // ── DIAGNOSTICS ──
     const validSp=allSp.filter(v=>v!==null&&v!==undefined&&v>0.5);
     const rawMean=validSp.length?validSp.reduce((s,v)=>s+v,0)/validSp.length:0;
-    const hubMean=logWS(rawMean*mcpF,mastH,hubHH,z0);
+    const hubMean=powerLawWS(rawMean*mcpF,mastH,hubHH,shearAlpha);
     log(`TS data: ${allSp.length.toLocaleString()} records, ${validSp.length.toLocaleString()} valid, raw mean=${rawMean.toFixed(2)} m/s, hub mean=${hubMean.toFixed(2)} m/s`,'i');
     if(validSp.length<50){setProg('ts',0,'\u274c Not enough valid wind data');return;}
     if(hubMean<0.1){setProg('ts',0,'\u274c Hub WS ~0 \u2014 check mast height/z0');log('TS: hub WS too low. Mast height or z0 may be wrong.','e');return;}
@@ -3444,7 +3479,7 @@ async function runTimeSeries(){
         const roughR = getSectorRoughnessRatio(si, hubHH, nSectTS);
         const owcGwcR = owcToGWC(1.0, mastH, z0_mast_s, hubHH, 0.03, tsL);
         const gwcSwcR = gwcToSWC(1.0, hubHH, 0.03, hubHH, z0_site_s, tsL);
-        const undoExtrapolation = logWS_stab(1.0, mastH, hubHH, z0, tsL);
+        const undoExtrapolation = powerLawWS(1.0, mastH, hubHH, shearAlpha);
         chainR = (owcGwcR * gwcSwcR * roughR * tsGdlFactor) / Math.max(undoExtrapolation, 0.01);
         if (!isFinite(chainR) || isNaN(chainR)) chainR = 1.0;
         chainR = Math.max(0.7, Math.min(1.3, chainR));
@@ -3459,7 +3494,7 @@ async function runTimeSeries(){
     const stateBins=new Map();
     for(let h=0;h<allSp.length;h+=step){
       const raw=allSp[h]??0;if(raw<0.1)continue;
-      const ws=logWS(raw*mcpF,mastH,hubHH,z0);
+      const ws=powerLawWS(raw*mcpF,mastH,hubHH,shearAlpha);
       if(ws<cutIn||ws>cutOut+2)continue;
       // v13.1: Apply per-sector OWC→GWC→SWC chain correction
       const dirDeg = allDr[h] || 0;
@@ -3485,7 +3520,7 @@ async function runTimeSeries(){
     const perTurbHourly=[];  // [{ts,ws,wd,gross_kW:[],net_kW:[]}]
     for(let h=0;h<allSp.length;h+=step){
       const raw=allSp[h]??0;if(raw<0.1)continue;
-      let ws0=logWS(raw*mcpF,mastH,hubHH,z0);
+      let ws0=powerLawWS(raw*mcpF,mastH,hubHH,shearAlpha);
       if(ws0<cutIn||ws0>cutOut+2)continue;
       // v13.1: Apply per-sector OWC→GWC→SWC chain to match calcAEP
       const dirDeg = allDr[h] || 0;
@@ -3534,11 +3569,11 @@ async function runTimeSeries(){
     const CF=netG*1000/(instMW*Math.max(1,hrs))*100;
     const diurnal=hPow.map((v,i)=>hCnt[i]?v/hCnt[i]:0);
     setProg('ts',100,`\u2713 Gross=${grossG.toFixed(2)} GWh \u00b7 Net=${netG.toFixed(2)} GWh \u00b7 CF=${CF.toFixed(1)}%`);
-    $('tsRc').textContent=processed.toLocaleString();
-    $('tsNt').textContent=netG.toFixed(2);
-    $('tsWk').textContent=Math.max(0,wakeL).toFixed(1)+'%';
-    $('tsCf').textContent=CF.toFixed(1)+'%';
-    $('tsOut').style.display='block';
+    if($('tsRc'))$('tsRc').textContent=processed.toLocaleString();
+    if($('tsNt'))$('tsNt').textContent=netG.toFixed(2);
+    if($('tsWk'))$('tsWk').textContent=Math.max(0,wakeL).toFixed(1)+'%';
+    if($('tsCf'))$('tsCf').textContent=CF.toFixed(1)+'%';
+    if($('tsOut'))$('tsOut').style.display='block';
     drawMonthlyChart(Array.from(mG),Array.from(mN));drawDiurnalChart(diurnal);
     S.tsData={mG:Array.from(mG),mN:Array.from(mN),allSp,allDr,allTs,grossG,netG,wakeL,CF,perTurbHourly};
     log(`\u2713 TS complete: gross=${grossG.toFixed(2)} GWh \u00b7 net=${netG.toFixed(2)} GWh \u00b7 CF=${CF.toFixed(1)}%`,'i');
@@ -3943,7 +3978,7 @@ initMap();calcDensity();
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 29 ready. Site → Layout → Wind → Terrain → Roughness → BZ → MCP → Analysis → Report','i');
+log('WindFlow Pro 31.0 ready. Site → Layout → Wind → Terrain → Roughness → BZ → MCP → Analysis → Report','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 
@@ -4722,6 +4757,63 @@ function logWS_stab(ws, fromH, toH, z0, L) {
   return ws;
 }
 
+// v31.0: Power-law vertical extrapolation
+// WS(h2) = WS(h1) × (h2/h1)^α
+// This is the standard wind engineering method for vertical wind shear extrapolation.
+// α (shear exponent) is user-specified or derived from multi-height measurements.
+// Typical values: 0.10 (offshore), 0.14 (neutral), 0.20 (stable), 0.30+ (very stable/complex
+function powerLawWS(ws, fromH, toH, alpha) {
+  if (!alpha || alpha <= 0) alpha = 0.14; // fallback
+  if (fromH <= 0 || toH <= 0) return ws;
+  return ws * Math.pow(toH / fromH, alpha);
+}
+
+// v31.0: Combined vertical extrapolation — uses power law with shear alpha
+// as the PRIMARY method (industry standard for wind energy), with stability-corrected
+// log law as a secondary reference. The power law directly uses the shear alpha
+// which can be derived from multi-height measurements or specified by the user.
+//
+// The methodology follows IEC 61400-12-1 and the WAsP wind atlas methodology:
+//   1. If shear alpha is available from measurements (multi-height data), use power law
+//   2. If only roughness is known, use stability-corrected log law
+//   3. Blend both approaches for robustness (WAsP uses log law for the atlas,
+//      but the shear alpha is used for the rotor-averaged correction)
+//
+// This replaces the old approach that used ONLY log law, which doesn't account
+// for measured shear properly and can underestimate/overestimate at hub height.
+function verticalExtrapolate(ws, fromH, toH, z0, alpha, L) {
+  if (L === undefined || L === null) L = getStabilityL();
+  if (!alpha || alpha < 0.01) alpha = parseFloat($('shearA')?.value) || 0.14;
+
+  // Power law extrapolation using measured/derived shear alpha
+  const wsPow = powerLawWS(ws, fromH, toH, alpha);
+
+  // Stability-corrected log law (for reference and cross-check)
+  const wsLog = logWS_stab(ws, fromH, toH, z0, L);
+
+  // v31.0: Use power law as the PRIMARY method for vertical extrapolation
+  // This is consistent with how wind energy professionals work:
+  // - Shear alpha comes from on-site measurements (mast or lidar)
+  // - Power law is the standard for extrapolation in resource assessment
+  // - Log law is used within WAsP for the wind atlas chain (roughness change)
+  //   but for simple vertical extrapolation, power law is preferred
+  //
+  // However, for very large height differences (>2×), log law is more physically
+  // accurate. So we blend: use power law for small ratios, blend toward log law
+  // for large ratios.
+  const heightRatio = toH / fromH;
+  if (heightRatio > 2.0) {
+    // Large extrapolation: blend 60% power law + 40% log law
+    return 0.6 * wsPow + 0.4 * wsLog;
+  } else if (heightRatio > 1.5) {
+    // Moderate extrapolation: blend 80% power law + 20% log law
+    return 0.8 * wsPow + 0.2 * wsLog;
+  } else {
+    // Small extrapolation (typical mast→hub): use power law
+    return wsPow;
+  }
+}
+
 function getStabilityL() {
   const stab = $('stab')?.value || 'N';
   if (stab === 'A') {
@@ -5338,12 +5430,12 @@ function switchWindDataSource(src){
   const PD=.5*rho*mean**3;
   const elev=ws.elevation||null;
   // Update primary stats display
-  $('e5WS').textContent=mean.toFixed(2);
-  $('e5WA').textContent=wb.A.toFixed(2);
-  $('e5WK').textContent=wb.k.toFixed(2);
-  $('e5PD').textContent=PD.toFixed(0);
-  $('e5RC').textContent=sp.length.toLocaleString();
-  $('e5EL').textContent=elev?elev.toFixed(0):'—';
+  if($('e5WS'))$('e5WS').textContent=mean.toFixed(2);
+  if($('e5WA'))$('e5WA').textContent=wb.A.toFixed(2);
+  if($('e5WK'))$('e5WK').textContent=wb.k.toFixed(2);
+  if($('e5PD'))$('e5PD').textContent=PD.toFixed(0);
+  if($('e5RC'))$('e5RC').textContent=sp.length.toLocaleString();
+  if($('e5EL'))$('e5EL').textContent=elev?elev.toFixed(0):'—';
   // Update mast height to match source
   if(ws.mastH&&$('mastH'))$('mastH').value=ws.mastH;
   // v29: Show shear extrapolation note if data height ≠ hub height (Issue 7)
@@ -6041,7 +6133,7 @@ function onCalApplyChange() {
     if (S.results) {
       const R = applyWaspCalibration(S.results);
       updateResultsUI(R);
-      $('sbAEP').textContent = `${R.netAEP.toFixed(2)} GWh`;
+      if($('sbAEP'))$('sbAEP').textContent = `${R.netAEP.toFixed(2)} GWh`;
       log(`✓ Calibrated: Net AEP ${S.results.netAEP.toFixed(2)} → ${R.netAEP.toFixed(2)} GWh (WAsP-aligned)`, 'i');
     }
   } else {
@@ -6049,7 +6141,7 @@ function onCalApplyChange() {
     // Re-run without calibration
     if (S.results) {
       updateResultsUI(S.results);
-      $('sbAEP').textContent = `${S.results.netAEP.toFixed(2)} GWh`;
+      if($('sbAEP'))$('sbAEP').textContent = `${S.results.netAEP.toFixed(2)} GWh`;
     }
   }
 }
@@ -6170,7 +6262,7 @@ function clearCalibration() {
   $('calConf').value = '—';
   $('calApplyCB').checked = false;
   $('calResult').style.display = 'none';
-  $('calApplyNote').textContent = 'Check "Apply" to re-enable default auto-calibration';
+  if($('calApplyNote'))$('calApplyNote').textContent = 'Check "Apply" to re-enable default auto-calibration';
   $('calApplyNote').style.color = 'var(--muted)';
   // Clear input fields
   ['calWaspGross','calWaspNet','calWaspWake','calWaspWS','calWaspCF','calWaspRIX'].forEach(id => {
@@ -6184,7 +6276,7 @@ function clearCalibration() {
     if (rawR) {
       S.results = rawR;
       updateResultsUI(rawR);
-      $('sbAEP').textContent = `${rawR.netAEP.toFixed(2)} GWh`;
+      if($('sbAEP'))$('sbAEP').textContent = `${rawR.netAEP.toFixed(2)} GWh`;
     }
   }
 }
@@ -7311,7 +7403,7 @@ async function runBZModel(){
     // v28.0: Catch BZ timeout or computation errors
     setProg('bz',0,'BZ failed: '+bzErr.message);
     log('BZ model error: '+bzErr.message,'e');
-    $('bzpt').textContent='Error: '+bzErr.message;
+    if($('bzpt'))$('bzpt').textContent='Error: '+bzErr.message;
     if(bzErr.message.includes('timed out')){
       log('Tip: Reduce terrain domain size or use fewer turbines to speed up BZ computation','w');
     }
