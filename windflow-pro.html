@@ -51,6 +51,10 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 #dpLegend .dp-row{display:flex;align-items:center;gap:.3rem;margin-bottom:.1rem}
 #dpLegend .dp-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1.5px solid #fff}
 #dpLegend .dp-dist{color:var(--mint);margin-left:auto;font-size:.5rem}
+/* Wind speed summary items */
+.ws-sum-item{text-align:center;padding:.3rem .2rem;background:rgba(30,41,59,.5);border-radius:4px}
+.ws-sum-val{font-size:.82rem;font-weight:700;color:#38bdf8}
+.ws-sum-lbl{font-size:.48rem;color:var(--text3);margin-top:2px}
 /* Wind rose canvas sizing */
 .rose-canvas-wrap{width:100%;max-width:420px;margin:0 auto}
 /* PC chart */
@@ -90,6 +94,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div id="drawStatus"></div>
         <div id="mapInfo">Lat: <span id="ovLat">—</span> Lon: <span id="ovLon">—</span><br>Elev: <span id="ovEl">—</span> | WS: <span id="ovWS">—</span> | SU: <span id="ovSU">—</span></div>
         <div id="dpLegend" style="display:none"><div class="dp-title">Data Points</div><div id="dpLegendRows"></div></div>
+        <div id="gwaLegend" style="display:none;position:absolute;bottom:30px;right:10px;z-index:400;background:rgba(15,23,42,.88);border-radius:6px;padding:8px 10px;font-size:10px;color:#e2e8f0;pointer-events:none;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.1)"><div id="gwaLegendTitle" style="font-weight:600;margin-bottom:4px;text-align:center">Wind Speed (m/s)</div><div style="display:flex;align-items:stretch;gap:4px"><div id="gwaLegendBar" style="width:16px;height:140px;border-radius:3px"></div><div style="display:flex;flex-direction:column;justify-content:space-between;font-size:9px;line-height:1"><span id="gwaLegMax">12</span><span id="gwaLeg75">9</span><span id="gwaLeg50">6</span><span id="gwaLeg25">3</span><span id="gwaLegMin">0</span></div></div></div>
       </div>
       <div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
         <button class="btn btn-sm btn-gold" id="drawBtn" onclick="toggleDraw()">✏ Draw Boundary</button>
@@ -115,6 +120,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         </select>
       </div>
       <div id="bndStats" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">No boundary defined</div>
+      <div id="layoutWSSummary" style="display:none;margin-top:.5rem;padding:.5rem .6rem;background:rgba(15,23,42,.6);border-radius:6px;border:1px solid var(--border)"><div style="font-size:.62rem;font-weight:600;color:var(--acc);margin-bottom:.3rem">Layout Wind Speed Summary</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem" id="wsSummaryGrid"><div class="ws-sum-item"><div class="ws-sum-val" id="wsAvg">—</div><div class="ws-sum-lbl">Avg WS @ 120m</div></div><div class="ws-sum-item"><div class="ws-sum-val" id="wsMax">—</div><div class="ws-sum-lbl">Max WS @ 120m</div></div><div class="ws-sum-item"><div class="ws-sum-val" id="wsMin">—</div><div class="ws-sum-lbl">Min WS @ 120m</div></div><div class="ws-sum-item"><div class="ws-sum-val" id="wsCount">—</div><div class="ws-sum-lbl">WTG Count</div></div></div><div style="font-size:.52rem;color:var(--text3);margin-top:.2rem" id="wsSummaryNote">Interpolated from GWA 100m & 150m using log-law shear</div></div>
     </div>
     <div>
       <div class="card"><div class="card-title green">Upload Boundary</div>
@@ -3618,7 +3624,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 27.2 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 29 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -3659,7 +3665,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 27.2 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Bankability report</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 29 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Bankability report</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -3889,6 +3895,8 @@ function autoCenterMap(){
   setTimeout(()=>{autoFocusMap();},300);
   // Safety: re-focus after map is fully visible
   setTimeout(()=>{if(leafMap&&S.turbines.length)autoFocusMap();},1000);
+  // v29: Fetch wind speed summary at WTG positions
+  setTimeout(()=>{fetchLayoutWSSummary();},500);
   log(`Map focused on layout: ${S.turbines.length} turbines`,'i');
 }
 function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)&&ws>=0&&ws<80){sp.push(ws);dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;S.windSources.CSV={speeds:[...sp],dirs:[...dr],times:[...ts],mcpFactor:1,mastH:parseFloat($('mastH').value)||100,elevation:null};const vs=sp.filter(v=>v>0.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);updateDataSourceUI('CSV');addDataPointMarker('CSV',parseFloat($('mastLat')?.value||$('e5La')?.value||55.5),parseFloat($('mastLon')?.value||$('e5Lo')?.value||7.9),'Uploaded CSV · Mast height: '+(parseFloat($('mastH').value)||100)+'m');log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
@@ -3910,7 +3918,7 @@ initMap();calcDensity();
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 27.2 ready. Site → Layout → Wind → Terrain → Roughness → BZ → MCP → Analysis → Report','i');
+log('WindFlow Pro 29 ready. Site → Layout → Wind → Terrain → Roughness → BZ → MCP → Analysis → Report','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 
@@ -4346,7 +4354,7 @@ function exportBankabilityReport(){
 <div class="cover">
   <h1>${pn}</h1>
   <p>Wind Energy Assessment Report</p>
-  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 27.2 &mdash; ${now}</p>
+  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 29 &mdash; ${now}</p>
 </div>
 
 <h2>1. Executive Summary</h2>
@@ -4413,7 +4421,7 @@ ${terrCanvasImg?`<h2>8. Detailed Terrain Elevation Map</h2><p><img src="${terrCa
 ${roughCanvasImg?`<h2>9. Detailed Roughness Map</h2><p><img src="${roughCanvasImg}" style="max-width:100%;border:1px solid #d1d5db;border-radius:6px" alt="Roughness"></p>`:''}
 
 <p style="color:#9ca3af;font-size:9px;margin-top:30px;border-top:1px solid #e5e7eb;padding-top:10px">
-Generated by WindFlow Pro 27.2 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; Bankability report format</p>
+Generated by WindFlow Pro 29 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; Bankability report format</p>
 </body></html>`;
 
   dlFile(h,`WindAssessment_${pn.replace(/\s+/g,'_')}.html`,'text/html');
@@ -7513,6 +7521,9 @@ function rebuildGWAOverlay(){
     $('gwaOverlayBtn').textContent='🗺 GWA Overlay ✓';
     $('gwaOverlayBtn').style.background='rgba(63,185,80,.18)';
     log(`GWA overlay rebuilt: ${$('gwaLayer')?.value==='pd'?'Power Density':'Wind Speed'} at ${$('gwaHeight')?.value||100}m`,'i');
+    updateGWALegend();
+    $('gwaLegend').style.display='block';
+    fetchLayoutWSSummary();
   }
 }
 function initMap(){
@@ -7751,6 +7762,7 @@ function toggleGWAOverlay(){
     leafMap.removeLayer(gwaTileLayer);
     $('gwaOverlayBtn').textContent='🗺 GWA Overlay';
     $('gwaOverlayBtn').style.background='';
+    $('gwaLegend').style.display='none';
     log('GWA overlay removed','i');
   }else{
     // Rebuild in case height/layer changed since last toggle
@@ -7766,8 +7778,187 @@ function toggleGWAOverlay(){
     const h=$('gwaHeight')?.value||100;
     const lt=$('gwaLayer')?.value==='pd'?'Power Density':'Wind Speed';
     log(`GWA 4.0 ${lt} overlay enabled at ${h}m (opacity=${(parseFloat($('gwaOp')?.value||0.55)*100).toFixed(0)}%)`,'i');
+    // Show and populate legend
+    updateGWALegend();
+    $('gwaLegend').style.display='block';
+    // Fetch wind speeds at WTG positions for summary
+    fetchLayoutWSSummary();
   }
 }
+
+// v29: Build the turbo colormap gradient for the GWA legend bar
+function updateGWALegend(){
+  const layerType=$('gwaLayer')?.value||'ws';
+  const isPD=layerType==='pd';
+  const maxVal=isPD?2000:12;
+  const unit=isPD?'W/m²':'m/s';
+  const title=isPD?'Power Density ('+unit+')':'Wind Speed ('+unit+')';
+  $('gwaLegendTitle').textContent=title;
+  $('gwaLegMax').textContent=maxVal.toFixed(0);
+  $('gwaLeg75').textContent=(maxVal*0.75).toFixed(isPD?0:1);
+  $('gwaLeg50').textContent=(maxVal*0.5).toFixed(isPD?0:1);
+  $('gwaLeg25').textContent=(maxVal*0.25).toFixed(isPD?0:1);
+  $('gwaLegMin').textContent='0';
+  // Build turbo gradient CSS (top=high, bottom=low)
+  // Turbo colormap key stops: 0=#30123b, 0.25=#4797f5, 0.5=#7bf273, 0.75=#f5e626, 1=#a3011f
+  const bar=$('gwaLegendBar');
+  bar.style.background='linear-gradient(to top, #30123b, #4797f5 25%, #7bf273 50%, #f5e626 75%, #a3011f)';
+}
+
+// v29: Fetch GWA wind speeds at each WTG position and compute summary
+// Uses Open-Meteo ERA5 weather API (CORS-friendly) to sample wind at WTG positions
+// Interpolates WS at target height (default 120m) from available heights using log-law
+async function fetchLayoutWSSummary(){
+  if(!S.turbines||S.turbines.length===0){
+    $('layoutWSSummary').style.display='none';
+    return;
+  }
+  $('layoutWSSummary').style.display='block';
+  $('wsAvg').textContent='...';
+  $('wsMax').textContent='...';
+  $('wsMin').textContent='...';
+  $('wsCount').textContent=S.turbines.length;
+
+  try{
+    // Compute centroid for a single API call (more efficient than per-WTG)
+    const clat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
+    const clon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
+
+    // If WTGs are spread over a large area, sample multiple points
+    // For efficiency, we sample at up to 5 points: centroid + corner points
+    const samplePoints=[{lat:clat,lon:clon,label:'center'}];
+    if(S.turbines.length>=4){
+      const lats=S.turbines.map(t=>t.lat), lons=S.turbines.map(t=>t.lon);
+      const minLat=Math.min(...lats),maxLat=Math.max(...lats);
+      const minLon=Math.min(...lons),maxLon=Math.max(...lons);
+      samplePoints.push(
+        {lat:minLat,lon:minLon,label:'SW'},
+        {lat:maxLat,lon:maxLon,label:'NE'},
+        {lat:minLat,lon:maxLon,label:'SE'},
+        {lat:maxLat,lon:minLon,label:'NW'}
+      );
+    }
+
+    const wsAtTarget=[];
+    // Open-Meteo ERA5 has winds at 100m and 150m (perfect for interpolation to 120m)
+    const targetHH=120;
+
+    for(const pt of samplePoints){
+      // Fetch 5 years of hourly data at 100m and 150m
+      const endYear=Math.min(new Date().getFullYear()-1,2024);
+      const startYear=endYear-4;
+      const url=`https://archive-api.open-meteo.com/v1/era5?latitude=${pt.lat.toFixed(4)}&longitude=${pt.lon.toFixed(4)}&start_date=${startYear}-01-01&end_date=${endYear}-12-31&hourly=wind_speed_100m,wind_speed_150m&timezone=auto`;
+      const resp=await fetch(url);
+      if(!resp.ok)throw new Error('Open-Meteo HTTP '+resp.status);
+      const data=await resp.json();
+      const ws100=data.hourly?.wind_speed_100m||[];
+      const ws150=data.hourly?.wind_speed_150m||[];
+
+      if(ws100.length===0)continue;
+
+      // Calculate mean WS at 100m and 150m
+      const valid100=ws100.filter(v=>v!=null&&v>=0);
+      const valid150=ws150.filter(v=>v!=null&&v>=0);
+      const mean100=valid100.length?valid100.reduce((s,v)=>s+v,0)/valid100.length:0;
+      const mean150=valid150.length?valid150.reduce((s,v)=>s+v,0)/valid150.length:0;
+
+      if(mean100>0&&mean150>0){
+        // Derive z0 from ratio and interpolate to target height
+        const ratio=mean150/mean100;
+        const z0=solveZ0(100,150,ratio);
+        const wsTarget=mean100*Math.log(targetHH/Math.max(z0,0.001))/Math.log(100/Math.max(z0,0.001));
+        wsAtTarget.push({ws:wsTarget,pt:pt.label});
+      }else if(mean100>0){
+        const z0=parseFloat($('z0val')?.value)||0.03;
+        const wsTarget=mean100*Math.log(targetHH/z0)/Math.log(100/z0);
+        wsAtTarget.push({ws:wsTarget,pt:pt.label});
+      }
+    }
+
+    if(wsAtTarget.length===0){
+      // Fallback: use current wind data if available
+      if(S.wind&&S.wind.speeds&&S.wind.speeds.length){
+        const vs=S.wind.speeds.filter(v=>v>0.5);
+        const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);
+        const z0=parseFloat($('z0val')?.value)||0.03;
+        const srcH=parseFloat($('mastH')?.value)||100;
+        const ws120=logWS(mean,srcH,targetHH,z0);
+        $('wsAvg').textContent=ws120.toFixed(2)+' m/s';
+        $('wsMax').textContent='—';
+        $('wsMin').textContent='—';
+        $('wsSummaryNote').textContent=`Estimated from current wind data (${srcH}m → ${targetHH}m, z0=${z0})`;
+      }else{
+        $('wsAvg').textContent='—';
+        $('wsMax').textContent='—';
+        $('wsMin').textContent='—';
+        $('wsSummaryNote').textContent='No wind data available — enable GWA overlay or download ERA5 data first';
+      }
+      return;
+    }
+
+    // If we have multiple sample points, estimate per-WTG wind speeds
+    // by assigning each WTG to its nearest sample point
+    const wtgWS=[];
+    if(wsAtTarget.length===1){
+      // Single centroid point — all WTGs get same WS
+      for(let i=0;i<S.turbines.length;i++)wtgWS.push(wsAtTarget[0].ws);
+    }else{
+      // Assign each WTG to nearest sample point
+      for(const t of S.turbines){
+        let minDist=Infinity, bestWS=wsAtTarget[0].ws;
+        for(let j=0;j<wsAtTarget.length;j++){
+          const sp=samplePoints[j];
+          const d=(t.lat-sp.lat)**2+(t.lon-sp.lon)**2;
+          if(d<minDist){minDist=d;bestWS=wsAtTarget[j].ws;}
+        }
+        wtgWS.push(bestWS);
+      }
+    }
+
+    const avg=wtgWS.reduce((s,v)=>s+v,0)/wtgWS.length;
+    const maxWS=Math.max(...wtgWS);
+    const minWS=Math.min(...wtgWS);
+    $('wsAvg').textContent=avg.toFixed(2)+' m/s';
+    $('wsMax').textContent=maxWS.toFixed(2)+' m/s';
+    $('wsMin').textContent=minWS.toFixed(2)+' m/s';
+    $('wsSummaryNote').textContent=`Interpolated to ${targetHH}m from ERA5 100m & 150m via log-law (${wsAtTarget.length} sample pts, ${S.turbines.length} WTGs)`;
+    log(`Layout WS summary @ ${targetHH}m: avg=${avg.toFixed(2)}, max=${maxWS.toFixed(2)}, min=${minWS.toFixed(2)} m/s`,'i');
+  }catch(e){
+    log('Wind speed summary fetch failed: '+e.message,'w');
+    // Fallback: use current wind data if available
+    if(S.wind&&S.wind.speeds&&S.wind.speeds.length){
+      const vs=S.wind.speeds.filter(v=>v>0.5);
+      const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);
+      const z0=parseFloat($('z0val')?.value)||0.03;
+      const srcH=parseFloat($('mastH')?.value)||100;
+      const ws120=logWS(mean,srcH,120,z0);
+      $('wsAvg').textContent=ws120.toFixed(2)+' m/s';
+      $('wsMax').textContent='—';
+      $('wsMin').textContent='—';
+      $('wsSummaryNote').textContent=`Estimated from current wind data (${srcH}m → 120m, z0=${z0})`;
+    }else{
+      $('wsAvg').textContent='—';
+      $('wsMax').textContent='—';
+      $('wsMin').textContent='—';
+      $('wsSummaryNote').textContent='No wind data available — enable GWA overlay or download ERA5 data first';
+    }
+  }
+}
+
+// Solve for z0 given wind speeds at two heights using log-law
+// ratio = WS(h2)/WS(h1) = ln(h2/z0)/ln(h1/z0)
+function solveZ0(h1,h2,ratio){
+  // Binary search for z0
+  let lo=0.0001, hi=Math.min(h1,h2)*0.5;
+  for(let i=0;i<50;i++){
+    const mid=(lo+hi)/2;
+    const r=Math.log(h2/mid)/Math.log(h1/mid);
+    if(r>ratio)lo=mid; else hi=mid;
+  }
+  return (lo+hi)/2;
+}
+
+
 
 // v29.0: Auto-focus map to wind farm area + 20km extent
 function autoFocusMap(){
@@ -8381,7 +8572,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 27.2`);
+  lines.push(`WAsP Project Export - WindFlow Pro 29`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
