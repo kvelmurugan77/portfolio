@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 29.0</title>
+<title>WindFlow Pro 30.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -67,7 +67,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 29.0</span></div></div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 30.0</span></div></div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" id="presetBadge" onclick="applyPreset()"></button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -121,6 +121,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       </div>
       <div id="bndStats" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">No boundary defined</div>
       <div id="layoutWSSummary" style="display:none;margin-top:.5rem;padding:.5rem .6rem;background:rgba(15,23,42,.6);border-radius:6px;border:1px solid var(--border)"><div style="font-size:.62rem;font-weight:600;color:var(--acc);margin-bottom:.3rem">Layout Wind Speed Summary</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem" id="wsSummaryGrid"><div class="ws-sum-item"><div class="ws-sum-val" id="wsAvg">—</div><div class="ws-sum-lbl">Avg WS @ 120m</div></div><div class="ws-sum-item"><div class="ws-sum-val" id="wsMax">—</div><div class="ws-sum-lbl">Max WS @ 120m</div></div><div class="ws-sum-item"><div class="ws-sum-val" id="wsMin">—</div><div class="ws-sum-lbl">Min WS @ 120m</div></div><div class="ws-sum-item"><div class="ws-sum-val" id="wsCount">—</div><div class="ws-sum-lbl">WTG Count</div></div></div><div style="font-size:.52rem;color:var(--text3);margin-top:.2rem" id="wsSummaryNote">Interpolated from GWA 100m & 150m using log-law shear</div></div>
+      <div id="layoutElevSummary" style="display:none;margin-top:.3rem;padding:.5rem .6rem;background:rgba(15,23,42,.6);border-radius:6px;border:1px solid var(--border)"><div style="font-size:.62rem;font-weight:600;color:var(--mint);margin-bottom:.3rem">Layout Elevation Summary</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem" id="elevSummaryGrid"><div class="ws-sum-item"><div class="ws-sum-val" id="elevAvg">—</div><div class="ws-sum-lbl">Avg Elev</div></div><div class="ws-sum-item"><div class="ws-sum-val" id="elevMax">—</div><div class="ws-sum-lbl">Max Elev</div></div><div class="ws-sum-item"><div class="ws-sum-val" id="elevMin">—</div><div class="ws-sum-lbl">Min Elev</div></div></div><div style="font-size:.52rem;color:var(--text3);margin-top:.2rem" id="elevSummaryNote">SRTM elevation at WTG positions</div></div>
     </div>
     <div>
       <div class="card"><div class="card-title green">Upload Boundary</div>
@@ -3648,7 +3649,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 29 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 30 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -3689,7 +3690,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 29 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Bankability report</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 30 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Bankability report</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -7585,8 +7586,15 @@ function initMap(){
       leafMap.on(L.Draw.Event.CREATED,function(e){drawnItems.clearLayers();drawnItems.addLayer(e.layer);var lls=e.layer.getLatLngs()[0];S.boundary=lls.map(function(ll){return[ll.lat,ll.lng];});var area=polyArea(S.boundary);$('bndStats').textContent='✓ '+S.boundary.length+' vertices · Area ≈ '+area.toFixed(1)+' km²';autoFocusMap();});
       leafMap.on(L.Draw.Event.DELETED,function(){S.boundary=[];$('bndStats').textContent='No boundary defined';});
     }catch(drawErr){console.warn('Leaflet Draw not available:',drawErr);}
-    // Mouse move for info overlay
-    leafMap.on('mousemove',function(e){if($('ovLat')){$('ovLat').textContent=e.latlng.lat.toFixed(4);$('ovLon').textContent=e.latlng.lng.toFixed(4);$('sbXY').textContent=e.latlng.lat.toFixed(4)+', '+e.latlng.lng.toFixed(4);}var su=getSpatialHubWS(e.latlng.lat,e.latlng.lng);if(su&&$('ovWS')){$('ovWS').textContent=su.ws.toFixed(2);$('ovSU').textContent=su.su.toFixed(4);$('ovEl').textContent=su.elev!==null?su.elev.toFixed(0)+'m':'—';}});
+    // Mouse move for info overlay — v30.0: enhanced with cursor WS + elevation from Open-Meteo
+    leafMap.on('mousemove',function(e){
+      if($('ovLat')){$('ovLat').textContent=e.latlng.lat.toFixed(4);$('ovLon').textContent=e.latlng.lng.toFixed(4);$('sbXY').textContent=e.latlng.lat.toFixed(4)+', '+e.latlng.lng.toFixed(4);}
+      // Try internal spatial model first
+      var su=getSpatialHubWS(e.latlng.lat,e.latlng.lng);
+      if(su&&$('ovWS')){$('ovWS').textContent=su.ws.toFixed(2);$('ovSU').textContent=su.su.toFixed(4);$('ovEl').textContent=su.elev!==null?su.elev.toFixed(0)+'m':'—';}
+      // Debounced API fetch for cursor hover WS + elevation
+      cursorHoverDebounce(e.latlng.lat,e.latlng.lng);
+    });
     // Click to add turbine
     leafMap.on('click',function(e){if(S.drawMode){S.boundary.push([e.latlng.lat,e.latlng.lng]);S.boundaryMarkers.push(L.circleMarker(e.latlng,{radius:4,color:'#d29922',fillColor:'#d29922',fillOpacity:1}).addTo(leafMap));$('bndStats').textContent=S.boundary.length+' vertices';}});
     setTimeout(function(){if(leafMap)leafMap.invalidateSize();},500);
@@ -7844,12 +7852,14 @@ function updateGWALegend(){
   bar.style.background='linear-gradient(to top, #30123b, #4797f5 25%, #7bf273 50%, #f5e626 75%, #a3011f)';
 }
 
-// v29: Fetch GWA wind speeds at each WTG position and compute summary
-// Uses Open-Meteo ERA5 weather API (CORS-friendly) to sample wind at WTG positions
-// Interpolates WS at target height (default 120m) from available heights using log-law
+// v30.0: Layout Wind Speed Summary from Open-Meteo
+// Uses ERA5 archive daily API for long-term mean + forecast API for shear profile
+// All API calls include &wind_speed_unit=ms to get m/s directly
+// ERA5 archive only has 100m; forecast API has 80m,100m,120m,180m — use for shear
 async function fetchLayoutWSSummary(){
   if(!S.turbines||S.turbines.length===0){
     $('layoutWSSummary').style.display='none';
+    $('layoutElevSummary').style.display='none';
     return;
   }
   $('layoutWSSummary').style.display='block';
@@ -7859,12 +7869,8 @@ async function fetchLayoutWSSummary(){
   $('wsCount').textContent=S.turbines.length;
 
   try{
-    // Compute centroid for a single API call (more efficient than per-WTG)
     const clat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
     const clon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
-
-    // If WTGs are spread over a large area, sample multiple points
-    // For efficiency, we sample at up to 5 points: centroid + corner points
     const samplePoints=[{lat:clat,lon:clon,label:'center'}];
     if(S.turbines.length>=4){
       const lats=S.turbines.map(t=>t.lat), lons=S.turbines.map(t=>t.lon);
@@ -7878,54 +7884,64 @@ async function fetchLayoutWSSummary(){
       );
     }
 
+    // Step 1: Get shear profile from forecast API (has multi-height data)
+    let shearAlpha=0.14;
+    try{
+      const shearUrl=`https://api.open-meteo.com/v1/forecast?latitude=${clat.toFixed(4)}&longitude=${clon.toFixed(4)}&hourly=wind_speed_80m,wind_speed_100m,wind_speed_120m,wind_speed_180m&forecast_days=1&wind_speed_unit=ms&timezone=auto`;
+      const shearResp=await fetch(shearUrl);
+      if(shearResp.ok){
+        const shearData=await shearResp.json();
+        const ws100=shearData.hourly?.wind_speed_100m||[];
+        const ws180=shearData.hourly?.wind_speed_180m||[];
+        const valid100=ws100.filter(v=>v!=null&&v>=0);
+        const valid180=ws180.filter(v=>v!=null&&v>=0);
+        if(valid100.length>0&&valid180.length>0){
+          const mean100=valid100.reduce((s,v)=>s+v,0)/valid100.length;
+          const mean180=valid180.reduce((s,v)=>s+v,0)/valid180.length;
+          if(mean100>0){
+            const ratio=mean180/mean100;
+            if(ratio>1){
+              shearAlpha=Math.log(ratio)/Math.log(180/100);
+              shearAlpha=Math.max(0.05,Math.min(0.4,shearAlpha));
+              log(`Shear alpha from forecast: ${shearAlpha.toFixed(4)} (WS100=${mean100.toFixed(2)} m/s, WS180=${mean180.toFixed(2)} m/s)`,'i');
+            }
+          }
+        }
+      }
+    }catch(shearErr){
+      log('Shear profile fetch failed, using default alpha=0.14: '+shearErr.message,'w');
+    }
+
+    // Step 2: Get long-term mean from ERA5 archive daily API
     const wsAtTarget=[];
-    // Open-Meteo ERA5 has winds at 100m and 150m (perfect for interpolation to 120m)
     const targetHH=120;
+    const endYear=Math.min(new Date().getFullYear()-1,2024);
+    const startYear=endYear-4;
 
     for(const pt of samplePoints){
-      // Fetch 5 years of hourly data at 100m and 150m
-      const endYear=Math.min(new Date().getFullYear()-1,2024);
-      const startYear=endYear-4;
-      const url=`https://archive-api.open-meteo.com/v1/era5?latitude=${pt.lat.toFixed(4)}&longitude=${pt.lon.toFixed(4)}&start_date=${startYear}-01-01&end_date=${endYear}-12-31&hourly=wind_speed_100m,wind_speed_150m&timezone=auto`;
+      const url=`https://archive-api.open-meteo.com/v1/era5?latitude=${pt.lat.toFixed(4)}&longitude=${pt.lon.toFixed(4)}&start_date=${startYear}-01-01&end_date=${endYear}-12-31&daily=wind_speed_100m_mean&wind_speed_unit=ms&timezone=auto`;
       const resp=await fetch(url);
-      if(!resp.ok)throw new Error('Open-Meteo HTTP '+resp.status);
+      if(!resp.ok)throw new Error('Open-Meteo ERA5 HTTP '+resp.status);
       const data=await resp.json();
-      const ws100=data.hourly?.wind_speed_100m||[];
-      const ws150=data.hourly?.wind_speed_150m||[];
-
-      if(ws100.length===0)continue;
-
-      // Calculate mean WS at 100m and 150m
-      const valid100=ws100.filter(v=>v!=null&&v>=0);
-      const valid150=ws150.filter(v=>v!=null&&v>=0);
-      const mean100=valid100.length?valid100.reduce((s,v)=>s+v,0)/valid100.length:0;
-      const mean150=valid150.length?valid150.reduce((s,v)=>s+v,0)/valid150.length:0;
-
-      if(mean100>0&&mean150>0){
-        // Derive z0 from ratio and interpolate to target height
-        const ratio=mean150/mean100;
-        const z0=solveZ0(100,150,ratio);
-        const wsTarget=mean100*Math.log(targetHH/Math.max(z0,0.001))/Math.log(100/Math.max(z0,0.001));
-        wsAtTarget.push({ws:wsTarget,pt:pt.label});
-      }else if(mean100>0){
-        const z0=parseFloat($('z0val')?.value)||0.03;
-        const wsTarget=mean100*Math.log(targetHH/z0)/Math.log(100/z0);
-        wsAtTarget.push({ws:wsTarget,pt:pt.label});
-      }
+      const ws100daily=data.daily?.wind_speed_100m_mean||[];
+      const valid100=ws100daily.filter(v=>v!=null&&v>=0);
+      if(valid100.length===0)continue;
+      const mean100ms=valid100.reduce((s,v)=>s+v,0)/valid100.length;
+      const wsTarget=mean100ms*Math.pow(targetHH/100,shearAlpha);
+      wsAtTarget.push({ws:wsTarget,pt:pt.label});
     }
 
     if(wsAtTarget.length===0){
-      // Fallback: use current wind data if available
       if(S.wind&&S.wind.speeds&&S.wind.speeds.length){
         const vs=S.wind.speeds.filter(v=>v>0.5);
         const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);
         const z0=parseFloat($('z0val')?.value)||0.03;
         const srcH=parseFloat($('mastH')?.value)||100;
-        const ws120=logWS(mean,srcH,targetHH,z0);
+        const ws120=logWS(mean,srcH,120,z0);
         $('wsAvg').textContent=ws120.toFixed(2)+' m/s';
         $('wsMax').textContent='—';
         $('wsMin').textContent='—';
-        $('wsSummaryNote').textContent=`Estimated from current wind data (${srcH}m → ${targetHH}m, z0=${z0})`;
+        $('wsSummaryNote').textContent=`Estimated from current wind data (${srcH}m → 120m, z0=${z0})`;
       }else{
         $('wsAvg').textContent='—';
         $('wsMax').textContent='—';
@@ -7935,14 +7951,10 @@ async function fetchLayoutWSSummary(){
       return;
     }
 
-    // If we have multiple sample points, estimate per-WTG wind speeds
-    // by assigning each WTG to its nearest sample point
     const wtgWS=[];
     if(wsAtTarget.length===1){
-      // Single centroid point — all WTGs get same WS
       for(let i=0;i<S.turbines.length;i++)wtgWS.push(wsAtTarget[0].ws);
     }else{
-      // Assign each WTG to nearest sample point
       for(const t of S.turbines){
         let minDist=Infinity, bestWS=wsAtTarget[0].ws;
         for(let j=0;j<wsAtTarget.length;j++){
@@ -7957,14 +7969,32 @@ async function fetchLayoutWSSummary(){
     const avg=wtgWS.reduce((s,v)=>s+v,0)/wtgWS.length;
     const maxWS=Math.max(...wtgWS);
     const minWS=Math.min(...wtgWS);
-    $('wsAvg').textContent=avg.toFixed(2)+' m/s';
-    $('wsMax').textContent=maxWS.toFixed(2)+' m/s';
-    $('wsMin').textContent=minWS.toFixed(2)+' m/s';
-    $('wsSummaryNote').textContent=`Interpolated to ${targetHH}m from ERA5 100m & 150m via log-law (${wsAtTarget.length} sample pts, ${S.turbines.length} WTGs)`;
-    log(`Layout WS summary @ ${targetHH}m: avg=${avg.toFixed(2)}, max=${maxWS.toFixed(2)}, min=${minWS.toFixed(2)} m/s`,'i');
+
+    // v30.0: Apply GWA correction if available (ERA5 underestimates by ~10-30% in complex terrain)
+    let correctedAvg=avg, correctedMax=maxWS, correctedMin=minWS;
+    let gwaCorrFactor=1.0;
+    if(S.gwaData&&S.gwaData.meanWS>0){
+      // GWA provides a corrected mean WS — use it to derive a correction factor
+      // Scale all WTG WS values by the ratio of GWA mean to ERA5 mean
+      gwaCorrFactor=S.gwaData.meanWS/avg;
+      // Clamp correction factor to reasonable range (0.8–1.5)
+      gwaCorrFactor=Math.max(0.8,Math.min(1.5,gwaCorrFactor));
+      correctedAvg=avg*gwaCorrFactor;
+      correctedMax=maxWS*gwaCorrFactor;
+      correctedMin=minWS*gwaCorrFactor;
+    }
+
+    $('wsAvg').textContent=correctedAvg.toFixed(2)+' m/s';
+    $('wsMax').textContent=correctedMax.toFixed(2)+' m/s';
+    $('wsMin').textContent=correctedMin.toFixed(2)+' m/s';
+    const gwaNote=gwaCorrFactor>1.001?` | GWA correction ×${gwaCorrFactor.toFixed(2)}`:'';
+    $('wsSummaryNote').textContent=`ERA5 ${startYear}–${endYear} daily @ 100m → ${targetHH}m (α=${shearAlpha.toFixed(3)}${gwaNote})`;
+    log(`Layout WS summary @ ${targetHH}m: avg=${correctedAvg.toFixed(2)}, max=${correctedMax.toFixed(2)}, min=${correctedMin.toFixed(2)} m/s (shear α=${shearAlpha.toFixed(3)}${gwaNote})`,'i');
+
+    // Also fetch elevation summary for WTGs
+    fetchElevationSummary();
   }catch(e){
     log('Wind speed summary fetch failed: '+e.message,'w');
-    // Fallback: use current wind data if available
     if(S.wind&&S.wind.speeds&&S.wind.speeds.length){
       const vs=S.wind.speeds.filter(v=>v>0.5);
       const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);
@@ -7984,6 +8014,57 @@ async function fetchLayoutWSSummary(){
   }
 }
 
+// v30.0: Fetch elevation summary for WTG positions using Open-Meteo elevation API
+async function fetchElevationSummary(){
+  if(!S.turbines||S.turbines.length===0)return;
+  $('layoutElevSummary').style.display='block';
+  $('elevAvg').textContent='...';
+  $('elevMax').textContent='...';
+  $('elevMin').textContent='...';
+
+  try{
+    const batchSize=100;
+    const allElevs=[];
+    for(let i=0;i<S.turbines.length;i+=batchSize){
+      const batch=S.turbines.slice(i,i+batchSize);
+      const lats=batch.map(t=>t.lat.toFixed(4)).join(',');
+      const lons=batch.map(t=>t.lon.toFixed(4)).join(',');
+      const url=`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lons}`;
+      const resp=await fetch(url);
+      if(!resp.ok)continue;
+      const data=await resp.json();
+      const elevs=data.elevation||[];
+      allElevs.push(...elevs);
+      for(let j=0;j<batch.length&&j<elevs.length;j++){
+        batch[j].elev=elevs[j];
+      }
+    }
+
+    if(allElevs.length===0){
+      $('elevAvg').textContent='—';
+      $('elevMax').textContent='—';
+      $('elevMin').textContent='—';
+      $('elevSummaryNote').textContent='Elevation data unavailable';
+      return;
+    }
+
+    const avg=allElevs.reduce((s,v)=>s+v,0)/allElevs.length;
+    const maxE=Math.max(...allElevs);
+    const minE=Math.min(...allElevs);
+    $('elevAvg').textContent=avg.toFixed(0)+' m';
+    $('elevMax').textContent=maxE.toFixed(0)+' m';
+    $('elevMin').textContent=minE.toFixed(0)+' m';
+    $('elevSummaryNote').textContent=`SRTM elevation at ${allElevs.length} WTG positions`;
+    log(`Layout Elevation summary: avg=${avg.toFixed(0)}m, max=${maxE.toFixed(0)}m, min=${minE.toFixed(0)}m`,'i');
+  }catch(e){
+    log('Elevation summary fetch failed: '+e.message,'w');
+    $('elevAvg').textContent='—';
+    $('elevMax').textContent='—';
+    $('elevMin').textContent='—';
+    $('elevSummaryNote').textContent='Elevation data unavailable';
+  }
+}
+
 // Solve for z0 given wind speeds at two heights using log-law
 // ratio = WS(h2)/WS(h1) = ln(h2/z0)/ln(h1/z0)
 function solveZ0(h1,h2,ratio){
@@ -7998,6 +8079,67 @@ function solveZ0(h1,h2,ratio){
 }
 
 
+
+// v30.0: Cursor hover — debounced wind speed + elevation from Open-Meteo APIs
+// Shows WS and Elev at cursor position when moving the mouse over the map
+let _cursorHoverTimer=null;
+let _cursorHoverCache={}; // simple cache keyed by rounded lat/lon
+const CURSOR_HOVER_DELAY=600; // ms debounce
+const CURSOR_HOVER_ROUND=3; // round to 3 decimal places (~111m) for caching
+
+function cursorHoverDebounce(lat,lon){
+  if(_cursorHoverTimer)clearTimeout(_cursorHoverTimer);
+  _cursorHoverTimer=setTimeout(()=>fetchCursorWS(lat,lon),CURSOR_HOVER_DELAY);
+}
+
+async function fetchCursorWS(lat,lon){
+  const rLat=lat.toFixed(CURSOR_HOVER_ROUND);
+  const rLon=lon.toFixed(CURSOR_HOVER_ROUND);
+  const cacheKey=rLat+','+rLon;
+
+  // Check cache first
+  if(_cursorHoverCache[cacheKey]){
+    const c=_cursorHoverCache[cacheKey];
+    if(c.ws>0&&$('ovWS'))$('ovWS').textContent=c.ws.toFixed(2);
+    if(c.elev!=null&&$('ovEl'))$('ovEl').textContent=c.elev.toFixed(0)+'m';
+    if(c.su!=null&&$('ovSU'))$('ovSU').textContent=c.su.toFixed(4);
+    return;
+  }
+
+  // Check what data we already have from internal model
+  const currentWS=$('ovWS')?.textContent;
+  const currentEl=$('ovEl')?.textContent;
+  const hasWS=currentWS&&currentWS!=='—'&&currentWS!=='';
+  const hasEl=currentEl&&currentEl!=='—'&&currentEl!=='';
+  // If both WS and Elev are already populated, no need for API call
+  if(hasWS&&hasEl)return;
+
+  try{
+    // Only fetch what we need — saves API calls
+    const fetches=[];
+    if(!hasEl)fetches.push(fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}`).then(r=>r.ok?r.json():null).catch(()=>null));
+    else fetches.push(Promise.resolve(null));
+    if(!hasWS)fetches.push(fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=wind_speed_100m&wind_speed_unit=ms&timezone=auto`).then(r=>r.ok?r.json():null).catch(()=>null));
+    else fetches.push(Promise.resolve(null));
+
+    const [elevData,wsData]=await Promise.all(fetches);
+
+    let elev=null, ws=null;
+    if(elevData&&elevData.elevation&&elevData.elevation.length)elev=elevData.elevation[0];
+    if(wsData&&wsData.current)ws=wsData.current.wind_speed_100m;
+
+    // Cache the result (merge with existing internal data)
+    const cachedWs=hasWS?parseFloat(currentWS):(ws||0);
+    _cursorHoverCache[cacheKey]={ws:cachedWs,elev:elev,su:null};
+    const keys=Object.keys(_cursorHoverCache);
+    if(keys.length>500)delete _cursorHoverCache[keys[0]];
+
+    if(ws!==null&&!hasWS&&$('ovWS'))$('ovWS').textContent=ws.toFixed(2);
+    if(elev!==null&&!hasEl&&$('ovEl'))$('ovEl').textContent=elev.toFixed(0)+'m';
+  }catch(e){
+    // Silently fail
+  }
+}
 
 // v29.0: Auto-focus map to wind farm area + 20km extent
 function autoFocusMap(){
@@ -8257,6 +8399,8 @@ async function downloadGWA(){
         $('gwaStatus').textContent=`✓ GWA proxy (ERA5 5yr): mean=${mean.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`;
         log(`GWA proxy via Open-Meteo (5yr): ${valid.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
         S.gwaData={meanWS:mean,weibullA:wb.A,weibullK:wb.k,sectors:0,source:'ERA5-5yr-proxy'};
+        // Re-trigger layout WS summary with GWA correction if turbines exist
+        if(S.turbines&&S.turbines.length>0)fetchLayoutWSSummary();
         return;
       }
     }
@@ -8267,7 +8411,7 @@ async function downloadGWA(){
   // ── Strategy 2: Open-Meteo Climate API (monthly long-term) ──
   try{
     $('gwaStatus').textContent='Trying Open-Meteo climate API...';
-    const clUrl=`https://climate-api.open-meteo.com/v1/climate?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=2024-12-31&models=EC_Earth3P_HR&monthly=wind_speed_100m`;
+    const clUrl=`https://climate-api.open-meteo.com/v1/climate?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=2024-12-31&models=EC_Earth3P_HR&monthly=wind_speed_100m&wind_speed_unit=ms`;
     const r2=await fetch(clUrl);
     if(r2.ok){
       const d2=await r2.json();
@@ -8280,6 +8424,8 @@ async function downloadGWA(){
         $('gwaStatus').textContent=`✓ GWA proxy (Climate API): mean=${mean.toFixed(2)} m/s, A≈${estA.toFixed(2)}, k≈2.0`;
         log(`GWA proxy via Climate API: ${valid.length} monthly values, mean=${mean.toFixed(2)}, A≈${estA.toFixed(2)}`,'i');
         S.gwaData={meanWS:mean,weibullA:estA,weibullK:2.0,sectors:0,source:'Climate-API-proxy'};
+        // Re-trigger layout WS summary with GWA correction if turbines exist
+        if(S.turbines&&S.turbines.length>0)fetchLayoutWSSummary();
         return;
       }
     }
