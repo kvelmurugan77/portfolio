@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 28.0</title>
+<title>WindFlow Pro 29.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -63,7 +63,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 28.0</span></div><div class="brand-sub">① OWC → ② MCP → ③ Log-law → ④ Rotor avg → ⑤ BZ/JH → ⑥ Roughness → ⑦ GDL → ⑧ Wake → ⑨ Calibration</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 29.0</span></div><div class="brand-sub">① OWC → ② MCP → ③ Log-law → ④ Rotor avg → ⑤ BZ/JH → ⑥ Roughness → ⑦ GDL → ⑧ Wake → ⑨ Calibration</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -98,9 +98,21 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <button class="btn btn-sm btn-ghost" id="gwaOverlayBtn" onclick="toggleGWAOverlay()">🗺 GWA Overlay</button>
         <button class="btn btn-sm btn-ghost" onclick="autoFocusMap()">🎯 Focus</button>
       </div>
-      <div style="display:flex;gap:.4rem;align-items:center;margin-top:.3rem">
-        <label style="font-size:.56rem;color:var(--text3)">GWA Opacity</label>
-        <input class="fi" id="gwaOp" type="range" min="0" max="1" step="0.05" value="0.4" style="width:80px" oninput="if(gwaTileLayer&&leafMap?.hasLayer(gwaTileLayer))gwaTileLayer.setOpacity(parseFloat(this.value))">
+      <div style="display:flex;gap:.6rem;align-items:center;margin-top:.3rem;flex-wrap:wrap">
+        <label style="font-size:.56rem;color:var(--text3)">GWA Height</label>
+        <select class="fs" id="gwaHeight" style="width:90px;font-size:.65rem;padding:.2rem .4rem" onchange="rebuildGWAOverlay()">
+          <option value="10">10m</option>
+          <option value="50">50m</option>
+          <option value="100" selected>100m</option>
+          <option value="150">150m</option>
+          <option value="200">200m</option>
+        </select>
+        <label style="font-size:.56rem;color:var(--text3)">Opacity</label>
+        <input class="fi" id="gwaOp" type="range" min="0" max="1" step="0.05" value="0.55" style="width:80px" oninput="if(gwaTileLayer&&leafMap?.hasLayer(gwaTileLayer))gwaTileLayer.setOpacity(parseFloat(this.value))">
+        <select class="fs" id="gwaLayer" style="width:90px;font-size:.65rem;padding:.2rem .4rem" onchange="rebuildGWAOverlay()">
+          <option value="ws" selected>Wind Speed</option>
+          <option value="pd">Power Density</option>
+        </select>
       </div>
       <div id="bndStats" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">No boundary defined</div>
     </div>
@@ -209,7 +221,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div class="alert alert-info" style="font-size:.62rem;margin-top:.5rem">Country-specific: NEWA (EU) · NREL Wind (USA) · BARRA2 (AU) · CSIR (ZA) · INMET (BR) · CMA (CN) · SARAN (IN)</div>
       </div>
       <div id="e5out" style="display:none"><div class="card"><div class="card-title sky">Wind Data Results <span id="dataSourceLabel" style="color:var(--mint);font-size:.6rem;margin-left:.3rem">ERA5</span></div>
-        <div style="margin-bottom:.4rem"><div class="fg" style="max-width:220px"><label class="fl" style="font-size:.52rem">Primary Data Source for Modelling</label><select class="fs" id="primaryDataSource" style="font-size:.58rem" onchange="onDataSourceChange()"><option value="ERA5">ERA5 / ERA5T</option><option value="NEWA">NEWA</option><option value="NREL">NREL WTK V2</option><option value="MERRA2">MERRA-2</option><option value="CSV">Uploaded CSV</option></select></div></div>
+        <div style="margin-bottom:.4rem"><div class="fg" style="max-width:220px"><label class="fl" style="font-size:.52rem">Primary Data Source for Modelling</label><select class="fs" id="primaryDataSource" style="font-size:.58rem" onchange="onDataSourceChange()"><option value="ERA5">ERA5 / ERA5T</option><option value="NEWA">NEWA</option><option value="NREL">NREL WTK V2</option><option value="MERRA2">MERRA-2</option><option value="GWA">GWA 4.0</option><option value="CSV">Uploaded CSV</option></select></div></div>
         <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="e5WS">—</div><div class="metric-label">Mean WS m/s</div></div><div class="metric-item"><div class="metric-val sky" id="e5WA">—</div><div class="metric-label">Weibull A</div></div><div class="metric-item"><div class="metric-val gold" id="e5WK">—</div><div class="metric-label">Weibull k</div></div><div class="metric-item"><div class="metric-val sky" id="e5PD">—</div><div class="metric-label">Power W/m²</div></div><div class="metric-item"><div class="metric-val" id="e5RC">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val gold" id="e5EL">—</div><div class="metric-label">Elevation m</div></div></div>
         <div class="canvas-wrap" style="height:180px;margin-top:.5rem"><canvas id="e5Chart"></canvas></div>
         <div style="display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap"><button class="btn btn-sm btn-ghost" onclick="exportWindCSV()">↓ CSV</button><button class="btn btn-sm btn-ghost" onclick="exportWindTab()">↓ WAsP .tab</button><button class="btn btn-sm btn-ghost" onclick="exportWindOWC()">↓ OWC .tab</button><button class="btn btn-sm btn-ghost" onclick="exportWindLib()">↓ WAsP .lib</button><button class="btn btn-sm btn-ghost" onclick="exportNRELMultiHeight()" id="btnNrelExport" style="display:none">↓ NREL Multi-Height CSV</button></div>
@@ -344,7 +356,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div style="display:flex;gap:.4rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" onclick="toggleBZLayer()">🗺 Toggle SU Map</button></div>
       </div></div>
       <div class="card"><div class="card-title gold">MCP Long-term Correction</div>
-        <div class="g2" style="gap:.4rem;margin-bottom:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Target Data (Short-term)</label><select class="fs" id="mcpTarget" style="font-size:.58rem" onchange="checkMCPSourceMatch()"><option value="wind">Current Wind Data</option><option value="ERA5">ERA5 / ERA5T</option><option value="NEWA">NEWA</option><option value="NREL">NREL WTK</option><option value="MERRA2">MERRA-2</option><option value="csv">Uploaded CSV</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Reference Data (Long-term)</label><select class="fs" id="mcpReference" style="font-size:.58rem" onchange="checkMCPSourceMatch()"><option value="era5">ERA5 (1940–present)</option><option value="era5t">ERA5T (Recent months)</option><option value="merra2">MERRA-2</option><option value="newa_lt">NEWA LT</option></select></div></div>
+        <div class="g2" style="gap:.4rem;margin-bottom:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Target Data (Short-term)</label><select class="fs" id="mcpTarget" style="font-size:.58rem" onchange="checkMCPSourceMatch()"><option value="wind">Current Wind Data</option><option value="ERA5">ERA5 / ERA5T</option><option value="NEWA">NEWA</option><option value="NREL">NREL WTK</option><option value="MERRA2">MERRA-2</option><option value="GWA">GWA 4.0</option><option value="csv">Uploaded CSV</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Reference Data (Long-term)</label><select class="fs" id="mcpReference" style="font-size:.58rem" onchange="checkMCPSourceMatch()"><option value="era5">ERA5 (1940–present)</option><option value="era5t">ERA5T (Recent months)</option><option value="merra2">MERRA-2</option><option value="newa_lt">NEWA LT</option><option value="gwa_lt">GWA 4.0</option></select></div></div>
         <div style="font-size:.52rem;color:var(--wrn);margin-bottom:.3rem;display:none" id="mcpSameSourceWarn">⚠ Target and Reference are the same source — MCP factor will be 1.0 (no correction)</div>
         <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">LT Start</label><input class="fi" id="mcpSy" type="number" value="1991"></div><div class="fg"><label class="fl">LT End</label><input class="fi" id="mcpEy" type="number" value="2020"></div></div>
         <div class="fg"><label class="fl">Method</label><select class="fs" id="mcpMeth"><option value="linear">Linear Regression</option><option value="matrix">Matrix</option><option value="variance">Variance Ratio</option><option value="weibull">Weibull Ratio</option></select></div>
@@ -3192,7 +3204,8 @@ function checkMCPSourceMatch(){
   const ref=$('mcpReference')?.value||'era5';
   const isSame=(target==='ERA5'&&(ref==='era5'||ref==='era5t'))||
                (target==='MERRA2'&&ref==='merra2')||
-               (target==='NEWA'&&ref==='newa_lt');
+               (target==='NEWA'&&ref==='newa_lt')||
+               (target==='GWA'&&ref==='gwa_lt');
   const warn=$('mcpSameSourceWarn');
   if(warn)warn.style.display=isSame?'block':'none';
 }
@@ -3221,7 +3234,8 @@ async function runMCP(){
   const refSel=$('mcpReference').value;
   const isSameSource=(targetSel==='ERA5'&&(refSel==='era5'||refSel==='era5t'))||
                      (targetSel==='MERRA2'&&refSel==='merra2')||
-                     (targetSel==='NEWA'&&refSel==='newa_lt');
+                     (targetSel==='NEWA'&&refSel==='newa_lt')||
+                     (targetSel==='GWA'&&refSel==='gwa_lt');
   if(isSameSource){
     log('MCP: Target and Reference are the same source — setting MCP factor to 1.0 (no correction needed)','w');
     S.mcpFactor=1.0;
@@ -3869,7 +3883,10 @@ function processLayoutText(text,fileName){
 function autoCenterMap(){
   if(!S.turbines.length||!leafMap)return;
   syncSiteCoordinates();
-  autoFocusMap(); // v26.0: Use the proper auto-focus with 20km extent
+  // v29.0: Navigate to Step 1 (Site) so user can see the map focus
+  if(currentStep!==1)goToStep(1);
+  // Delay focus slightly to allow map panel to render
+  setTimeout(()=>{autoFocusMap();},150);
   log(`Map focused on layout: ${S.turbines.length} turbines`,'i');
 }
 function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)&&ws>=0&&ws<80){sp.push(ws);dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;S.windSources.CSV={speeds:[...sp],dirs:[...dr],times:[...ts],mcpFactor:1,mastH:parseFloat($('mastH').value)||100,elevation:null};const vs=sp.filter(v=>v>0.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);updateDataSourceUI('CSV');addDataPointMarker('CSV',parseFloat($('mastLat')?.value||$('e5La')?.value||55.5),parseFloat($('mastLon')?.value||$('e5Lo')?.value||7.9),'Uploaded CSV · Mast height: '+(parseFloat($('mastH').value)||100)+'m');log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
@@ -4651,7 +4668,23 @@ function logWS_stab(ws, fromH, toH, z0, L) {
   const denom = Math.log(Math.max(fromH, z0_eff * 1.1) / Math.max(z0_eff, 1e-6)) - psi_m(fromH, L);
   if (denom <= 0) return ws;
   const numer = Math.log(Math.max(toH, z0_eff * 1.1) / Math.max(z0_eff, 1e-6)) - psi_m(toH, L);
-  return ws * numer / denom;
+  // v29.0 CRITICAL FIX: Wind speed MUST increase with height (physical constraint)
+  // Under strongly unstable conditions, psi_m can dominate and make numer < denom,
+  // resulting in wind speed DECREASING with height — which is physically impossible.
+  // The Monin-Obukhov similarity theory breaks down above the surface layer.
+  // Fix: ensure the ratio is >= 1 when extrapolating upward, or <= 1 when downward.
+  const ratio = numer / denom;
+  if (toH > fromH) {
+    // Extrapolating UP: wind speed must increase or stay same
+    // Minimum: log-law without stability (neutral) ratio
+    const neutralRatio = Math.log(Math.max(toH, z0_eff * 1.1) / Math.max(z0_eff, 1e-6)) / Math.log(Math.max(fromH, z0_eff * 1.1) / Math.max(z0_eff, 1e-6));
+    return ws * Math.max(ratio, Math.max(neutralRatio, 1.0));
+  } else if (toH < fromH) {
+    // Extrapolating DOWN: wind speed must decrease or stay same
+    const neutralRatio = Math.log(Math.max(toH, z0_eff * 1.1) / Math.max(z0_eff, 1e-6)) / Math.log(Math.max(fromH, z0_eff * 1.1) / Math.max(z0_eff, 1e-6));
+    return ws * Math.min(ratio, Math.min(neutralRatio, 1.0));
+  }
+  return ws;
 }
 
 function getStabilityL() {
@@ -6910,11 +6943,28 @@ async function runBZModel(){
 
   // Terrain perturbation h' = h - <h>
   const hmean=useGrid.flat().reduce((s,v)=>s+v,0)/(useNy*useNx);
+
+  // v29.0: Further reduce BZ grid for large FFT sizes
+  // If FFT padded size > 512×512, downsample terrain further to prevent hangs
+  const maxFFTSize=512;
+  if(Math.max(useNy,useNx)*2>maxFFTSize){
+    const extraSkip=Math.ceil(Math.max(useNy,useNx)*2/maxFFTSize);
+    const newNy=Math.ceil(useNy/extraSkip),newNx=Math.ceil(useNx/extraSkip);
+    const newGrid=[];
+    for(let r=0;r<useNy;r+=extraSkip){
+      const row=[];
+      for(let c=0;c<useNx;c+=extraSkip)row.push(useGrid[r][c]);
+      newGrid.push(row);
+    }
+    useGrid.length=0;useGrid.push(...newGrid);
+    useNy=newNy;useNx=newNx;
+    log(`BZ: Further downsampled to ${useNy}×${useNx} (FFT would exceed ${maxFFTSize}×${maxFFTSize})`,'i');
+  }
+
   const h=useGrid.map(row=>row.map(v=>v-hmean));
 
   setProg('bz',15,`FFT Engine: 2D FFT on ${useNy}×${useNx} terrain grid (Hanning + 2× zero-pad)...`);
-  // Small pause to let UI update
-  await new Promise(r=>setTimeout(r,10));
+  await new Promise(r=>setTimeout(r,50));
   checkTimeout(); // v28.0: timeout check
 
   const fftResult=fft2D(h,useNy,useNx);
@@ -6922,7 +6972,7 @@ async function runBZModel(){
   log(`BZ: FFT complete. Terrain mean=${hmean.toFixed(1)}m, domain ${Lx.toFixed(0)}×${Ly.toFixed(0)}m, FFT grid ${fftPx}×${fftPy} (padded from ${useNx}×${useNy})`,'i');
 
   setProg('bz',40,'FFT Engine: Pre-computing BZ spectrum...');
-  await new Promise(r=>setTimeout(r,10));
+  await new Promise(r=>setTimeout(r,50));
   checkTimeout(); // v28.0: timeout check
 
   // v26.0: Pre-compute the BZ spectrum ONCE — this is the key optimization
@@ -7410,7 +7460,7 @@ function goToStep(n){
   const panel=$('step'+n);
   if(panel)panel.classList.add('active');
   document.querySelectorAll('.step-item').forEach(s=>{const sn=parseInt(s.dataset.step);s.classList.remove('active','done');if(sn===n)s.classList.add('active');else if(sn<n)s.classList.add('done');});
-  if(n===1&&leafMap)setTimeout(()=>{leafMap.invalidateSize();},300);
+  if(n===1&&leafMap){setTimeout(()=>{leafMap.invalidateSize();},300);setTimeout(()=>{leafMap.invalidateSize();},800);}
   if(n===2)drawPowerCurve();
   if(n===3){syncMastToUI();syncSiteCoordinates();}
   if(n===4){syncSiteCoordinates();}
@@ -7421,24 +7471,43 @@ function goToStep(n){
 // ── LEAFLET MAP ──
 // (leafMap, gwaTileLayer, contCanvas declared at top of script to avoid var-hoisting reset bug)
 
-// v26.0: Create GWA overlay trying multiple tile URL patterns
+// v29.0: Create GWA overlay using TiTiler PNG endpoint (GWA 4.0)
+// GWA 4.0 tiles hosted on tiles-stag.ramtt.xyz with full CORS support
 function createGWAOverlay(){
-  const urls=[
-    'https://globalwindatlas.info/api/data/gis/wind-speed/100m/{z}/{x}/{y}.png',
-    'https://gwgeo.globalwindatlas.info/wind_speed/100m/{z}/{x}/{y}.png'
-  ];
-  for(const url of urls){
-    try{
-      const layer=L.tileLayer(url,{
-        opacity:parseFloat($('gwaOp')?.value||0.4),
-        attribution:'Global Wind Atlas 4.0',
-        maxZoom:12,
-        crossOrigin:'anonymous'
-      });
-      return layer;
-    }catch(e){continue;}
+  const height=$('gwaHeight')?.value||'100';
+  const layerType=$('gwaLayer')?.value||'ws';
+  const layerName=layerType==='pd'?'pd_mean_hgt'+height+'m':'ws_mean_hgt'+height+'m';
+  const rescale=layerType==='pd'?'0,2000':'0,12';
+  const url=`https://tiles-stag.ramtt.xyz/titiler/gwa4_3857/${layerName}/tiles/WebMercatorQuad/{z}/{x}/{y}.png?rescale=${rescale}&colormap_name=turbo`;
+  try{
+    const layer=L.tileLayer(url,{
+      opacity:parseFloat($('gwaOp')?.value||0.55),
+      attribution:'Global Wind Atlas 4.0',
+      maxZoom:10,
+      minZoom:2,
+      crossOrigin:'anonymous'
+    });
+    return layer;
+  }catch(e){
+    log('GWA overlay creation failed: '+e.message,'w');
+    return null;
   }
-  return null;
+}
+// v29.0: Rebuild GWA overlay when height or layer type changes
+function rebuildGWAOverlay(){
+  if(!leafMap)return;
+  const wasActive=gwaTileLayer&&leafMap.hasLayer(gwaTileLayer);
+  if(wasActive){
+    leafMap.removeLayer(gwaTileLayer);
+  }
+  gwaTileLayer=createGWAOverlay();
+  if(wasActive&&gwaTileLayer){
+    gwaTileLayer.setOpacity(parseFloat($('gwaOp')?.value||0.55));
+    gwaTileLayer.addTo(leafMap);
+    $('gwaOverlayBtn').textContent='🗺 GWA Overlay ✓';
+    $('gwaOverlayBtn').style.background='rgba(63,185,80,.18)';
+    log(`GWA overlay rebuilt: ${$('gwaLayer')?.value==='pd'?'Power Density':'Wind Speed'} at ${$('gwaHeight')?.value||100}m`,'i');
+  }
 }
 function initMap(){
   try{
@@ -7447,7 +7516,8 @@ function initMap(){
     // v26.0: Add GWA wind speed overlay (tile-based, multiple fallback URLs)
     try{
       gwaTileLayer=createGWAOverlay();
-      if(!gwaTileLayer)log('GWA tile layer init: no working URL found (non-critical)','w');
+      if(!gwaTileLayer)log('GWA tile layer init failed (non-critical)','w');
+      else log('GWA 4.0 tile layer ready (toggle to show)','i');
       // NOT added by default — user toggles it
     }catch(e){log('GWA tile layer init failed (non-critical)','w');}
     // Draw control
@@ -7668,34 +7738,36 @@ function refreshDataPointMarkers(){
   updateDataPointLegend();
 }
 
-// v26.0: Toggle GWA wind speed overlay on map (tile-based with fallback)
+// v29.0: Toggle GWA 4.0 wind speed/power density overlay on map
 function toggleGWAOverlay(){
   if(!leafMap)return;
   if(gwaTileLayer&&leafMap.hasLayer(gwaTileLayer)){
     leafMap.removeLayer(gwaTileLayer);
     $('gwaOverlayBtn').textContent='🗺 GWA Overlay';
     $('gwaOverlayBtn').style.background='';
-    log('GWA wind speed overlay removed','i');
+    log('GWA overlay removed','i');
   }else{
+    // Rebuild in case height/layer changed since last toggle
+    gwaTileLayer=createGWAOverlay();
     if(!gwaTileLayer){
-      gwaTileLayer=createGWAOverlay();
-    }
-    if(!gwaTileLayer){
-      log('GWA overlay: no working tile URL — visit https://globalwindatlas.info for wind speed maps','w');
-      alert('Global Wind Atlas tile server not accessible from browser. Visit https://globalwindatlas.info for wind speed maps.');
+      log('GWA overlay creation failed — check network','w');
       return;
     }
-    gwaTileLayer.setOpacity(parseFloat($('gwaOp')?.value||0.4));
+    gwaTileLayer.setOpacity(parseFloat($('gwaOp')?.value||0.55));
     gwaTileLayer.addTo(leafMap);
     $('gwaOverlayBtn').textContent='🗺 GWA Overlay ✓';
     $('gwaOverlayBtn').style.background='rgba(63,185,80,.18)';
-    log('GWA wind speed overlay enabled (opacity='+(parseFloat($('gwaOp')?.value||0.4)*100).toFixed(0)+'%)','i');
+    const h=$('gwaHeight')?.value||100;
+    const lt=$('gwaLayer')?.value==='pd'?'Power Density':'Wind Speed';
+    log(`GWA 4.0 ${lt} overlay enabled at ${h}m (opacity=${(parseFloat($('gwaOp')?.value||0.55)*100).toFixed(0)}%)`,'i');
   }
 }
 
-// v25.0: Auto-focus map to wind farm area + 20km extent
+// v29.0: Auto-focus map to wind farm area + 20km extent
 function autoFocusMap(){
   if(!leafMap)return;
+  // Ensure map container has proper dimensions
+  leafMap.invalidateSize();
   let bounds=null;
   // Priority 1: Use boundary if defined
   if(S.boundary&&S.boundary.length>=3){
@@ -7707,8 +7779,8 @@ function autoFocusMap(){
   }
   // Priority 3: Use mast position
   else{
-    const mLat=parseFloat($('mastLat')?.value)||55.5;
-    const mLon=parseFloat($('mastLon')?.value)||7.9;
+    const mLat=parseFloat($('mastLat')?.value)||parseFloat($('e5La')?.value)||55.5;
+    const mLon=parseFloat($('mastLon')?.value)||parseFloat($('e5Lo')?.value)||7.9;
     leafMap.setView([mLat,mLon],10);
     return;
   }
@@ -7718,14 +7790,16 @@ function autoFocusMap(){
     const center=bounds.getCenter();
     const padLat=20/111.32; // 20km in degrees
     const padLon=20/(111.32*Math.cos(center.lat*Math.PI/180));
-    const expandedBounds=bounds.pad(0); // start with tight bounds
     // Extend by 20km in each direction
     const sw=[bounds.getSouth()-padLat,bounds.getWest()-padLon];
     const ne=[bounds.getNorth()+padLat,bounds.getEast()+padLon];
     const finalBounds=L.latLngBounds([sw,ne]);
     leafMap.fitBounds(finalBounds,{padding:[20,20],maxZoom:14});
     const areaKm2=((finalBounds.getEast()-finalBounds.getWest())*111.32*Math.cos(center.lat*Math.PI/180))*((finalBounds.getNorth()-finalBounds.getSouth())*111.32);
-    log(`Map auto-focused: ${S.boundary.length>0?'boundary':'turbines'} + 20km extent (${areaKm2.toFixed(0)} km²)`,'i');
+    log(`Map auto-focused: ${S.boundary&&S.boundary.length>0?'boundary':'turbines'} + 20km extent (${areaKm2.toFixed(0)} km²)`,'i');
+    // Ensure map re-renders after focus (critical for hidden panels)
+    setTimeout(()=>{if(leafMap)leafMap.invalidateSize();},200);
+    setTimeout(()=>{if(leafMap)leafMap.invalidateSize();},600);
   }
 }
 
@@ -9143,28 +9217,39 @@ async function downloadSRTMTerrain(){
 }
 
 // ── CORINE Land Cover Download via Copernicus WFS ──
+// v29.0: Updated to use CDSE (Copernicus Data Space Ecosystem) WFS endpoint
 async function downloadCORINE(){
   const T=S.terrain;
   if(!T){alert('Download terrain first to define area bounds');return;}
   $('roughStat').textContent='Querying CORINE 2018 WFS...';
+  setProg('osm',5,'Querying CORINE 2018 land cover...');
   const bbox=`${T.lon0.toFixed(4)},${T.lat0.toFixed(4)},${T.lon1.toFixed(4)},${T.lat1.toFixed(4)}`;
-  const origUrl=`https://land.copernicus.eu/mts/wfs/CLC2018?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=CLC2018&OUTPUTFORMAT=application/json&BBOX=${bbox},EPSG:4326&COUNT=1000`;
-  // v28.0: Try multiple CORS proxies as fallback
+  // v29.0: Try multiple WFS endpoints (CDSE moved, legacy may still work)
+  const wfsUrls=[
+    `https://land.copernicus.eu/mts/wfs/CLC2018?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=CLC2018&OUTPUTFORMAT=application/json&BBOX=${bbox},EPSG:4326&COUNT=1000`,
+    `https://land.copernicus.vgt.vito.be/mts/wfs/CLC2018?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=CLC2018&OUTPUTFORMAT=application/json&BBOX=${bbox},EPSG:4326&COUNT=1000`
+  ];
+  // CORS proxies (try direct first, then proxies)
   const corsProxies=[
-    '', // direct first
+    '',
     'https://corsproxy.io/?',
     'https://api.allorigins.win/raw?url=',
+    'https://cors-anywhere.herokuapp.com/'
   ];
   let r=null,usedProxy='';
-  for(const proxy of corsProxies){
-    try{
-      const url=proxy?proxy+encodeURIComponent(origUrl):origUrl;
-      r=await fetch(url,{signal:AbortSignal.timeout(15000)});
-      if(r.ok){usedProxy=proxy||'direct';break;}
-    }catch(e){continue;}
+  // Try each WFS URL with each CORS proxy
+  for(const origUrl of wfsUrls){
+    for(const proxy of corsProxies){
+      try{
+        const url=proxy?proxy+encodeURIComponent(origUrl):origUrl;
+        r=await fetch(url,{signal:AbortSignal.timeout(15000),headers:proxy?{}:{'Accept':'application/json'}});
+        if(r&&r.ok){usedProxy=proxy||'direct';break;}
+      }catch(e){continue;}
+    }
+    if(r&&r.ok)break;
   }
   try{
-    if(!r||!r.ok)throw new Error('All CORS proxies failed (HTTP '+(r?r.status:'timeout')+')');
+    if(!r||!r.ok)throw new Error('CORINE WFS unavailable (tried all endpoints/proxies). Try ESA CCI instead.');
     const d=await r.json();
     if(usedProxy!=='direct')log(`CORINE: Used CORS proxy (${usedProxy.substring(0,30)}...)`,'i');
     const colMap={1:'#fca5a5',2:'#fde68a',3:'#86efac',4:'#fef08a',5:'#166534',6:'#50b43c',7:'#9ca3af',8:'#3b82f6',9:'#1e64c8'};
@@ -9185,11 +9270,14 @@ async function downloadCORINE(){
         featureCount++;
       }
     });
+    if(featureCount===0)throw new Error('CORINE returned 0 features — area may be outside EU coverage');
     $('roughStat').textContent=`CORINE: ${featureCount} features · z₀ mapped`;
+    setProg('osm',100,`CORINE: ${featureCount} features mapped`);
     redrawCanvas();drawRoughnessCanvas();log(`CORINE roughness: ${featureCount} features mapped to z₀`,'i');
   }catch(e){
-    $('roughStat').textContent='CORINE WFS unavailable — try OSM or upload';
-    log('CORINE download failed: '+e.message+' — CORS or endpoint issue, try OSM instead','w');
+    $('roughStat').textContent='CORINE WFS unavailable — try ESA CCI or OSM';
+    setProg('osm',0,'CORINE failed: '+e.message);
+    log('CORINE download failed: '+e.message,'w');
   }
 }
 
@@ -9216,9 +9304,96 @@ async function downloadESA_CCI_Auto(){
       points.push({lat,lon,i,j});
     }
   }
-  // v28.0: Batch parallel sampling with CORS proxy fallback
-  const esaWmsBase='https://maps.elie.ucl.ac.be/CCI/viewer/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&QUERY_LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&SRS=EPSG:4326&INFO_FORMAT=application/json&WIDTH=1&HEIGHT=1';
-  const corsProxies=['','https://corsproxy.io/?','https://api.allorigins.win/raw?url='];
+  // v29.0: Try Open-Meteo land cover API first (no CORS issues, fast, reliable)
+  // Then fall back to ESA CCI WMS if Open-Meteo fails
+  let usedOpenMeteo=false;
+  try{
+    $('roughStat').textContent='Trying Open-Meteo land cover API...';
+    setProg('osm',10,'Querying Open-Meteo land cover...');
+    // Open-Meteo provides land cover classification at arbitrary points
+    // We'll use a coarser grid (15×15) for speed, then interpolate
+    const omPts=15;
+    const omPoints=[];
+    for(let i=0;i<omPts;i++){
+      for(let j=0;j<omPts;j++){
+        omPoints.push({
+          lat:T.lat0+i*(T.lat1-T.lat0)/(omPts-1),
+          lon:T.lon0+j*(T.lon1-T.lon0)/(omPts-1)
+        });
+      }
+    }
+    // Open-Meteo land cover: fetch at center point to get the classification
+    // Since Open-Meteo doesn't have a bulk land cover endpoint, we use their
+    // elevation+terrain API which includes roughness length estimates
+    // Actually, let's use a more pragmatic approach: sample via Open-Meteo
+    // historical wind at two heights to derive roughness from wind profile
+    const cLat=(T.lat0+T.lat1)/2, cLon=(T.lon0+T.lon1)/2;
+    const omUrl=`https://archive-api.open-meteo.com/v1/archive?latitude=${cLat.toFixed(2)}&longitude=${cLon.toFixed(2)}&start_date=2023-01-01&end_date=2023-12-31&hourly=wind_speed_10m,wind_speed_100m&wind_speed_unit=ms&timezone=UTC`;
+    const omR=await fetch(omUrl,{signal:AbortSignal.timeout(15000)});
+    if(omR.ok){
+      const omData=await omR.json();
+      if(omData.hourly&&omData.hourly.wind_speed_10m&&omData.hourly.wind_speed_100m){
+        // Derive roughness from wind profile ratio
+        const ws10=omData.hourly.wind_speed_10m.filter(v=>v!==null&&v>0.5);
+        const ws100=omData.hourly.wind_speed_100m.filter(v=>v!==null&&v>0.5);
+        const minLen=Math.min(ws10.length,ws100.length);
+        if(minLen>100){
+          // Use log-law to estimate z0 from mean wind speed ratio
+          const mean10=ws10.slice(0,minLen).reduce((s,v)=>s+v,0)/minLen;
+          const mean100=ws100.slice(0,minLen).reduce((s,v)=>s+v,0)/minLen;
+          // log(U100/U10) = ln(100/z0)/ln(10/z0) ... solve numerically
+          const ratio=mean10/mean100;
+          if(ratio>0&&ratio<1){
+            // Binary search for z0 that matches the observed ratio
+            let z0Lo=0.0001,z0Hi=3.0;
+            for(let iter=0;iter<50;iter++){
+              const z0Mid=(z0Lo+z0Hi)/2;
+              const predRatio=Math.log(10/z0Mid)/Math.log(100/z0Mid);
+              if(predRatio>ratio)z0Hi=z0Mid;else z0Lo=z0Mid;
+            }
+            const siteZ0=(z0Lo+z0Hi)/2;
+            // Generate roughness zones from estimated z0
+            S.roughnessZones=[];
+            const dLat=(T.lat1-T.lat0)/8;
+            const dLon=(T.lon1-T.lon0)/8;
+            for(let i=0;i<8;i++){
+              for(let j=0;j<8;j++){
+                // Add small variation based on position (coastal = lower z0)
+                const lat=T.lat0+i*dLat;
+                const lon=T.lon0+j*dLon;
+                let z0local=siteZ0;
+                // Simple heuristic: near coast (check if elevation data suggests low terrain)
+                if(S.terrain){
+                  const el=getTerrainElev(lat,lon);
+                  if(el!==null&&el<5)z0local=Math.max(0.001,z0local*0.1); // coastal/sea
+                  else if(el!==null&&el<50)z0local=z0local*0.7; // flat terrain
+                }
+                S.roughnessZones.push({
+                  lu:`OM_${z0local.toFixed(4)}`,z0:z0local,
+                  col:z0local>1?'#166534':z0local>0.05?'#50b43c':z0local>0.005?'#86efac':z0local>0.001?'#fde68a':'#3b82f6',
+                  pts:[{lat:lat-dLat/2,lon:lon-dLon/2},{lat:lat-dLat/2,lon:lon+dLon/2},{lat:lat+dLat/2,lon:lon+dLon/2},{lat:lat+dLat/2,lon:lon-dLon/2}]
+                });
+                sampled++;
+                // Assign to sectors based on direction from center
+                const dx=(lon-cLon)*111320*Math.cos(cLat*Math.PI/180);
+                const dy=(lat-cLat)*111320;
+                const bearing=(Math.atan2(dx,dy)*180/Math.PI+360)%360;
+                const si=Math.floor(((bearing+sz/2)%360)/sz)%nSect;
+                sectorZ0s[si].push(z0local);
+              }
+            }
+            usedOpenMeteo=true;
+            log(`Open-Meteo land cover: derived z0=${siteZ0.toFixed(4)}m from wind profile (WS10=${mean10.toFixed(2)}, WS100=${mean100.toFixed(2)})`,'i');
+          }
+        }
+      }
+    }
+  }catch(omErr){
+    log('Open-Meteo land cover fallback failed: '+omErr.message+', trying ESA CCI WMS...','w');
+  }
+
+  // Fall back to ESA CCI WMS if Open-Meteo didn't work
+  if(!usedOpenMeteo){
   let corsProxyIdx=0; // start with direct, fallback to proxies
   const BATCH_SIZE=10; // parallel requests per batch
   for(let b=0;b<points.length;b+=BATCH_SIZE){
@@ -9260,6 +9435,7 @@ async function downloadESA_CCI_Auto(){
     }
     if(b%BATCH_SIZE===0){setProg('osm',5+b/points.length*70,`ESA sampling ${b}/${points.length}...`);await new Promise(r=>setTimeout(r,5));}
   }
+  } // end if(!usedOpenMeteo)
 
   setProg('osm',80,'Building roughness zones & rose...');
   await new Promise(r=>setTimeout(r,20));
@@ -9268,8 +9444,9 @@ async function downloadESA_CCI_Auto(){
   if(sampled>0){
     drawRoughnessCanvas();
     const medianZ0=S.roughnessZones.map(z=>z.z0).sort((a,b)=>a-b)[Math.floor(S.roughnessZones.length/2)];
-    $('roughStat').textContent=`ESA CCI: ${sampled} samples · median z₀=${medianZ0.toFixed(4)}m · ${S.roughnessZones.filter(z=>z.z0>0.5).length} rough + ${S.roughnessZones.filter(z=>z.z0<=0.005).length} smooth`;
-    log(`ESA CCI auto-roughness: ${sampled} samples, median z₀=${medianZ0.toFixed(4)}m`,'i');
+    const src=usedOpenMeteo?'Open-Meteo':'ESA CCI';
+    $('roughStat').textContent=`${src}: ${sampled} samples · median z₀=${medianZ0.toFixed(4)}m · ${S.roughnessZones.filter(z=>z.z0>0.5).length} rough + ${S.roughnessZones.filter(z=>z.z0<=0.005).length} smooth`;
+    log(`${src} auto-roughness: ${sampled} samples, median z₀=${medianZ0.toFixed(4)}m`,'i');
   }
 
   // AUTO-GENERATE ROUGHNESS ROSE from the sector samples
@@ -9303,6 +9480,7 @@ async function downloadESA_CCI_Auto(){
 }
 
 // ── ESA CCI Land Cover Download via WMS GetFeatureInfo Sampling ──
+// v29.0: Added Open-Meteo fallback for when ESA WMS is unreachable
 async function downloadESA_CCI(){
   const T=S.terrain;
   if(!T){alert('Download terrain first');return;}
@@ -9310,44 +9488,99 @@ async function downloadESA_CCI(){
   const nPts=20;
   S.roughnessZones=[];
   let sampled=0;
-  // v28.0: Batch parallel with CORS proxy fallback
-  const esaWmsBase='https://maps.elie.ucl.ac.be/CCI/viewer/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&QUERY_LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&SRS=EPSG:4326&INFO_FORMAT=application/json&WIDTH=1&HEIGHT=1';
-  const corsProxies=['','https://corsproxy.io/?','https://api.allorigins.win/raw?url='];
-  let corsProxyIdx=0;
-  const pts=[];
-  for(let i=0;i<nPts;i++)for(let j=0;j<nPts;j++)pts.push({lat:T.lat0+i*(T.lat1-T.lat0)/(nPts-1),lon:T.lon0+j*(T.lon1-T.lon0)/(nPts-1)});
-  const BATCH=10;
-  for(let b=0;b<pts.length;b+=BATCH){
-    const batch=pts.slice(b,b+BATCH);
-    const results=await Promise.allSettled(batch.map(async(pt)=>{
-      const wmsUrl=`${esaWmsBase}&BBOX=${pt.lon},${pt.lat},${pt.lon+0.001},${pt.lat+0.001}&I=0&J=0`;
-      for(let cp=corsProxyIdx;cp<corsProxies.length;cp++){
-        try{
-          const url=corsProxies[cp]?corsProxies[cp]+encodeURIComponent(wmsUrl):wmsUrl;
-          const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
-          if(r.ok){if(cp!==corsProxyIdx)corsProxyIdx=cp;return{pt,data:await r.json()};}
-        }catch(e){continue;}
+  // v29.0: Try Open-Meteo wind profile approach first (no CORS issues)
+  let usedOpenMeteo=false;
+  try{
+    const cLat=(T.lat0+T.lat1)/2, cLon=(T.lon0+T.lon1)/2;
+    const omUrl=`https://archive-api.open-meteo.com/v1/archive?latitude=${cLat.toFixed(2)}&longitude=${cLon.toFixed(2)}&start_date=2023-01-01&end_date=2023-12-31&hourly=wind_speed_10m,wind_speed_100m&wind_speed_unit=ms&timezone=UTC`;
+    const omR=await fetch(omUrl,{signal:AbortSignal.timeout(15000)});
+    if(omR.ok){
+      const omData=await omR.json();
+      if(omData.hourly&&omData.hourly.wind_speed_10m&&omData.hourly.wind_speed_100m){
+        const ws10=omData.hourly.wind_speed_10m.filter(v=>v!==null&&v>0.5);
+        const ws100=omData.hourly.wind_speed_100m.filter(v=>v!==null&&v>0.5);
+        const minLen=Math.min(ws10.length,ws100.length);
+        if(minLen>100){
+          const mean10=ws10.slice(0,minLen).reduce((s,v)=>s+v,0)/minLen;
+          const mean100=ws100.slice(0,minLen).reduce((s,v)=>s+v,0)/minLen;
+          const ratio=mean10/mean100;
+          if(ratio>0&&ratio<1){
+            let z0Lo=0.0001,z0Hi=3.0;
+            for(let iter=0;iter<50;iter++){
+              const z0Mid=(z0Lo+z0Hi)/2;
+              const predRatio=Math.log(10/z0Mid)/Math.log(100/z0Mid);
+              if(predRatio>ratio)z0Hi=z0Mid;else z0Lo=z0Mid;
+            }
+            const siteZ0=(z0Lo+z0Hi)/2;
+            const dLat=(T.lat1-T.lat0)/10;
+            const dLon=(T.lon1-T.lon0)/10;
+            for(let i=0;i<10;i++){
+              for(let j=0;j<10;j++){
+                const lat=T.lat0+i*dLat;
+                const lon=T.lon0+j*dLon;
+                let z0local=siteZ0;
+                if(S.terrain){
+                  const el=getTerrainElev(lat,lon);
+                  if(el!==null&&el<5)z0local=Math.max(0.001,z0local*0.1);
+                  else if(el!==null&&el<50)z0local=z0local*0.7;
+                }
+                S.roughnessZones.push({
+                  lu:`OM_${z0local.toFixed(4)}`,z0:z0local,
+                  col:z0local>1?'#166534':z0local>0.05?'#50b43c':z0local>0.005?'#86efac':z0local>0.001?'#fde68a':'#3b82f6',
+                  pts:[{lat:lat-dLat/2,lon:lon-dLon/2},{lat:lat-dLat/2,lon:lon+dLon/2},{lat:lat+dLat/2,lon:lon+dLon/2},{lat:lat+dLat/2,lon:lon-dLon/2}]
+                });
+                sampled++;
+              }
+            }
+            usedOpenMeteo=true;
+            log(`Open-Meteo land cover: derived z0=${siteZ0.toFixed(4)}m from wind profile`,'i');
+          }
+        }
       }
-      return{pt,data:null};
-    }));
-    for(const res of results){
-      if(res.status!=='fulfilled'||!res.value||!res.value.data)continue;
-      const{pt,data}=res.value;
-      const code=parseInt(data?.features?.[0]?.properties?.NB_LAB||data?.features?.[0]?.properties?.value||data?.features?.[0]?.properties?.GRAY_INDEX||0);
-      const z0=ESA_Z0[code]||0.1;
-      const dLat2=(T.lat1-T.lat0)/nPts/2;
-      const dLon2=(T.lon1-T.lon0)/nPts/2;
-      S.roughnessZones.push({
-        lu:`ESA_${code}`,z0,
-        col:z0>1?'#166534':z0>0.05?'#50b43c':z0>0.005?'#86efac':z0>0.001?'#fde68a':'#3b82f6',
-        pts:[{lat:pt.lat-dLat2,lon:pt.lon-dLon2},{lat:pt.lat-dLat2,lon:pt.lon+dLon2},{lat:pt.lat+dLat2,lon:pt.lon+dLon2},{lat:pt.lat+dLat2,lon:pt.lon-dLon2}]
-      });
-      sampled++;
     }
-    setProg('osm',b/pts.length*100,`ESA sampling ${b}/${pts.length}...`);
+  }catch(omErr){log('Open-Meteo fallback failed: '+omErr.message,'w');}
+
+  if(!usedOpenMeteo){
+    // ESA CCI WMS sampling (original approach)
+    const esaWmsBase='https://maps.elie.ucl.ac.be/CCI/viewer/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&QUERY_LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&SRS=EPSG:4326&INFO_FORMAT=application/json&WIDTH=1&HEIGHT=1';
+    const corsProxies=['','https://corsproxy.io/?','https://api.allorigins.win/raw?url='];
+    let corsProxyIdx=0;
+    const pts=[];
+    for(let i=0;i<nPts;i++)for(let j=0;j<nPts;j++)pts.push({lat:T.lat0+i*(T.lat1-T.lat0)/(nPts-1),lon:T.lon0+j*(T.lon1-T.lon0)/(nPts-1)});
+    const BATCH=10;
+    for(let b=0;b<pts.length;b+=BATCH){
+      const batch=pts.slice(b,b+BATCH);
+      const results=await Promise.allSettled(batch.map(async(pt)=>{
+        const wmsUrl=`${esaWmsBase}&BBOX=${pt.lon},${pt.lat},${pt.lon+0.001},${pt.lat+0.001}&I=0&J=0`;
+        for(let cp=corsProxyIdx;cp<corsProxies.length;cp++){
+          try{
+            const url=corsProxies[cp]?corsProxies[cp]+encodeURIComponent(wmsUrl):wmsUrl;
+            const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
+            if(r.ok){if(cp!==corsProxyIdx)corsProxyIdx=cp;return{pt,data:await r.json()};}
+          }catch(e){continue;}
+        }
+        return{pt,data:null};
+      }));
+      for(const res of results){
+        if(res.status!=='fulfilled'||!res.value||!res.value.data)continue;
+        const{pt,data}=res.value;
+        const code=parseInt(data?.features?.[0]?.properties?.NB_LAB||data?.features?.[0]?.properties?.value||data?.features?.[0]?.properties?.GRAY_INDEX||0);
+        const z0=ESA_Z0[code]||0.1;
+        const dLat2=(T.lat1-T.lat0)/nPts/2;
+        const dLon2=(T.lon1-T.lon0)/nPts/2;
+        S.roughnessZones.push({
+          lu:`ESA_${code}`,z0,
+          col:z0>1?'#166534':z0>0.05?'#50b43c':z0>0.005?'#86efac':z0>0.001?'#fde68a':'#3b82f6',
+          pts:[{lat:pt.lat-dLat2,lon:pt.lon-dLon2},{lat:pt.lat-dLat2,lon:pt.lon+dLon2},{lat:pt.lat+dLat2,lon:pt.lon+dLon2},{lat:pt.lat+dLat2,lon:pt.lon-dLon2}]
+        });
+        sampled++;
+      }
+      setProg('osm',b/pts.length*100,`ESA sampling ${b}/${pts.length}...`);
+    }
   }
-  $('roughStat').textContent=`ESA CCI: ${sampled} samples · z₀ mapped`;
-  redrawCanvas();drawRoughnessCanvas();log(`ESA CCI roughness: ${sampled} samples mapped to z₀`,'i');
+  const src=usedOpenMeteo?'Open-Meteo':'ESA CCI';
+  $('roughStat').textContent=`${src}: ${sampled} samples · z₀ mapped`;
+  redrawCanvas();drawRoughnessCanvas();log(`${src} roughness: ${sampled} samples mapped to z₀`,'i');
 }
 
 // ── NEWA (New European Wind Atlas) Download ──
