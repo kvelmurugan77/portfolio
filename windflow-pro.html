@@ -45,6 +45,12 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 #mapInfo{position:absolute;bottom:6px;left:6px;background:rgba(7,17,30,.88);border:1px solid var(--border);border-radius:var(--radius2);padding:.35rem .6rem;font-size:.62rem;color:var(--text3);pointer-events:none;z-index:500;line-height:1.6;font-family:var(--mono)}#mapInfo span{color:var(--mint)}
 #drawStatus{display:none;position:absolute;top:6px;left:50%;transform:translateX(-50%);background:rgba(245,166,35,.92);color:var(--bg);font-weight:700;padding:.3rem 1rem;border-radius:var(--radius2);font-size:.68rem;z-index:600;pointer-events:none}
 #contCanvas{position:absolute;top:0;left:0;pointer-events:none;z-index:0}
+/* v27.1: Data point legend overlay */
+#dpLegend{position:absolute;top:6px;right:6px;background:rgba(7,17,30,.92);border:1px solid var(--border);border-radius:var(--radius2);padding:.4rem .6rem;font-size:.56rem;color:var(--text3);z-index:500;pointer-events:none;line-height:1.6;font-family:var(--mono);max-width:220px}
+#dpLegend .dp-title{color:var(--text);font-weight:600;margin-bottom:.2rem;font-size:.58rem}
+#dpLegend .dp-row{display:flex;align-items:center;gap:.3rem;margin-bottom:.1rem}
+#dpLegend .dp-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1.5px solid #fff}
+#dpLegend .dp-dist{color:var(--mint);margin-left:auto;font-size:.5rem}
 /* Wind rose canvas sizing */
 .rose-canvas-wrap{width:100%;max-width:420px;margin:0 auto}
 /* PC chart */
@@ -83,6 +89,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <canvas id="contCanvas"></canvas>
         <div id="drawStatus"></div>
         <div id="mapInfo">Lat: <span id="ovLat">—</span> Lon: <span id="ovLon">—</span><br>Elev: <span id="ovEl">—</span> | WS: <span id="ovWS">—</span> | SU: <span id="ovSU">—</span></div>
+        <div id="dpLegend" style="display:none"><div class="dp-title">Data Points</div><div id="dpLegendRows"></div></div>
       </div>
       <div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
         <button class="btn btn-sm btn-gold" id="drawBtn" onclick="toggleDraw()">✏ Draw Boundary</button>
@@ -508,8 +515,14 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 15.0 — Step-Based Wizard · ERA5T Density · Per-WTG ρ · Humidity · WAsP-Aligned · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Centralized Coords
+// WINDFLOW PRO 27.1 — Step-Based Wizard · ERA5T Density · Per-WTG ρ · Humidity · WAsP-Aligned · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Centralized Coords
 // ═══════════════════════════════════════════════════════════════════
+// v27.1: Global map variables declared FIRST to prevent var hoisting from
+// resetting them to null after initMap() runs (var leafMap=null at line 7333
+// was executing AFTER initMap() at line 3807, resetting the map reference)
+var leafMap=null;
+var gwaTileLayer=null;
+var contCanvas;
 const $=id=>document.getElementById(id);
 function log(m,t='i'){const d=$('elog');if(!d)return;const s=document.createElement('span');s.className={i:'li',w:'lw',e:'le'}[t]||'li';s.textContent=`[${new Date().toLocaleTimeString()}] ${m}\n`;d.appendChild(s);d.scrollTop=1e6}
 function setProg(id,p,t){const pb=$(id+'pb'),pt=$(id+'pt');if(pb)pb.style.width=p+'%';if(pt)pt.textContent=t}
@@ -527,7 +540,10 @@ const S={
   waspCalibration:null,
   windSources:{},
   windSource:'ERA5',
-  era5Marker:null // v26.0: ERA5 data point marker on map
+  era5Marker:null, // v26.0: ERA5 data point marker on map
+  dataPointMarkers:{}, // v27.1: Per-source data point markers on map {ERA5: marker, NEWA: marker, ...}
+  dataPointLines:[], // v27.1: Lines connecting data points to site center/WTGs
+  dataPointLegend:null // v27.1: Legend control on map for data points
 };
 
 // ── POWER CURVES ──
@@ -1553,7 +1569,7 @@ function elevCol(e,mn,mx){const t=Math.min(1,Math.max(0,(e-mn)/Math.max(1,mx-mn)
 function autoCI(r){if(r<50)return 5;if(r<200)return 10;if(r<500)return 20;return 50;}
 
 // ── CANVAS OVERLAY (replaces DOM polylines — ~20× faster render) ──
-let contCanvas;
+// contCanvas declared at top of script
 function initCanvas(){
   contCanvas=$('contCanvas');
   // v19.0: Move canvas INSIDE Leaflet's overlay pane so it renders above tiles but below markers
@@ -2358,6 +2374,8 @@ async function downloadERA5(){
         })
       }).addTo(leafMap).bindTooltip('ERA5 Grid Point (' + lat.toFixed(4) + ', ' + lon.toFixed(4) + ')');
     }
+    // v27.1: Add data point marker with distance info
+    addDataPointMarker('ERA5', lat, lon, 'ERA5/ERA5T reanalysis · Height: '+h+'m');
     // v14.0: Store ERA5 atmospheric data for density calculation
     S.era5Atm={pres:allPres.map(v=>v??null),temp:allTemp.map(v=>v??null),rh:allRH.map(v=>v??null),elev};
     const vs=sp.filter(v=>v>.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);const wb=weibullFit(vs);
@@ -3225,6 +3243,8 @@ async function runMCP(){
         })
       }).addTo(leafMap).bindTooltip('MCP Ref Point (' + lat.toFixed(4) + ', ' + lon.toFixed(4) + ')');
     }
+    // v27.1: Add data point marker for MCP reference
+    addDataPointMarker('ERA5', lat, lon, 'MCP Reference · '+refLabel);
     $('mcpOut').style.display='block';log(`MCP: factor=${factor.toFixed(3)}, R²=${R2.toFixed(2)}, σ_MCP=${(sigMCP*100).toFixed(1)}%${regressionEq}`,'i');
   }catch(e){setProg('mcp',0,'❌ '+e.message);log('MCP failed: '+e.message,'e');}
 }
@@ -3790,7 +3810,7 @@ function autoCenterMap(){
   autoFocusMap(); // v26.0: Use the proper auto-focus with 20km extent
   log(`Map focused on layout: ${S.turbines.length} turbines`,'i');
 }
-function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)&&ws>=0&&ws<80){sp.push(ws);dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;S.windSources.CSV={speeds:[...sp],dirs:[...dr],times:[...ts],mcpFactor:1,mastH:parseFloat($('mastH').value)||100,elevation:null};const vs=sp.filter(v=>v>0.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);updateDataSourceUI('CSV');log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
+function importWind(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(l=>l.trim());const sp=[],dr=[],ts=[];for(let i=0;i<lines.length;i++){const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0].replace(/[^0-9.\-]/g,'')))continue;let ws,wd,t='';if(p.length>=3){t=p[0];ws=+p[1];wd=+p[2];}else if(p.length===2){ws=+p[0];wd=+p[1];}else ws=+p[0];if(!isNaN(ws)&&ws>=0&&ws<80){sp.push(ws);dr.push(isNaN(wd)?0:(wd%360+360)%360);ts.push(t);}}if(!sp.length){alert('No valid data');return;}S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;S.windSources.CSV={speeds:[...sp],dirs:[...dr],times:[...ts],mcpFactor:1,mastH:parseFloat($('mastH').value)||100,elevation:null};const vs=sp.filter(v=>v>0.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);$('windStat').textContent=`Imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;updateWindUI(sp,dr);updateDataSourceUI('CSV');addDataPointMarker('CSV',parseFloat($('mastLat')?.value||$('e5La')?.value||55.5),parseFloat($('mastLon')?.value||$('e5Lo')?.value||7.9),'Uploaded CSV · Mast height: '+(parseFloat($('mastH').value)||100)+'m');log(`Wind imported: ${sp.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`,'i');};r.readAsText(f);ev.target.value='';}
 function dlFile(c,f,m){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:m}));a.download=f;a.click();}
 function showToast(msg,dur=3000){const t=document.createElement('div');t.textContent=msg;t.style.cssText='position:fixed;bottom:20px;right:20px;background:#1e293b;color:#f1f5f9;padding:10px 18px;border-radius:8px;font-size:12px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:fadeInUp .3s ease';document.body.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300)},dur);}
 function showTab(id){/* legacy stub */}
@@ -7295,6 +7315,8 @@ function syncSiteCoordinates(){
   if($('mastLon'))$('mastLon').value=c.lon.toFixed(3);
   if($('osmLa'))$('osmLa').value=c.lat.toFixed(3);
   if($('osmLo'))$('osmLo').value=c.lon.toFixed(3);
+  // v27.1: Refresh data point markers when site center changes
+  if(Object.keys(S.dataPointMarkers).length)refreshDataPointMarkers();
 }
 
 // ── STEP NAVIGATION ──
@@ -7314,8 +7336,7 @@ function goToStep(n){
 }
 
 // ── LEAFLET MAP ──
-var leafMap=null;
-var gwaTileLayer=null; // v26.0: Global Wind Atlas overlay layer (tile-based)
+// (leafMap, gwaTileLayer, contCanvas declared at top of script to avoid var-hoisting reset bug)
 
 // v26.0: Create GWA overlay trying multiple tile URL patterns
 function createGWAOverlay(){
@@ -7363,6 +7384,205 @@ function initMap(){
     initCanvas();
     log('Map initialized successfully','i');
   }catch(e){console.error('Map init failed:',e);log('Map init failed: '+e.message,'e');}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// v27.1: DATA POINT MARKERS ON MAP
+// Shows the location of each downloaded wind data source relative to WTGs
+// with distance lines, labels, and a legend overlay
+// ══════════════════════════════════════════════════════════════════════
+
+const DP_COLORS = {
+  ERA5:   '#58a6ff',  // Blue
+  NEWA:   '#f59e0b',  // Amber/Gold
+  NREL:   '#a855f7',  // Purple
+  MERRA2: '#ef4444',  // Red
+  CSV:    '#22c55e',  // Green
+  GWA:    '#06b6d4'   // Cyan
+};
+
+const DP_ICONS = {
+  ERA5:   '📡',
+  NEWA:   '🌍',
+  NREL:   '🇺🇸',
+  MERRA2: '🛰',
+  CSV:    '📂',
+  GWA:    '🗺'
+};
+
+// Haversine distance in km between two lat/lon points
+function haversineKm(lat1,lon1,lat2,lon2){
+  const R=6371;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// Add or update a data source marker on the map
+function addDataPointMarker(source,lat,lon,extraInfo){
+  if(!leafMap||!isFinite(lat)||!isFinite(lon))return;
+  // Remove old marker for this source if it exists
+  removeDataPointMarker(source);
+  const color=DP_COLORS[source]||'#58a6ff';
+  const icon=DP_ICONS[source]||'📍';
+  // Create distinctive marker with source icon
+  const marker=L.marker([lat,lon],{
+    icon:L.divIcon({
+      className:'dp-marker-'+source,
+      html:`<div style="position:relative;width:28px;height:28px;display:flex;align-items:center;justify-content:center">
+        <div style="position:absolute;width:20px;height:20px;background:${color};border:2px solid #fff;border-radius:50%;box-shadow:0 0 10px ${color}88,0 2px 6px rgba(0,0,0,.4)"></div>
+        <span style="position:relative;font-size:10px;z-index:1;filter:brightness(0)">${icon}</span>
+      </div>`,
+      iconSize:[28,28],
+      iconAnchor:[14,14]
+    })
+  }).addTo(leafMap);
+
+  // Compute distances to site center and nearest WTG
+  const siteLat=parseFloat($('e5La')?.value)||parseFloat($('gLat')?.value)||lat;
+  const siteLon=parseFloat($('e5Lo')?.value)||parseFloat($('gLon')?.value)||lon;
+  const distToSite=haversineKm(lat,lon,siteLat,siteLon);
+  let distToNearest='—',nearestWTG='—';
+  if(S.turbines.length){
+    let minD=Infinity,minI=0;
+    S.turbines.forEach((t,i)=>{const d=haversineKm(lat,lon,t.lat,t.lon);if(d<minD){minD=d;minI=i;}});
+    distToNearest=minD.toFixed(2);
+    nearestWTG='T'+(minI+1);
+  }
+
+  // Rich tooltip popup
+  const popupContent=`
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#e6edf3;min-width:180px">
+      <div style="font-weight:700;color:${color};font-size:12px;margin-bottom:4px">${icon} ${source} Data Point</div>
+      <div>Lat: <b>${lat.toFixed(5)}</b>°N</div>
+      <div>Lon: <b>${lon.toFixed(5)}</b>°E</div>
+      <div style="margin-top:4px;border-top:1px solid rgba(255,255,255,.15);padding-top:4px">
+        <div>Distance to site: <b style="color:#00d68f">${distToSite.toFixed(2)} km</b></div>
+        ${S.turbines.length?`<div>Nearest WTG: <b style="color:#58a6ff">${nearestWTG}</b> (${distToNearest} km)</div>`:''}
+        ${extraInfo?`<div style="margin-top:2px;color:#8b949e">${extraInfo}</div>`:''}
+      </div>
+    </div>`;
+  marker.bindPopup(popupContent,{className:'dp-popup',maxWidth:280});
+  marker.bindTooltip(`${icon} ${source} (${lat.toFixed(3)}, ${lon.toFixed(3)})`,{direction:'top',offset:[0,-14]});
+
+  S.dataPointMarkers[source]=marker;
+
+  // Draw dashed line from data point to site center
+  const line=L.polyline([[lat,lon],[siteLat,siteLon]],{
+    color:color,weight:1.5,dashArray:'6,4',opacity:.5
+  }).addTo(leafMap);
+  S.dataPointLines.push(line);
+
+  // If WTGs exist, also draw line to nearest WTG
+  if(S.turbines.length){
+    const nearT=S.turbines.reduce((best,t,i)=>{
+      const d=haversineKm(lat,lon,t.lat,t.lon);
+      return d<best.d?{t,i,d}:best;
+    },{t:null,i:-1,d:Infinity});
+    if(nearT.t){
+      const nearLine=L.polyline([[lat,lon],[nearT.t.lat,nearT.t.lon]],{
+        color:color,weight:1,dashArray:'3,5',opacity:.35
+      }).addTo(leafMap);
+      S.dataPointLines.push(nearLine);
+    }
+  }
+
+  // Update legend
+  updateDataPointLegend();
+  log(`${source} data point marker placed at (${lat.toFixed(4)}, ${lon.toFixed(4)}), ${distToSite.toFixed(1)} km from site${S.turbines.length?', nearest WTG: '+nearestWTG+' ('+distToNearest+' km)':''}`,'i');
+}
+
+// Remove a data source marker from the map
+function removeDataPointMarker(source){
+  if(S.dataPointMarkers[source]){
+    S.dataPointMarkers[source].remove();
+    delete S.dataPointMarkers[source];
+  }
+  // Remove associated lines (we rebuild all lines for simplicity)
+  S.dataPointLines.forEach(l=>l.remove());
+  S.dataPointLines=[];
+  // Re-add lines for remaining data points
+  const siteLat=parseFloat($('e5La')?.value)||parseFloat($('gLat')?.value)||55.5;
+  const siteLon=parseFloat($('e5Lo')?.value)||parseFloat($('gLon')?.value)||7.9;
+  Object.entries(S.dataPointMarkers).forEach(([src,marker])=>{
+    const ll=marker.getLatLng();
+    const color=DP_COLORS[src]||'#58a6ff';
+    const line=L.polyline([[ll.lat,ll.lng],[siteLat,siteLon]],{
+      color:color,weight:1.5,dashArray:'6,4',opacity:.5
+    }).addTo(leafMap);
+    S.dataPointLines.push(line);
+  });
+  updateDataPointLegend();
+}
+
+// Update the data point legend overlay
+function updateDataPointLegend(){
+  const legend=$('dpLegend');
+  const rows=$('dpLegendRows');
+  if(!legend||!rows)return;
+  const sources=Object.keys(S.dataPointMarkers);
+  if(!sources.length){
+    legend.style.display='none';
+    return;
+  }
+  legend.style.display='block';
+  const siteLat=parseFloat($('e5La')?.value)||parseFloat($('gLat')?.value)||55.5;
+  const siteLon=parseFloat($('e5Lo')?.value)||parseFloat($('gLon')?.value)||7.9;
+  let html='';
+  sources.forEach(src=>{
+    const marker=S.dataPointMarkers[src];
+    if(!marker)return;
+    const ll=marker.getLatLng();
+    const dist=haversineKm(ll.lat,ll.lng,siteLat,siteLon);
+    const color=DP_COLORS[src]||'#58a6ff';
+    const icon=DP_ICONS[src]||'📍';
+    // Find nearest WTG
+    let nearInfo='';
+    if(S.turbines.length){
+      let minD=Infinity,minI=0;
+      S.turbines.forEach((t,i)=>{const d=haversineKm(ll.lat,ll.lng,t.lat,t.lon);if(d<minD){minD=d;minI=i;}});
+      nearInfo=`<span style="color:#58a6ff">→ T${minI+1} ${minD.toFixed(1)}km</span>`;
+    }
+    html+=`<div class="dp-row"><div class="dp-dot" style="background:${color}"></div><span>${icon} ${src}</span><span class="dp-dist">${dist.toFixed(1)}km ${nearInfo}</span></div>`;
+  });
+  // Add WTG count
+  if(S.turbines.length){
+    html+=`<div class="dp-row" style="margin-top:.2rem;border-top:1px solid rgba(255,255,255,.1);padding-top:.2rem"><div class="dp-dot" style="background:#00d68f"></div><span>WTGs: ${S.turbines.length}</span></div>`;
+  }
+  rows.innerHTML=html;
+}
+
+// Redraw all data point markers and lines (call after site coordinates change)
+function refreshDataPointMarkers(){
+  if(!leafMap)return;
+  const siteLat=parseFloat($('e5La')?.value)||parseFloat($('gLat')?.value)||55.5;
+  const siteLon=parseFloat($('e5Lo')?.value)||parseFloat($('gLon')?.value)||7.9;
+  // Remove all lines and redraw
+  S.dataPointLines.forEach(l=>l.remove());
+  S.dataPointLines=[];
+  Object.entries(S.dataPointMarkers).forEach(([src,marker])=>{
+    const ll=marker.getLatLng();
+    const color=DP_COLORS[src]||'#58a6ff';
+    const line=L.polyline([[ll.lat,ll.lng],[siteLat,siteLon]],{
+      color:color,weight:1.5,dashArray:'6,4',opacity:.5
+    }).addTo(leafMap);
+    S.dataPointLines.push(line);
+    // Line to nearest WTG
+    if(S.turbines.length){
+      const nearT=S.turbines.reduce((best,t,i)=>{
+        const d=haversineKm(ll.lat,ll.lng,t.lat,t.lon);
+        return d<best.d?{t,i,d}:best;
+      },{t:null,i:-1,d:Infinity});
+      if(nearT.t){
+        const nearLine=L.polyline([[ll.lat,ll.lng],[nearT.t.lat,nearT.t.lon]],{
+          color:color,weight:1,dashArray:'3,5',opacity:.35
+        }).addTo(leafMap);
+        S.dataPointLines.push(nearLine);
+      }
+    }
+  });
+  updateDataPointLegend();
 }
 
 // v26.0: Toggle GWA wind speed overlay on map (tile-based with fallback)
@@ -7742,7 +7962,7 @@ function gamma(z){
   return Math.sqrt(2*Math.PI)*Math.pow(t,z+0.5)*Math.exp(-t)*x;
 }
 
-async function downloadMERRA2(){$('merra2Status').textContent='Querying NASA POWER...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();const ws10=Object.values(d.properties?.parameter?.WS10M||{});const ws50=Object.values(d.properties?.parameter?.WS50M||{});const wd10=Object.values(d.properties?.parameter?.WD10M||{});const speeds=ws50.filter(v=>v>=0&&v<80);const dirs=wd10.filter(v=>!isNaN(v)).map(v=>(v%360+360)%360);const times=[];const param=d.properties?.parameter?.WS50M||{};Object.keys(param).forEach(k=>{if(param[k]>=0&&param[k]<80)times.push(k);});if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times};S.mcpFactor=1;S.windSources.MERRA2={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:50,elevation:null};const vs=speeds.filter(v=>v>.5);const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;const wb=weibullFit(vs);const rho=parseFloat($('airDen').value)||1.225;const PD=.5*rho*mean**3;$('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);$('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';$('e5out').style.display='block';drawE5Hist(speeds,wb);if($('mastH'))$('mastH').value=50;updateDataSourceUI('MERRA2');$('merra2Status').textContent='✓ MERRA-2: '+speeds.length.toLocaleString()+' records, mean WS50m='+mean.toFixed(2)+' m/s';log('MERRA-2 data downloaded: '+speeds.length+' records, mean='+mean.toFixed(2)+' m/s','i');}catch(e){$('merra2Status').textContent='⚠ MERRA-2 unavailable: '+e.message;log('MERRA-2 failed: '+e.message,'w');}}
+async function downloadMERRA2(){$('merra2Status').textContent='Querying NASA POWER...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();const ws10=Object.values(d.properties?.parameter?.WS10M||{});const ws50=Object.values(d.properties?.parameter?.WS50M||{});const wd10=Object.values(d.properties?.parameter?.WD10M||{});const speeds=ws50.filter(v=>v>=0&&v<80);const dirs=wd10.filter(v=>!isNaN(v)).map(v=>(v%360+360)%360);const times=[];const param=d.properties?.parameter?.WS50M||{};Object.keys(param).forEach(k=>{if(param[k]>=0&&param[k]<80)times.push(k);});if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times};S.mcpFactor=1;S.windSources.MERRA2={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:50,elevation:null};const vs=speeds.filter(v=>v>.5);const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;const wb=weibullFit(vs);const rho=parseFloat($('airDen').value)||1.225;const PD=.5*rho*mean**3;$('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);$('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';$('e5out').style.display='block';drawE5Hist(speeds,wb);if($('mastH'))$('mastH').value=50;updateDataSourceUI('MERRA2');addDataPointMarker('MERRA2',lat,lon,'NASA POWER MERRA-2 · Height: 50m');$('merra2Status').textContent='✓ MERRA-2: '+speeds.length.toLocaleString()+' records, mean WS50m='+mean.toFixed(2)+' m/s';log('MERRA-2 data downloaded: '+speeds.length+' records, mean='+mean.toFixed(2)+' m/s','i');}catch(e){$('merra2Status').textContent='⚠ MERRA-2 unavailable: '+e.message;log('MERRA-2 failed: '+e.message,'w');}}
 
 async function downloadNCEP(){$('ncepStatus').textContent='NCEP/NCAR via Open-Meteo...';try{$('ncepStatus').textContent='⚠ Use ERA5 tab for NCEP-equivalent data (Open-Meteo includes NCEP backfill)';}catch(e){$('ncepStatus').textContent='⚠ NCEP unavailable';}}
 
@@ -8168,6 +8388,11 @@ function clearAll(){
   S.turbines=[];S.wind=null;S.era5Raw=null;S.mcpFactor=1;S.tsData=null;S.results=null;S.terrain=null;S.contoursData=[];S.boundary=[];S.obstacles=[];S.masts=[];S.waspCalibration=null;S.hourlyStability=null;S.autoRoughnessRose=null;S.roughnessZones=null;S.windSources={};S.windSource='ERA5';S._terrProfRef=null;S._terrProfData=null;BZ.enabled=false;BZ.speedups=[];BZ.grid=null;BZ.sectorSU=[];BZ.sectorTurning=[];BZ.sectorRoughRC=[];BZ.turbRoughRC=[];BZ.mastSU=1;BZ.showLayer=false;
   // v26.0: Remove ERA5 marker from map
   if(S.era5Marker){S.era5Marker.remove();S.era5Marker=null;}
+  // v27.1: Remove all data point markers and lines
+  Object.keys(S.dataPointMarkers).forEach(src=>removeDataPointMarker(src));
+  S.dataPointLines.forEach(l=>l.remove());S.dataPointLines=[];
+  S.dataPointMarkers={};
+  updateDataPointLegend();
   refreshTable();updateMarkers();clearBoundary();renderMastList();log('All data cleared','i');goToStep(1);
 }
 
@@ -8246,6 +8471,8 @@ function updateMarkers(){
   // v26.0: Force map refresh (helps when map was hidden on different step)
   setTimeout(()=>{if(leafMap)leafMap.invalidateSize();},100);
   setTimeout(()=>{if(leafMap)leafMap.invalidateSize();},500);
+  // v27.1: Refresh data point distance lines after WTG update
+  refreshDataPointMarkers();
 }
 
 // v19.0: Convex hull algorithm for wind farm boundary visualization
@@ -9060,6 +9287,8 @@ async function downloadNEWA(){
             $('e5out').style.display='block';drawE5Hist(speeds,wb);
             if($('mastH'))$('mastH').value=hh;
             updateDataSourceUI('NEWA');
+            // v27.1: Add NEWA data point marker on map
+            addDataPointMarker('NEWA', lat, lon, 'NEWA (ERA5 10yr proxy) · Height: '+hh+'m');
             $('newaStatus').textContent=`NEWA (ERA5 10yr proxy): ${speeds.length.toLocaleString()} hrs, mean=${meanWS.toFixed(1)} m/s @ ${hh}m`;
             log(`NEWA data via ERA5 10yr proxy: ${speeds.length.toLocaleString()} hours, mean=${meanWS.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
             return;
@@ -9105,6 +9334,8 @@ async function downloadNEWA(){
       drawE5Hist(speeds,wb);
       if($('mastH'))$('mastH').value=hh;
       updateDataSourceUI('NEWA');
+      // v27.1: Add NEWA data point marker on map
+      addDataPointMarker('NEWA', lat, lon, 'NEWA Wind Atlas · Height: '+hh+'m · Source: '+source);
       $('newaStatus').textContent=`NEWA: ${speeds.length} hrs, mean=${meanWS.toFixed(1)} m/s @ ${hh}m`;
       log(`NEWA wind data (${source}): ${speeds.length} hours, mean=${meanWS.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
     }else{
@@ -9387,6 +9618,8 @@ async function downloadNREL(){
     $('e5out').style.display='block';
     drawE5Hist(speeds,wb);
     updateDataSourceUI('NREL');
+    // v27.1: Add NREL data point marker on map
+    addDataPointMarker('NREL', lat, lon, 'NREL WTK V2 · Height: '+hubHt+'m · Year: '+year);
     // Update status
     const htSummary=wsHeights.length>1?` · ${wsHeights.length} heights [${wsHeights.join(',')}m]`:'';
     $('nrelStatus').textContent=`NREL V2: ${dataRows.length} records @ ${hubHt}m (closest to ${userHH}m HH), mean=${meanWS.toFixed(1)} m/s${htSummary}`;
