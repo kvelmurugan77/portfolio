@@ -2985,7 +2985,16 @@ function calcAEP(){
 
 function runAnalysis(){
   if(!S.turbines.length){alert('Add turbines (grid generator or Demo)');return;}
-  if(!S.wind){alert('Load wind data (ERA5 tab or Import)');return;}
+  if(!S.wind||!S.wind.speeds||!S.wind.speeds.length){alert('Load wind data (ERA5 tab or Import)');return;}
+  // v29: Pipeline input validation guard (Issue 24)
+  if(S.wind.speeds.filter(v=>v>0.5).length<50){
+    log('⚠ Very few valid wind records — results will be unreliable','w');
+    showToast('Warning: Very few wind records');
+  }
+  if(BZ.enabled&&!S.terrain){
+    log('⚠ BZ enabled but no terrain data — orographic speedups will be null','w');
+    showToast('Warning: No terrain data for BZ');
+  }
   setStatus('Running WAsP engine...');$('runBtn').disabled=true;
   // v28.0: Log the flow model pipeline sequence for transparency (CORRECTED order)
   log(`── Flow Model Pipeline ──`,'i');
@@ -3007,7 +3016,11 @@ function runAnalysis(){
     }
     setStatus(`✓ Net AEP: ${R.netAEP.toFixed(2)} GWh | Wake: ${R.wakeLoss.toFixed(1)}% | CF: ${R.CF.toFixed(1)}%${R.bzEnabled?' [BZ]':''}${R.calibrated?' [WAsP Cal]':''}`);
     $('sbAEP').textContent=`${R.netAEP.toFixed(2)} GWh`;
-    log(`✓ Gross=${R.grossAEP.toFixed(2)} GWh · Wake=${R.wakeLoss.toFixed(1)}% · Net=${R.netAEP.toFixed(2)} GWh · CF=${R.CF.toFixed(1)}%${R.bzEnabled?' · BZ integrated':''}${R.calibrated?' · WAsP-calibrated':''}`,'i');
+    // v29: Data period label (Issue 27)
+    const src=S.windSource||'ERA5';
+    const srcData=S.windSources[src];
+    const dataPeriod=srcData?.times?.length?`${srcData.times[0]?.substring(0,4)||'?'}–${srcData.times[srcData.times.length-1]?.substring(0,4)||'?'}`:'N/A';
+    log(`✓ Gross=${R.grossAEP.toFixed(2)} GWh · Wake=${R.wakeLoss.toFixed(1)}% · Net=${R.netAEP.toFixed(2)} GWh · CF=${R.CF.toFixed(1)}%${R.bzEnabled?' · BZ integrated':''}${R.calibrated?' · WAsP-calibrated':''} · Data: ${src} (${dataPeriod})`,'i');
   }catch(e){log('Engine error: '+e.message,'e');setStatus('Error: '+e.message);}
   $('runBtn').disabled=false;},30);
 }
@@ -3035,7 +3048,10 @@ function updateResultsUI(R){
   // v25.0: Updated to include Eff.SU column for transparency
   R.perTurbine.forEach(t=>{const tb2=S.turbines[t.i-1]||{};const tr=document.createElement('tr');
     const effSU=t.effSU||parseFloat(t.speedup||1);
-    tr.innerHTML=`<td>T${t.i}</td><td>${(tb2.lat||0).toFixed(4)}</td><td>${(tb2.lon||0).toFixed(4)}</td><td>${(tb2.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${t.ws}</td><td>${t.wake}%</td><td>${t.wakeWS||t.ws}</td><td style="color:var(--acc)">${effSU.toFixed(3)}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;tb.appendChild(tr);});
+    // v29: CF flagging (Issue 30) — highlight unrealistic values
+    const cfVal=parseFloat(t.cf);
+    const cfStyle=cfVal>55?'color:var(--wrn);font-weight:700':cfVal<10?'color:var(--wrn)':'';
+    tr.innerHTML=`<td>T${t.i}</td><td>${(tb2.lat||0).toFixed(4)}</td><td>${(tb2.lon||0).toFixed(4)}</td><td>${(tb2.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${t.ws}</td><td>${t.wake}%</td><td>${t.wakeWS||t.ws}</td><td style="color:var(--acc)">${effSU.toFixed(3)}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td style="${cfStyle}">${t.cf}%</td>`;tb.appendChild(tr);});
   drawAEPChart(R.perTurbine);drawShearChart(R.shearProfile);
   if (R.calibrated) {
     if ($('calIndicator')) $('calIndicator').style.display = 'block';
@@ -8523,28 +8539,40 @@ function runFinancial(){
   const instMW=R.instMW;
   const totalCAPEX=instMW*capex*1000;
   const annualRev=R.netAEP*1000*ppa;
-  const annualOpex=instMW*opex*1000;
-  const annualNet=annualRev-annualOpex;
-  // NPV with discounted cash flows
+  // v29: OPEX with 2% annual escalation (Issue 37)
+  const opexEscRate=0.02; // 2% per year real escalation
+  const annualOpexY1=instMW*opex*1000;
   let npv=-totalCAPEX;
-  for(let y=1;y<=life;y++){npv+=annualNet/Math.pow(1+dr/100,y);}
-  // IRR using Newton-Raphson
-  let irrGuess=annualNet/totalCAPEX;
+  let totalOpexNPV=0, totalRevNPV=0;
+  for(let y=1;y<=life;y++){
+    const escalatedOpex=annualOpexY1*Math.pow(1+opexEscRate,y-1);
+    const discFactor=Math.pow(1+dr/100,y);
+    totalOpexNPV+=escalatedOpex/discFactor;
+    totalRevNPV+=annualRev/discFactor;
+    npv+=(annualRev-escalatedOpex)/discFactor;
+  }
+  const avgAnnualOpex=annualOpexY1*(1-Math.pow(1+opexEscRate,life))/(1-opexEscRate)/life||annualOpexY1;
+  // IRR using Newton-Raphson with escalating OPEX
+  let irrGuess=annualRev/totalCAPEX;
   for(let iter=0;iter<50;iter++){
     let npvIrr=-totalCAPEX;let dNpv=0;
-    for(let y=1;y<=life;y++){const f=Math.pow(1+irrGuess,y);npvIrr+=annualNet/f;dNpv-=y*annualNet/(f*(1+irrGuess));}
+    for(let y=1;y<=life;y++){
+      const escalatedOpex=annualOpexY1*Math.pow(1+opexEscRate,y-1);
+      const cf=annualRev-escalatedOpex;
+      const f=Math.pow(1+irrGuess,y);npvIrr+=cf/f;dNpv-=y*cf/(f*(1+irrGuess));
+    }
     if(Math.abs(dNpv)<1e-10)break;
     const newIrr=irrGuess-npvIrr/dNpv;
     if(Math.abs(newIrr-irrGuess)<1e-8){irrGuess=newIrr;break;}
     irrGuess=newIrr;
   }
   const irr=irrGuess*100;
-  // LCOE = (CRF × CAPEX + annual OPEX) / annual energy
+  // LCOE = (CRF × CAPEX + avg escalated OPEX) / annual energy
   const crf=(dr/100*Math.pow(1+dr/100,life))/(Math.pow(1+dr/100,life)-1);
-  const lcoe=(crf*totalCAPEX+annualOpex)/(R.netAEP*1000);
+  const lcoe=(crf*totalCAPEX+avgAnnualOpex)/(R.netAEP*1000);
   $('finResults').style.display='block';
-  $('finResults').innerHTML=`<div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val gold">$${(totalCAPEX/1e6).toFixed(1)}M</div><div class="metric-label">Total CAPEX</div></div><div class="metric-item"><div class="metric-val sky">$${(annualRev/1e6).toFixed(2)}M</div><div class="metric-label">Annual Revenue</div></div><div class="metric-item"><div class="metric-val">$${(annualOpex/1e6).toFixed(2)}M</div><div class="metric-label">Annual OPEX</div></div><div class="metric-item"><div class="metric-val ${npv>0?'g':'r'}">$${(npv/1e6).toFixed(2)}M</div><div class="metric-label">NPV</div></div><div class="metric-item"><div class="metric-val ${irr>dr?'g':'r'}">${irr.toFixed(1)}%</div><div class="metric-label">IRR</div></div><div class="metric-item"><div class="metric-val sky">$${lcoe.toFixed(1)}/MWh</div><div class="metric-label">LCOE</div></div></div>`;
-  log(`Financial: CAPEX=$${(totalCAPEX/1e6).toFixed(1)}M, Rev=$${(annualRev/1e6).toFixed(2)}M/yr, NPV=$${(npv/1e6).toFixed(2)}M, IRR≈${irr.toFixed(1)}%, LCOE=$${lcoe.toFixed(1)}/MWh`,'i');
+  $('finResults').innerHTML=`<div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val gold">$${(totalCAPEX/1e6).toFixed(1)}M</div><div class="metric-label">Total CAPEX</div></div><div class="metric-item"><div class="metric-val sky">$${(annualRev/1e6).toFixed(2)}M</div><div class="metric-label">Annual Revenue</div></div><div class="metric-item"><div class="metric-val">$${(avgAnnualOpex/1e6).toFixed(2)}M</div><div class="metric-label">Avg Annual OPEX</div></div><div class="metric-item"><div class="metric-val ${npv>0?'g':'r'}">$${(npv/1e6).toFixed(2)}M</div><div class="metric-label">NPV</div></div><div class="metric-item"><div class="metric-val ${irr>dr?'g':'r'}">${irr.toFixed(1)}%</div><div class="metric-label">IRR</div></div><div class="metric-item"><div class="metric-val sky">$${lcoe.toFixed(1)}/MWh</div><div class="metric-label">LCOE</div></div></div><div style="font-size:.52rem;color:var(--text3);margin-top:.3rem">OPEX escalated at ${(opexEscRate*100).toFixed(0)}%/yr real · Discount rate: ${dr}%</div>`;
+  log(`Financial: CAPEX=$${(totalCAPEX/1e6).toFixed(1)}M, Rev=$${(annualRev/1e6).toFixed(2)}M/yr, NPV=$${(npv/1e6).toFixed(2)}M, IRR≈${irr.toFixed(1)}%, LCOE=$${lcoe.toFixed(1)}/MWh (OPEX ${opex} $/kW/yr +${(opexEscRate*100).toFixed(0)}%/yr esc)`,'i');
 }
 
 // ── NOISE ASSESSMENT ──
@@ -9448,6 +9476,14 @@ async function downloadSRTMTerrain(){
 async function downloadCORINE(){
   const T=S.terrain;
   if(!T){alert('Download terrain first to define area bounds');return;}
+  // v29: EU coverage guard (Issue 34) — CORINE only covers EEA member states
+  const clat=(T.lat0+T.lat1)/2, clon=(T.lon0+T.lon1)/2;
+  if(clat<35||clat>72||clon<-25||clon>45){
+    $('roughStat').textContent='⚠ CORINE only covers EU/EFTA (35-72°N, 25°W-45°E). Use ESA CCI for global coverage.';
+    log('CORINE: Site outside EU coverage — use ESA CCI instead','w');
+    showToast('CORINE unavailable outside EU — use ESA CCI');
+    return;
+  }
   $('roughStat').textContent='Querying CORINE 2018 WFS...';
   setProg('osm',5,'Querying CORINE 2018 land cover...');
   const bbox=`${T.lon0.toFixed(4)},${T.lat0.toFixed(4)},${T.lon1.toFixed(4)},${T.lat1.toFixed(4)}`;
