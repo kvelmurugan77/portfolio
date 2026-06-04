@@ -564,6 +564,8 @@ const S={
   windSources:{},
   windSource:'ERA5',
   era5Marker:null, // v26.0: ERA5 data point marker on map
+  merra2Marker:null, // v33.3: MERRA2 data point marker
+  newaMarker:null, // v33.3: NEWA data point marker
   gwcSectors:null // v32.0: GWC sectors from waspGeneralize for GDL downscale
 };
 
@@ -2477,17 +2479,8 @@ async function downloadERA5(){
     // v32.0: Update mast coordinates to match ERA5 data source position
     $('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);
     log(`v32.0: Data source position: ${lat.toFixed(4)}°, ${lon.toFixed(4)}° · Height: ${h}m · This is the position for horizontal extrapolation`,'i');
-    // v26.0: Show ERA5 data point on map
-    if(leafMap && !S.era5Marker){
-      S.era5Marker = L.marker([lat, lon], {
-        icon: L.divIcon({
-          className: 'era5-marker',
-          html: '<div style="background:#58a6ff;border:2px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 8px rgba(88,166,255,.6)"></div>',
-          iconSize: [14, 14],
-          iconAnchor: [7, 7]
-        })
-      }).addTo(leafMap).bindTooltip('ERA5 Grid Point (' + lat.toFixed(4) + ', ' + lon.toFixed(4) + ')');
-    }
+    // v33.3: Show ERA5T data point on map with label
+    addDataSourceMarker('ERA5T',lat,lon,parseInt(h)||100);
     // v14.0: Store ERA5 atmospheric data for density calculation
     S.era5Atm={pres:allPres.map(v=>v??null),temp:allTemp.map(v=>v??null),rh:allRH.map(v=>v??null),elev};
     const vs=sp.filter(v=>v>.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);const wb=weibullFit(vs);
@@ -3392,17 +3385,8 @@ async function runMCP(){
     const targetLabel=$('mcpTarget')?.value==='csv'?'Uploaded CSV (short-term)':'ERA5/NEWA concurrent data';
     const refLabel=$('mcpReference')?.value==='era5t'?'ERA5T (near-real-time)':($('mcpReference')?.value==='merra2'?'MERRA-2':'ERA5 long-term reference');
     $('mcpPvals').innerHTML=`P50: <b style="color:var(--grn)">${ltCorr.toFixed(2)} m/s</b> &nbsp; P75: <b style="color:var(--acc)">${(ltCorr*(1-.674*sigMCP)).toFixed(2)}</b> &nbsp; P90: <b style="color:var(--wrn)">${(ltCorr*(1-1.282*sigMCP)).toFixed(2)}</b><br>σ_MCP=${(sigMCP*100).toFixed(1)}% · Method: <b style="color:var(--acc)">${methLabel}</b> · R²=${R2.toFixed(2)} · n=${pairs.length} months${regressionEq}<br>Conc. mean = ${cMean.toFixed(2)} m/s · LT ref mean = ${ltMean.toFixed(2)} m/s · Factor = ${factor.toFixed(3)}<br><span style="color:var(--muted);font-size:.6rem">Target (concurrent): ${targetLabel} · Reference (LT): ${refLabel} (${sy}–${ey})</span>`;
-    // v26.0: Show MCP reference data point on map (reuse ERA5 marker if same location)
-    if(leafMap && !S.era5Marker){
-      S.era5Marker = L.marker([lat, lon], {
-        icon: L.divIcon({
-          className: 'era5-marker',
-          html: '<div style="background:#58a6ff;border:2px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 8px rgba(88,166,255,.6)"></div>',
-          iconSize: [14, 14],
-          iconAnchor: [7, 7]
-        })
-      }).addTo(leafMap).bindTooltip('MCP Ref Point (' + lat.toFixed(4) + ', ' + lon.toFixed(4) + ')');
-    }
+    // v33.3: Show MCP reference data point on map
+    addDataSourceMarker('ERA5T',lat,lon,parseInt($('mastH').value)||100);
     $('mcpOut').style.display='block';log(`MCP: factor=${factor.toFixed(3)}, R²=${R2.toFixed(2)}, σ_MCP=${(sigMCP*100).toFixed(1)}%${regressionEq}`,'i');
   }catch(e){setProg('mcp',0,'❌ '+e.message);log('MCP failed: '+e.message,'e');}
 }
@@ -8125,7 +8109,7 @@ function gamma(z){
   return Math.sqrt(2*Math.PI)*Math.pow(t,z+0.5)*Math.exp(-t)*x;
 }
 
-async function downloadMERRA2(){$('merra2Status').textContent='Querying NASA POWER...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();const ws10=Object.values(d.properties?.parameter?.WS10M||{});const ws50=Object.values(d.properties?.parameter?.WS50M||{});const wd10=Object.values(d.properties?.parameter?.WD10M||{});const speeds=ws50.filter(v=>v>=0&&v<80);const dirs=wd10.filter(v=>!isNaN(v)).map(v=>(v%360+360)%360);const times=[];const param=d.properties?.parameter?.WS50M||{};Object.keys(param).forEach(k=>{if(param[k]>=0&&param[k]<80)times.push(k);});if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times};S.mcpFactor=1;S.windSources.MERRA2={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:50,elevation:null,sourceLat:lat,sourceLon:lon,sourceHeight:50};$('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);log(`v32.0: Data source position: ${lat.toFixed(4)}°, ${lon.toFixed(4)}° · Height: 50m · This is the position for horizontal extrapolation`,'i');const vs=speeds.filter(v=>v>.5);const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;const wb=weibullFit(vs);const rho=parseFloat($('airDen').value)||1.225;const PD=.5*rho*mean**3;$('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);$('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';$('e5out').style.display='block';drawE5Hist(speeds,wb);if($('mastH'))$('mastH').value=50;updateDataSourceUI('MERRA2');$('merra2Status').textContent='✓ MERRA-2: '+speeds.length.toLocaleString()+' records, mean WS50m='+mean.toFixed(2)+' m/s';log('MERRA-2 data downloaded: '+speeds.length+' records, mean='+mean.toFixed(2)+' m/s','i');}catch(e){$('merra2Status').textContent='⚠ MERRA-2 unavailable: '+e.message;log('MERRA-2 failed: '+e.message,'w');}}
+async function downloadMERRA2(){$('merra2Status').textContent='Querying NASA POWER...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();const ws10=Object.values(d.properties?.parameter?.WS10M||{});const ws50=Object.values(d.properties?.parameter?.WS50M||{});const wd10=Object.values(d.properties?.parameter?.WD10M||{});const speeds=ws50.filter(v=>v>=0&&v<80);const dirs=wd10.filter(v=>!isNaN(v)).map(v=>(v%360+360)%360);const times=[];const param=d.properties?.parameter?.WS50M||{};Object.keys(param).forEach(k=>{if(param[k]>=0&&param[k]<80)times.push(k);});if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times};S.mcpFactor=1;S.windSources.MERRA2={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:50,elevation:null,sourceLat:lat,sourceLon:lon,sourceHeight:50};$('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);log(`v32.0: Data source position: ${lat.toFixed(4)}°, ${lon.toFixed(4)}° · Height: 50m · This is the position for horizontal extrapolation`,'i');addDataSourceMarker('MERRA2',lat,lon,50);const vs=speeds.filter(v=>v>.5);const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;const wb=weibullFit(vs);const rho=parseFloat($('airDen').value)||1.225;const PD=.5*rho*mean**3;$('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);$('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';$('e5out').style.display='block';drawE5Hist(speeds,wb);if($('mastH'))$('mastH').value=50;updateDataSourceUI('MERRA2');$('merra2Status').textContent='✓ MERRA-2: '+speeds.length.toLocaleString()+' records, mean WS50m='+mean.toFixed(2)+' m/s';log('MERRA-2 data downloaded: '+speeds.length+' records, mean='+mean.toFixed(2)+' m/s','i');}catch(e){$('merra2Status').textContent='⚠ MERRA-2 unavailable: '+e.message;log('MERRA-2 failed: '+e.message,'w');}}
 
 async function downloadNCEP(){$('ncepStatus').textContent='NCEP/NCAR via Open-Meteo...';try{$('ncepStatus').textContent='⚠ Use ERA5 tab for NCEP-equivalent data (Open-Meteo includes NCEP backfill)';}catch(e){$('ncepStatus').textContent='⚠ NCEP unavailable';}}
 
@@ -8598,8 +8582,8 @@ function loadProject(event){
 function clearAll(){
   if(!confirm('Clear all data?'))return;
   S.turbines=[];S.wind=null;S.era5Raw=null;S.mcpFactor=1;S.tsData=null;S.results=null;S.terrain=null;S.contoursData=[];S.boundary=[];S.obstacles=[];S.masts=[];S.waspCalibration=null;S.hourlyStability=null;S.autoRoughnessRose=null;S.roughnessZones=null;S.windSources={};S.windSource='ERA5';S._terrProfRef=null;S._terrProfData=null;BZ.enabled=false;BZ.speedups=[];BZ.grid=null;BZ.sectorSU=[];BZ.sectorTurning=[];BZ.sectorRoughRC=[];BZ.turbRoughRC=[];BZ.mastSU=1;BZ.showLayer=false;
-  // v26.0: Remove ERA5 marker from map
-  if(S.era5Marker){S.era5Marker.remove();S.era5Marker=null;}
+  // v33.3: Remove all data source markers from map
+  removeDataSourceMarkers();
   refreshTable();updateMarkers();clearBoundary();renderMastList();log('All data cleared','i');goToStep(1);
 }
 
@@ -9589,6 +9573,7 @@ async function downloadNEWA(){
             S.windSources.NEWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:hh,elevation:null,sourceLat:lat,sourceLon:lon,sourceHeight:hh};
             $('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);
             log(`v32.0: Data source position: ${lat.toFixed(4)}°, ${lon.toFixed(4)}° · Height: ${hh}m · This is the position for horizontal extrapolation`,'i');
+            addDataSourceMarker('NEWA',lat,lon,hh);
             const meanWS=speeds.reduce((s,v)=>s+v,0)/speeds.length;
             const wb=weibullFit(speeds);
             const rho=parseFloat($('airDen').value)||1.225;
@@ -9631,6 +9616,7 @@ async function downloadNEWA(){
       S.windSources.NEWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:hh,elevation:null,sourceLat:lat,sourceLon:lon,sourceHeight:hh};
       $('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);
       log(`v32.0: Data source position: ${lat.toFixed(4)}°, ${lon.toFixed(4)}° · Height: ${hh}m · This is the position for horizontal extrapolation`,'i');
+      addDataSourceMarker('NEWA',lat,lon,hh);
       const meanWS=speeds.reduce((s,v)=>s+v,0)/speeds.length;
       const wb=weibullFit(speeds);
       const rho=parseFloat($('airDen').value)||1.225;
@@ -9654,6 +9640,38 @@ async function downloadNEWA(){
     $('newaStatus').textContent='⚠ NEWA unavailable — use ERA5 tab instead';
     log('NEWA download failed: '+e.message+' — CORS or endpoint issue. Use ERA5 tab for reliable wind data download.','w');
   }
+}
+
+// ── Data Source Point Markers on Map ──
+// v33.3: Show each data source point on map so user knows which is nearest
+const DSMARKER_STYLES={
+  ERA5T:{bg:'#58a6ff',border:'#fff',label:'ERA5T',shadow:'rgba(88,166,255,.6)'},
+  ERA5:{bg:'#58a6ff',border:'#fff',label:'ERA5',shadow:'rgba(88,166,255,.6)'},
+  MERRA2:{bg:'#f5a623',border:'#fff',label:'MERRA-2',shadow:'rgba(245,166,35,.6)'},
+  NEWA:{bg:'#00d68f',border:'#fff',label:'NEWA',shadow:'rgba(0,214,143,.6)'},
+  CSV:{bg:'#e05050',border:'#fff',label:'CSV',shadow:'rgba(224,80,80,.6)'}
+};
+function addDataSourceMarker(source,lat,lon,hh){
+  if(!leafMap)return;
+  const key=source.replace(/[^A-Z0-9]/g,'').toUpperCase();
+  const style=DSMARKER_STYLES[source]||DSMARKER_STYLES[key]||DSMARKER_STYLES.CSV;
+  const markerKey=source==='ERA5T'?'era5Marker':source.toLowerCase().replace(/[^a-z0-9]/g,'')+'Marker';
+  // Remove old marker for this source
+  if(S[markerKey]){S[markerKey].remove();S[markerKey]=null;}
+  S[markerKey]=L.marker([lat,lon],{
+    icon:L.divIcon({
+      className:'data-source-marker',
+      html:`<div style="position:relative"><div style="background:${style.bg};border:2px solid ${style.border};border-radius:50%;width:16px;height:16px;box-shadow:0 0 10px ${style.shadow}"></div><div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:${style.bg};color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;white-space:nowrap;font-family:IBM Plex Mono,monospace">${style.label}</div></div>`,
+      iconSize:[16,16],
+      iconAnchor:[8,8]
+    })
+  }).addTo(leafMap).bindTooltip(`${style.label} Data Point (${lat.toFixed(4)}, ${lon.toFixed(4)}) · ${hh}m`);
+  log(`Data source marker: ${style.label} at (${lat.toFixed(4)}, ${lon.toFixed(4)}) · ${hh}m`,'i');
+}
+function removeDataSourceMarkers(){
+  ['era5Marker','merra2Marker','newaMarker'].forEach(k=>{
+    if(S[k]){S[k].remove();S[k]=null;}
+  });
 }
 
 // ── Data Source Selector ──
