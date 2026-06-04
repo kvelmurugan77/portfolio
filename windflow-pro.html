@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 32.0</title>
+<title>WindFlow Pro 33.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 32.0</span></div><div class="brand-sub">① Site → ② Power Curve → ③ Wind Data → ④ Terrain → ⑤ Flow Model → ⑥ Reporting</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 33.1</span></div><div class="brand-sub">① Site → ② Power Curve → ③ Wind Data → ④ Terrain → ⑤ Flow Model → ⑥ Reporting</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -366,7 +366,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem"><b>WAsP Wind Atlas Step 1:</b> Remove mast terrain (BZ) + roughness effects via Geostrophic Drag Law → Generalized Wind Climate at standard height/roughness</div>
         <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Mast z₀ (m)</label><input class="fi" id="bzMz0" type="number" value="0.0002" step="0.0001"></div><div class="fg"><label class="fl">GWC z₀ (m)</label><input class="fi" id="gwcZ0" type="number" value="0.03" step="0.01"><div style="font-size:.5rem;color:var(--text3);margin-top:.1rem">WAsP standard = 0.03m</div></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">GWC Height (m)</label><input class="fi" id="gwcH" type="number" value="100" step="10"><div style="font-size:.5rem;color:var(--text3);margin-top:.1rem">WAsP standard = 100m</div></div><div class="fg"><label class="fl">Inner Layer Scale</label><input class="fi" id="bzLscale" type="number" value="1.0" step="0.1" min="0.3" max="3.0"><div style="font-size:.5rem;color:var(--text3);margin-top:.1rem">1.0=WAsP default · Auto-tuned on run</div></div></div>
-        <div class="fg"><label class="fl">RIX Threshold</label><input class="fi" id="bzRixThr" type="number" value="0.3" step="0.05" min="0.05" max="0.5"></div>
+        <div class="fg"><label class="fl">RIX Threshold</label><input class="fi" id="bzRixThr" type="number" value="0.05" step="0.01" min="0.01" max="0.5"></div>
         <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="runBZModel()">⚙ Compute BZ Speedups + Generalize (OWC→GWC)</button>
         <div class="progress"><div class="progress-bar" id="bzpb" style="width:0"></div></div><div id="bzpt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">Download terrain first, then generalize</div>
       </div>
@@ -1656,6 +1656,46 @@ function redrawCanvas(){
 }
 
 // ── TERRAIN DOWNLOAD (parallel batches, canvas render) ──
+// v33.1: Added OpenTopoData fallback (Open-Meteo API sometimes returns 502)
+async function fetchElevOpenMeteo(rLats,rLons){
+  const CHUNK=50;const chunks=[];
+  for(let c=0;c<rLats.length;c+=CHUNK)chunks.push({la:rLats.slice(c,c+CHUNK),lo:rLons.slice(c,c+CHUNK)});
+  const elevs=[];
+  for(let bi=0;bi<chunks.length;bi++){
+    const ch=chunks[bi];
+    try{
+      const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${ch.la.join(',')}&longitude=${ch.lo.join(',')}`,{signal:AbortSignal.timeout(10000)});
+      if(!r.ok){log(`Terrain batch ${bi+1} HTTP ${r.status} — retrying...`,'w');await new Promise(r=>setTimeout(r,500));const r2=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${ch.la.join(',')}&longitude=${ch.lo.join(',')}`,{signal:AbortSignal.timeout(10000)});if(r2.ok){const d2=await r2.json();elevs.push(...(d2.elevation||[]));}else{elevs.push(...ch.la.map(()=>null));}}
+      else{const d=await r.json();elevs.push(...(d.elevation||[]));}
+    }catch(e){log(`Terrain batch ${bi+1} Open-Meteo failed: ${e.message}`,'w');elevs.push(...ch.la.map(()=>null));}
+  }
+  return elevs;
+}
+
+// v33.1: OpenTopoData fallback — free API, no key required, Mapzen dataset (global ~30m)
+async function fetchElevOpenTopoData(rLats,rLons,dataset){
+  // OpenTopoData uses locations=lat,lon|lat,lon|... format, max 100 per request
+  const CHUNK=100;const chunks=[];
+  for(let c=0;c<rLats.length;c+=CHUNK)chunks.push({la:rLats.slice(c,c+CHUNK),lo:rLons.slice(c,c+CHUNK)});
+  const elevs=[];
+  const ds=dataset||'mapzen'; // mapzen is global, srtm30m is land-only but higher quality
+  for(let bi=0;bi<chunks.length;bi++){
+    const ch=chunks[bi];
+    const locs=ch.la.map((la,i)=>`${la},${ch.lo[i]}`).join('|');
+    try{
+      const r=await fetch(`https://api.opentopodata.org/v1/${ds}?locations=${locs}`,{signal:AbortSignal.timeout(15000)});
+      if(!r.ok){log(`Terrain batch ${bi+1} OpenTopoData HTTP ${r.status}`,'w');elevs.push(...ch.la.map(()=>null));continue;}
+      const d=await r.json();
+      if(d.status==='OK'&&d.results){
+        d.results.forEach(res=>{elevs.push(res.elevation!==null?res.elevation:null);});
+      }else{elevs.push(...ch.la.map(()=>null));}
+    }catch(e){log(`Terrain batch ${bi+1} OpenTopoData failed: ${e.message}`,'w');elevs.push(...ch.la.map(()=>null));}
+    // v33.1: Rate limit — OpenTopoData allows 1 req/s
+    if(bi<chunks.length-1)await new Promise(r=>setTimeout(r,1100));
+  }
+  return elevs;
+}
+
 async function downloadTerrainForArea(clat,clon,radKm,ng,ciSel){
   const dLat=radKm/111.32,dLon=radKm/(111.32*Math.cos(clat*Math.PI/180));
   const lat0=clat-dLat,lat1=clat+dLat,lon0=clon-dLon,lon1=clon+dLon;
@@ -1664,28 +1704,43 @@ async function downloadTerrainForArea(clat,clon,radKm,ng,ciSel){
 
   // Round coordinates to 4 decimals to keep URL short
   const rLats=gLats.map(v=>+v.toFixed(4)),rLons=gLons.map(v=>+v.toFixed(4));
+  setProg('terrP',5,`Fetching ${rLats.length} elevation points...`);
 
-  // Parallel batches of 50 (Open-Meteo API rejects URLs > ~3000 chars)
-  const CHUNK=50;const chunks=[];
-  for(let c=0;c<rLats.length;c+=CHUNK)chunks.push({la:rLats.slice(c,c+CHUNK),lo:rLons.slice(c,c+CHUNK)});
-
-  setProg('terrP',10,`Fetching ${rLats.length} pts in ${chunks.length} batches...`);
-  const elevs=[];
-  for(let bi=0;bi<chunks.length;bi++){
-    const ch=chunks[bi];
-    try{
-      const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${ch.la.join(',')}&longitude=${ch.lo.join(',')}`);
-      if(!r.ok){log(`Terrain batch ${bi+1} HTTP ${r.status} — retrying...`,'w');await new Promise(r=>setTimeout(r,500));const r2=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${ch.la.join(',')}&longitude=${ch.lo.join(',')}`);if(r2.ok){const d2=await r2.json();elevs.push(...(d2.elevation||[]));}else{elevs.push(...ch.la.map(()=>null));}}
-      else{const d=await r.json();elevs.push(...(d.elevation||[]));}
-    }catch(e){log(`Terrain batch ${bi+1} failed: ${e.message}`,'w');elevs.push(...ch.la.map(()=>null));}
-    setProg('terrP',10+50*(bi+1)/chunks.length,`Batch ${bi+1}/${chunks.length}...`);
+  // v33.1: Try Open-Meteo first, fall back to OpenTopoData if it fails
+  let elevs=[];
+  let source='Open-Meteo';
+  log(`Terrain: Trying Open-Meteo elevation API...`,'i');
+  elevs=await fetchElevOpenMeteo(rLats,rLons);
+  const validCount=elevs.filter(e=>e!==null&&!isNaN(e)&&e!==undefined).length;
+  if(validCount<rLats.length*0.5){
+    log(`Terrain: Open-Meteo returned only ${validCount}/${rLats.length} valid points — trying OpenTopoData fallback (Mapzen)`,'w');
+    setProg('terrP',15,`Open-Meteo incomplete — trying OpenTopoData...`);
+    const elevs2=await fetchElevOpenTopoData(rLats,rLons,'mapzen');
+    const validCount2=elevs2.filter(e=>e!==null&&!isNaN(e)&&e!==undefined).length;
+    if(validCount2>validCount){
+      elevs=elevs2;source='OpenTopoData (Mapzen)';
+      log(`Terrain: OpenTopoData returned ${validCount2} valid points — using as primary`,'i');
+    }
+  }
+  // v33.1: If still bad, try SRTM30m dataset on OpenTopoData
+  const validCount3=elevs.filter(e=>e!==null&&!isNaN(e)&&e!==undefined).length;
+  if(validCount3<rLats.length*0.5){
+    log(`Terrain: Mapzen also incomplete — trying SRTM30m dataset`,'w');
+    setProg('terrP',20,`Trying SRTM30m dataset...`);
+    const elevs3=await fetchElevOpenTopoData(rLats,rLons,'srtm30m');
+    const validCount4=elevs3.filter(e=>e!==null&&!isNaN(e)&&e!==undefined).length;
+    if(validCount4>validCount3){
+      elevs=elevs3;source='OpenTopoData (SRTM30m)';
+      log(`Terrain: SRTM30m returned ${validCount4} valid points — using as primary`,'i');
+    }
   }
 
   setProg('terrP',60,'Building grid + marching squares...');
   const grid=[];for(let i=0;i<ng;i++){grid[i]=[];for(let j=0;j<ng;j++){const v=elevs[i*ng+j];grid[i][j]=(v!==null&&v!==undefined&&!isNaN(v))?v:0;}}
   const validE=elevs.filter(e=>e!==null&&!isNaN(e)&&e!==undefined);
-  if(!validE.length){setProg('terrP',0,'❌ No elevation data received');log('Terrain: Open-Meteo API returned no data. Check coordinates and try again.','e');return{minE:0,maxE:0,meanE:0,ci:5,levels:0};}
+  if(!validE.length){setProg('terrP',0,'❌ No elevation data received');log('Terrain: All elevation APIs returned no data. Check coordinates and try again.','e');return{minE:0,maxE:0,meanE:0,ci:5,levels:0};}
   const minE=Math.min(...validE),maxE=Math.max(...validE),meanE=validE.reduce((s,v)=>s+v,0)/validE.length;
+  if(source!=='Open-Meteo')log(`Terrain: Data source: ${source} (${validE.length}/${rLats.length} valid points)`,'i');
 
   let ci=ciSel==='auto'?autoCI(maxE-minE):parseFloat(ciSel);if(ci<1)ci=1;
   const levels=[];for(let l=Math.ceil(minE/ci)*ci;l<=maxE;l+=ci)levels.push(l);
@@ -1804,11 +1859,31 @@ function getTerrainElev(lat,lon){
 }
 
 // ── TURBINE ELEVATION VERIFICATION ──
+// v33.1: Added OpenTopoData fallback
 async function verifyTurbineElevations(){
   if(!S.turbines.length){alert('Add turbines first');return;}
   const lats=S.turbines.map(t=>t.lat),lons=S.turbines.map(t=>t.lon);
-  try{const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats.join(',')}&longitude=${lons.join(',')}`);const d=await r.json();const el=d.elevation||[];S.turbines.forEach((t,i)=>t.elev=el[i]??0);refreshTable();let h='<table class="dtbl"><thead><tr><th>#</th><th>Lat</th><th>Lon</th><th>Elev(m)</th></tr></thead><tbody>';S.turbines.forEach((t,i)=>h+=`<tr><td>T${i+1}</td><td>${t.lat.toFixed(4)}</td><td>${t.lon.toFixed(4)}</td><td>${(t.elev||0).toFixed(0)}</td></tr>`);$('elevTable').innerHTML=h+'</tbody></table>';log(`Turbine elevations: ${el.map(e=>e?.toFixed(0)).join(', ')} m`,'i');}
-  catch(e){log('Elevation verify failed: '+e.message,'e');}
+  let el=[];
+  // Try Open-Meteo first
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats.join(',')}&longitude=${lons.join(',')}`,{signal:AbortSignal.timeout(10000)});
+    if(r.ok){const d=await r.json();el=d.elevation||[];}
+  }catch(e){log('Open-Meteo elevation verify failed: '+e.message,'w');}
+  // Fallback to OpenTopoData if Open-Meteo didn't work
+  const validEl=el.filter(v=>v!=null&&!isNaN(v)).length;
+  if(validEl<lats.length*0.5){
+    log('Trying OpenTopoData for turbine elevations...','i');
+    try{
+      const locs=lats.map((la,i)=>`${la.toFixed(4)},${lons[i].toFixed(4)}`).join('|');
+      const r2=await fetch(`https://api.opentopodata.org/v1/mapzen?locations=${locs}`,{signal:AbortSignal.timeout(15000)});
+      if(r2.ok){const d2=await r2.json();if(d2.status==='OK'&&d2.results)el=d2.results.map(res=>res.elevation??0);}
+    }catch(e2){log('OpenTopoData elevation verify also failed: '+e2.message,'w');}
+  }
+  S.turbines.forEach((t,i)=>t.elev=el[i]??0);refreshTable();
+  let h='<table class="dtbl"><thead><tr><th>#</th><th>Lat</th><th>Lon</th><th>Elev(m)</th></tr></thead><tbody>';
+  S.turbines.forEach((t,i)=>h+=`<tr><td>T${i+1}</td><td>${t.lat.toFixed(4)}</td><td>${t.lon.toFixed(4)}</td><td>${(t.elev||0).toFixed(0)}</td></tr>`);
+  $('elevTable').innerHTML=h+'</tbody></table>';
+  log(`Turbine elevations: ${el.map(e=>e?.toFixed(0)).join(', ')} m`,'i');
 }
 
 function drawTerrainProfile(){
@@ -3610,7 +3685,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 32.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 33.1 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -3651,7 +3726,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 32.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Bankability report</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 33.1 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Bankability report</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -3897,7 +3972,7 @@ initMap();calcDensity();
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 32.0 ready. Site → Layout → Wind → Terrain → Roughness → BZ → MCP → Analysis → Report','i');
+log('WindFlow Pro 33.1 ready. Site → Layout → Wind → Terrain → Roughness → BZ → MCP → Analysis → Report','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 
@@ -4333,7 +4408,7 @@ function exportBankabilityReport(){
 <div class="cover">
   <h1>${pn}</h1>
   <p>Wind Energy Assessment Report</p>
-  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 32.0 &mdash; ${now}</p>
+  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 33.1 &mdash; ${now}</p>
 </div>
 
 <h2>1. Executive Summary</h2>
@@ -4400,7 +4475,7 @@ ${terrCanvasImg?`<h2>8. Detailed Terrain Elevation Map</h2><p><img src="${terrCa
 ${roughCanvasImg?`<h2>9. Detailed Roughness Map</h2><p><img src="${roughCanvasImg}" style="max-width:100%;border:1px solid #d1d5db;border-radius:6px" alt="Roughness"></p>`:''}
 
 <p style="color:#9ca3af;font-size:9px;margin-top:30px;border-top:1px solid #e5e7eb;padding-top:10px">
-Generated by WindFlow Pro 32.0 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; Bankability report format</p>
+Generated by WindFlow Pro 33.1 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; Bankability report format</p>
 </body></html>`;
 
   dlFile(h,`WindAssessment_${pn.replace(/\s+/g,'_')}.html`,'text/html');
@@ -4480,7 +4555,7 @@ function drawRoughnessRoseChart() {
   mkChart('rrChart', 'bar', {
     labels: dirs16,
     datasets: [{data: data.map(v => +v.toFixed(4)), label: 'Site z₀ (m)', backgroundColor: 'rgba(88,166,255,.5)', borderColor: 'var(--acc)', borderWidth: 1}]
-  }, {legend: {display: false}, y: {type: 'log', title: {display: true, text: 'z₀ (m)', color: '#8b949e', font: {size: 8}}}});
+  }, {legend: {display: false}, y: {type: 'logarithmic', title: {display: true, text: 'z₀ (m)', color: '#8b949e', font: {size: 8}}}});
 }
 
 // Initialize roughness rose on load
@@ -6312,13 +6387,15 @@ function getCalibrationFactors(rix) {
 
 // ── MODIFIED BESSEL FUNCTIONS (Abramowitz & Stegun 9.8.5-9.8.7) ──────
 // I₀(x): modified Bessel of first kind, order 0
+// v33.1 FIX: A&S 9.8.1 uses t=x/3.75 (NOT x/2) — was causing 136% error in K0(1)
 function besselI0(x){
-  const t=x/2;const t2=t*t;
+  const t=x/3.75;const t2=t*t;
   return 1+3.5156329*t2+3.0899424*t2**2+1.2067492*t2**3+0.2659732*t2**4+0.0360768*t2**5+0.0045813*t2**6;
 }
 // I₁(x): modified Bessel of first kind, order 1
+// v33.1 FIX: A&S 9.8.2 uses t=x/3.75 (NOT x/2) — was causing 22% error in K1(1)
 function besselI1(x){
-  const t=x/2;const t2=t*t;
+  const t=x/3.75;const t2=t*t;
   return x*(0.5+0.87890594*t2+0.51498869*t2**2+0.15084934*t2**3+0.02658733*t2**4+0.00301532*t2**5+0.00032411*t2**6);
 }
 // K₀(x): modified Bessel of second kind, order 0
@@ -6984,19 +7061,31 @@ function buildRoughnessSequence(z0Mast,z0Site,mastDist,hubH,windDir,sectorIndex)
 
 // ── RIX CALCULATION ────────────────────────────────────────────────────
 // Fraction of terrain within 5km with slope > threshold
+// v33.1 FIX: Auto-scale threshold by grid resolution — coarse grids (~1km)
+// produce much smaller slopes than fine grids (~30m), so raw 0.3 threshold
+// always returns RIX=0 for Open-Meteo data even on complex terrain
 function computeRIX(terrain,threshold){
   const{grid,lat0,lat1,lon0,lon1,ny,nx}=terrain;
   const dLat=(lat1-lat0)/(ny-1),dLon=(lon1-lon0)/(nx-1);
   const mLat=111320,mLon=111320*Math.cos((lat0+lat1)/2*Math.PI/180);
   const dY=dLat*mLat,dX=dLon*mLon; // cell size in metres
+  // v33.1: Auto-scale threshold for grid resolution
+  // WAsP RIX is defined at ~100m DEM resolution with threshold=0.30
+  // At coarser resolution, slopes are proportionally smaller
+  // Scale factor: (reference_res / actual_res) where reference=100m
+  const cellSize=Math.max(dX,dY);
+  const resScale=Math.min(1, 100/Math.max(cellSize,50)); // only scale down for coarser grids
+  const effectiveThreshold=threshold*resScale;
   let steep=0,total=0;
   for(let i=0;i<ny-1;i++)for(let j=0;j<nx-1;j++){
     const dh=Math.abs(grid[i+1][j]-grid[i][j]);
     const slope=dh/dY;
-    if(slope>threshold)steep++;
+    if(slope>effectiveThreshold)steep++;
     total++;
   }
-  return total>0?100*steep/total:0;
+  const rix=total>0?100*steep/total:0;
+  if(resScale<1)log(`RIX: threshold auto-scaled ${threshold}→${effectiveThreshold.toFixed(4)} (cell=${cellSize.toFixed(0)}m, scale=${resScale.toFixed(2)})`,'i');
+  return rix;
 }
 
 // ── FULL BZ MODEL RUN ──────────────────────────────────────────────────
@@ -7033,7 +7122,7 @@ async function runBZModel(){
   // v17.0 Fix 4: Use auto-tuned lScale if it's higher than the input value
   const lScale_auto = autoTuneLScale();
   const lScale = Math.max(lScale_input, lScale_auto);
-  const rixThr=parseFloat($('bzRixThr').value)||0.3;
+  const rixThr=parseFloat($('bzRixThr').value)||0.05;
 
   // Domain size in metres
   const clat=(lat0+lat1)/2;
@@ -7085,14 +7174,18 @@ async function runBZModel(){
   if(Math.abs(rawMastSU-BZ.mastSU)>0.01)log(`BZ mastSU clamped: raw=${rawMastSU.toFixed(4)} → clamped=${BZ.mastSU.toFixed(4)}`,'w');
 
   // v22.0 FIX: Improved BZ terrain speedup
-  // On flat terrain (terrain range < 10m), BZ speedups should be EXACTLY 1.0
-  // FFT noise on flat terrain can produce spurious speedups of 0.8-1.2
+  // v33.1: "Flat terrain" detection must be resolution-aware — with 1km grid cells,
+  // even 50m terrain range can appear flat due to smoothing, but it's NOT flat.
+  // Use RIX (which is now resolution-scaled) as the primary flat terrain indicator.
+  // Also use a relative threshold: terrain is "flat" if range < 5m per km of radius
   const terrainRange = S.terrain.maxE - S.terrain.minE;
-  const isFlat = terrainRange < 10; // v22.0: more conservative flat terrain threshold
-  const isModerate = terrainRange >= 10 && terrainRange < 50;
+  const gridRadiusKm = Math.max(Ly, Lx) / 2000; // Ly and Lx are full span in metres; radius = half
+  const rangePerKm = terrainRange / Math.max(gridRadiusKm, 1);
+  const isFlat = terrainRange < 5 && rangePerKm < 2; // truly flat: <5m range AND <2m/km
+  const isModerate = !isFlat && rangePerKm < 10; // moderate: 2-10 m/km
   const BZ_prevRix = BZ.rix;
   BZ.rix=computeRIX(S.terrain,rixThr);
-  const isFlatByRIX = BZ.rix < 5;
+  const isFlatByRIX = BZ.rix < 3; // v33.1: lowered from 5% to 3% (RIX is now resolution-scaled)
   const nSect=parseInt($('sects').value)||16; // v26.0: define nSect early so flat terrain path can use it
 
   if (isFlat || isFlatByRIX) {
@@ -7460,7 +7553,7 @@ function drawBesselChart(){
   mkChart('bzBesChart','line',{labels:xs.map(x=>x.toFixed(2)),datasets:[
     {data:xs.map(x=>K0(x).toFixed(6)),borderColor:'#58a6ff',fill:false,pointRadius:0,tension:.3,borderWidth:1.5,label:'K₀(x)'},
     {data:xs.map(x=>K1(x).toFixed(6)),borderColor:'#3fb950',fill:false,pointRadius:0,tension:.3,borderWidth:1.5,label:'K₁(x)'}
-  ]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}},y:{type:'log',min:0.001,max:1000,title:{display:true,text:'Kₙ(x)',color:'#8b949e',font:{size:8}}},x:{title:{display:true,text:'x',color:'#8b949e',font:{size:8}}}});
+  ]},{legend:{display:true,labels:{color:'#8b949e',font:{size:8}}},y:{type:'logarithmic',min:0.001,max:1000,title:{display:true,text:'Kₙ(x)',color:'#8b949e',font:{size:8}}},x:{title:{display:true,text:'x',color:'#8b949e',font:{size:8}}}});
 }
 
 // ── HOOK BZ SPEEDUPS INTO calcAEP ─────────────────────────────────────
@@ -8315,7 +8408,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 32.0`);
+  lines.push(`WAsP Project Export - WindFlow Pro 33.1`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
