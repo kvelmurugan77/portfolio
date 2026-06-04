@@ -91,49 +91,55 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 <!-- ═══ ACCESS LOCK OVERLAY ═══ -->
 <div id="lockOverlay" class="lock-overlay">
   <div class="lock-modal">
-    <div class="lock-lock-icon">🔒</div>
-    <div class="lock-brand"><div class="lb-name">WindFlow Pro</div><div class="lb-ver">Access Controlled</div></div>
+    <div class="lock-lock-icon" id="lockIconEl">🔒</div>
+    <div class="lock-brand"><div class="lb-name">WindFlow Pro</div><div class="lb-ver" id="lockSubtitle">Access Controlled</div></div>
 
-    <!-- Tab navigation -->
-    <div class="lock-tabs">
-      <div class="lock-tab active" onclick="lockSwitchTab('login')">Login</div>
-      <div class="lock-tab" onclick="lockSwitchTab('request')">Request Access</div>
-      <div class="lock-tab" onclick="lockSwitchTab('setup')" id="lockTabSetup" style="display:none">Setup</div>
-    </div>
-
-    <!-- LOGIN PANEL -->
-    <div class="lock-panel active" id="lockPanelLogin">
-      <p>Enter your password or access code to unlock WindFlow Pro.</p>
-      <input type="password" id="lockPasswordInput" placeholder="Password / Access Code" autocomplete="off" onkeydown="if(event.key==='Enter')lockLogin()">
-      <div class="lock-error" id="lockLoginError"></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="lockLogin()">Unlock</button>
+    <!-- ═══ FIRST-TIME SETUP (shown when no password exists) ═══ -->
+    <div id="lockFirstTime" style="display:none">
+      <div style="text-align:center;margin-bottom:1rem">
+        <div style="font-size:.72rem;color:var(--mint);font-weight:600;margin-bottom:.4rem">Welcome! Create your password to get started</div>
+        <div style="font-size:.62rem;color:var(--text3)">This password protects your WindFlow Pro tool. Only you and people you grant access can use it.</div>
       </div>
-    </div>
-
-    <!-- REQUEST ACCESS PANEL -->
-    <div class="lock-panel" id="lockPanelRequest">
-      <div class="lock-request-info">
-        Access requests are sent to the tool owner at <b>k.velmurugan77@gmail.com</b>. You will receive an access code via email once approved.
-      </div>
-      <input type="text" id="lockReqName" placeholder="Your Full Name" style="letter-spacing:normal;text-align:left" autocomplete="off">
-      <input type="email" id="lockReqEmail" placeholder="Your Email Address" style="letter-spacing:normal;text-align:left" autocomplete="off">
-      <input type="text" id="lockReqReason" placeholder="Reason for Access (optional)" style="letter-spacing:normal;text-align:left" autocomplete="off">
-      <div class="lock-error" id="lockReqError"></div>
-      <div class="lock-success" id="lockReqSuccess"></div>
-      <div class="btn-row">
-        <button class="btn btn-sky" onclick="lockSendRequest()">Send Request</button>
-      </div>
-    </div>
-
-    <!-- SETUP PANEL (admin first-time) -->
-    <div class="lock-panel" id="lockPanelSetup">
-      <p>Set your admin password. You will use this to access WindFlow Pro and manage guest access.</p>
-      <input type="password" id="lockSetupPass" placeholder="Choose Admin Password" autocomplete="off">
-      <input type="password" id="lockSetupPass2" placeholder="Confirm Password" autocomplete="off">
+      <input type="password" id="lockSetupPass" placeholder="Choose a Password (min 4 chars)" autocomplete="off" onkeydown="if(event.key==='Enter')$('lockSetupPass2').focus()">
+      <input type="password" id="lockSetupPass2" placeholder="Re-enter Password to Confirm" autocomplete="off" onkeydown="if(event.key==='Enter')lockSetup()">
       <div class="lock-error" id="lockSetupError"></div>
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="lockSetup()">Set Password</button>
+        <button class="btn btn-primary" onclick="lockSetup()" style="width:100%">Create Password & Enter</button>
+      </div>
+    </div>
+
+    <!-- ═══ LOGIN (shown when password already exists) ═══ -->
+    <div id="lockLoginSection" style="display:none">
+      <!-- Tab navigation -->
+      <div class="lock-tabs">
+        <div class="lock-tab active" onclick="lockSwitchTab('login')">Login</div>
+        <div class="lock-tab" onclick="lockSwitchTab('request')">Request Access</div>
+      </div>
+
+      <!-- LOGIN PANEL -->
+      <div class="lock-panel active" id="lockPanelLogin">
+        <p>Enter your password or access code to unlock WindFlow Pro.</p>
+        <input type="password" id="lockPasswordInput" placeholder="Password / Access Code" autocomplete="off" onkeydown="if(event.key==='Enter')lockLogin()">
+        <div class="lock-error" id="lockLoginError"></div>
+        <div style="font-size:.56rem;color:var(--text3);text-align:center;margin-top:.3rem">Forgot password? <a href="javascript:void(0)" onclick="lockResetPassword()" style="color:var(--sky);text-decoration:underline">Reset it</a></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="lockLogin()">Unlock</button>
+        </div>
+      </div>
+
+      <!-- REQUEST ACCESS PANEL -->
+      <div class="lock-panel" id="lockPanelRequest">
+        <div class="lock-request-info">
+          Access requests are sent to the tool owner at <b>k.velmurugan77@gmail.com</b>. You will receive an access code via email once approved.
+        </div>
+        <input type="text" id="lockReqName" placeholder="Your Full Name" style="letter-spacing:normal;text-align:left" autocomplete="off">
+        <input type="email" id="lockReqEmail" placeholder="Your Email Address" style="letter-spacing:normal;text-align:left" autocomplete="off">
+        <input type="text" id="lockReqReason" placeholder="Reason for Access (optional)" style="letter-spacing:normal;text-align:left" autocomplete="off">
+        <div class="lock-error" id="lockReqError"></div>
+        <div class="lock-success" id="lockReqSuccess"></div>
+        <div class="btn-row">
+          <button class="btn btn-sky" onclick="lockSendRequest()">Send Request</button>
+        </div>
       </div>
     </div>
   </div>
@@ -10363,20 +10369,41 @@ function lockGenCode(){
 async function lockInit(){
   const admin=lockGetAdmin();
   const overlay=$('lockOverlay');
-  const setupTab=$('lockTabSetup');
+  const firstTime=$('lockFirstTime');
+  const loginSection=$('lockLoginSection');
 
   if(!admin){
-    // First time — show setup
-    setupTab.style.display='';
-    lockSwitchTab('setup');
+    // First time — show "Create your password" screen (no tabs, no confusion)
+    firstTime.style.display='block';
+    loginSection.style.display='none';
     overlay.style.display='flex';
+    $('lockIconEl').textContent='🆕';
+    $('lockSubtitle').textContent='First Time Setup';
   }else if(lockIsSessionValid()){
     // Already authenticated
     lockUnlock();
   }else{
-    // Need to login
+    // Need to login — show login tabs
+    firstTime.style.display='none';
+    loginSection.style.display='block';
     overlay.style.display='flex';
     lockSwitchTab('login');
+  }
+}
+
+// Reset password (for users who forgot)
+function lockResetPassword(){
+  if(confirm('This will remove your saved password. You will create a new one. Continue?')){
+    localStorage.removeItem(LOCK_ADMIN_KEY);
+    localStorage.removeItem(LOCK_SESSION_KEY);
+    // Show the first-time setup screen again
+    $('lockFirstTime').style.display='block';
+    $('lockLoginSection').style.display='none';
+    $('lockIconEl').textContent='🆕';
+    $('lockSubtitle').textContent='First Time Setup';
+    $('lockSetupPass').value='';
+    $('lockSetupPass2').value='';
+    $('lockSetupError').textContent='';
   }
 }
 
