@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 33.2</title>
+<title>WindFlow Pro 33.3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 33.2</span></div><div class="brand-sub">① Site → ② Power Curve → ③ Wind Data → ④ Terrain → ⑤ Flow Model → ⑥ Reporting</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 33.3</span></div><div class="brand-sub">① Site → ② Power Curve → ③ Wind Data → ④ Terrain → ⑤ Flow Model → ⑥ Reporting</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -1606,16 +1606,18 @@ function initCanvas(){
       contCanvas.style.left = '0';
       contCanvas.style.pointerEvents = 'none';
     }
+    // v33.3: Guard resize/events with null checks so canvas init can't crash map
+    function resize(){if(!contCanvas||!leafMap)return;try{const sz=leafMap.getSize();contCanvas.width=sz.x;contCanvas.height=sz.y;redrawCanvas();}catch(e){}}
+    leafMap.on('moveend zoomend resize',()=>{try{redrawCanvas();}catch(e){}});
+    leafMap.on('move zoom',()=>{try{redrawCanvas();}catch(e){}});
+    resize();
   }
-  function resize(){const sz=leafMap.getSize();contCanvas.width=sz.x;contCanvas.height=sz.y;redrawCanvas();}
-  leafMap.on('moveend zoomend resize',()=>redrawCanvas());
-  leafMap.on('move zoom',()=>redrawCanvas());
-  resize();
 }
 function redrawCanvas(){
   if(!contCanvas||!leafMap)return;
+  try{
   const sz=leafMap.getSize();contCanvas.width=sz.x;contCanvas.height=sz.y;
-  const ctx=contCanvas.getContext('2d');ctx.clearRect(0,0,sz.x,sz.y);
+  const ctx=contCanvas.getContext('2d');if(!ctx)return;ctx.clearRect(0,0,sz.x,sz.y);
   const op=parseFloat($('terrOp')?.value||.5);
   const T=S.terrain;
   if(!T)return;
@@ -1653,6 +1655,7 @@ function redrawCanvas(){
       ctx.closePath();ctx.fill();
     });ctx.globalAlpha=1;
   }
+  }catch(e){/* v33.3: silently ignore canvas redraw errors */}
 }
 
 // ── TERRAIN DOWNLOAD (parallel batches, canvas render) ──
@@ -3979,14 +3982,16 @@ function autoShear(){
   $('shearA').value=alpha.toFixed(2);
   log(`Auto shear: z0=${z0} → α=${alpha.toFixed(2)} (${stab} stability)`,'i');
 }
-initMap();calcDensity();
+try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed: '+e.message,'e');}calcDensity();
 // v14.0: Bind density option checkboxes to recalculate
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 33.1 ready. Site → Layout → Wind → Terrain → Roughness → BZ → MCP → Analysis → Report','i');
+log('WindFlow Pro 33.3 ready. Site → Layout → Wind → Terrain → Roughness → BZ → MCP → Analysis → Report','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
+// v33.3: Safety net — if leafMap failed to init, retry after DOM is fully settled
+if(!leafMap){setTimeout(()=>{if(!leafMap){try{initMap();log('Map re-initialized (retry)','i');}catch(e){log('Map retry failed: '+e.message,'e');}}},1000);}
 
 // ══════════════════════════════════════════════════════════════════════
 // v27.0: BANKABILITY-STYLE MAP OVERVIEW & REPORT
