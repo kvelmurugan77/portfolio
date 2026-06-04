@@ -3982,6 +3982,9 @@ function autoShear(){
   $('shearA').value=alpha.toFixed(2);
   log(`Auto shear: z0=${z0} → α=${alpha.toFixed(2)} (${stab} stability)`,'i');
 }
+// v33.3: Declare leafMap and gwaTileLayer BEFORE initMap() so var-hoisting doesn't overwrite them
+var leafMap=null;
+var gwaTileLayer=null;
 try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed: '+e.message,'e');}calcDensity();
 // v14.0: Bind density option checkboxes to recalculate
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
@@ -7692,8 +7695,10 @@ function goToStep(n){
 }
 
 // ── LEAFLET MAP ──
-var leafMap=null;
-var gwaTileLayer=null; // v26.0: Global Wind Atlas overlay layer (tile-based)
+// v33.3: Moved declarations above initMap() call to prevent var-hoisting from overwriting leafMap to null
+// (Previously, var leafMap=null at this position ran AFTER initMap() on line ~3983,
+//  resetting leafMap back to null and breaking all map-dependent features)
+
 
 // v26.0: Create GWA overlay trying multiple tile URL patterns
 function createGWAOverlay(){
