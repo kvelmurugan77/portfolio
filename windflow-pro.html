@@ -3175,8 +3175,8 @@ function updateWSChain(R){
   // v32.0: Dynamic data source position info
   const curSrc=S.windSource||'ERA5';
   const curWS=S.windSources[curSrc];
-  const srcLat=curWS?.sourceLat??parseFloat($('mastLat').value)||0;
-  const srcLon=curWS?.sourceLon??parseFloat($('mastLon').value)||0;
+  const srcLat=curWS?.sourceLat??(parseFloat($('mastLat').value)||0);
+  const srcLon=curWS?.sourceLon??(parseFloat($('mastLon').value)||0);
   const srcH=curWS?.sourceHeight??R.mastH;
   // Compute distance from data point to layout center
   let srcDistTxt='';
@@ -9674,8 +9674,8 @@ function updateDataSourcePosInfo(){
   const src=S.windSource||'ERA5';
   const ws=S.windSources[src];
   if(!ws||!ws.speeds||!ws.speeds.length){el.style.display='none';return;}
-  const srcLat=ws.sourceLat??parseFloat($('mastLat').value)||0;
-  const srcLon=ws.sourceLon??parseFloat($('mastLon').value)||0;
+  const srcLat=ws.sourceLat??(parseFloat($('mastLat').value)||0);
+  const srcLon=ws.sourceLon??(parseFloat($('mastLon').value)||0);
   const srcH=ws.sourceHeight??ws.mastH??100;
   let distTxt='';
   if(S.turbines.length){
