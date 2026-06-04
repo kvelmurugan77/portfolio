@@ -381,9 +381,9 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <b style="color:var(--acc)">Why roughness matters:</b> Surface roughness (z₀) determines wind shear — taller obstacles = slower near-surface wind = higher shear.
           Different directions have different terrain (forest vs sea vs open fields), so <b>per-sector roughness</b> is needed for accurate WAsP-style OWC→GWC→SWC wind atlas chain.
         </div>
-        <div class="fg"><label class="fl">Data Source</label><select class="fs" id="roughSource" onchange="onRoughSourceChange()"><option value="esa" selected>ESA CCI 300m (Global, auto)</option><option value="osm">OSM Overpass (Manual)</option><option value="corine">CORINE 2018 (EU only)</option><option value="upload">Upload Classification</option></select></div>
-        <div id="esaOpts" style="margin-top:.3rem"><button class="btn btn-primary" style="width:100%" onclick="downloadESA_CCI_Auto()">🌍 Auto-Download Global Land Cover & Generate Roughness Map + Rose</button><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">ESA Climate Change Initiative · Global 300m · Auto-generates roughness zones + directional rose</div></div>
-        <div id="corineOpts" style="display:none;margin-top:.3rem"><button class="btn btn-sm btn-ghost" style="width:100%" onclick="downloadCORINE()">🌍 Download CORINE 2018 WFS</button><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">Copernicus Land Monitoring Service · EU coverage only</div></div>
+        <div class="fg"><label class="fl">Data Source</label><select class="fs" id="roughSource" onchange="onRoughSourceChange()"><option value="esa" selected>Land Cover (Auto — ESA CCI / OSM)</option><option value="osm">OSM Overpass (Manual)</option><option value="corine">CORINE 2018 (EU only)</option><option value="upload">Upload Classification</option></select></div>
+        <div id="esaOpts" style="margin-top:.3rem"><button class="btn btn-primary" style="width:100%" onclick="downloadESA_CCI_Auto()">🌍 Auto-Download Land Cover & Generate Roughness Map + Rose</button><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">Tries ESA CCI first, falls back to OSM Enhanced · Auto-generates roughness zones + 16-sector directional rose</div></div>
+        <div id="corineOpts" style="display:none;margin-top:.3rem"><button class="btn btn-sm btn-ghost" style="width:100%" onclick="downloadCORINE()">🌍 Download CORINE 2018</button><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">Copernicus WFS — falls back to OSM Enhanced if endpoint is offline</div></div>
         <div id="osmOpts" style="display:none;margin-top:.3rem">
           <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Lat</label><input class="fi" id="osmLa" type="number" value="55.500" step="0.001"></div><div class="fg"><label class="fl">Lon</label><input class="fi" id="osmLo" type="number" value="7.900" step="0.001"></div></div>
           <div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="osmRad" type="number" value="20" min="5" max="50"></div>
@@ -1854,6 +1854,18 @@ async function downloadTerrainForArea(clat,clon,radKm,ng,ciSel){
     if(validCount4>validCount3){
       elevs=elevs3;source='OpenTopoData (SRTM30m)';
       log(`Terrain: SRTM30m returned ${validCount4} valid points — using as primary`,'i');
+    }
+  }
+  // v33.2: Final fallback — etopo1 (bathymetry + topography, covers ocean/land)
+  const validCount5=elevs.filter(e=>e!==null&&!isNaN(e)&&e!==undefined).length;
+  if(validCount5<rLats.length*0.5){
+    log(`Terrain: All previous sources incomplete — trying ETOPO1 (global bathymetry)`,'w');
+    setProg('terrP',25,`Trying ETOPO1 global dataset...`);
+    const elevs4=await fetchElevOpenTopoData(rLats,rLons,'etopo1');
+    const validCount6=elevs4.filter(e=>e!==null&&!isNaN(e)&&e!==undefined).length;
+    if(validCount6>validCount5){
+      elevs=elevs4;source='OpenTopoData (ETOPO1)';
+      log(`Terrain: ETOPO1 returned ${validCount6} valid points — using as primary`,'i');
     }
   }
 
@@ -9370,80 +9382,133 @@ async function downloadCORINE(){
   if(!T){alert('Download terrain first to define area bounds');return;}
   $('roughStat').textContent='Querying CORINE 2018 WFS...';
   const bbox=`${T.lon0.toFixed(4)},${T.lat0.toFixed(4)},${T.lon1.toFixed(4)},${T.lat1.toFixed(4)}`;
-  try{
-    const url=`https://land.copernicus.eu/mts/wfs/CLC2018?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=CLC2018&OUTPUTFORMAT=application/json&BBOX=${bbox},EPSG:4326&COUNT=1000`;
-    const r=await fetch(url);
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const d=await r.json();
-    const colMap={1:'#fca5a5',2:'#fde68a',3:'#86efac',4:'#fef08a',5:'#166534',6:'#50b43c',7:'#9ca3af',8:'#3b82f6',9:'#1e64c8'};
-    S.roughnessZones=[];
-    let featureCount=0;
-    (d.features||[]).forEach(f=>{
-      if(!f.geometry)return;
-      const code=parseInt(f.properties?.code||f.properties?.code_18||f.properties?.CLC_CODE||f.properties?.ITEM||0);
-      const z0=CORINE_Z0[code]||0.1;
-      let pts=[];
-      if(f.geometry.type==='Polygon'&&f.geometry.coordinates[0]){
-        pts=f.geometry.coordinates[0].map(c=>({lat:c[1],lon:c[0]}));
-      }else if(f.geometry.type==='MultiPolygon'&&f.geometry.coordinates[0]&&f.geometry.coordinates[0][0]){
-        pts=f.geometry.coordinates[0][0].map(c=>({lat:c[1],lon:c[0]}));
+
+  // v33.2: CORINE WFS endpoint has been decommissioned — use enhanced OSM with CORINE-like z0 mapping instead
+  const corineEndpoints=[
+    `https://land.copernicus.eu/mts/wfs/CLC2018?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=CLC2018&OUTPUTFORMAT=application/json&BBOX=${bbox},EPSG:4326&COUNT=1000`,
+    `https://land.copernicus.vgt.vito.be/MTS/WFS/CLC2018?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=CLC2018&OUTPUTFORMAT=application/json&BBOX=${bbox},EPSG:4326&COUNT=1000`
+  ];
+
+  for(const url of corineEndpoints){
+    try{
+      const r=await fetch(url,{signal:AbortSignal.timeout(12000)});
+      if(!r.ok)continue;
+      const d=await r.json();
+      if(!d.features||d.features.length===0)continue;
+      const colMap={1:'#fca5a5',2:'#fde68a',3:'#86efac',4:'#fef08a',5:'#166534',6:'#50b43c',7:'#9ca3af',8:'#3b82f6',9:'#1e64c8'};
+      S.roughnessZones=[];
+      let featureCount=0;
+      (d.features||[]).forEach(f=>{
+        if(!f.geometry)return;
+        const code=parseInt(f.properties?.code||f.properties?.code_18||f.properties?.CLC_CODE||f.properties?.ITEM||0);
+        const z0=CORINE_Z0[code]||0.1;
+        let pts=[];
+        if(f.geometry.type==='Polygon'&&f.geometry.coordinates[0]){
+          pts=f.geometry.coordinates[0].map(c=>({lat:c[1],lon:c[0]}));
+        }else if(f.geometry.type==='MultiPolygon'&&f.geometry.coordinates[0]&&f.geometry.coordinates[0][0]){
+          pts=f.geometry.coordinates[0][0].map(c=>({lat:c[1],lon:c[0]}));
+        }
+        if(pts.length>=3){
+          S.roughnessZones.push({lu:`CORINE_${code}`,z0,col:colMap[Math.floor(code/100)]||'#e5e7eb',pts});
+          featureCount++;
+        }
+      });
+      if(featureCount>0){
+        $('roughStat').textContent=`CORINE: ${featureCount} features · z₀ mapped`;
+        redrawCanvas();drawRoughnessCanvas();log(`CORINE roughness: ${featureCount} features mapped to z₀`,'i');
+        return;
       }
-      if(pts.length>=3){
-        S.roughnessZones.push({lu:`CORINE_${code}`,z0,col:colMap[Math.floor(code/100)]||'#e5e7eb',pts});
-        featureCount++;
-      }
-    });
-    $('roughStat').textContent=`CORINE: ${featureCount} features · z₀ mapped`;
-    redrawCanvas();drawRoughnessCanvas();log(`CORINE roughness: ${featureCount} features mapped to z₀`,'i');
-  }catch(e){
-    $('roughStat').textContent='CORINE WFS unavailable — try OSM or upload';
-    log('CORINE download failed: '+e.message+' — CORS or endpoint issue, try OSM instead','w');
+    }catch(e){log('CORINE endpoint failed: '+e.message,'w');}
   }
+
+  // All CORINE endpoints failed — fall back to enhanced OSM with CORINE-equivalent z0 mapping
+  log('CORINE WFS endpoints are currently offline — using enhanced OSM with CORINE-equivalent z₀ mapping as fallback','w');
+  $('roughStat').textContent='CORINE unavailable — using enhanced OSM fallback with CORINE z₀...';
+  await downloadRoughnessEnhanced();
 }
 
-// v25.0: ONE-CLICK automatic roughness: download ESA CCI → generate zones → auto-generate rose
+// v33.2: ONE-CLICK automatic roughness — uses enhanced OSM Overpass (ESA CCI WMS is offline)
+// Generates roughness zones + auto-generates 16-sector roughness rose
 async function downloadESA_CCI_Auto(){
   const T=S.terrain;
   if(!T){alert('Download terrain first (TERRAIN tab) — need elevation grid extent to know sampling area');return;}
-  $('roughStat').textContent='Auto-downloading ESA CCI land cover...';
-  setProg('osm',5,'Sampling ESA CCI 300m land cover...');
-  await new Promise(r=>setTimeout(r,50));
-  const nPts=25; // sample 25×25 = 625 points across the terrain domain
+  $('roughStat').textContent='Auto-downloading land cover & generating roughness...';
+  setProg('osm',5,'Sampling land cover data...');
+
+  // v33.2: ESA CCI WMS (maps.elie.ucl.ac.be) is offline (404 since 2026).
+  // Try ESA CCI first (in case it comes back), then fall back to enhanced OSM Overpass
+  let usedESA=false;
+  const nPts=25;
   S.roughnessZones=[];
-  const sectorZ0s=Array.from({length:16},()=>[]); // per-sector z0 samples
+  const sectorZ0s=Array.from({length:16},()=>[]);
   let sampled=0;
   const nSect=16, sz=360/nSect;
   const clat=(T.lat0+T.lat1)/2, clon=(T.lon0+T.lon1)/2;
 
-  for(let i=0;i<nPts;i++){
-    for(let j=0;j<nPts;j++){
-      const lat=T.lat0+i*(T.lat1-T.lat0)/(nPts-1);
-      const lon=T.lon0+j*(T.lon1-T.lon0)/(nPts-1);
-      try{
-        const url=`https://maps.elie.ucl.ac.be/CCI/viewer/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&QUERY_LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&SRS=EPSG:4326&INFO_FORMAT=application/json&WIDTH=1&HEIGHT=1&BBOX=${lon},${lat},${lon+0.001},${lat+0.001}&I=0&J=0`;
-        const r=await fetch(url,{signal:AbortSignal.timeout(5000)});
-        if(r.ok){
-          const d=await r.json();
-          const code=parseInt(d?.features?.[0]?.properties?.NB_LAB||d?.features?.[0]?.properties?.value||d?.features?.[0]?.properties?.GRAY_INDEX||0);
-          const z0=ESA_Z0[code]||0.1;
-          const dLat2=(T.lat1-T.lat0)/nPts/2;
-          const dLon2=(T.lon1-T.lon0)/nPts/2;
-          S.roughnessZones.push({
-            lu:`ESA_${code}`,z0,
-            col:z0>1?'#166534':z0>0.05?'#50b43c':z0>0.005?'#86efac':z0>0.001?'#fde68a':'#3b82f6',
-            pts:[{lat:lat-dLat2,lon:lon-dLon2},{lat:lat-dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon-dLon2}]
-          });
-          sampled++;
-          // Assign to sectors: compute bearing from site centre to this sample point
-          const dx=(lon-clon)*111320*Math.cos(clat*Math.PI/180);
-          const dy=(lat-clat)*111320;
+  // Attempt ESA CCI WMS (may come back online)
+  try{
+    const testUrl=`https://maps.elie.ucl.ac.be/CCI/viewer/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&QUERY_LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&SRS=EPSG:4326&INFO_FORMAT=application/json&WIDTH=1&HEIGHT=1&BBOX=${clon},${clat},${clon+0.001},${clat+0.001}&I=0&J=0`;
+    const testR=await fetch(testUrl,{signal:AbortSignal.timeout(5000)});
+    if(testR.ok){
+      usedESA=true;
+      for(let i=0;i<nPts;i++){
+        for(let j=0;j<nPts;j++){
+          const lat=T.lat0+i*(T.lat1-T.lat0)/(nPts-1);
+          const lon=T.lon0+j*(T.lon1-T.lon0)/(nPts-1);
+          try{
+            const url=`https://maps.elie.ucl.ac.be/CCI/viewer/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&QUERY_LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&SRS=EPSG:4326&INFO_FORMAT=application/json&WIDTH=1&HEIGHT=1&BBOX=${lon},${lat},${lon+0.001},${lat+0.001}&I=0&J=0`;
+            const r=await fetch(url,{signal:AbortSignal.timeout(5000)});
+            if(r.ok){
+              const d=await r.json();
+              const code=parseInt(d?.features?.[0]?.properties?.NB_LAB||d?.features?.[0]?.properties?.value||d?.features?.[0]?.properties?.GRAY_INDEX||0);
+              const z0=ESA_Z0[code]||0.1;
+              const dLat2=(T.lat1-T.lat0)/nPts/2;
+              const dLon2=(T.lon1-T.lon0)/nPts/2;
+              S.roughnessZones.push({lu:`ESA_${code}`,z0,col:z0>1?'#166534':z0>0.05?'#50b43c':z0>0.005?'#86efac':z0>0.001?'#fde68a':'#3b82f6',pts:[{lat:lat-dLat2,lon:lon-dLon2},{lat:lat-dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon-dLon2}]});
+              sampled++;
+              const dx=(lon-clon)*111320*Math.cos(clat*Math.PI/180);
+              const dy=(lat-clat)*111320;
+              const bearing=(Math.atan2(dx,dy)*180/Math.PI+360)%360;
+              const si=Math.floor(((bearing+sz/2)%360)/sz)%nSect;
+              sectorZ0s[si].push(z0);
+            }
+          }catch(e){}
+        }
+        if(i%3===0){setProg('osm',5+i/nPts*70,`ESA sampling row ${i+1}/${nPts}...`);await new Promise(r=>setTimeout(r,10));}
+      }
+    }
+  }catch(e){log('ESA CCI WMS offline — using enhanced OSM Overpass fallback','w');}
+
+  // Fallback: Enhanced OSM Overpass with comprehensive z0 mapping
+  if(!usedESA||sampled<nPts*nPts*0.3){
+    if(usedESA)log(`ESA CCI only ${sampled} samples — supplementing with OSM`,'w');
+    else $('roughStat').textContent='ESA CCI offline — using enhanced OSM Overpass...';
+    setProg('osm',10,'Querying OSM Overpass for land cover...');
+    await new Promise(r=>setTimeout(r,50));
+    S.roughnessZones=[];sectorZ0s.forEach(a=>a.length=0);sampled=0;
+    const q=`[out:json][timeout:30][bbox:${T.lat0},${T.lon0},${T.lat1},${T.lon1}];(way["landuse"];way["natural"~"wood|water|scrub|grassland|wetland|heath|sand|bare_rock|beach"];way["leisure"~"park|garden|golf_course"];way["amenity"~"school|university|hospital"];relation["landuse"]["type"="multipolygon"];relation["natural"~"wood|water|scrub|grassland|wetland"]["type"="multipolygon"];);out geom;`;
+    try{
+      const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q),signal:AbortSignal.timeout(30000)});
+      if(r.ok){
+        const d=await r.json();
+        const z0Map={residential:.4,commercial:.4,industrial:.5,retail:.3,construction:.1,farmland:.03,grass:.03,meadow:.03,grassland:.03,orchard:.1,vineyard:.1,forest:1.5,wood:1.5,scrub:.05,heath:.05,wetland:.0002,water:.0002,sand:.002,bare_rock:.002,beach:.002,park:.1,garden:.1,golf_course:.03,school:.4,university:.4,hospital:.4};
+        const colMap={water:'#3b82f6',forest:'#166534',wood:'#166534',grass:'#86efac',meadow:'#86efac',scrub:'#fef08a',residential:'#fca5a5',farmland:'#fde68a',industrial:'#9ca3af',commercial:'#fca5a5',heath:'#fef08a',wetland:'#93c5fd',sand:'#fde68a',bare_rock:'#d4d4d8',beach:'#fde68a',park:'#86efac',garden:'#86efac'};
+        (d.elements||[]).forEach(el=>{
+          if(!el.geometry||el.geometry.length<3)return;
+          const lu=el.tags?.landuse||el.tags?.natural||el.tags?.leisure||el.tags?.amenity||'other';
+          const z0=z0Map[lu]||.1;const col=colMap[lu]||'#e5e7eb';
+          S.roughnessZones.push({lu,z0,col,pts:el.geometry.map(p=>({lat:p.lat,lon:p.lon}))});
+          const elLat=el.geometry.reduce((s,p)=>s+p.lat,0)/el.geometry.length;
+          const elLon=el.geometry.reduce((s,p)=>s+p.lon,0)/el.geometry.length;
+          const dx=(elLon-clon)*111320*Math.cos(clat*Math.PI/180);
+          const dy=(elLat-clat)*111320;
           const bearing=(Math.atan2(dx,dy)*180/Math.PI+360)%360;
           const si=Math.floor(((bearing+sz/2)%360)/sz)%nSect;
-          sectorZ0s[si].push(z0);
-        }
-      }catch(e){}
-    }
-    if(i%3===0){setProg('osm',5+i/nPts*70,`ESA sampling row ${i+1}/${nPts}...`);await new Promise(r=>setTimeout(r,10));}
+          sectorZ0s[si].push(z0);sampled++;
+        });
+        log(`OSM Overpass: ${sampled} land-use features with enhanced z₀ mapping`,'i');
+      }else{log('OSM Overpass returned HTTP '+r.status,'w');}
+    }catch(e){$('roughStat').textContent='OSM Overpass unavailable — using manual z₀';log('OSM roughness failed: '+e.message,'w');setProg('osm',0,'Failed');return;}
   }
 
   setProg('osm',80,'Building roughness zones & rose...');
@@ -9453,8 +9518,9 @@ async function downloadESA_CCI_Auto(){
   if(sampled>0){
     drawRoughnessCanvas();
     const medianZ0=S.roughnessZones.map(z=>z.z0).sort((a,b)=>a-b)[Math.floor(S.roughnessZones.length/2)];
-    $('roughStat').textContent=`ESA CCI: ${sampled} samples · median z₀=${medianZ0.toFixed(4)}m · ${S.roughnessZones.filter(z=>z.z0>0.5).length} rough + ${S.roughnessZones.filter(z=>z.z0<=0.005).length} smooth`;
-    log(`ESA CCI auto-roughness: ${sampled} samples, median z₀=${medianZ0.toFixed(4)}m`,'i');
+    const src=usedESA?'ESA CCI':'OSM Enhanced';
+    $('roughStat').textContent=`${src}: ${sampled} features · median z₀=${medianZ0.toFixed(4)}m · ${S.roughnessZones.filter(z=>z.z0>0.5).length} rough + ${S.roughnessZones.filter(z=>z.z0<=0.005).length} smooth`;
+    log(`Auto-roughness (${src}): ${sampled} features, median z₀=${medianZ0.toFixed(4)}m`,'i');
   }
 
   // AUTO-GENERATE ROUGHNESS ROSE from the sector samples
@@ -9488,39 +9554,89 @@ async function downloadESA_CCI_Auto(){
 }
 
 // ── ESA CCI Land Cover Download via WMS GetFeatureInfo Sampling ──
+// v33.2: Enhanced with fallback to OSM Overpass when ESA CCI WMS is offline
 async function downloadESA_CCI(){
   const T=S.terrain;
   if(!T){alert('Download terrain first');return;}
-  $('roughStat').textContent='Sampling ESA CCI Land Cover...';
+  $('roughStat').textContent='Sampling land cover...';
   const nPts=20;
   S.roughnessZones=[];
   let sampled=0;
+  let usedESA=false;
+  // Try ESA CCI WMS first
   for(let i=0;i<nPts;i++){
     for(let j=0;j<nPts;j++){
       const lat=T.lat0+i*(T.lat1-T.lat0)/(nPts-1);
       const lon=T.lon0+j*(T.lon1-T.lon0)/(nPts-1);
       try{
         const url=`https://maps.elie.ucl.ac.be/CCI/viewer/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&QUERY_LAYERS=ESACCI-LC-L4-LC10-Map-300m-P1Y&SRS=EPSG:4326&INFO_FORMAT=application/json&WIDTH=1&HEIGHT=1&BBOX=${lon},${lat},${lon+0.001},${lat+0.001}&I=0&J=0`;
-        const r=await fetch(url);
+        const r=await fetch(url,{signal:AbortSignal.timeout(5000)});
         if(r.ok){
+          usedESA=true;
           const d=await r.json();
           const code=parseInt(d?.features?.[0]?.properties?.NB_LAB||d?.features?.[0]?.properties?.value||d?.features?.[0]?.properties?.GRAY_INDEX||0);
           const z0=ESA_Z0[code]||0.1;
           const dLat2=(T.lat1-T.lat0)/nPts/2;
           const dLon2=(T.lon1-T.lon0)/nPts/2;
-          S.roughnessZones.push({
-            lu:`ESA_${code}`,z0,
-            col:z0>1?'#166534':z0>0.05?'#50b43c':z0>0.005?'#86efac':z0>0.001?'#fde68a':'#3b82f6',
-            pts:[{lat:lat-dLat2,lon:lon-dLon2},{lat:lat-dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon-dLon2}]
-          });
+          S.roughnessZones.push({lu:`ESA_${code}`,z0,col:z0>1?'#166534':z0>0.05?'#50b43c':z0>0.005?'#86efac':z0>0.001?'#fde68a':'#3b82f6',pts:[{lat:lat-dLat2,lon:lon-dLon2},{lat:lat-dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon+dLon2},{lat:lat+dLat2,lon:lon-dLon2}]});
           sampled++;
         }
-      }catch(e){}
+      }catch(e){break;} // ESA offline, stop trying
     }
+    if(!usedESA)break; // First row failed = ESA is offline
     setProg('osm',i/nPts*100,`ESA sampling ${i+1}/${nPts}...`);
+  }
+  // Fallback to enhanced OSM if ESA CCI didn't work
+  if(!usedESA||sampled<nPts*nPts*0.3){
+    log('ESA CCI WMS offline — using OSM Overpass fallback','w');
+    await downloadRoughnessEnhanced();
+    return;
   }
   $('roughStat').textContent=`ESA CCI: ${sampled} samples · z₀ mapped`;
   redrawCanvas();drawRoughnessCanvas();log(`ESA CCI roughness: ${sampled} samples mapped to z₀`,'i');
+}
+
+// v33.2: Enhanced OSM Overpass roughness download with comprehensive z0 mapping
+// Used as fallback when ESA CCI and CORINE endpoints are offline
+async function downloadRoughnessEnhanced(){
+  const T=S.terrain;
+  if(!T){alert('Download terrain first');return;}
+  $('roughStat').textContent='Querying OSM Overpass (enhanced z₀)...';
+  setProg('osm',5,'Querying OSM Overpass...');
+  const clat=(T.lat0+T.lat1)/2, clon=(T.lon0+T.lon1)/2;
+  const q=`[out:json][timeout:30][bbox:${T.lat0},${T.lon0},${T.lat1},${T.lon1}];(way["landuse"];way["natural"~"wood|water|scrub|grassland|wetland|heath|sand|bare_rock|beach"];way["leisure"~"park|garden|golf_course"];way["amenity"~"school|university|hospital"];relation["landuse"]["type"="multipolygon"];relation["natural"~"wood|water|scrub|grassland|wetland"]["type"="multipolygon"];);out geom;`;
+  try{
+    const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q),signal:AbortSignal.timeout(30000)});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    const z0Map={residential:.4,commercial:.4,industrial:.5,retail:.3,construction:.1,farmland:.03,grass:.03,meadow:.03,grassland:.03,orchard:.1,vineyard:.1,forest:1.5,wood:1.5,scrub:.05,heath:.05,wetland:.0002,water:.0002,sand:.002,bare_rock:.002,beach:.002,park:.1,garden:.1,golf_course:.03,railway:.03,school:.4,university:.4,hospital:.4};
+    const colMap={water:'#3b82f6',forest:'#166534',wood:'#166534',grass:'#86efac',meadow:'#86efac',scrub:'#fef08a',residential:'#fca5a5',farmland:'#fde68a',industrial:'#9ca3af',commercial:'#fca5a5',heath:'#fef08a',wetland:'#93c5fd',sand:'#fde68a',bare_rock:'#d4d4d8',beach:'#fde68a',park:'#86efac',garden:'#86efac'};
+    S.roughnessZones=[];
+    let count=0;
+    (d.elements||[]).forEach(el=>{
+      if(!el.geometry||el.geometry.length<3)return;
+      const lu=el.tags?.landuse||el.tags?.natural||el.tags?.leisure||el.tags?.amenity||'other';
+      const z0=z0Map[lu]||.1;const col=colMap[lu]||'#e5e7eb';
+      S.roughnessZones.push({lu,z0,col,pts:el.geometry.map(p=>({lat:p.lat,lon:p.lon}))});
+      count++;
+    });
+    // Smooth roughness zones — cap extreme z0 values
+    if(S.roughnessZones.length>1){
+      const allZ0=S.roughnessZones.map(z=>z.z0).sort((a,b)=>a-b);
+      const med=allZ0[Math.floor(allZ0.length/2)];
+      S.roughnessZones.forEach(z=>{z.z0=Math.max(med*0.1,Math.min(med*10,z.z0));});
+    }
+    setProg('osm',100,`Done: ${count} features`);
+    const medianZ0=S.roughnessZones.map(z=>z.z0).sort((a,b)=>a-b)[Math.floor(S.roughnessZones.length/2)];
+    $('roughStat').textContent=`OSM Enhanced: ${count} features · median z₀=${medianZ0.toFixed(4)}m`;
+    if($('z0val'))$('z0val').value=medianZ0.toFixed(4);
+    redrawCanvas();drawRoughnessCanvas();
+    log(`OSM Enhanced roughness: ${count} features, median z₀=${medianZ0.toFixed(4)}m`,'i');
+  }catch(e){
+    $('roughStat').textContent='OSM Overpass unavailable — using manual z₀';
+    log('Enhanced OSM roughness failed: '+e.message,'w');
+    setProg('osm',0,'Failed');
+  }
 }
 
 // ── NEWA (New European Wind Atlas) Download ──
