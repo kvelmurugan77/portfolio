@@ -95,16 +95,16 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
     <div class="lock-brand"><div class="lb-name">WindFlow Pro</div><div class="lb-ver" id="lockSubtitle">Access Controlled</div></div>
 
     <!-- ═══ FIRST-TIME SETUP (shown when no password exists) ═══ -->
-    <div id="lockFirstTime" style="display:none">
+    <div id="lockFirstTime">
       <div style="text-align:center;margin-bottom:1rem">
-        <div style="font-size:.72rem;color:var(--mint);font-weight:600;margin-bottom:.4rem">Welcome! Create your password to get started</div>
-        <div style="font-size:.62rem;color:var(--text3)">This password protects your WindFlow Pro tool. Only you and people you grant access can use it.</div>
+        <div style="font-size:.78rem;color:var(--mint);font-weight:700;margin-bottom:.5rem">Welcome! Create your password</div>
+        <div style="font-size:.64rem;color:var(--text2);line-height:1.5">Choose any password you like (min 4 characters).<br>You will use this every time you visit WindFlow Pro.</div>
       </div>
       <input type="password" id="lockSetupPass" placeholder="Choose a Password (min 4 chars)" autocomplete="off" onkeydown="if(event.key==='Enter')$('lockSetupPass2').focus()">
       <input type="password" id="lockSetupPass2" placeholder="Re-enter Password to Confirm" autocomplete="off" onkeydown="if(event.key==='Enter')lockSetup()">
       <div class="lock-error" id="lockSetupError"></div>
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="lockSetup()" style="width:100%">Create Password & Enter</button>
+        <button class="btn btn-primary" onclick="lockSetup()" style="width:100%;font-size:.72rem;padding:.6rem">Create Password & Enter</button>
       </div>
     </div>
 
@@ -121,8 +121,10 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <p>Enter your password or access code to unlock WindFlow Pro.</p>
         <input type="password" id="lockPasswordInput" placeholder="Password / Access Code" autocomplete="off" onkeydown="if(event.key==='Enter')lockLogin()">
         <div class="lock-error" id="lockLoginError"></div>
-        <div style="font-size:.56rem;color:var(--text3);text-align:center;margin-top:.3rem">Forgot password? <a href="javascript:void(0)" onclick="lockResetPassword()" style="color:var(--sky);text-decoration:underline">Reset it</a></div>
-        <div class="btn-row">
+        <div style="font-size:.56rem;color:var(--text3);text-align:center;margin-top:.5rem;padding:.4rem;border:1px dashed var(--border);border-radius:6px;line-height:1.5">
+          Forgot password? <a href="javascript:void(0)" onclick="lockResetPassword()" style="color:var(--sky);text-decoration:underline;font-weight:600">Reset and create a new one</a>
+        </div>
+        <div class="btn-row" style="margin-top:.6rem">
           <button class="btn btn-primary" onclick="lockLogin()">Unlock</button>
         </div>
       </div>
