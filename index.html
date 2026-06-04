@@ -237,6 +237,43 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
 /* ── TOOLS SECTION ─────────────────────────────────────── */
 #tools{background:linear-gradient(180deg,rgba(8,18,38,.9) 0%,rgba(10,20,42,.97) 100%);position:relative}
 #tools::before{content:'';position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse at 30% 30%,rgba(29,184,126,.05) 0%,transparent 60%)}
+
+/* ── TOOLS ACCESS LOCK ── */
+.tools-lock-overlay{position:absolute;inset:0;z-index:50;background:rgba(7,17,30,.88);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;border-radius:12px;transition:opacity .5s}
+.tools-lock-overlay.unlocked{opacity:0;pointer-events:none}
+.lock-modal{background:rgba(11,31,58,.95);border:1px solid var(--border);border-radius:16px;padding:2.5rem;width:400px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.6);text-align:center}
+.lock-modal h2{color:var(--mint);font-size:1.15rem;margin:0 0 .3rem;font-family:var(--display);font-style:italic;display:flex;align-items:center;justify-content:center;gap:.6rem}
+.lock-modal p{color:rgba(255,255,255,.5);font-size:.78rem;margin:.5rem 0 1.2rem;line-height:1.6}
+.lock-modal .pin-input{width:100%;padding:.7rem 1rem;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.05);color:#fff;font-size:1.2rem;letter-spacing:6px;text-align:center;margin-bottom:1rem;font-family:var(--display);outline:none;transition:border-color .3s,box-shadow .3s}
+.lock-modal .pin-input:focus{border-color:var(--mint);box-shadow:0 0 0 3px rgba(29,184,126,.2)}
+.lock-modal .pin-input.error{border-color:var(--red);animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.lock-btn{font-size:.72rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;border:none;padding:.8rem 2rem;border-radius:6px;cursor:pointer;transition:all .25s;margin:.2rem}
+.lock-btn-primary{background:var(--mint);color:var(--sky1)}
+.lock-btn-primary:hover{background:var(--gold);transform:translateY(-2px);box-shadow:0 4px 15px rgba(240,165,0,.3)}
+.lock-btn-ghost{background:transparent;color:rgba(255,255,255,.5);border:1px solid var(--border)}
+.lock-btn-ghost:hover{border-color:var(--mint);color:var(--mint)}
+.lock-btn-danger{background:transparent;color:var(--red);border:1px solid rgba(248,81,73,.3)}
+.lock-btn-danger:hover{background:rgba(248,81,73,.1)}
+.lock-error{color:var(--red);font-size:.72rem;margin-top:.3rem;min-height:1.2em}
+.lock-setup{background:rgba(29,184,126,.06);border:1px dashed rgba(29,184,126,.25);border-radius:8px;padding:.8rem 1rem;margin-top:1rem;text-align:left;font-size:.72rem;color:rgba(255,255,255,.5);line-height:1.6}
+.lock-setup b{color:var(--mint)}
+.lock-admin-panel{margin-top:1.2rem;text-align:left;display:none}
+.lock-admin-panel.visible{display:block}
+.access-list{margin-top:.6rem;max-height:150px;overflow-y:auto}
+.access-item{display:flex;align-items:center;gap:.5rem;padding:.4rem .6rem;border:1px solid var(--border);border-radius:6px;margin-bottom:.3rem;background:rgba(255,255,255,.02);font-size:.72rem;color:rgba(255,255,255,.6)}
+.access-item .revoke{margin-left:auto;cursor:pointer;color:var(--red);opacity:.7;font-weight:700;font-size:.7rem;transition:opacity .2s}
+.access-item .revoke:hover{opacity:1}
+.access-item .access-expiry{font-size:.6rem;color:rgba(255,255,255,.3)}
+.tools-lock-badge{position:absolute;top:1rem;right:1rem;z-index:60;display:inline-flex;align-items:center;gap:.4rem;font-size:.68rem;font-weight:600;padding:.4rem .9rem;border-radius:20px;cursor:pointer;transition:all .25s;font-family:var(--body);letter-spacing:.08em;text-transform:uppercase}
+.tools-lock-badge.locked{background:rgba(248,81,73,.12);color:var(--red);border:1px solid rgba(248,81,73,.25)}
+.tools-lock-badge.unlocked{background:rgba(29,184,126,.12);color:var(--mint);border:1px solid rgba(29,184,126,.25)}
+.tools-lock-badge:hover{transform:scale(1.05)}
+.grant-row{display:flex;gap:.4rem;margin-top:.6rem;align-items:center}
+.grant-row input{flex:1;padding:.4rem .6rem;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:#fff;font-size:.75rem;outline:none}
+.grant-row input:focus{border-color:var(--mint)}
+.grant-row select{padding:.4rem .4rem;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,.05);color:#fff;font-size:.7rem;outline:none}
+.grant-row select option{background:var(--sky1)}
 </style>
 </head>
 <body>
@@ -727,6 +764,45 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
 
 <!-- TOOLS -->
 <section id="tools" class="section-wrap">
+  <!-- ACCESS LOCK OVERLAY -->
+  <div class="tools-lock-overlay" id="toolsLockOverlay">
+    <div class="lock-modal" id="lockModal">
+      <h2>🔒 Tools Access</h2>
+      <p>Professional tools are access-protected. Enter your PIN or request access from the owner.</p>
+      <input type="password" class="pin-input" id="lockPinInput" placeholder="••••••" maxlength="6" autocomplete="off">
+      <div class="lock-error" id="lockError"></div>
+      <div style="display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap">
+        <button class="lock-btn lock-btn-primary" id="lockUnlockBtn" onclick="toolsLockUnlock()">Unlock</button>
+        <button class="lock-btn lock-btn-ghost" id="lockSetupBtn" onclick="toolsLockSetup()" style="display:none">Set PIN</button>
+        <button class="lock-btn lock-btn-ghost" onclick="toolsLockRequestAccess()">Request Access</button>
+      </div>
+      <div class="lock-setup" id="lockSetupHint">
+        <b>First time?</b> Click <b>Set PIN</b> to create your owner PIN. This PIN will be required to access the tools section. You can grant time-limited access to others from the admin panel.
+      </div>
+      <!-- Admin panel (visible after owner unlock) -->
+      <div class="lock-admin-panel" id="lockAdminPanel">
+        <div style="font-size:.75rem;font-weight:700;color:var(--mint);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.6rem;padding-bottom:.4rem;border-bottom:1px solid var(--border)">Grant Access</div>
+        <div class="grant-row">
+          <input type="text" id="grantNameInput" placeholder="Name or email">
+          <select id="grantDurationSelect">
+            <option value="1">1 hour</option>
+            <option value="4">4 hours</option>
+            <option value="24">1 day</option>
+            <option value="168">1 week</option>
+            <option value="720">30 days</option>
+          </select>
+          <button class="lock-btn lock-btn-primary" style="padding:.4rem .8rem;font-size:.65rem" onclick="toolsGrantAccess()">Grant</button>
+        </div>
+        <div class="access-list" id="accessList"></div>
+        <div style="margin-top:1rem;display:flex;gap:.4rem;flex-wrap:wrap">
+          <button class="lock-btn lock-btn-danger" style="padding:.5rem 1rem;font-size:.62rem" onclick="toolsLockLock()">🔒 Lock Now</button>
+          <button class="lock-btn lock-btn-ghost" style="padding:.5rem 1rem;font-size:.62rem" onclick="toolsChangePin()">Change PIN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Lock status badge -->
+  <div class="tools-lock-badge locked" id="toolsLockBadge" onclick="toolsLockBadgeClick()">🔒 Locked</div>
   <div class="container">
     <div class="rv">
       <div class="eyebrow gold">Tools</div>
@@ -1329,6 +1405,293 @@ document.querySelectorAll('.rv').forEach(r=>obs.observe(r));
 
   if(document.readyState==='complete') setTimeout(start,30);
   else window.addEventListener('load',function(){setTimeout(start,30);});
+})();
+</script>
+
+<!-- ── TOOLS ACCESS LOCK SYSTEM ── -->
+<script>
+(function(){
+  const STORAGE_KEY='vk_tools_lock';
+  const PIN_HASH_KEY='vk_tools_pin_hash';
+  const ACCESS_KEY='vk_tools_access';
+  const SESSION_KEY='vk_tools_session';
+
+  // Simple hash (not cryptographically secure but sufficient for client-side PIN)
+  function simpleHash(str){
+    let h=0;
+    for(let i=0;i<str.length;i++){h=((h<<5)-h)+str.charCodeAt(i);h|=0;}
+    return 'h_'+Math.abs(h).toString(36);
+  }
+
+  // Read stored lock state
+  function getLockData(){
+    try{
+      const d=localStorage.getItem(STORAGE_KEY);
+      return d?JSON.parse(d):{pinSet:false,accessList:[]};
+    }catch(e){return{pinSet:false,accessList:[]};}
+  }
+  function saveLockData(d){
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(d));}catch(e){}
+  }
+
+  // Session management (survives page reload within tab)
+  function getSession(){
+    try{
+      const s=sessionStorage.getItem(SESSION_KEY);
+      return s?JSON.parse(s):{unlocked:false,isOwner:false};
+    }catch(e){return{unlocked:false,isOwner:false};}
+  }
+  function saveSession(s){
+    try{sessionStorage.setItem(SESSION_KEY,JSON.stringify(s));}catch(e){}
+  }
+
+  // Check if any granted access is still valid
+  function checkGrantedAccess(){
+    const lockData=getLockData();
+    const now=Date.now();
+    // Clean expired
+    lockData.accessList=lockData.accessList.filter(a=>a.expires>now);
+    saveLockData(lockData);
+    // Check for valid access via stored token
+    try{
+      const token=localStorage.getItem(ACCESS_KEY);
+      if(token){
+        const t=JSON.parse(token);
+        if(t.expires>now){return true;}
+        else{localStorage.removeItem(ACCESS_KEY);}
+      }
+    }catch(e){}
+    return false;
+  }
+
+  // Update UI based on lock state
+  function updateLockUI(){
+    const overlay=document.getElementById('toolsLockOverlay');
+    const badge=document.getElementById('toolsLockBadge');
+    const setupBtn=document.getElementById('lockSetupBtn');
+    const setupHint=document.getElementById('lockSetupHint');
+    const unlockBtn=document.getElementById('lockUnlockBtn');
+    const adminPanel=document.getElementById('lockAdminPanel');
+    const pinInput=document.getElementById('lockPinInput');
+    const lockData=getLockData();
+    const session=getSession();
+
+    if(!lockData.pinSet && !checkGrantedAccess()){
+      // No PIN set yet — show setup mode
+      if(setupBtn)setupBtn.style.display='inline-block';
+      if(setupHint)setupHint.style.display='block';
+      if(unlockBtn)unlockBtn.style.display='none';
+      if(pinInput)pinInput.placeholder='Create 4-6 digit PIN';
+    }else{
+      if(setupBtn)setupBtn.style.display='none';
+      if(setupHint)setupHint.style.display='none';
+      if(unlockBtn)unlockBtn.style.display='inline-block';
+      if(pinInput)pinInput.placeholder='••••••';
+    }
+
+    const isUnlocked=session.unlocked||checkGrantedAccess();
+    if(isUnlocked){
+      if(overlay)overlay.classList.add('unlocked');
+      if(badge){badge.className='tools-lock-badge unlocked';badge.textContent='🔓 Unlocked';}
+      if(session.isOwner&&adminPanel)adminPanel.classList.add('visible');
+      renderAccessList();
+    }else{
+      if(overlay)overlay.classList.remove('unlocked');
+      if(badge){badge.className='tools-lock-badge locked';badge.textContent='🔒 Locked';}
+      if(adminPanel)adminPanel.classList.remove('visible');
+    }
+  }
+
+  // Render access list in admin panel
+  function renderAccessList(){
+    const listEl=document.getElementById('accessList');
+    if(!listEl)return;
+    const lockData=getLockData();
+    const now=Date.now();
+    lockData.accessList=lockData.accessList.filter(a=>a.expires>now);
+    saveLockData(lockData);
+    if(!lockData.accessList.length){
+      listEl.innerHTML='<div style="font-size:.68rem;color:rgba(255,255,255,.3);padding:.4rem">No active grants</div>';
+      return;
+    }
+    listEl.innerHTML=lockData.accessList.map((a,i)=>{
+      const remain=Math.round((a.expires-now)/3600000);
+      const unit=remain>=24?Math.round(remain/24)+'d':remain+'h';
+      return '<div class="access-item"><span>👤 '+a.name+'</span><span class="access-expiry">'+unit+' left</span><span class="revoke" onclick="window.toolsRevokeAccess('+i+')">✕ Revoke</span></div>';
+    }).join('');
+  }
+
+  // Set up PIN (first time)
+  window.toolsLockSetup=function(){
+    const pinInput=document.getElementById('lockPinInput');
+    const errorEl=document.getElementById('lockError');
+    const pin=pinInput?pinInput.value.trim():'';
+    if(pin.length<4||pin.length>6||!/^\d+$/.test(pin)){
+      if(errorEl)errorEl.textContent='PIN must be 4-6 digits';
+      if(pinInput)pinInput.classList.add('error');
+      setTimeout(()=>{if(pinInput)pinInput.classList.remove('error');},500);
+      return;
+    }
+    const lockData=getLockData();
+    lockData.pinSet=true;
+    saveLockData(lockData);
+    localStorage.setItem(PIN_HASH_KEY,simpleHash(pin));
+    saveSession({unlocked:true,isOwner:true});
+    if(errorEl)errorEl.textContent='';
+    if(pinInput)pinInput.value='';
+    updateLockUI();
+  };
+
+  // Unlock with PIN
+  window.toolsLockUnlock=function(){
+    const pinInput=document.getElementById('lockPinInput');
+    const errorEl=document.getElementById('lockError');
+    const pin=pinInput?pinInput.value.trim():'';
+    if(!pin){if(errorEl)errorEl.textContent='Enter your PIN';return;}
+    const storedHash=localStorage.getItem(PIN_HASH_KEY)||'';
+    if(simpleHash(pin)===storedHash){
+      saveSession({unlocked:true,isOwner:true});
+      if(errorEl)errorEl.textContent='';
+      if(pinInput)pinInput.value='';
+      updateLockUI();
+    }else{
+      if(errorEl)errorEl.textContent='Incorrect PIN';
+      if(pinInput){pinInput.classList.add('error');pinInput.value='';}
+      setTimeout(()=>{if(pinInput)pinInput.classList.remove('error');},500);
+    }
+  };
+
+  // Lock manually
+  window.toolsLockLock=function(){
+    saveSession({unlocked:false,isOwner:false});
+    // Also clear any granted access token
+    try{localStorage.removeItem(ACCESS_KEY);}catch(e){}
+    updateLockUI();
+  };
+
+  // Change PIN
+  window.toolsChangePin=function(){
+    const pinInput=document.getElementById('lockPinInput');
+    const errorEl=document.getElementById('lockError');
+    const newPin=prompt('Enter new 4-6 digit PIN:');
+    if(!newPin)return;
+    if(newPin.length<4||newPin.length>6||!/^\d+$/.test(newPin)){
+      if(errorEl)errorEl.textContent='PIN must be 4-6 digits';return;
+    }
+    localStorage.setItem(PIN_HASH_KEY,simpleHash(newPin));
+    if(errorEl)errorEl.textContent='PIN updated ✓';
+    if(errorEl)errorEl.style.color='var(--mint)';
+    setTimeout(()=>{if(errorEl){errorEl.textContent='';errorEl.style.color='';}},2000);
+  };
+
+  // Grant access to someone
+  window.toolsGrantAccess=function(){
+    const nameInput=document.getElementById('grantNameInput');
+    const durationSelect=document.getElementById('grantDurationSelect');
+    const name=nameInput?nameInput.value.trim():'';
+    const hours=durationSelect?parseInt(durationSelect.value):24;
+    if(!name){alert('Enter a name or email');return;}
+    const lockData=getLockData();
+    const grantToken='grant_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+    lockData.accessList.push({name,token:grantToken,expires:Date.now()+hours*3600000});
+    saveLockData(lockData);
+    nameInput.value='';
+    // Generate shareable link with token
+    const shareUrl=window.location.origin+window.location.pathname+'?access='+grantToken;
+    const copied=copyToClipboard(shareUrl);
+    alert('Access granted to "'+name+'" for '+hours+'h.\n\nShareable link '+(copied?'copied to clipboard':'(copy manually)')+':\n\n'+shareUrl);
+    renderAccessList();
+  };
+
+  // Revoke access
+  window.toolsRevokeAccess=function(index){
+    const lockData=getLockData();
+    if(lockData.accessList[index]){
+      const name=lockData.accessList[index].name;
+      lockData.accessList.splice(index,1);
+      saveLockData(lockData);
+      renderAccessList();
+    }
+  };
+
+  // Request access (for visitors)
+  window.toolsLockRequestAccess=function(){
+    const ownerEmail='velmurugan.k@bluepowerpartners.com'; // Update with actual contact
+    const subject=encodeURIComponent('Access Request — VK Portfolio Tools');
+    const body=encodeURIComponent('Hi Velmurugan,\n\nI would like to request access to the professional tools on your portfolio website.\n\nName: \nPurpose: \n\nThank you.');
+    window.open('mailto:'+ownerEmail+'?subject='+subject+'&body='+body);
+  };
+
+  // Badge click handler
+  window.toolsLockBadgeClick=function(){
+    const session=getSession();
+    if(session.unlocked&&session.isOwner){
+      // Toggle lock
+      if(confirm('Lock the tools section?'))window.toolsLockLock();
+    }else{
+      // Scroll to tools section and focus PIN input
+      document.getElementById('tools').scrollIntoView({behavior:'smooth'});
+      setTimeout(()=>{
+        const pinInput=document.getElementById('lockPinInput');
+        if(pinInput)pinInput.focus();
+      },500);
+    }
+  };
+
+  // Check URL for access token
+  function checkUrlAccessToken(){
+    const params=new URLSearchParams(window.location.search);
+    const token=params.get('access');
+    if(!token)return;
+    const lockData=getLockData();
+    const grant=lockData.accessList.find(a=>a.token===token);
+    if(grant&&grant.expires>Date.now()){
+      // Store access token
+      localStorage.setItem(ACCESS_KEY,JSON.stringify({token,expires:grant.expires}));
+      saveSession({unlocked:true,isOwner:false});
+      // Clean URL
+      const url=new URL(window.location);
+      url.searchParams.delete('access');
+      window.history.replaceState({},'',url);
+    }
+  }
+
+  // Clipboard helper
+  function copyToClipboard(text){
+    try{
+      if(navigator.clipboard){
+        navigator.clipboard.writeText(text);return true;
+      }
+      const ta=document.createElement('textarea');
+      ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+      document.body.appendChild(ta);ta.select();
+      document.execCommand('copy');document.body.removeChild(ta);return true;
+    }catch(e){return false;}
+  }
+
+  // Enter key support for PIN input
+  function setupPinInput(){
+    const pinInput=document.getElementById('lockPinInput');
+    if(pinInput){
+      pinInput.addEventListener('keydown',function(e){
+        if(e.key==='Enter'){
+          const lockData=getLockData();
+          if(!lockData.pinSet)window.toolsLockSetup();
+          else window.toolsLockUnlock();
+        }
+      });
+    }
+  }
+
+  // Initialize
+  function init(){
+    checkUrlAccessToken();
+    updateLockUI();
+    setupPinInput();
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
+  else init();
 })();
 </script>
 
