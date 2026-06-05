@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 39.0</title>
+<title>WindFlow Pro 39.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 39.0</span></div><div class="brand-sub">A: ① Site → ② Power Curve → ③ Wind Data → ④ MCP &amp; Extrapolation │ B: ⑤ Terrain → ⑥ WAsP Flow → ⑦ Reporting</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 39.1</span></div><div class="brand-sub">A: ① Site → ② Power Curve → ③ Wind Data → ④ MCP &amp; Extrapolation │ B: ⑤ Terrain → ⑥ WAsP Flow → ⑦ Reporting</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -257,15 +257,16 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem">Data height → Hub height via log-law + stability correction. Only requires roughness at mast location (a single value, not a map).</div>
         <!-- v37.0: Data source selector for vertical extrapolation -->
         <div class="g2" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Data Source</label><select class="fs" id="veSource" onchange="onVertExtrapSourceChange()"><option value="wind">Current Wind Data</option></select></div><div class="fg"><label class="fl">Method</label><select class="fs" id="veMethod" onchange="updateVerticalExtrapolationUI()"><option value="logstab" selected>Log-law + Stability (Businger-Dyer)</option><option value="logsimple">Simple Log-law</option><option value="powerlaw">Power Law (1/7 default)</option><option value="powercustom">Power Law (custom α)</option><option value="gdl">Geostrophic Drag Law</option></select></div></div>
-        <div class="g4" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Source Height (m)</label><input class="fi" id="veSrcH" type="number" value="100" step="10" oninput="runVertExtrap()"></div><div class="fg"><label class="fl">Target Height (m)</label><input class="fi" id="veTgtH" type="number" value="120" step="10" oninput="runVertExtrap()"></div><div class="fg"><label class="fl">z₀ (m)</label><input class="fi" id="veZ0" type="number" value="0.03" step="0.001" oninput="runVertExtrap()"></div><div class="fg"><label class="fl">α (custom)</label><input class="fi" id="veAlpha" type="number" value="0.143" step="0.01" oninput="runVertExtrap()"></div></div>
+        <div class="g4" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Source Height (m)</label><input class="fi" id="veSrcH" type="number" value="100" step="10" oninput="previewVertExtrap()"></div><div class="fg"><label class="fl">Target Height (m)</label><input class="fi" id="veTgtH" type="number" value="120" step="10" oninput="previewVertExtrap()"></div><div class="fg"><label class="fl">z₀ (m)</label><input class="fi" id="veZ0" type="number" value="0.03" step="0.001" oninput="previewVertExtrap()"></div><div class="fg"><label class="fl">α (custom)</label><input class="fi" id="veAlpha" type="number" value="0.143" step="0.01" oninput="previewVertExtrap()"></div></div>
         <div id="veSourceInfo" style="font-size:.52rem;color:var(--sky);margin-bottom:.3rem;padding:.2rem .4rem;background:rgba(74,179,232,.06);border-radius:3px;display:none"></div>
         <div class="g3" style="gap:.4rem">
           <div class="metric-item"><div class="metric-val" id="ve1MastWS">—</div><div class="metric-label">Source WS m/s</div></div>
           <div class="metric-item"><div class="metric-val sky" id="ve1HubWS">—</div><div class="metric-label">Target WS m/s</div></div>
           <div class="metric-item"><div class="metric-val gold" id="ve1Shear">—</div><div class="metric-label">Ratio / α</div></div>
         </div>
-        <button class="btn btn-sm btn-ghost" style="margin-top:.4rem" onclick="runVertExtrap()">⚙ Run Vertical Extrapolation</button>
+        <button class="btn btn-primary" style="margin-top:.4rem;width:100%" id="runVertExtrapBtn" onclick="runVertExtrap()">▶ Run Vertical Extrapolation</button>
         <div id="veResult" style="font-size:.58rem;color:var(--text3);margin-top:.3rem">—</div>
+        <div id="veStoredMsg" style="display:none;font-size:.56rem;color:var(--mint);margin-top:.2rem;padding:.2rem .4rem;background:var(--mint3);border-radius:3px"></div>
       </div>
 
       <!-- ② MCP LONG-TERM CORRECTION -->
@@ -301,7 +302,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div id="obsStat" style="font-size:.58rem;color:var(--text3);margin-top:.2rem">No obstacles</div>
       </div>
 
-      <!-- v39.0: ④ REWS and ⑤ Geostrophic moved to Step 6 (WAsP Flow Analysis) -->
+      <!-- v39.1: ④ REWS and ⑤ Geostrophic moved to Step 6 (WAsP Flow Analysis) -->
     </div>
     <div>
       <!-- CHECKPOINT -->
@@ -412,9 +413,9 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(4)">← MCP &amp; Extrapolation</button><button class="btn btn-primary" onclick="goToStep(6)">Next: WAsP Flow →</button></div>
 </div>
 
-<!-- ===== STEP 6: WAsP FLOW MODELLING (v39.0: one-button workflow) ===== -->
+<!-- ===== STEP 6: WAsP FLOW MODELLING (v39.1: one-button workflow) ===== -->
 <div class="step-panel" id="step6">
-  <!-- v39.0: WAsP-aligned one-button pipeline — Generalize+Downscale+REWS+Wake+AEP -->
+  <!-- v39.1: WAsP-aligned one-button pipeline — Generalize+Downscale+REWS+Wake+AEP -->
   
   <!-- PIPELINE PROGRESS BAR -->
   <div class="card" style="margin-bottom:.5rem;padding:.4rem .6rem;border-left:3px solid var(--acc)">
@@ -617,10 +618,10 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   <span id="bzMnSU">—</span>
   <span id="bz-mastSU">—</span>
   <table><tbody id="gwcBody"></tbody></table>
-  <!-- v39.0: BZ progress elements (now integrated into WAsP Flow status) -->
+  <!-- v39.1: BZ progress elements (now integrated into WAsP Flow status) -->
   <div class="progress"><div class="progress-bar" id="bzpb" style="width:0"></div></div>
   <span id="bzpt">—</span>
-  <!-- v39.0: REWS & Geostrophic elements moved from Step 4 to hidden (now integrated in WAsP Flow) -->
+  <!-- v39.1: REWS & Geostrophic elements moved from Step 4 to hidden (now integrated in WAsP Flow) -->
   <select id="rewsSource"><option value="wind">Current Wind Data</option></select>
   <input id="reHubH" type="number" value="120">
   <input id="reRotD" type="number" value="150">
@@ -918,7 +919,7 @@ function logWS(ws,fromH,toH,z0){const k=Math.log(Math.max(fromH,z0*1.1)/z0);retu
 function terrainSpeedup(turbElev,mastElev,hubH,z0){
   // v16.0: DEPRECATED — use terrainSpeedupJH() for Jackson-Hunt model
   // Kept as fallback for when no terrain grid is available
-  // v39.0: Flat terrain guard — if elevation difference < 20m, no orographic speedup
+  // v39.1: Flat terrain guard — if elevation difference < 20m, no orographic speedup
   const dElev=Math.abs((turbElev||0)-(mastElev||0));
   if(dElev<20)return 1.0;
   const dE=(turbElev||0)-(mastElev||0);
@@ -2925,12 +2926,12 @@ function calcAEP(){
   // This replaces the old single-speedup-per-turbine approach with direction-dependent
   // speedups from the Jackson-Hunt linearized potential flow model
   const jhSpeedups = computeAllJHSpeedups(sectors, hubHH, z0);
-  // v39.0: Flat terrain guard — if terrain is flat or no terrain data, all speedups = 1.0
+  // v39.1: Flat terrain guard — if terrain is flat or no terrain data, all speedups = 1.0
   const isFlatTerrain = !S.terrain || !S.terrain.grid || !S.terrain.grid.length || ((S.terrain.maxE||0)-(S.terrain.minE||0)) < 20;
   // For display: compute average speedup per turbine (using prevailing direction)
   const prevDir=parseFloat($('prevWD')?.value||270);
   const tSpeedups=S.turbines.map((t,ti)=>{
-    if(isFlatTerrain) return 1.0; // v39.0: No orographic speedup in flat terrain
+    if(isFlatTerrain) return 1.0; // v39.1: No orographic speedup in flat terrain
     if(!jhSpeedups[ti])return 1.0;
     // Average across all sectors (frequency-weighted)
     let wSum=0, suSum=0;
@@ -3104,7 +3105,7 @@ function calcAEP(){
   // v19.0: NaN guard for totals
   let grossG=Array.from(gross).reduce((s,e)=>s+(isFinite(e)?e:0),0)/1e6;
   let netWake=Array.from(net).reduce((s,e)=>s+(isFinite(e)?e:0),0)/1e6;
-  // v39.0: Diagnostic for AEP = 0 bug — log detailed info when no energy is accumulated
+  // v39.1: Diagnostic for AEP = 0 bug — log detailed info when no energy is accumulated
   if(grossG<=0){
     const activeSectors=sectors.filter(s=>s.freq>=1e-5).length;
     const hubSpValid=hubSp.filter(v=>v>0.5).length;
@@ -3530,7 +3531,7 @@ async function runMCP(){
     alert(`Target source "${tgtSrc}" not found in registry. Download it first.`);return;
   }
 
-  // v39.0: Filter target data to selected target period
+  // v39.1: Filter target data to selected target period
   const tgtSy=parseInt($('mcpTSy')?.value)||0;
   const tgtTEy=parseInt($('mcpTEy')?.value)||9999;
   let tgtStartDate=null,tgtEndDate=null;
@@ -3665,7 +3666,7 @@ async function runMCP(){
     // Show MCP reference data point on map
     addDataSourceMarker('ERA5T',refLat,refLon,refH);
     $('mcpOut').style.display='block';log(`MCP: factor=${factor.toFixed(3)}, R²=${R2.toFixed(2)}, σ_MCP=${(sigMCP*100).toFixed(1)}% · target=${targetLabel}@${tgtH}m, ref=${refLabel}@${refH}m${regressionEq}`,'i');
-    // v39.0: MCP Summary Report (WindPro-style)
+    // v39.1: MCP Summary Report (WindPro-style)
     const tgtLat=parseFloat($('mastLat').value)||0,tgtLon=parseFloat($('mastLon').value)||0;
     if(!$('mcpReportContent'))return;
     $('mcpReportContent').innerHTML=`
@@ -3697,7 +3698,7 @@ async function runMCP(){
     $('mcpReport').style.display='block';
   }catch(e){setProg('mcp',0,'❌ '+e.message);log('MCP failed: '+e.message,'e');}
 }
-// v39.0: Auto-detect MCP periods from loaded data
+// v39.1: Auto-detect MCP periods from loaded data
 function detectMCPPeriods(){
   const tgtSrc=$('mcpTarget')?.value||'wind';
   const refSrc=$('mcpReference')?.value||'ERA5';
@@ -4042,7 +4043,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 39.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 39.1 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -4083,11 +4084,11 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 39.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Bankability report</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 39.1 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Bankability report</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
-// v39.0: Export PDF Report in BAE format
+// v39.1: Export PDF Report in BAE format
 function exportPDFReport(){
   const R=S.results,pn=$('projName').value;
   if(!R){alert('Run analysis first before exporting PDF report');return;}
@@ -4430,7 +4431,7 @@ try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 39.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
+log('WindFlow Pro 39.1 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 // v33.3: Safety net — if leafMap failed to init, retry after DOM is fully settled
@@ -4868,7 +4869,7 @@ function exportBankabilityReport(){
 <div class="cover">
   <h1>${pn}</h1>
   <p>Wind Energy Assessment Report</p>
-  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 39.0 &mdash; ${now}</p>
+  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 39.1 &mdash; ${now}</p>
 </div>
 
 <h2>1. Executive Summary</h2>
@@ -4935,7 +4936,7 @@ ${terrCanvasImg?`<h2>8. Detailed Terrain Elevation Map</h2><p><img src="${terrCa
 ${roughCanvasImg?`<h2>9. Detailed Roughness Map</h2><p><img src="${roughCanvasImg}" style="max-width:100%;border:1px solid #d1d5db;border-radius:6px" alt="Roughness"></p>`:''}
 
 <p style="color:#9ca3af;font-size:9px;margin-top:30px;border-top:1px solid #e5e7eb;padding-top:10px">
-Generated by WindFlow Pro 39.0 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; Bankability report format</p>
+Generated by WindFlow Pro 39.1 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; Bankability report format</p>
 </body></html>`;
 
   dlFile(h,`WindAssessment_${pn.replace(/\s+/g,'_')}.html`,'text/html');
@@ -9197,7 +9198,7 @@ function showFlowTab(idx,btn){
 
 // ── PIPELINE PROGRESS (v32.0) ──
 function updatePipelineProgress() {
-  // v39.0: Updated pipeline — A: ①Vertical ②MCP ③Obstacles → B: ④WAsP Flow
+  // v39.1: Updated pipeline — A: ①Vertical ②MCP ③Obstacles → B: ④WAsP Flow
   const stages = [
     { id: 'pipe1', done: S.wind && S.wind.speeds && S.wind.speeds.length > 0 },
     { id: 'pipe2', done: S.mcpFactor && S.mcpFactor !== 1.0 },
@@ -9309,8 +9310,8 @@ function updateReportingDashboard(){
 // ── SAVE/LOAD PROJECT ──
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
-  const data={version:'39.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0'}};
-  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v39.0)','i');
+  const data={version:'39.1',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0'}};
+  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v39.1)','i');
 }
 
 // v22.0: WAsP-compatible project export
@@ -9335,7 +9336,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 39.0`);
+  lines.push(`WAsP Project Export - WindFlow Pro 39.1`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
@@ -11214,6 +11215,56 @@ function computeGeostrophic(){
   log(`Geostrophic: Ug=${Ug.toFixed(2)} m/s, u*=${uStar.toFixed(3)}, turn=${turnAngle}°, Ro=${Ro.toFixed(2)}, horiz_factor=${horizFactor.toFixed(4)}`,'i');
 }
 
+// v39.1: Preview vertical extrapolation (live update of display only, no data storage)
+// This runs on every input change to show expected results before the user clicks "Run"
+function previewVertExtrap(){
+  const srcH=parseFloat($('veSrcH').value)||100;
+  const tgtH=parseFloat($('veTgtH').value)||120;
+  const z0=parseFloat($('veZ0').value)||parseFloat($('z0val').value)||0.03;
+  const alpha=parseFloat($('veAlpha').value)||0.143;
+  const method=$('veMethod').value;
+  const selectedSource=$('veSource')?.value||'wind';
+
+  let srcWS=0;
+  let srcData=null;
+  if(selectedSource==='wind'){
+    srcData=S.wind;
+  }else if(S.windSources[selectedSource]){
+    srcData=S.windSources[selectedSource];
+  }
+  if(srcData&&srcData.speeds){
+    const vs=srcData.speeds.filter(v=>v>0.5);
+    srcWS=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;
+  }
+  if(!srcWS){$('ve1MastWS').textContent='—';$('ve1HubWS').textContent='—';$('ve1Shear').textContent='—';$('veResult').textContent='No wind data';return;}
+
+  const nativeH=selectedSource!=='wind'&&S.windSources[selectedSource]?(S.windSources[selectedSource].sourceHeight||S.windSources[selectedSource].mastH||srcH):srcH;
+  if(Math.abs(nativeH-srcH)>1&&method!=='powerlaw'&&method!=='powercustom'){
+    const L=getStabilityL();
+    srcWS=logWS_stab(srcWS,nativeH,srcH,z0,L);
+  }
+
+  let tgtWS,ratio;
+  if(method==='logstab'||method==='logsimple'){
+    const L=method==='logstab'?getStabilityL():1e8;
+    tgtWS=logWS_stab(srcWS,srcH,tgtH,z0,L);
+    ratio=tgtWS/srcWS;
+  }else if(method==='powerlaw'){
+    const a=1/7;tgtWS=srcWS*Math.pow(tgtH/srcH,a);ratio=Math.pow(tgtH/srcH,a);
+  }else if(method==='powercustom'){
+    tgtWS=srcWS*Math.pow(tgtH/srcH,alpha);ratio=Math.pow(tgtH/srcH,alpha);
+  }else if(method==='gdl'){
+    const L=getStabilityL();const gdlR=gdlCorrectionFactor(L,z0,tgtH)/gdlCorrectionFactor(L,z0,srcH);
+    tgtWS=srcWS*gdlR*logWS(1,srcH,tgtH,z0);ratio=tgtWS/srcWS;
+  }else{tgtWS=srcWS;ratio=1;}
+  $('ve1MastWS').textContent=srcWS.toFixed(2);
+  $('ve1HubWS').textContent=tgtWS.toFixed(2);
+  if(method==='powerlaw'||method==='powercustom'){$('ve1Shear').textContent=alpha.toFixed(3);}
+  else{$('ve1Shear').textContent=ratio.toFixed(4);}
+  const srcLabel=selectedSource==='wind'?'Current':selectedSource;
+  $('veResult').innerHTML=`<span style="color:var(--text3)">Preview:</span> [${srcLabel} @ ${srcH}m] → ${tgtH}m: ${srcWS.toFixed(2)} → ${tgtWS.toFixed(2)} m/s (ratio=${ratio.toFixed(4)})`;
+}
+
 // v37.0: Vertical Extrapolation (explicit run) — supports any data source at any height
 function runVertExtrap(){
   const srcH=parseFloat($('veSrcH').value)||100;
@@ -11278,7 +11329,7 @@ function runVertExtrap(){
   $('veResult').innerHTML=`[${srcLabel} @ ${srcH}m] → ${tgtH}m: ${srcWS.toFixed(2)} → ${tgtWS.toFixed(2)} m/s (ratio=${ratio.toFixed(4)}, method=${method})`;
   log(`Vertical extrap [${srcLabel}]: ${srcH}m→${tgtH}m, ${srcWS.toFixed(2)}→${tgtWS.toFixed(2)} m/s, ratio=${ratio.toFixed(4)}`,'i');
 
-  // v39.0: Store extrapolated data as new wind source for MCP input
+  // v39.1: Store extrapolated data as new wind source for MCP input
   if(ratio>0&&srcData&&srcData.speeds&&srcData.speeds.length>0){
     const newSourceName=`${srcLabel}_${tgtH}m`;
     const scaledSpeeds=srcData.speeds.map(v=>v>0.5?v*ratio:v);
@@ -11289,14 +11340,27 @@ function runVertExtrap(){
       mcpFactor:1,
       mastH:tgtH,
       elevation:srcData.elevation||null,
-      sourceLat:srcData.sourceLat||0,
-      sourceLon:srcData.sourceLon||0,
+      sourceLat:srcData.sourceLat||parseFloat($('mastLat').value)||0,
+      sourceLon:srcData.sourceLon||parseFloat($('mastLon').value)||0,
       sourceHeight:tgtH
     };
     enrichWindSource(newSourceName);
     refreshAllSourceDropdowns();
     addDataSourceMarker(newSourceName,srcData.sourceLat||0,srcData.sourceLon||0,tgtH);
-    log(`Vertical extrapolation: Added "${newSourceName}" to data sources (${scaledSpeeds.length} records, mean=${tgtWS.toFixed(2)} m/s @ ${tgtH}m)`,'i');
+    // v39.1: Auto-select the extrapolated source as MCP target
+    const mcpT=$('mcpTarget');
+    if(mcpT&&S.windSources[newSourceName]){
+      mcpT.value=newSourceName;
+      onMCPSourceChange();
+      log(`MCP target auto-set to "${newSourceName}"`,'i');
+    }
+    // Show confirmation message
+    const storedMsg=$('veStoredMsg');
+    if(storedMsg){
+      storedMsg.innerHTML=`✓ "${newSourceName}" added to data sources — now available as MCP target (${scaledSpeeds.length.toLocaleString()} records, mean=${tgtWS.toFixed(2)} m/s @ ${tgtH}m)`;
+      storedMsg.style.display='block';
+    }
+    log(`Vertical extrapolation: Added "${newSourceName}" to data sources (${scaledSpeeds.length} records, mean=${tgtWS.toFixed(2)} m/s @ ${tgtH}m) — available in MCP target dropdown`,'i');
   }
 }
 
@@ -11522,8 +11586,8 @@ function onVertExtrapSourceChange(){
   }else{
     if(infoEl)infoEl.style.display='none';
   }
-  // Auto-run extrapolation with new source
-  runVertExtrap();
+  // Auto-preview extrapolation with new source
+  previewVertExtrap();
 }
 
 // v37.0: When geostrophic source changes
@@ -11701,7 +11765,7 @@ function exportWindRegistryCSV(){
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// v39.0: WAsP ONE-BUTTON FLOW ANALYSIS
+// v39.1: WAsP ONE-BUTTON FLOW ANALYSIS
 // Chains: Generalize (OWC→GWC) → Downscale (GWC→SWC) → REWS → Wake → AEP
 // ══════════════════════════════════════════════════════════════════════
 var windMapLayers = []; // Leaflet rectangles for wind map
@@ -11730,7 +11794,7 @@ function runWAsPFlow() {
   const useREWS = $('useREWS')?.checked || false;
   const useGeo = $('useGeostrophic')?.checked || false;
 
-  log('── WAsP Flow Analysis (v39.0 one-button) ──', 'i');
+  log('── WAsP Flow Analysis (v39.1 one-button) ──', 'i');
   log(`  Options: REWS=${useREWS}, Geostrophic=${useGeo}`, 'i');
 
   // Stage 1: Generalize (OWC → GWC)
@@ -11863,7 +11927,7 @@ function runWAsPFlow() {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// v39.0: WIND MAP / RESOURCE GRID
+// v39.1: WIND MAP / RESOURCE GRID
 // Generate colored rectangles on the Leaflet map showing wind resource
 // ══════════════════════════════════════════════════════════════════════
 function generateWindMap() {
