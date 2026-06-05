@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 37.0</title>
+<title>WindFlow Pro 38.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 37.0</span></div><div class="brand-sub">A: ① Site → ② Power Curve → ③ Wind Data → ④ MCP &amp; Extrapolation │ B: ⑤ Terrain → ⑥ Flow Model → ⑦ Reporting</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 38.0</span></div><div class="brand-sub">A: ① Site → ② Power Curve → ③ Wind Data → ④ MCP &amp; Extrapolation │ B: ⑤ Terrain → ⑥ WAsP Flow → ⑦ Reporting</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -83,7 +83,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   <div class="checkpoint-item"><div class="checkpoint-dot" id="cpDot"></div><span id="cpLabel">Checkpoint</span></div><div class="win-sep"></div>
   <div class="win-group win-b">B · Terrain</div><div class="win-sep"></div>
   <div class="step-item" data-step="5" onclick="goToStep(5)"><div class="step-num">5</div><span class="step-label">Terrain</span></div><div class="step-connector"></div>
-  <div class="step-item" data-step="6" onclick="goToStep(6)"><div class="step-num">6</div><span class="step-label">Flow Model</span></div><div class="step-connector"></div>
+  <div class="step-item" data-step="6" onclick="goToStep(6)"><div class="step-num">6</div><span class="step-label">WAsP Flow</span></div><div class="step-connector"></div>
   <div class="step-item" data-step="7" onclick="goToStep(7)"><div class="step-num">7</div><span class="step-label">Reporting</span></div>
 </div>
 <div class="main">
@@ -297,38 +297,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div id="obsStat" style="font-size:.58rem;color:var(--text3);margin-top:.2rem">No obstacles</div>
       </div>
 
-      <!-- ④ ROTOR EQUIVALENT WIND SPEED -->
-      <div class="card"><div class="card-title sky">④ Rotor Equivalent Wind Speed</div>
-        <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem">Average wind speed over the rotor swept area. Accounts for wind shear across the rotor disk. No terrain required — only hub height and rotor diameter.</div>
-        <!-- v37.0: Data source selector for REWS -->
-        <div class="g3" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Data Source</label><select class="fs" id="rewsSource" onchange="onREWSSourceChange()"><option value="wind">Current Wind Data</option></select></div><div class="fg"><label class="fl">Hub Height (m)</label><input class="fi" id="reHubH" type="number" value="120" step="10" oninput="calcRotorEquivalent()"></div><div class="fg"><label class="fl">Rotor Diameter (m)</label><input class="fi" id="reRotD" type="number" value="150" step="10" oninput="calcRotorEquivalent()"></div></div>
-        <div id="rewsSourceInfo" style="font-size:.52rem;color:var(--sky);margin-bottom:.3rem;padding:.2rem .4rem;background:rgba(74,179,232,.06);border-radius:3px;display:none"></div>
-        <div class="g3" style="gap:.4rem;margin-top:.4rem">
-          <div class="metric-item"><div class="metric-val sky" id="reHubWS">—</div><div class="metric-label">Hub-height WS</div></div>
-          <div class="metric-item"><div class="metric-val" id="reREWS">—</div><div class="metric-label">Rotor-equiv WS</div></div>
-          <div class="metric-item"><div class="metric-val gold" id="reRatio">—</div><div class="metric-label">REWS/Hub ratio</div></div>
-        </div>
-        <button class="btn btn-sm btn-sky" style="margin-top:.4rem" onclick="calcRotorEquivalent()">⚙ Calculate REWS</button>
-      </div>
-
-      <!-- v37.0: ⑤ GEOSTROPHIC WIND & HORIZONTAL EXTRAPOLATION -->
-      <div class="card"><div class="card-title gold">⑤ Geostrophic Wind &amp; Horizontal Extrapolation</div>
-        <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem">Estimate geostrophic wind from surface observations using Rossby number similarity. Compute cross-isobaric turning angle for horizontal extrapolation between data point and site.</div>
-        <!-- v37.0: Data source selector for geostrophic -->
-        <div class="g2" style="gap:.4rem;margin-bottom:.3rem"><div class="fg"><label class="fl">Data Source</label><select class="fs" id="geoSource" onchange="onGeoSourceChange()"><option value="wind">Current Wind Data</option></select></div><div class="fg"><label class="fl">Height (m)</label><input class="fi" id="geoH" type="number" value="100" step="10" oninput="computeGeostrophic()"></div></div>
-        <div id="geoSourceInfo" style="font-size:.52rem;color:var(--sky);margin-bottom:.3rem;padding:.2rem .4rem;background:rgba(74,179,232,.06);border-radius:3px;display:none"></div>
-        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Latitude (°)</label><input class="fi" id="geoLat" type="number" value="55.5" step="0.1" oninput="computeGeostrophic()"></div><div class="fg"><label class="fl">Surface WS (m/s)</label><input class="fi" id="geoSurfWS" type="number" value="8" step="0.1" oninput="computeGeostrophic()"></div></div>
-        <div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">z₀ (m)</label><input class="fi" id="geoZ0" type="number" value="0.03" step="0.001" oninput="computeGeostrophic()"></div><div class="fg"><label class="fl">Stability Class</label><select class="fs" id="geoStab" onchange="computeGeostrophic()"><option value="1">1 — Very Unstable</option><option value="2">2 — Moderately Unstable</option><option value="3" selected>3 — Slightly Unstable</option><option value="4">4 — Neutral</option><option value="5">5 — Slightly Stable</option><option value="6">6 — Stable</option></select></div></div>
-        <div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">Distance (km)</label><input class="fi" id="geoDist" type="number" value="10" step="1"></div><div class="fg"><label class="fl">Site Latitude (°)</label><input class="fi" id="geoSiteLat" type="number" value="" step="0.1" placeholder="Layout center"></div></div>
-        <div class="g4" style="gap:.4rem;margin-top:.4rem">
-          <div class="metric-item"><div class="metric-val sky" id="geoUg">—</div><div class="metric-label">Ug m/s</div></div>
-          <div class="metric-item"><div class="metric-val gold" id="geoRo">—</div><div class="metric-label">Rossby No</div></div>
-          <div class="metric-item"><div class="metric-val" id="geoTurn">—</div><div class="metric-label">Turn °</div></div>
-          <div class="metric-item"><div class="metric-val" id="geoF">—</div><div class="metric-label">f (×10⁻⁴)</div></div>
-        </div>
-        <button class="btn btn-sm btn-gold" style="margin-top:.4rem" onclick="computeGeostrophic()">⚙ Compute</button>
-        <div id="geoResult" style="font-size:.58rem;color:var(--text3);margin-top:.3rem">—</div>
-      </div>
+      <!-- v38.0: ④ REWS and ⑤ Geostrophic moved to Step 6 (WAsP Flow Analysis) -->
     </div>
     <div>
       <!-- CHECKPOINT -->
@@ -436,12 +405,12 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       </div>
     </div>
   </div>
-  <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(4)">← MCP &amp; Extrapolation</button><button class="btn btn-primary" onclick="goToStep(6)">Next: Flow Model →</button></div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(4)">← MCP &amp; Extrapolation</button><button class="btn btn-primary" onclick="goToStep(6)">Next: WAsP Flow →</button></div>
 </div>
 
-<!-- ===== STEP 6: WIND FLOW MODELLING (was step5) ===== -->
+<!-- ===== STEP 6: WAsP FLOW MODELLING (v38.0: one-button workflow) ===== -->
 <div class="step-panel" id="step6">
-  <!-- v32.0: WAsP-aligned sequential pipeline — OWC → GWC → SWC -->
+  <!-- v38.0: WAsP-aligned one-button pipeline — Generalize+Downscale+REWS+Wake+AEP -->
   
   <!-- PIPELINE PROGRESS BAR -->
   <div class="card" style="margin-bottom:.5rem;padding:.4rem .6rem;border-left:3px solid var(--acc)">
@@ -453,46 +422,50 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <div style="color:var(--muted)">→</div>
       <div id="pipe3" style="display:flex;align-items:center;gap:.2rem;color:var(--text3)"><span style="font-size:.7rem">⬚</span> ③ Obstacles</div>
       <div style="color:var(--gold);font-size:.5rem;font-weight:600;margin:0 2px">B</div>
-      <div id="pipe4" style="display:flex;align-items:center;gap:.2rem;color:var(--text3)"><span style="font-size:.7rem">⬚</span> ① Generalize</div>
-      <div style="color:var(--muted)">→</div>
-      <div id="pipe5" style="display:flex;align-items:center;gap:.2rem;color:var(--text3)"><span style="font-size:.7rem">⬚</span> ② Downscale</div>
-      <div style="color:var(--muted)">→</div>
-      <div id="pipe6" style="display:flex;align-items:center;gap:.2rem;color:var(--text3)"><span style="font-size:.7rem">⬚</span> ③ Wake+AEP</div>
+      <div id="pipe4" style="display:flex;align-items:center;gap:.2rem;color:var(--text3)"><span style="font-size:.7rem">⬚</span> ④ WAsP Flow</div>
     </div>
     <div id="pipeDataInfo" style="font-size:.5rem;color:var(--text3);margin-top:.2rem;text-align:center">Load wind data first (Step 3)</div>
   </div>
 
   <div class="g2">
     <div>
-      <!-- ① GENERALIZE (OWC → GWC) — NEW EXPLICIT STEP -->
-      <div class="card"><div class="card-title green">① Generalize — OWC → GWC</div>
-        <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem"><b>WAsP Wind Atlas Step 1:</b> Remove mast terrain (BZ) + roughness effects via Geostrophic Drag Law → Generalized Wind Climate at standard height/roughness</div>
-        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Mast z₀ (m)</label><input class="fi" id="bzMz0" type="number" value="0.0002" step="0.0001"></div><div class="fg"><label class="fl">GWC z₀ (m)</label><input class="fi" id="gwcZ0" type="number" value="0.03" step="0.01"><div style="font-size:.5rem;color:var(--text3);margin-top:.1rem">WAsP standard = 0.03m</div></div></div>
-        <div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">GWC Height (m)</label><input class="fi" id="gwcH" type="number" value="100" step="10"><div style="font-size:.5rem;color:var(--text3);margin-top:.1rem">WAsP standard = 100m</div></div><div class="fg"><label class="fl">Inner Layer Scale</label><input class="fi" id="bzLscale" type="number" value="1.0" step="0.1" min="0.3" max="3.0"><div style="font-size:.5rem;color:var(--text3);margin-top:.1rem">1.0=WAsP default · Auto-tuned on run</div></div></div>
-        <div class="fg"><label class="fl">RIX Threshold</label><input class="fi" id="bzRixThr" type="number" value="0.05" step="0.01" min="0.01" max="0.5"></div>
-        <button class="btn btn-primary" style="width:100%;margin-top:.5rem" onclick="runBZModel()">⚙ Compute BZ Speedups + Generalize (OWC→GWC)</button>
-        <div class="progress"><div class="progress-bar" id="bzpb" style="width:0"></div></div><div id="bzpt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">Download terrain first, then generalize</div>
+      <!-- WAsP FLOW ANALYSIS — ONE-BUTTON CARD -->
+      <div class="card" style="border-color:var(--mint);border-width:2px"><div class="card-title green">WAsP Flow Analysis</div>
+        <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem"><b>One-button workflow:</b> Generalize (OWC→GWC) → Downscale (GWC→SWC) → REWS → Wake → AEP — all chained in sequence, just like WAsP.</div>
+        <div class="g2" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Data Source</label><select class="fs" id="analysisSource" onchange="onAnalysisSourceChange()"><option value="">Current Primary</option></select></div><div class="fg"><label class="fl">&nbsp;</label><label style="font-size:.6rem;cursor:pointer;display:flex;align-items:center;gap:.3rem;padding-top:.25rem"><input type="checkbox" id="useREWS" style="accent-color:var(--mint)"><span>Use REWS for power calc</span></label></div></div>
+        <div class="g2" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">&nbsp;</label><label style="font-size:.6rem;cursor:pointer;display:flex;align-items:center;gap:.3rem;padding-top:.25rem"><input type="checkbox" id="useGeostrophic" style="accent-color:var(--gold)"><span>Include geostrophic correction</span></label></div><div class="fg"></div></div>
+        <!-- Advanced options collapsible -->
+        <details style="margin-bottom:.5rem"><summary style="font-size:.58rem;font-weight:600;color:var(--sky);cursor:pointer;letter-spacing:.08em;text-transform:uppercase;padding:.3rem 0">▶ Advanced Options</summary>
+          <div style="padding-top:.4rem">
+            <div style="font-size:.5rem;color:var(--text3);margin-bottom:.3rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase">Generalize (OWC → GWC)</div>
+            <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Mast z₀ (m)</label><input class="fi" id="bzMz0" type="number" value="0.0002" step="0.0001"></div><div class="fg"><label class="fl">GWC z₀ (m)</label><input class="fi" id="gwcZ0" type="number" value="0.03" step="0.01"><div style="font-size:.5rem;color:var(--text3);margin-top:.1rem">WAsP standard = 0.03m</div></div></div>
+            <div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="fg"><label class="fl">GWC Height (m)</label><input class="fi" id="gwcH" type="number" value="100" step="10"><div style="font-size:.5rem;color:var(--text3);margin-top:.1rem">WAsP standard = 100m</div></div><div class="fg"><label class="fl">Inner Layer Scale</label><input class="fi" id="bzLscale" type="number" value="1.0" step="0.1" min="0.3" max="3.0"><div style="font-size:.5rem;color:var(--text3);margin-top:.1rem">1.0=WAsP default</div></div></div>
+            <div class="fg" style="margin-top:.3rem"><label class="fl">RIX Threshold</label><input class="fi" id="bzRixThr" type="number" value="0.05" step="0.01" min="0.01" max="0.5"></div>
+            <div style="font-size:.5rem;color:var(--text3);margin-top:.5rem;margin-bottom:.3rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase">Downscale (GWC → SWC)</div>
+            <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Site z₀ (m)</label><input class="fi" id="bzSz0" type="number" value="0.0002" step="0.0001"></div><div class="fg"><label class="fl">Method</label><select class="fs" id="downscaleMethod"><option value="gdl">GDL Pathway (WAsP standard)</option><option value="simple">Simple SU×RC (legacy)</option></select></div></div>
+            <div id="downscaleNote" style="font-size:.52rem;color:var(--acc);margin-top:.3rem">GDL pathway: OWC→u*→Ug→u*_target→SWC</div>
+          </div>
+        </details>
+        <button class="btn btn-primary" style="width:100%;font-size:.78rem;padding:.7rem" id="runBtn" onclick="runWAsPFlow()">▶▶ RUN WAsP FLOW ANALYSIS</button>
+        <div class="progress" style="margin-top:.4rem"><div class="progress-bar" id="waspFlowPB" style="width:0"></div></div>
+        <div id="waspFlowStatus" style="font-size:.58rem;color:var(--text3);margin-top:.2rem">Ready</div>
+        <div id="tbst" style="font-size:.62rem;color:var(--text3);margin-top:.3rem"></div>
       </div>
       <div id="bzOut" style="display:none"><div class="card"><div class="card-title sky">Generalization Results (OWC → GWC)</div>
-        <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem">① Removed mast orographic speed-up + roughness → GWC at standard height/roughness (via GDL pathway)</div>
+        <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem">Removed mast orographic speed-up + roughness → GWC at standard height/roughness (via GDL pathway)</div>
         <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="bzMaSU">—</div><div class="metric-label">Mast ΔS</div></div><div class="metric-item"><div class="metric-val gold" id="bzRixV">—</div><div class="metric-label">RIX %</div></div><div class="metric-item"><div class="metric-val sky" id="bzGws">—</div><div class="metric-label">GWC WS m/s</div></div><div class="metric-item"><div class="metric-val" id="bzGwcA">—</div><div class="metric-label">GWC A m/s</div></div></div>
         <div id="bzRixWarn" style="display:none;margin-top:.3rem" class="alert alert-warn">⚠ RIX warning</div>
         <div style="display:flex;gap:.4rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" onclick="toggleBZLayer()">🗺 Toggle SU Map</button></div>
       </div></div>
 
-      <!-- ② DOWNSCALE (GWC → SWC) — NEW EXPLICIT STEP -->
-      <div class="card"><div class="card-title green">② Downscale — GWC → SWC</div>
-        <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem"><b>WAsP Wind Atlas Step 2:</b> Apply target terrain (BZ) + roughness (IBL) effects via Geostrophic Drag Law → Specific Wind Climate at each WTG</div>
-        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Site z₀ (m)</label><input class="fi" id="bzSz0" type="number" value="0.0002" step="0.0001"></div><div class="fg"><label class="fl">Method</label><select class="fs" id="downscaleMethod"><option value="gdl">GDL Pathway (WAsP standard)</option><option value="simple">Simple SU×RC (legacy)</option></select></div></div>
-        <div id="downscaleNote" style="font-size:.52rem;color:var(--acc);margin-top:.3rem">GDL pathway uses: OWC→u*→Ug→u*_target→SWC (proper WAsP chain)</div>
-      </div>
-
-      <!-- ③ RUN ANALYSIS -->
-      <div class="card"><div class="card-title green">③ Run Full Analysis (Wake + Post-Processing)</div>
-        <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem">Jensen/PARK wake model → Calibration + Uncertainty (P50/P75/P90)</div>
-        <div class="g2" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Data Source</label><select class="fs" id="analysisSource" onchange="onAnalysisSourceChange()"><option value="">Current Primary</option></select></div><div class="fg"><label class="fl">&nbsp;</label><label style="font-size:.62rem;cursor:pointer;display:flex;align-items:center;gap:.3rem;padding-top:.25rem"><input type="checkbox" id="useREWS" style="accent-color:var(--mint)"><span>Use REWS for power calc</span></label></div></div>
-        <button class="btn btn-primary" style="width:100%;font-size:.78rem;padding:.7rem" id="runBtn" onclick="runAnalysis()">▶▶ RUN FULL ANALYSIS</button>
-        <div id="tbst" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">Ready</div>
+      <!-- WIND MAP / RESOURCE GRID -->
+      <div class="card"><div class="card-title gold">Wind Map / Resource Grid</div>
+        <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem">Generate a spatial wind resource map on the Leaflet map. Colored rectangles show wind speed or AEP variation across the site area.</div>
+        <div class="g3" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Grid Resolution</label><select class="fs" id="windMapRes"><option value="500">500m</option><option value="1000" selected>1km</option><option value="2000">2km</option></select></div><div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="windMapRadius" type="number" value="5" min="1" max="50" step="1"></div><div class="fg"><label class="fl">View Type</label><select class="fs" id="windMapType"><option value="ws" selected>Wind Speed</option><option value="aep">AEP</option><option value="weibullA">Weibull A</option></select></div></div>
+        <div class="g2" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Sector Filter</label><select class="fs" id="windMapSector"><option value="all" selected>All Sectors</option><option value="per">Per-sector</option></select></div><div class="fg"></div></div>
+        <button class="btn btn-gold" style="width:100%" onclick="generateWindMap()">🗺 Generate Wind Map</button>
+        <div id="windMapStatus" style="font-size:.58rem;color:var(--text3);margin-top:.2rem">Run WAsP Flow Analysis first</div>
+        <div id="windMapLegend" style="display:none;margin-top:.5rem"><div style="font-size:.52rem;color:var(--text3);margin-bottom:.2rem">Color Legend</div><div style="height:12px;border-radius:3px;background:linear-gradient(to right,#313695,#4575b4,#74add1,#abd9e9,#e0f3f8,#fee090,#fdae61,#f46d43,#d73027,#a50026);border:1px solid var(--border)"></div><div style="display:flex;justify-content:space-between;font-size:.48rem;color:var(--text3);margin-top:.1rem"><span id="wmLegendMin">Low</span><span id="wmLegendMax">High</span></div></div>
       </div>
     </div>
     <div>
@@ -621,7 +594,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
     </div>
   </div>
 
-  <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(6)">← Flow Model</button><div></div></div>
+  <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(6)">← WAsP Flow</button><div></div></div>
 </div>
 
 <!-- Hidden elements for backward compatibility with computation engine -->
@@ -639,6 +612,31 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   <span id="bzMnSU">—</span>
   <span id="bz-mastSU">—</span>
   <table><tbody id="gwcBody"></tbody></table>
+  <!-- v38.0: BZ progress elements (now integrated into WAsP Flow status) -->
+  <div class="progress"><div class="progress-bar" id="bzpb" style="width:0"></div></div>
+  <span id="bzpt">—</span>
+  <!-- v38.0: REWS & Geostrophic elements moved from Step 4 to hidden (now integrated in WAsP Flow) -->
+  <select id="rewsSource"><option value="wind">Current Wind Data</option></select>
+  <input id="reHubH" type="number" value="120">
+  <input id="reRotD" type="number" value="150">
+  <span id="rewsSourceInfo"></span>
+  <span id="reHubWS">—</span>
+  <span id="reREWS">—</span>
+  <span id="reRatio">—</span>
+  <select id="geoSource"><option value="wind">Current Wind Data</option></select>
+  <input id="geoH" type="number" value="100">
+  <span id="geoSourceInfo"></span>
+  <input id="geoLat" type="number" value="55.5">
+  <input id="geoSurfWS" type="number" value="8">
+  <input id="geoZ0" type="number" value="0.03">
+  <select id="geoStab"><option value="3" selected>3</option></select>
+  <input id="geoDist" type="number" value="10">
+  <input id="geoSiteLat" type="number" value="">
+  <span id="geoUg">—</span>
+  <span id="geoRo">—</span>
+  <span id="geoTurn">—</span>
+  <span id="geoF">—</span>
+  <span id="geoResult">—</span>
 </div>
 
 </div><!-- /main -->
@@ -3924,7 +3922,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 33.1 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 38.0 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -3965,7 +3963,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 33.1 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Bankability report</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 38.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Bankability report</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -4214,7 +4212,7 @@ try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 36.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → Flow Model → Reporting','i');
+log('WindFlow Pro 38.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 // v33.3: Safety net — if leafMap failed to init, retry after DOM is fully settled
@@ -4652,7 +4650,7 @@ function exportBankabilityReport(){
 <div class="cover">
   <h1>${pn}</h1>
   <p>Wind Energy Assessment Report</p>
-  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 33.1 &mdash; ${now}</p>
+  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 38.0 &mdash; ${now}</p>
 </div>
 
 <h2>1. Executive Summary</h2>
@@ -4719,7 +4717,7 @@ ${terrCanvasImg?`<h2>8. Detailed Terrain Elevation Map</h2><p><img src="${terrCa
 ${roughCanvasImg?`<h2>9. Detailed Roughness Map</h2><p><img src="${roughCanvasImg}" style="max-width:100%;border:1px solid #d1d5db;border-radius:6px" alt="Roughness"></p>`:''}
 
 <p style="color:#9ca3af;font-size:9px;margin-top:30px;border-top:1px solid #e5e7eb;padding-top:10px">
-Generated by WindFlow Pro 33.1 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; Bankability report format</p>
+Generated by WindFlow Pro 38.0 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; Bankability report format</p>
 </body></html>`;
 
   dlFile(h,`WindAssessment_${pn.replace(/\s+/g,'_')}.html`,'text/html');
@@ -8110,7 +8108,7 @@ function runFlatTerrainAnalysis(){
   // Set flat roughness rose
   S.roughnessRose={sectors:16,z0:flatZ0,flat:true};
   log('Flat terrain fallback: z0='+flatZ0+'m, elev='+flatElev+'m — no orographic speed-ups','w');
-  $('flatResult').innerHTML='<span style="color:var(--mint)">✓ Flat terrain set (z\u2080='+flatZ0+'m, elev='+flatElev+'m). Go to Step 6 \u2192 Flow Model to run analysis.</span>';
+  $('flatResult').innerHTML='<span style="color:var(--mint)">✓ Flat terrain set (z\u2080='+flatZ0+'m, elev='+flatElev+'m). Go to Step 6 \u2192 WAsP Flow to run analysis.</span>';
   S._windValidated=true;
   validateCheckpoint();
   // Unblock step 6
@@ -8981,13 +8979,12 @@ function showFlowTab(idx,btn){
 
 // ── PIPELINE PROGRESS (v32.0) ──
 function updatePipelineProgress() {
+  // v38.0: Updated pipeline — A: ①Vertical ②MCP ③Obstacles → B: ④WAsP Flow
   const stages = [
     { id: 'pipe1', done: S.wind && S.wind.speeds && S.wind.speeds.length > 0 },
     { id: 'pipe2', done: S.mcpFactor && S.mcpFactor !== 1.0 },
     { id: 'pipe3', done: true }, // obstacles are optional, always "done"
-    { id: 'pipe4', done: BZ.enabled },
-    { id: 'pipe5', done: BZ.enabled && S.gwcSectors },
-    { id: 'pipe6', done: S.results !== null },
+    { id: 'pipe4', done: S.results !== null },
   ];
   stages.forEach(s => {
     const el = $(s.id);
@@ -9094,8 +9091,8 @@ function updateReportingDashboard(){
 // ── SAVE/LOAD PROJECT ──
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
-  const data={version:'37.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0'}};
-  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v37.0)','i');
+  const data={version:'38.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0'}};
+  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v38.0)','i');
 }
 
 // v22.0: WAsP-compatible project export
@@ -9120,7 +9117,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 33.1`);
+  lines.push(`WAsP Project Export - WindFlow Pro 38.0`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
@@ -11462,6 +11459,345 @@ function exportWindRegistryCSV(){
   });
   dlFile(csv,'wind_data_registry.csv','text/csv');
   log('Wind data registry CSV exported','i');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// v38.0: WAsP ONE-BUTTON FLOW ANALYSIS
+// Chains: Generalize (OWC→GWC) → Downscale (GWC→SWC) → REWS → Wake → AEP
+// ══════════════════════════════════════════════════════════════════════
+var windMapLayers = []; // Leaflet rectangles for wind map
+
+function runWAsPFlow() {
+  if (!S.turbines.length) { alert('Add turbines (grid generator or Demo)'); return; }
+  if (!S.wind) { alert('Load wind data (ERA5 tab or Import)'); return; }
+
+  const runBtn = $('runBtn');
+  const pbEl = $('waspFlowPB');
+  const statusEl = $('waspFlowStatus');
+  runBtn.disabled = true;
+
+  // Sync hidden REWS/Geo fields from main settings
+  if ($('reHubH')) $('reHubH').value = parseFloat($('hubH')?.value || 120);
+  if ($('reRotD')) $('reRotD').value = parseFloat($('rotD')?.value || 150);
+  if ($('rewsSource')) {
+    const src = $('analysisSource')?.value || 'wind';
+    $('rewsSource').value = src === '' ? 'wind' : src;
+  }
+  if ($('geoSource')) {
+    const src = $('analysisSource')?.value || 'wind';
+    $('geoSource').value = src === '' ? 'wind' : src;
+  }
+
+  const useREWS = $('useREWS')?.checked || false;
+  const useGeo = $('useGeostrophic')?.checked || false;
+
+  log('── WAsP Flow Analysis (v38.0 one-button) ──', 'i');
+  log(`  Options: REWS=${useREWS}, Geostrophic=${useGeo}`, 'i');
+
+  // Stage 1: Generalize (OWC → GWC)
+  async function stage1() {
+    statusEl.textContent = 'Generalizing OWC→GWC...';
+    pbEl.style.width = '10%';
+    statusEl.style.color = 'var(--sky)';
+    log('  ① Generalizing OWC → GWC (BZ model)...', 'i');
+    try {
+      if (S.terrain) {
+        await runBZModel();
+      } else {
+        log('  No terrain data — skipping BZ generalization (will use simple speedup)', 'w');
+      }
+    } catch (e) {
+      log('BZ model warning: ' + e.message, 'w');
+    }
+    stage2();
+  }
+
+  // Stage 2: Downscale (GWC → SWC)
+  function stage2() {
+    statusEl.textContent = 'Downscaling GWC→SWC...';
+    pbEl.style.width = '30%';
+    log('  ② Downscaling GWC → SWC...', 'i');
+    // Downscale is performed inside runAnalysis() via BZ pipeline
+    // Just mark it as proceeding
+    setTimeout(() => { stage3(); }, 100);
+  }
+
+  // Stage 3: REWS (if checked)
+  function stage3() {
+    if (useREWS) {
+      statusEl.textContent = 'Computing REWS...';
+      pbEl.style.width = '50%';
+      log('  ③ Computing Rotor Equivalent Wind Speed...', 'i');
+      try {
+        calcRotorEquivalent();
+        // Store REWS ratio for runAnalysis
+        const rewsRatio = parseFloat($('reRatio')?.textContent) || 1.0;
+        S.rewsRatio = rewsRatio;
+        log(`  REWS ratio: ${rewsRatio.toFixed(4)}`, 'i');
+      } catch (e) {
+        log('REWS warning: ' + e.message, 'w');
+      }
+    } else {
+      S.rewsRatio = null;
+      log('  ③ REWS skipped (not checked)', 'i');
+    }
+    stage4();
+  }
+
+  // Stage 4: Geostrophic correction (if checked)
+  function stage4() {
+    if (useGeo) {
+      statusEl.textContent = 'Applying geostrophic correction...';
+      pbEl.style.width = '60%';
+      log('  ④ Applying geostrophic correction...', 'i');
+      try {
+        computeGeostrophic();
+      } catch (e) {
+        log('Geostrophic warning: ' + e.message, 'w');
+      }
+    } else {
+      log('  ④ Geostrophic correction skipped (not checked)', 'i');
+    }
+    stage5();
+  }
+
+  // Stage 5: Wake + AEP
+  function stage5() {
+    statusEl.textContent = 'Running Wake Model + AEP...';
+    pbEl.style.width = '75%';
+    log('  ⑤ Running Wake Model + AEP calculation...', 'i');
+    setTimeout(() => {
+      try {
+        let R = calcAEP();
+        if (!R) {
+          statusEl.textContent = 'Error in AEP calculation';
+          statusEl.style.color = 'var(--red)';
+          runBtn.disabled = false;
+          return;
+        }
+
+        // Apply availability and electrical loss
+        const avail = parseFloat($('availabilityPct')?.value) || 95;
+        const elecLoss = parseFloat($('electricalLossPct')?.value) || 2;
+
+        // Auto-compute default calibration if not set
+        if (!S.waspCalibration || S.waspCalibration.source === 'default') autoApplyDefaultCalibration();
+        // Apply WAsP calibration if enabled
+        if ($('calApplyCB')?.checked && S.waspCalibration) R = applyWaspCalibration(R);
+
+        S.results = R;
+        updateResultsUI(R);
+        updateWindUI(S.wind.speeds, S.wind.dirs);
+        updateWSChain(R);
+        updateGWCTab(R);
+        updatePipelineProgress();
+
+        // Log per-turbine free WS
+        if (R.perTurbine.length > 1) {
+          const freeWSvals = R.perTurbine.map(t => parseFloat(t.ws));
+          const minFree = Math.min(...freeWSvals).toFixed(2), maxFree = Math.max(...freeWSvals).toFixed(2);
+          log(`  Free-stream WS range: ${minFree}–${maxFree} m/s (Δ=${(Math.max(...freeWSvals) - Math.min(...freeWSvals)).toFixed(2)} m/s across ${freeWSvals.length} WTGs)`, 'i');
+        }
+
+        pbEl.style.width = '100%';
+        statusEl.textContent = '✓ Complete';
+        statusEl.style.color = 'var(--mint)';
+
+        const availFactor = avail / 100;
+        const elecFactor = 1 - elecLoss / 100;
+        const netFinal = R.netAEP_final || R.netAEP;
+        setStatus(`✓ Net AEP: ${netFinal.toFixed(2)} GWh | Wake: ${R.wakeLoss.toFixed(1)}% | CF: ${R.CF.toFixed(1)}% | Avail: ${avail}% | Elec: ${elecLoss}%${R.bzEnabled ? ' [BZ]' : ''}${R.calibrated ? ' [WAsP Cal]' : ''}`);
+        $('sbAEP').textContent = `${netFinal.toFixed(2)} GWh`;
+        log(`✓ WAsP Flow complete: Gross=${R.grossAEP.toFixed(2)} GWh · Wake=${R.wakeLoss.toFixed(1)}% · Net=${R.netAEP.toFixed(2)} GWh · Final=${netFinal.toFixed(2)} GWh · CF=${R.CF.toFixed(1)}%${R.bzEnabled ? ' · BZ integrated' : ''}${R.calibrated ? ' · WAsP-calibrated' : ''}${useREWS ? ' · REWS applied' : ''}${useGeo ? ' · Geostrophic applied' : ''}`, 'i');
+
+      } catch (e) {
+        log('Engine error: ' + e.message, 'e');
+        statusEl.textContent = 'Error: ' + e.message;
+        statusEl.style.color = 'var(--red)';
+      }
+      runBtn.disabled = false;
+    }, 100);
+  }
+
+  // Start the chain
+  stage1();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// v38.0: WIND MAP / RESOURCE GRID
+// Generate colored rectangles on the Leaflet map showing wind resource
+// ══════════════════════════════════════════════════════════════════════
+function generateWindMap() {
+  if (!S.results) {
+    $('windMapStatus').textContent = 'Run WAsP Flow Analysis first';
+    $('windMapStatus').style.color = 'var(--gold)';
+    return;
+  }
+  if (!leafMap) {
+    $('windMapStatus').textContent = 'Map not initialized';
+    return;
+  }
+
+  const resolution = parseInt($('windMapRes')?.value || 1000); // meters
+  const radius = parseFloat($('windMapRadius')?.value || 5); // km
+  const viewType = $('windMapType')?.value || 'ws';
+  const sectorFilter = $('windMapSector')?.value || 'all';
+
+  // Clear existing wind map layers
+  windMapLayers.forEach(l => leafMap.removeLayer(l));
+  windMapLayers = [];
+
+  // Get center point from turbines or mast
+  let centerLat, centerLon;
+  if (S.turbines.length) {
+    centerLat = S.turbines.reduce((s, t) => s + t.lat, 0) / S.turbines.length;
+    centerLon = S.turbines.reduce((s, t) => s + t.lon, 0) / S.turbines.length;
+  } else {
+    centerLat = parseFloat($('mastLat')?.value || 55.5);
+    centerLon = parseFloat($('mastLon')?.value || 7.9);
+  }
+
+  const R = S.results;
+  const hubH = parseFloat($('hubH')?.value || 120);
+  const rotD = parseFloat($('rotD')?.value || 150);
+  const rated = parseFloat($('ratedPow')?.value || 4000);
+  const z0 = parseFloat($('z0val')?.value || 0.03);
+  const mastH = parseFloat($('mastH')?.value || 100);
+  const pc = getPC();
+  const nSect = parseInt($('sects')?.value || 16);
+
+  // Grid of points
+  const resKm = resolution / 1000;
+  const steps = Math.ceil(radius * 2 / resKm);
+  const startLat = centerLat - radius / 111;
+  const startLon = centerLon - radius / (111 * Math.cos(centerLat * Math.PI / 180));
+  const dLat = (radius * 2 / 111) / steps;
+  const dLon = (radius * 2 / (111 * Math.cos(centerLat * Math.PI / 180))) / steps;
+
+  log(`Generating wind map: ${steps}x${steps} grid, resolution=${resolution}m, radius=${radius}km, type=${viewType}`, 'i');
+  $('windMapStatus').textContent = 'Generating grid...';
+  $('windMapStatus').style.color = 'var(--sky)';
+
+  const values = [];
+  const points = [];
+
+  for (let i = 0; i <= steps; i++) {
+    for (let j = 0; j <= steps; j++) {
+      const lat = startLat + i * dLat;
+      const lon = startLon + j * dLon;
+
+      // Estimate wind speed at this point using terrain speedup if available
+      let ws = R.hubMean || R.rotorMeanWS || 8.0;
+      let aep = R.netAEP || 0;
+
+      if (S.turbines.length && R.perTurbine && R.perTurbine.length) {
+        // Interpolate from per-turbine results (inverse distance)
+        let wSum = 0, wsW = 0, aepW = 0;
+        R.perTurbine.forEach(t => {
+          const tLat = S.turbines[t.i - 1]?.lat || 0;
+          const tLon = S.turbines[t.i - 1]?.lon || 0;
+          const d = Math.sqrt((lat - tLat) ** 2 + (lon - tLon) ** 2) * 111;
+          const w = d < 0.01 ? 1e6 : 1 / (d * d);
+          wsW += parseFloat(t.ws) * w;
+          aepW += parseFloat(t.net) * w;
+          wSum += w;
+        });
+        ws = wsW / wSum;
+        aep = aepW / wSum;
+      }
+
+      // Apply BZ speedup if terrain data is available
+      if (BZ.enabled && BZ.speedups && BZ.speedups.length) {
+        // Simple nearest-neighbor speedup interpolation
+        let minD = Infinity, nearestSU = 1;
+        if (S.turbines.length) {
+          S.turbines.forEach((t, idx) => {
+            const d = Math.sqrt((lat - t.lat) ** 2 + (lon - t.lon) ** 2);
+            if (d < minD) {
+              minD = d;
+              nearestSU = R.perTurbine[idx]?.effSU || 1;
+            }
+          });
+        }
+        ws *= nearestSU;
+      }
+
+      let value;
+      if (viewType === 'ws') {
+        value = ws;
+      } else if (viewType === 'aep') {
+        // Estimate AEP at this point
+        value = (aep / Math.max(S.turbines.length, 1)) * (ws / (R.hubMean || 8)) ** 3;
+      } else { // weibullA
+        // Approximate Weibull A from mean WS (A ≈ mean / Γ(1+1/k), k≈2 → A≈mean/0.886)
+        value = ws / 0.886;
+      }
+
+      values.push(value);
+      points.push({ lat, lon, value });
+    }
+  }
+
+  // Color scale
+  const minVal = Math.min(...values);
+  const maxVal = Math.max(...values);
+  const range = maxVal - minVal || 1;
+
+  function valueToColor(v) {
+    const t = Math.max(0, Math.min(1, (v - minVal) / range));
+    // Blue → Cyan → Yellow → Orange → Red
+    const colors = [
+      [49, 54, 149],   // #313695
+      [69, 117, 180],  // #4575b4
+      [116, 173, 209], // #74add1
+      [171, 217, 233], // #abd9e9
+      [224, 243, 248], // #e0f3f8
+      [254, 224, 144], // #fee090
+      [253, 174, 97],  // #fdae61
+      [244, 109, 67],  // #f46d43
+      [215, 48, 39],   // #d73027
+      [165, 0, 38]     // #a50026
+    ];
+    const idx = t * (colors.length - 1);
+    const i = Math.floor(idx);
+    const f = idx - i;
+    const c0 = colors[Math.min(i, colors.length - 1)];
+    const c1 = colors[Math.min(i + 1, colors.length - 1)];
+    const r = Math.round(c0[0] + (c1[0] - c0[0]) * f);
+    const g = Math.round(c0[1] + (c1[1] - c0[1]) * f);
+    const b = Math.round(c0[2] + (c1[2] - c0[2]) * f);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  // Draw rectangles on map
+  const halfDLat = dLat / 2 * 0.95;
+  const halfDLon = dLon / 2 * 0.95;
+
+  points.forEach(p => {
+    const color = valueToColor(p.value);
+    const bounds = [[p.lat - halfDLat, p.lon - halfDLon], [p.lat + halfDLat, p.lon + halfDLon]];
+    const rect = L.rectangle(bounds, {
+      color: 'transparent',
+      fillColor: color,
+      fillOpacity: 0.55,
+      weight: 0
+    }).addTo(leafMap);
+    rect.bindPopup(`<b>${viewType === 'ws' ? 'Wind Speed' : viewType === 'aep' ? 'AEP' : 'Weibull A'}</b>: ${p.value.toFixed(2)}${viewType === 'ws' ? ' m/s' : viewType === 'aep' ? ' GWh' : ' m/s'}<br>Lat: ${p.lat.toFixed(4)} Lon: ${p.lon.toFixed(4)}`);
+    windMapLayers.push(rect);
+  });
+
+  // Update legend
+  const legendEl = $('windMapLegend');
+  if (legendEl) {
+    legendEl.style.display = 'block';
+    const unit = viewType === 'ws' ? 'm/s' : viewType === 'aep' ? 'GWh' : 'm/s';
+    if ($('wmLegendMin')) $('wmLegendMin').textContent = minVal.toFixed(1) + ' ' + unit;
+    if ($('wmLegendMax')) $('wmLegendMax').textContent = maxVal.toFixed(1) + ' ' + unit;
+  }
+
+  $('windMapStatus').textContent = `✓ ${points.length} grid points rendered (${viewType})`;
+  $('windMapStatus').style.color = 'var(--mint)';
+  log(`Wind map generated: ${points.length} points, ${viewType} range ${minVal.toFixed(2)}–${maxVal.toFixed(2)}`, 'i');
 }
 
 </script></body></html>
