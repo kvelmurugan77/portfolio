@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 38.0</title>
+<title>WindFlow Pro 39.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 38.0</span></div><div class="brand-sub">A: ① Site → ② Power Curve → ③ Wind Data → ④ MCP &amp; Extrapolation │ B: ⑤ Terrain → ⑥ WAsP Flow → ⑦ Reporting</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 39.0</span></div><div class="brand-sub">A: ① Site → ② Power Curve → ③ Wind Data → ④ MCP &amp; Extrapolation │ B: ⑤ Terrain → ⑥ WAsP Flow → ⑦ Reporting</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -275,7 +275,8 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div class="g2" style="gap:.4rem;margin-bottom:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Target Data (Short-term)</label><select class="fs" id="mcpTarget" style="font-size:.58rem" onchange="onMCPSourceChange()"><option value="wind">Current Wind Data</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Reference Data (Long-term)</label><select class="fs" id="mcpReference" style="font-size:.58rem" onchange="onMCPSourceChange()"><option value="ERA5">ERA5 (1940–present)</option><option value="MERRA2">MERRA-2</option><option value="NEWA">NEWA</option><option value="NREL">NREL WTK</option><option value="CSV">Uploaded CSV</option></select></div></div>
         <div id="mcpSourceInfo" style="font-size:.52rem;color:var(--sky);margin-bottom:.3rem;padding:.2rem .4rem;background:rgba(74,179,232,.06);border-radius:3px;display:none"></div>
         <div class="g4" style="gap:.4rem;margin-bottom:.3rem"><div class="metric-item"><div class="metric-val" id="mcpTargetH" style="font-size:.9rem">—</div><div class="metric-label">Target H m</div></div><div class="metric-item"><div class="metric-val" id="mcpRefH" style="font-size:.9rem">—</div><div class="metric-label">Ref H m</div></div><div class="fg"><label class="fl">Target Height (m)</label><input class="fi" id="mcpTargetHeight" type="number" value="100" step="10" oninput="onMCPHeightChange()"></div><div class="fg"><label class="fl">Reference Height (m)</label><input class="fi" id="mcpRefHeight" type="number" value="100" step="10" oninput="onMCPHeightChange()"></div></div>
-        <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">LT Start</label><input class="fi" id="mcpSy" type="number" value="1991"></div><div class="fg"><label class="fl">LT End</label><input class="fi" id="mcpEy" type="number" value="2020"></div></div>
+        <div class="g3" style="gap:.4rem;margin-bottom:.3rem"><div class="fg"><label class="fl">Target Period Start</label><input class="fi" id="mcpTSy" type="number" value="2020" min="1940" max="2026"></div><div class="fg"><label class="fl">Target Period End</label><input class="fi" id="mcpTEy" type="number" value="2023" min="1940" max="2026"></div><div class="fg" style="display:flex;align-items:end"><button class="btn btn-sm btn-ghost" onclick="detectMCPPeriods()" style="width:100%">Auto-detect</button></div></div>
+        <div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">Reference LT Start</label><input class="fi" id="mcpSy" type="number" value="1991"></div><div class="fg"><label class="fl">Reference LT End</label><input class="fi" id="mcpEy" type="number" value="2020"></div><div class="fg"><label class="fl">Concurrent Overlap</label><div class="metric-item" style="padding:.3rem"><span id="mcpOverlap" style="color:var(--sky);font-size:.75rem">—</span></div></div></div>
         <div class="fg"><label class="fl">Method</label><select class="fs" id="mcpMeth"><option value="linear">Linear Regression</option><option value="matrix">Matrix</option><option value="variance">Variance Ratio</option><option value="weibull">Weibull Ratio</option><option value="quantile">Quantile Mapping (v36)</option></select></div>
         <div style="display:flex;gap:.3rem;margin-top:.4rem"><button class="btn btn-gold" style="flex:1" onclick="runMCP()">↺ MCP Correction</button><button class="btn btn-sm btn-sky" onclick="downloadERA5LT()">⬇ Download ERA5 LT for Reference</button></div>
         <div class="progress"><div class="progress-bar" id="mcppb" style="width:0"></div></div><div id="mcppt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div>
@@ -283,6 +284,9 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <div id="mcpOut" style="display:none"><div class="card"><div class="card-title sky">MCP Results</div>
         <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="mcpCW">—</div><div class="metric-label">Concurrent WS</div></div><div class="metric-item"><div class="metric-val" id="mcpLW">—</div><div class="metric-label">LT-Corrected WS</div></div><div class="metric-item"><div class="metric-val gold" id="mcpFc">—</div><div class="metric-label">LT Factor</div></div><div class="metric-item"><div class="metric-val sky" id="mcpR2">—</div><div class="metric-label">R²</div></div></div>
         <div id="mcpPvals" style="font-size:.62rem;color:var(--text3);margin-top:.3rem"></div>
+      </div></div>
+      <div id="mcpReport" style="display:none"><div class="card"><div class="card-title sky">MCP Summary Report</div>
+        <div id="mcpReportContent" style="font-size:.62rem;line-height:1.6"></div>
       </div></div>
 
       <!-- ③ OBSTACLES (terrain-independent — Perera shelter) -->
@@ -297,7 +301,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div id="obsStat" style="font-size:.58rem;color:var(--text3);margin-top:.2rem">No obstacles</div>
       </div>
 
-      <!-- v38.0: ④ REWS and ⑤ Geostrophic moved to Step 6 (WAsP Flow Analysis) -->
+      <!-- v39.0: ④ REWS and ⑤ Geostrophic moved to Step 6 (WAsP Flow Analysis) -->
     </div>
     <div>
       <!-- CHECKPOINT -->
@@ -408,9 +412,9 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(4)">← MCP &amp; Extrapolation</button><button class="btn btn-primary" onclick="goToStep(6)">Next: WAsP Flow →</button></div>
 </div>
 
-<!-- ===== STEP 6: WAsP FLOW MODELLING (v38.0: one-button workflow) ===== -->
+<!-- ===== STEP 6: WAsP FLOW MODELLING (v39.0: one-button workflow) ===== -->
 <div class="step-panel" id="step6">
-  <!-- v38.0: WAsP-aligned one-button pipeline — Generalize+Downscale+REWS+Wake+AEP -->
+  <!-- v39.0: WAsP-aligned one-button pipeline — Generalize+Downscale+REWS+Wake+AEP -->
   
   <!-- PIPELINE PROGRESS BAR -->
   <div class="card" style="margin-bottom:.5rem;padding:.4rem .6rem;border-left:3px solid var(--acc)">
@@ -613,10 +617,10 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   <span id="bzMnSU">—</span>
   <span id="bz-mastSU">—</span>
   <table><tbody id="gwcBody"></tbody></table>
-  <!-- v38.0: BZ progress elements (now integrated into WAsP Flow status) -->
+  <!-- v39.0: BZ progress elements (now integrated into WAsP Flow status) -->
   <div class="progress"><div class="progress-bar" id="bzpb" style="width:0"></div></div>
   <span id="bzpt">—</span>
-  <!-- v38.0: REWS & Geostrophic elements moved from Step 4 to hidden (now integrated in WAsP Flow) -->
+  <!-- v39.0: REWS & Geostrophic elements moved from Step 4 to hidden (now integrated in WAsP Flow) -->
   <select id="rewsSource"><option value="wind">Current Wind Data</option></select>
   <input id="reHubH" type="number" value="120">
   <input id="reRotD" type="number" value="150">
@@ -914,8 +918,10 @@ function logWS(ws,fromH,toH,z0){const k=Math.log(Math.max(fromH,z0*1.1)/z0);retu
 function terrainSpeedup(turbElev,mastElev,hubH,z0){
   // v16.0: DEPRECATED — use terrainSpeedupJH() for Jackson-Hunt model
   // Kept as fallback for when no terrain grid is available
+  // v39.0: Flat terrain guard — if elevation difference < 20m, no orographic speedup
+  const dElev=Math.abs((turbElev||0)-(mastElev||0));
+  if(dElev<20)return 1.0;
   const dE=(turbElev||0)-(mastElev||0);
-  if(Math.abs(dE)<0.5)return 1.0;
   // ~50% of terrain height difference adds to effective hub height (WAsP approximation)
   const effH=Math.max(5,hubH+dE*0.5);
   const su=Math.log(effH/Math.max(z0,0.00001))/Math.log(Math.max(hubH,z0*1.1)/Math.max(z0,0.00001));
@@ -2919,9 +2925,12 @@ function calcAEP(){
   // This replaces the old single-speedup-per-turbine approach with direction-dependent
   // speedups from the Jackson-Hunt linearized potential flow model
   const jhSpeedups = computeAllJHSpeedups(sectors, hubHH, z0);
+  // v39.0: Flat terrain guard — if terrain is flat or no terrain data, all speedups = 1.0
+  const isFlatTerrain = !S.terrain || !S.terrain.grid || !S.terrain.grid.length || ((S.terrain.maxE||0)-(S.terrain.minE||0)) < 20;
   // For display: compute average speedup per turbine (using prevailing direction)
   const prevDir=parseFloat($('prevWD')?.value||270);
   const tSpeedups=S.turbines.map((t,ti)=>{
+    if(isFlatTerrain) return 1.0; // v39.0: No orographic speedup in flat terrain
     if(!jhSpeedups[ti])return 1.0;
     // Average across all sectors (frequency-weighted)
     let wSum=0, suSum=0;
@@ -3095,6 +3104,14 @@ function calcAEP(){
   // v19.0: NaN guard for totals
   let grossG=Array.from(gross).reduce((s,e)=>s+(isFinite(e)?e:0),0)/1e6;
   let netWake=Array.from(net).reduce((s,e)=>s+(isFinite(e)?e:0),0)/1e6;
+  // v39.0: Diagnostic for AEP = 0 bug — log detailed info when no energy is accumulated
+  if(grossG<=0){
+    const activeSectors=sectors.filter(s=>s.freq>=1e-5).length;
+    const hubSpValid=hubSp.filter(v=>v>0.5).length;
+    log(`⚠ AEP = 0.00 GWh diagnostic: hubSp valid=${hubSpValid}/${hubSp.length}, activeSectors=${activeSectors}/${sectors.length}, mastMean=${mastMean.toFixed(2)}, hubMean=${hubMean.toFixed(2)}, mcpFactor=${S.mcpFactor.toFixed(3)}, BZ=${BZ.enabled}, isFlatTerrain=${isFlatTerrain}`,'w');
+    if(hubSpValid===0)log('  → All hub-height wind speeds ≤ 0.5 m/s — check wind data and MCP factor','w');
+    if(activeSectors===0)log('  → No active sectors (all freq < 1e-5) — check wind direction data','w');
+  }
   // v10.0: Apply empirical calibration — roughness and wake corrections
   let calNetWake = netWake;
   let calRoughRC = 1;
@@ -3513,6 +3530,27 @@ async function runMCP(){
     alert(`Target source "${tgtSrc}" not found in registry. Download it first.`);return;
   }
 
+  // v39.0: Filter target data to selected target period
+  const tgtSy=parseInt($('mcpTSy')?.value)||0;
+  const tgtTEy=parseInt($('mcpTEy')?.value)||9999;
+  let tgtStartDate=null,tgtEndDate=null;
+  if(tgtSy > 0 && tgtTimes.length){
+    const filteredIndices=[];
+    for(let i=0;i<tgtTimes.length;i++){
+      const yr=tgtTimes[i]?parseInt(tgtTimes[i].substring(0,4)):0;
+      if(yr>=tgtSy&&yr<=tgtTEy) filteredIndices.push(i);
+    }
+    if(filteredIndices.length>100){
+      tgtSpeeds=filteredIndices.map(i=>tgtSpeeds[i]);
+      tgtTimes=filteredIndices.map(i=>tgtTimes[i]);
+      tgtDirs=filteredIndices.map(i=>tgtDirs[i]);
+      log(`MCP: Target data filtered to ${tgtSy}–${tgtTEy}: ${tgtSpeeds.length.toLocaleString()} records`,'i');
+    }
+    // Store date range for report
+    const validTgtTimes=tgtTimes.filter(t=>t);
+    if(validTgtTimes.length>1){tgtStartDate=validTgtTimes[0].substring(0,10);tgtEndDate=validTgtTimes[validTgtTimes.length-1].substring(0,10);}
+  }
+
   const concMonths=new Set(tgtTimes.map(t=>t?t.substring(0,7):null).filter(Boolean)).size;
   if(concMonths<3)log(`MCP warning: only ${concMonths} month(s) of concurrent data — MCP accuracy may be low (recommend ≥12 months)`,'w');
   if(concMonths>=3&&concMonths<12)log(`MCP note: ${concMonths} months concurrent. Longer periods give better regression.`,'i');
@@ -3627,8 +3665,89 @@ async function runMCP(){
     // Show MCP reference data point on map
     addDataSourceMarker('ERA5T',refLat,refLon,refH);
     $('mcpOut').style.display='block';log(`MCP: factor=${factor.toFixed(3)}, R²=${R2.toFixed(2)}, σ_MCP=${(sigMCP*100).toFixed(1)}% · target=${targetLabel}@${tgtH}m, ref=${refLabel}@${refH}m${regressionEq}`,'i');
+    // v39.0: MCP Summary Report (WindPro-style)
+    const tgtLat=parseFloat($('mastLat').value)||0,tgtLon=parseFloat($('mastLon').value)||0;
+    if(!$('mcpReportContent'))return;
+    $('mcpReportContent').innerHTML=`
+<table style="width:100%;font-size:.6rem;border-collapse:collapse">
+  <tr style="background:rgba(74,179,232,.06)"><td colspan="2" style="padding:.3rem .5rem;font-weight:700;color:var(--sky)">Target Data (Short-term)</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Source</td><td style="padding:.2rem .5rem">${targetLabel}</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Coordinates</td><td style="padding:.2rem .5rem">${tgtLat.toFixed(4)}°, ${tgtLon.toFixed(4)}°</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Height</td><td style="padding:.2rem .5rem">${tgtH}m</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Period</td><td style="padding:.2rem .5rem">${tgtStartDate||'—'} → ${tgtEndDate||'—'}</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Records</td><td style="padding:.2rem .5rem">${tgtSpeeds.length.toLocaleString()}</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Mean WS</td><td style="padding:.2rem .5rem">${cMean.toFixed(2)} m/s</td></tr>
+  <tr style="background:rgba(245,166,35,.06)"><td colspan="2" style="padding:.3rem .5rem;font-weight:700;color:var(--gold)">Reference Data (Long-term)</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Source</td><td style="padding:.2rem .5rem">${refLabel}</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Coordinates</td><td style="padding:.2rem .5rem">${refLat.toFixed(4)}°, ${refLon.toFixed(4)}°</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Height</td><td style="padding:.2rem .5rem">${refH}m</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Period</td><td style="padding:.2rem .5rem">${sy} → ${ey}</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Records</td><td style="padding:.2rem .5rem">${refSpeeds.length.toLocaleString()}</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Mean WS</td><td style="padding:.2rem .5rem">${ltMean.toFixed(2)} m/s</td></tr>
+  <tr style="background:rgba(0,214,143,.06)"><td colspan="2" style="padding:.3rem .5rem;font-weight:700;color:var(--mint)">MCP Results</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Method</td><td style="padding:.2rem .5rem">${methLabel}</td></tr>
+  ${meth==='linear'||meth==='matrix'?`<tr><td style="padding:.2rem .5rem;color:var(--text3)">Equation</td><td style="padding:.2rem .5rem">WS_corr = ${lrSlope.toFixed(4)} × WS_ref + ${lrIntercept.toFixed(4)}</td></tr>`:''}
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">R² (Correlation)</td><td style="padding:.2rem .5rem;color:${R2>0.8?'var(--mint)':R2>0.6?'var(--gold)':'var(--red)'}">${R2.toFixed(3)}${R2>0.8?' (Strong)':R2>0.6?' (Moderate)':' (Weak — consider longer period or different method)'}</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Concurrent Months</td><td style="padding:.2rem .5rem">${pairs.length}${pairs.length<12?' ⚠ Low — recommend ≥12 months':''}</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">LT Factor</td><td style="padding:.2rem .5rem;color:var(--gold)">${factor.toFixed(3)}</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Concurrent WS</td><td style="padding:.2rem .5rem">${cMean.toFixed(2)} m/s</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">LT-Corrected WS</td><td style="padding:.2rem .5rem;color:var(--mint);font-weight:700">${ltCorr.toFixed(2)} m/s</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">σ_MCP</td><td style="padding:.2rem .5rem">${(sigMCP*100).toFixed(1)}%</td></tr>
+</table>`;
+    $('mcpReport').style.display='block';
   }catch(e){setProg('mcp',0,'❌ '+e.message);log('MCP failed: '+e.message,'e');}
 }
+// v39.0: Auto-detect MCP periods from loaded data
+function detectMCPPeriods(){
+  const tgtSrc=$('mcpTarget')?.value||'wind';
+  const refSrc=$('mcpReference')?.value||'ERA5';
+  
+  // Target period from source times
+  let tgtTimes=null;
+  if(tgtSrc==='wind'&&S.wind) tgtTimes=S.wind.times;
+  else if(S.windSources[tgtSrc]) tgtTimes=S.windSources[tgtSrc].times;
+  
+  if(tgtTimes&&tgtTimes.length){
+    const valid=tgtTimes.filter(t=>t);
+    if(valid.length>1){
+      const sy=parseInt(valid[0].substring(0,4))||2020;
+      const ey=parseInt(valid[valid.length-1].substring(0,4))||2023;
+      $('mcpTSy').value=sy;
+      $('mcpTEy').value=ey;
+    }
+  }
+  
+  // Reference period from source times
+  let refTimes=null;
+  if(S.windSources[refSrc]) refTimes=S.windSources[refSrc].times;
+  
+  if(refTimes&&refTimes.length){
+    const valid=refTimes.filter(t=>t);
+    if(valid.length>1){
+      const sy=parseInt(valid[0].substring(0,4))||1991;
+      const ey=parseInt(valid[valid.length-1].substring(0,4))||2020;
+      $('mcpSy').value=sy;
+      $('mcpEy').value=ey;
+    }
+  }
+  
+  // Calculate overlap
+  updateMCPOverlap();
+  log('MCP periods auto-detected from data','i');
+}
+
+function updateMCPOverlap(){
+  const tgtSy=parseInt($('mcpTSy')?.value)||2020;
+  const tgtEy=parseInt($('mcpTEy')?.value)||2023;
+  const refSy=parseInt($('mcpSy')?.value)||1991;
+  const refEy=parseInt($('mcpEy')?.value)||2020;
+  const overlapStart=Math.max(tgtSy,refSy);
+  const overlapEnd=Math.min(tgtEy,refEy);
+  const overlapYears=Math.max(0,overlapEnd-overlapStart+1);
+  const el=$('mcpOverlap');
+  if(el) el.textContent=overlapYears>0?`${overlapStart}–${overlapEnd} (${overlapYears} yrs)`:'No overlap ⚠';
+}
+
 function monthlyMeans(sp,ts){const s={},c={};for(let i=0;i<sp.length;i++){if(!ts[i]||!sp[i])continue;const k=ts[i].substring(0,7);s[k]=(s[k]||0)+sp[i];c[k]=(c[k]||0)+1;}const r={};for(const k of Object.keys(s))r[k]=s[k]/c[k];return r;}
 
 // ── TIME SERIES (pre-binned) ──
@@ -3923,7 +4042,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 38.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 39.0 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -3964,11 +4083,11 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 38.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Bankability report</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 39.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Bankability report</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
-// v38.0: Export PDF Report in BAE format
+// v39.0: Export PDF Report in BAE format
 function exportPDFReport(){
   const R=S.results,pn=$('projName').value;
   if(!R){alert('Run analysis first before exporting PDF report');return;}
@@ -4311,7 +4430,7 @@ try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 38.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
+log('WindFlow Pro 39.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 // v33.3: Safety net — if leafMap failed to init, retry after DOM is fully settled
@@ -4749,7 +4868,7 @@ function exportBankabilityReport(){
 <div class="cover">
   <h1>${pn}</h1>
   <p>Wind Energy Assessment Report</p>
-  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 38.0 &mdash; ${now}</p>
+  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 39.0 &mdash; ${now}</p>
 </div>
 
 <h2>1. Executive Summary</h2>
@@ -4816,7 +4935,7 @@ ${terrCanvasImg?`<h2>8. Detailed Terrain Elevation Map</h2><p><img src="${terrCa
 ${roughCanvasImg?`<h2>9. Detailed Roughness Map</h2><p><img src="${roughCanvasImg}" style="max-width:100%;border:1px solid #d1d5db;border-radius:6px" alt="Roughness"></p>`:''}
 
 <p style="color:#9ca3af;font-size:9px;margin-top:30px;border-top:1px solid #e5e7eb;padding-top:10px">
-Generated by WindFlow Pro 38.0 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; Bankability report format</p>
+Generated by WindFlow Pro 39.0 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; Bankability report format</p>
 </body></html>`;
 
   dlFile(h,`WindAssessment_${pn.replace(/\s+/g,'_')}.html`,'text/html');
@@ -9078,7 +9197,7 @@ function showFlowTab(idx,btn){
 
 // ── PIPELINE PROGRESS (v32.0) ──
 function updatePipelineProgress() {
-  // v38.0: Updated pipeline — A: ①Vertical ②MCP ③Obstacles → B: ④WAsP Flow
+  // v39.0: Updated pipeline — A: ①Vertical ②MCP ③Obstacles → B: ④WAsP Flow
   const stages = [
     { id: 'pipe1', done: S.wind && S.wind.speeds && S.wind.speeds.length > 0 },
     { id: 'pipe2', done: S.mcpFactor && S.mcpFactor !== 1.0 },
@@ -9190,8 +9309,8 @@ function updateReportingDashboard(){
 // ── SAVE/LOAD PROJECT ──
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
-  const data={version:'38.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0'}};
-  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v38.0)','i');
+  const data={version:'39.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0'}};
+  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v39.0)','i');
 }
 
 // v22.0: WAsP-compatible project export
@@ -9216,7 +9335,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 38.0`);
+  lines.push(`WAsP Project Export - WindFlow Pro 39.0`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
@@ -11158,6 +11277,27 @@ function runVertExtrap(){
   const srcLabel=selectedSource==='wind'?'Current':selectedSource;
   $('veResult').innerHTML=`[${srcLabel} @ ${srcH}m] → ${tgtH}m: ${srcWS.toFixed(2)} → ${tgtWS.toFixed(2)} m/s (ratio=${ratio.toFixed(4)}, method=${method})`;
   log(`Vertical extrap [${srcLabel}]: ${srcH}m→${tgtH}m, ${srcWS.toFixed(2)}→${tgtWS.toFixed(2)} m/s, ratio=${ratio.toFixed(4)}`,'i');
+
+  // v39.0: Store extrapolated data as new wind source for MCP input
+  if(ratio>0&&srcData&&srcData.speeds&&srcData.speeds.length>0){
+    const newSourceName=`${srcLabel}_${tgtH}m`;
+    const scaledSpeeds=srcData.speeds.map(v=>v>0.5?v*ratio:v);
+    S.windSources[newSourceName]={
+      speeds:[...scaledSpeeds],
+      dirs:[...(srcData.dirs||srcData.speeds.map(()=>0))],
+      times:[...(srcData.times||srcData.speeds.map((_,i)=>''+i))],
+      mcpFactor:1,
+      mastH:tgtH,
+      elevation:srcData.elevation||null,
+      sourceLat:srcData.sourceLat||0,
+      sourceLon:srcData.sourceLon||0,
+      sourceHeight:tgtH
+    };
+    enrichWindSource(newSourceName);
+    refreshAllSourceDropdowns();
+    addDataSourceMarker(newSourceName,srcData.sourceLat||0,srcData.sourceLon||0,tgtH);
+    log(`Vertical extrapolation: Added "${newSourceName}" to data sources (${scaledSpeeds.length} records, mean=${tgtWS.toFixed(2)} m/s @ ${tgtH}m)`,'i');
+  }
 }
 
 // v36.0: Download ERA5 long-term data specifically for MCP reference
@@ -11561,7 +11701,7 @@ function exportWindRegistryCSV(){
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// v38.0: WAsP ONE-BUTTON FLOW ANALYSIS
+// v39.0: WAsP ONE-BUTTON FLOW ANALYSIS
 // Chains: Generalize (OWC→GWC) → Downscale (GWC→SWC) → REWS → Wake → AEP
 // ══════════════════════════════════════════════════════════════════════
 var windMapLayers = []; // Leaflet rectangles for wind map
@@ -11590,7 +11730,7 @@ function runWAsPFlow() {
   const useREWS = $('useREWS')?.checked || false;
   const useGeo = $('useGeostrophic')?.checked || false;
 
-  log('── WAsP Flow Analysis (v38.0 one-button) ──', 'i');
+  log('── WAsP Flow Analysis (v39.0 one-button) ──', 'i');
   log(`  Options: REWS=${useREWS}, Geostrophic=${useGeo}`, 'i');
 
   // Stage 1: Generalize (OWC → GWC)
@@ -11723,7 +11863,7 @@ function runWAsPFlow() {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// v38.0: WIND MAP / RESOURCE GRID
+// v39.0: WIND MAP / RESOURCE GRID
 // Generate colored rectangles on the Leaflet map showing wind resource
 // ══════════════════════════════════════════════════════════════════════
 function generateWindMap() {
