@@ -53,6 +53,11 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 .mast-list{max-height:320px;overflow-y:auto}
 /* Financial table */
 .fin-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+/* Layout WS & Elevation summary panels */
+.ws-sum-item{text-align:center;padding:.3rem .2rem;background:rgba(30,41,59,.5);border-radius:4px}
+.ws-sum-val{font-size:.82rem;font-weight:700;color:#38bdf8}
+.ws-sum-val.mint{color:var(--mint)}
+.ws-sum-lbl{font-size:.48rem;color:var(--text3);margin-top:2px}
 </style>
 </head>
 <body>
@@ -96,6 +101,8 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <input class="fi" id="gwaOp" type="range" min="0" max="1" step="0.05" value="0.4" style="width:80px" oninput="if(gwaTileLayer&&leafMap?.hasLayer(gwaTileLayer))gwaTileLayer.setOpacity(parseFloat(this.value))">
       </div>
       <div id="bndStats" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">No boundary defined</div>
+      <div id="layoutWSSummary" style="display:none;margin-top:.5rem;padding:.5rem .6rem;background:rgba(15,23,42,.6);border-radius:6px;border:1px solid var(--border)"><div style="font-size:.62rem;font-weight:600;color:var(--acc);margin-bottom:.3rem">Layout Wind Speed Summary</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem" id="wsSummaryGrid"><div class="ws-sum-item"><div class="ws-sum-val" id="wsAvg">—</div><div class="ws-sum-lbl" id="wsAvgLbl">Avg WS @ Hub</div></div><div class="ws-sum-item"><div class="ws-sum-val" id="wsMax">—</div><div class="ws-sum-lbl" id="wsMaxLbl">Max WS @ Hub</div></div><div class="ws-sum-item"><div class="ws-sum-val" id="wsMin">—</div><div class="ws-sum-lbl" id="wsMinLbl">Min WS @ Hub</div></div><div class="ws-sum-item"><div class="ws-sum-val" id="wsCount">—</div><div class="ws-sum-lbl">WTG Count</div></div></div><div style="font-size:.52rem;color:var(--text3);margin-top:.2rem" id="wsSummaryNote">Interpolated from GWA 100m & 150m using log-law shear</div></div>
+      <div id="layoutElevSummary" style="display:none;margin-top:.3rem;padding:.5rem .6rem;background:rgba(15,23,42,.6);border-radius:6px;border:1px solid var(--border)"><div style="font-size:.62rem;font-weight:600;color:var(--mint);margin-bottom:.3rem">Layout Elevation Summary</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem" id="elevSummaryGrid"><div class="ws-sum-item"><div class="ws-sum-val mint" id="elevAvg">—</div><div class="ws-sum-lbl">Avg Elev</div></div><div class="ws-sum-item"><div class="ws-sum-val mint" id="elevMax">—</div><div class="ws-sum-lbl">Max Elev</div></div><div class="ws-sum-item"><div class="ws-sum-val mint" id="elevMin">—</div><div class="ws-sum-lbl">Min Elev</div></div></div><div style="font-size:.52rem;color:var(--text3);margin-top:.2rem" id="elevSummaryNote">SRTM elevation at WTG positions</div></div>
     </div>
     <div>
       <div class="card"><div class="card-title green">Upload Boundary</div>
@@ -7823,6 +7830,176 @@ function autoFocusMap(){
   }
 }
 
+// ── Layout WS & Elevation Summary Panels ──
+// Fetch wind speed summary at hub height for all WTG positions
+async function fetchLayoutWSSummary(){
+  if(!S.turbines||S.turbines.length===0){
+    $('layoutWSSummary').style.display='none';
+    $('layoutElevSummary').style.display='none';
+    return;
+  }
+  $('layoutWSSummary').style.display='block';
+  $('wsAvg').textContent='...';
+  $('wsMax').textContent='...';
+  $('wsMin').textContent='...';
+  $('wsCount').textContent=S.turbines.length;
+
+  try{
+    const clat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
+    const clon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
+    const samplePoints=[{lat:clat,lon:clon,label:'center'}];
+    if(S.turbines.length>=4){
+      const lats=S.turbines.map(t=>t.lat),lons=S.turbines.map(t=>t.lon);
+      samplePoints.push(
+        {lat:Math.min(...lats),lon:Math.min(...lons),label:'SW'},
+        {lat:Math.max(...lats),lon:Math.max(...lons),label:'NE'},
+        {lat:Math.min(...lats),lon:Math.max(...lons),label:'SE'},
+        {lat:Math.max(...lats),lon:Math.min(...lons),label:'NW'}
+      );
+    }
+
+    // Step 1: Get shear profile from forecast API (has multi-height data)
+    let shearAlpha=0.14;
+    try{
+      const shearUrl=`https://api.open-meteo.com/v1/forecast?latitude=${clat.toFixed(4)}&longitude=${clon.toFixed(4)}&hourly=wind_speed_80m,wind_speed_100m,wind_speed_120m,wind_speed_180m&forecast_days=1&wind_speed_unit=ms&timezone=auto`;
+      const shearResp=await fetch(shearUrl);
+      if(shearResp.ok){
+        const shearData=await shearResp.json();
+        const ws100=shearData.hourly?.wind_speed_100m||[];
+        const ws180=shearData.hourly?.wind_speed_180m||[];
+        const valid100=ws100.filter(v=>v!=null&&v>=0);
+        const valid180=ws180.filter(v=>v!=null&&v>=0);
+        if(valid100.length>0&&valid180.length>0){
+          const mean100=valid100.reduce((s,v)=>s+v,0)/valid100.length;
+          const mean180=valid180.reduce((s,v)=>s+v,0)/valid180.length;
+          if(mean100>0){
+            const ratio=mean180/mean100;
+            if(ratio>1){shearAlpha=Math.log(ratio)/Math.log(180/100);shearAlpha=Math.max(0.05,Math.min(0.4,shearAlpha));log(`Shear alpha from forecast: ${shearAlpha.toFixed(4)}`,'i');}
+          }
+        }
+      }
+    }catch(shearErr){log('Shear profile fetch failed, using default alpha=0.14: '+shearErr.message,'w');}
+
+    // Step 2: Get long-term mean from ERA5 archive daily API
+    const wsAtTarget=[];
+    const targetHH=parseInt($('hubH')?.value)||120;
+    // Update labels to show actual hub height
+    if($('wsAvgLbl'))$('wsAvgLbl').textContent=`Avg WS @ ${targetHH}m`;
+    if($('wsMaxLbl'))$('wsMaxLbl').textContent=`Max WS @ ${targetHH}m`;
+    if($('wsMinLbl'))$('wsMinLbl').textContent=`Min WS @ ${targetHH}m`;
+    const endYear=Math.min(new Date().getFullYear()-1,2024);
+    const startYear=endYear-4;
+
+    for(const pt of samplePoints){
+      const url=`https://archive-api.open-meteo.com/v1/era5?latitude=${pt.lat.toFixed(4)}&longitude=${pt.lon.toFixed(4)}&start_date=${startYear}-01-01&end_date=${endYear}-12-31&daily=wind_speed_100m_mean&wind_speed_unit=ms&timezone=auto`;
+      const resp=await fetch(url);
+      if(!resp.ok)throw new Error('Open-Meteo ERA5 HTTP '+resp.status);
+      const data=await resp.json();
+      const ws100daily=data.daily?.wind_speed_100m_mean||[];
+      const valid100=ws100daily.filter(v=>v!=null&&v>=0);
+      if(valid100.length===0)continue;
+      const mean100ms=valid100.reduce((s,v)=>s+v,0)/valid100.length;
+      const wsTarget=mean100ms*Math.pow(targetHH/100,shearAlpha);
+      wsAtTarget.push({ws:wsTarget,pt:pt.label});
+    }
+
+    if(wsAtTarget.length===0){
+      if(S.wind&&S.wind.speeds&&S.wind.speeds.length){
+        const vs=S.wind.speeds.filter(v=>v>0.5);
+        const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);
+        const z0=parseFloat($('z0val')?.value)||0.03;
+        const srcH=parseFloat($('mastH')?.value)||100;
+        const ws120=logWS(mean,srcH,targetHH,z0);
+        $('wsAvg').textContent=ws120.toFixed(2)+' m/s';
+        $('wsMax').textContent='—';
+        $('wsMin').textContent='—';
+        $('wsSummaryNote').textContent=`Estimated from current wind data (${srcH}m → ${targetHH}m, z0=${z0})`;
+      }else{
+        $('wsAvg').textContent='—';$('wsMax').textContent='—';$('wsMin').textContent='—';
+        $('wsSummaryNote').textContent='No wind data — download ERA5 data first';
+      }
+      fetchElevationSummary();
+      return;
+    }
+
+    const wtgWS=[];
+    if(wsAtTarget.length===1){
+      for(let i=0;i<S.turbines.length;i++)wtgWS.push(wsAtTarget[0].ws);
+    }else{
+      for(const t of S.turbines){
+        let minDist=Infinity,bestWS=wsAtTarget[0].ws;
+        for(let j=0;j<wsAtTarget.length;j++){
+          const sp=samplePoints[j];
+          const d=(t.lat-sp.lat)**2+(t.lon-sp.lon)**2;
+          if(d<minDist){minDist=d;bestWS=wsAtTarget[j].ws;}
+        }
+        wtgWS.push(bestWS);
+      }
+    }
+
+    const avg=wtgWS.reduce((s,v)=>s+v,0)/wtgWS.length;
+    const maxWS=Math.max(...wtgWS);
+    const minWS=Math.min(...wtgWS);
+    $('wsAvg').textContent=avg.toFixed(2)+' m/s';
+    $('wsMax').textContent=maxWS.toFixed(2)+' m/s';
+    $('wsMin').textContent=minWS.toFixed(2)+' m/s';
+    $('wsSummaryNote').textContent=`ERA5 ${startYear}–${endYear} daily @ 100m → ${targetHH}m (α=${shearAlpha.toFixed(3)})`;
+    log(`Layout WS summary @ ${targetHH}m: avg=${avg.toFixed(2)}, max=${maxWS.toFixed(2)}, min=${minWS.toFixed(2)} m/s`,'i');
+    fetchElevationSummary();
+  }catch(e){
+    log('Wind speed summary fetch failed: '+e.message,'w');
+    if(S.wind&&S.wind.speeds&&S.wind.speeds.length){
+      const vs=S.wind.speeds.filter(v=>v>0.5);
+      const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);
+      const z0=parseFloat($('z0val')?.value)||0.03;
+      const srcH=parseFloat($('mastH')?.value)||100;
+      const targetHH=parseInt($('hubH')?.value)||120;
+      const ws120=logWS(mean,srcH,targetHH,z0);
+      $('wsAvg').textContent=ws120.toFixed(2)+' m/s';
+      $('wsMax').textContent='—';$('wsMin').textContent='—';
+      $('wsSummaryNote').textContent=`Estimated from current wind data (${srcH}m → ${targetHH}m, z0=${z0})`;
+    }else{
+      $('wsAvg').textContent='—';$('wsMax').textContent='—';$('wsMin').textContent='—';
+      $('wsSummaryNote').textContent='No wind data — download ERA5 data first';
+    }
+    fetchElevationSummary();
+  }
+}
+
+// Fetch elevation summary for WTG positions using Open-Meteo elevation API
+async function fetchElevationSummary(){
+  if(!S.turbines||S.turbines.length===0)return;
+  $('layoutElevSummary').style.display='block';
+  $('elevAvg').textContent='...';$('elevMax').textContent='...';$('elevMin').textContent='...';
+  try{
+    const batchSize=100;
+    const allElevs=[];
+    for(let i=0;i<S.turbines.length;i+=batchSize){
+      const batch=S.turbines.slice(i,i+batchSize);
+      const lats=batch.map(t=>t.lat.toFixed(4)).join(',');
+      const lons=batch.map(t=>t.lon.toFixed(4)).join(',');
+      const url=`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lons}`;
+      const resp=await fetch(url);
+      if(!resp.ok)continue;
+      const data=await resp.json();
+      const elevs=data.elevation||[];
+      allElevs.push(...elevs);
+      for(let j=0;j<batch.length&&j<elevs.length;j++){batch[j].elev=elevs[j];}
+    }
+    if(allElevs.length===0){$('elevAvg').textContent='—';$('elevMax').textContent='—';$('elevMin').textContent='—';$('elevSummaryNote').textContent='Elevation data unavailable';return;}
+    const avg=allElevs.reduce((s,v)=>s+v,0)/allElevs.length;
+    $('elevAvg').textContent=avg.toFixed(0)+' m';
+    $('elevMax').textContent=Math.max(...allElevs).toFixed(0)+' m';
+    $('elevMin').textContent=Math.min(...allElevs).toFixed(0)+' m';
+    $('elevSummaryNote').textContent=`SRTM elevation at ${allElevs.length} WTG positions`;
+    log(`Layout Elevation summary: avg=${avg.toFixed(0)}m, max=${Math.max(...allElevs).toFixed(0)}m, min=${Math.min(...allElevs).toFixed(0)}m`,'i');
+  }catch(e){
+    log('Elevation summary fetch failed: '+e.message,'w');
+    $('elevAvg').textContent='—';$('elevMax').textContent='—';$('elevMin').textContent='—';
+    $('elevSummaryNote').textContent='Elevation data unavailable';
+  }
+}
+
 // ── POWER CURVE UPLOAD ──
 const PC_PRESETS={
   'v90':{rated:2000,D:90,hh:80,cutIn:3,cutOut:25,ws:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25],pw:[0,0,0,45,165,350,590,870,1150,1400,1650,1850,1970,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,2000,0],ct:[0,0,0,.88,.85,.82,.79,.76,.70,.62,.53,.44,.36,.29,.23,.19,.16,.13,.11,.09,.08,.07,.06,.05,.04,0]},
@@ -8708,6 +8885,8 @@ function refreshTable(){
   $('sbN').textContent=S.turbines.length;
   const rated=parseFloat($('ratedPow')?.value)||4000;
   $('sbCap').textContent=(S.turbines.length*rated/1000).toFixed(1)+' MW';
+  // v34.0: Update layout WS + elevation summary panels when turbines change
+  if(S.turbines.length>0)setTimeout(()=>fetchLayoutWSSummary(),300);
 }
 
 function editTurbineHH(idx){
@@ -8815,6 +8994,8 @@ function clearTurbines(){
   S.turbines=[];refreshTable();
   if(S.markers)S.markers.forEach(m=>m.remove());
   S.markers=[];
+  if($('layoutWSSummary'))$('layoutWSSummary').style.display='none';
+  if($('layoutElevSummary'))$('layoutElevSummary').style.display='none';
   log('Turbines cleared','i');
 }
 
