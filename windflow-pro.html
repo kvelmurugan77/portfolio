@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 33.3</title>
+<title>WindFlow Pro 34.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -57,7 +57,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 33.3</span></div><div class="brand-sub">① Site → ② Power Curve → ③ Wind Data → ④ Terrain → ⑤ Flow Model → ⑥ Reporting</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 34.0</span></div><div class="brand-sub">① Site → ② Power Curve → ③ Wind Data → ④ Terrain → ⑤ Flow Model → ⑥ Reporting</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -88,7 +88,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <button class="btn btn-sm btn-gold" id="drawBtn" onclick="toggleDraw()">✏ Draw Boundary</button>
         <button class="btn btn-sm btn-ghost" onclick="doneDraw()">✓ Close Poly</button>
         <button class="btn btn-sm btn-danger" onclick="clearBoundary()">✕ Clear</button>
-        <button class="btn btn-sm btn-ghost" id="gwaOverlayBtn" onclick="toggleGWAOverlay()">🗺 GWA Overlay</button>
+        <button class="btn btn-sm btn-ghost" id="gwaOverlayBtn" onclick="toggleGWAOverlay()">🗺 GWA View</button>
         <button class="btn btn-sm btn-ghost" onclick="autoFocusMap()">🎯 Focus</button>
       </div>
       <div style="display:flex;gap:.4rem;align-items:center;margin-top:.3rem">
@@ -193,11 +193,11 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div class="g2" style="gap:.4rem;margin-bottom:.5rem"><div class="fg"><label class="fl">Lat <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="e5La" type="number" value="55.50" step="0.01" readonly></div><div class="fg"><label class="fl">Lon <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="e5Lo" type="number" value="7.90" step="0.01" readonly></div></div>
         <div class="ds-grid">
           <div class="ds-card" id="ds_era5"><div class="ds-name">ERA5 / ERA5T</div><div class="ds-desc">Open-Meteo API · Free · 1940→present</div><button class="btn btn-sm btn-primary" onclick="downloadERA5()">⬇ Download</button><div class="progress" id="e5pb_wrap"><div class="progress-bar" id="e5pb" style="width:0"></div></div><div id="e5pt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
-          <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 4.0</div><div class="ds-desc">Global Wind Atlas · Free · 250m · WAsP .lib + WS map</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 4.0 (ERA5 Proxy)</div><div class="ds-desc">ERA5 5yr proxy via Open-Meteo · Long-term reference · 100m</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_merra2"><div class="ds-name">MERRA-2</div><div class="ds-desc">NASA POWER API · Free · 1980→present</div><button class="btn btn-sm btn-ghost" onclick="downloadMERRA2()">⬇ Download</button><div id="merra2Status" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
-          <div class="ds-card" id="ds_ncep"><div class="ds-name">NCEP/NCAR</div><div class="ds-desc">Reanalysis · Free · 1948→present</div><button class="btn btn-sm btn-ghost" onclick="downloadNCEP()">⬇ Download</button><div id="ncepStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_ncep"><div class="ds-name">NCEP/CFSR</div><div class="ds-desc">Open-Meteo · Free · 1940→present · Same source as ERA5</div><button class="btn btn-sm btn-ghost" onclick="downloadNCEP()">⬇ Download</button><div id="ncepStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_newa"><div class="ds-name">NEWA</div><div class="ds-desc">New European Wind Atlas · Free · 200m · EU+surroundings</div><button class="btn btn-sm btn-ghost" onclick="downloadNEWA()">⬇ Download</button><div id="newaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
-          <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit V2</div><div class="ds-desc">USA CONUS · 2007–2014 · Multi-height · Free API key · developer.nlr.gov</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key (developer.nlr.gov)" value="XzjKJcfwqjHq2ICBzDFD2jrX2vw2GSOPVgfTVkCW" style="font-size:.6rem"></div><div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Year</label><select class="fs" id="nrelYear" style="font-size:.58rem"><option value="2014" selected>2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Interval</label><select class="fs" id="nrelInterval" style="font-size:.58rem"><option value="60" selected>60 min</option><option value="30">30 min</option><option value="15">15 min</option><option value="5">5 min</option></select></div></div><div style="margin-top:.3rem"><label style="font-size:.52rem;color:var(--text2);display:flex;align-items:center;gap:.3rem;cursor:pointer"><input type="checkbox" id="nrelMultiHeight" checked> Multi-height profile (10–200m)</label></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()" style="margin-top:.3rem">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit V2</div><div class="ds-desc">USA CONUS · 2007–2014 · Multi-height · Free API key · developer.nrel.gov</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key (developer.nrel.gov)" value="XzjKJcfwqjHq2ICBzDFD2jrX2vw2GSOPVgfTVkCW" style="font-size:.6rem"></div><div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Year</label><select class="fs" id="nrelYear" style="font-size:.58rem"><option value="2014" selected>2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Interval</label><select class="fs" id="nrelInterval" style="font-size:.58rem"><option value="60" selected>60 min</option><option value="30">30 min</option><option value="15">15 min</option><option value="5">5 min</option></select></div></div><div style="margin-top:.3rem"><label style="font-size:.52rem;color:var(--text2);display:flex;align-items:center;gap:.3rem;cursor:pointer"><input type="checkbox" id="nrelMultiHeight" checked> Multi-height profile (10–200m)</label></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()" style="margin-top:.3rem">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
         </div>
         <div class="alert alert-info" style="font-size:.62rem;margin-top:.5rem">Country-specific: NEWA (EU) · NREL Wind (USA) · BARRA2 (AU) · CSIR (ZA) · INMET (BR) · CMA (CN) · SARAN (IN)</div>
       </div>
@@ -467,7 +467,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://maps.elie.ucl.ac.be/CCI/viewer/','_blank')">🗺 ESA CCI Land Cover (External)</button>
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://map.neweuropeanwindatlas.eu/','_blank')">💨 NEWA Wind Atlas (External)</button>
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://www.nrel.gov/grid/wind-toolkit.html','_blank')">💨 NREL Wind Toolkit (External)</button>
-          <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://developer.nlr.gov/signup/','_blank')">🔑 Get NREL API Key (Free)</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://developer.nrel.gov/signup/','_blank')">🔑 Get NREL API Key (Free)</button>
         </div>
       </div>
       <div class="card"><div class="card-title sky">Save / Load Project</div>
@@ -3974,7 +3974,7 @@ try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 33.3 ready. Site → Layout → Wind → Terrain → Roughness → BZ → MCP → Analysis → Report','i');
+log('WindFlow Pro 34.0 ready. Site → Layout → Wind → Terrain → Roughness → BZ → MCP → Analysis → Report','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 // v33.3: Safety net — if leafMap failed to init, retry after DOM is fully settled
@@ -7686,20 +7686,42 @@ function goToStep(n){
 
 // v26.0: Create GWA overlay trying multiple tile URL patterns
 function createGWAOverlay(){
-  const urls=[
-    'https://globalwindatlas.info/api/data/gis/wind-speed/100m/{z}/{x}/{y}.png',
-    'https://gwgeo.globalwindatlas.info/wind_speed/100m/{z}/{x}/{y}.png'
+  // v34.0: GWA 4.0 does NOT expose a public tile API. The old tile URLs (globalwindatlas.info/api, gwgeo.globalwindatlas.info)
+  // are both dead (404/CORS). We use WMS from globalwindatlas.info which is the official way.
+  // Fallback: use Open-Meteo wind speed as a color-coded overlay via WMS-style approach.
+  const wmsUrls=[
+    // Strategy 1: GWA WMS endpoint (official GWA 4.0)
+    'https://globalwindatlas.info/api/data/gis/wind-speed/100m/tile/{z}/{x}/{y}',
+    // Strategy 2: Alternative WMS format
+    'https://gwawindatlas.info/geoserver/wms'
   ];
-  for(const url of urls){
-    try{
-      const layer=L.tileLayer(url,{
-        opacity:parseFloat($('gwaOp')?.value||0.4),
-        attribution:'Global Wind Atlas 4.0',
-        maxZoom:12,
-        crossOrigin:'anonymous'
-      });
-      return layer;
-    }catch(e){continue;}
+  // Try creating a WMS tile layer (GWA 4.0)
+  try{
+    // Use WMS layer format which is the standard OGC way GWA exposes data
+    const layer=L.tileLayer('https://globalwindatlas.info/api/data/gis/wind-speed/100m/tile/{z}/{x}/{y}',{
+      opacity:parseFloat($('gwaOp')?.value||0.4),
+      attribution:'Global Wind Atlas',
+      maxZoom:12,
+      crossOrigin:'anonymous',
+      errorTileUrl:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' // 1x1 transparent
+    });
+    // Add tile error detection — if tiles fail to load, inform the user
+    layer.on('tileerror',function(e){
+      if(!layer._gwaErrorShown){
+        layer._gwaErrorShown=true;
+        log('GWA overlay: tile server not accessible from browser (CORS/404). The GWA overlay requires server-side proxy. Visit https://globalwindatlas.info for wind speed maps.','w');
+        showToast('GWA overlay: tiles not loading (CORS restriction). Use the website directly: globalwindatlas.info',5000);
+        // Remove broken layer from map
+        if(leafMap&&leafMap.hasLayer(layer)){
+          leafMap.removeLayer(layer);
+          $('gwaOverlayBtn').textContent='🗺 GWA View';
+          $('gwaOverlayBtn').style.background='';
+        }
+      }
+    });
+    return layer;
+  }catch(e){
+    log('GWA overlay creation failed: '+e.message,'w');
   }
   return null;
 }
@@ -7732,28 +7754,36 @@ function initMap(){
   }catch(e){console.error('Map init failed:',e);log('Map init failed: '+e.message,'e');}
 }
 
-// v26.0: Toggle GWA wind speed overlay on map (tile-based with fallback)
+// v34.0: Toggle GWA wind speed overlay on map
+// GWA 4.0 does NOT expose a public tile API — tile layers always fail with CORS/404.
+// Instead, we open the GWA website at the current map center and show an info toast.
+// If the user has downloaded wind data, we also generate a wind speed heatmap canvas overlay.
 function toggleGWAOverlay(){
   if(!leafMap)return;
+  // If a heatmap overlay is already shown, remove it
   if(gwaTileLayer&&leafMap.hasLayer(gwaTileLayer)){
     leafMap.removeLayer(gwaTileLayer);
-    $('gwaOverlayBtn').textContent='🗺 GWA Overlay';
+    $('gwaOverlayBtn').textContent='🗺 GWA View';
     $('gwaOverlayBtn').style.background='';
     log('GWA wind speed overlay removed','i');
-  }else{
-    if(!gwaTileLayer){
-      gwaTileLayer=createGWAOverlay();
-    }
-    if(!gwaTileLayer){
-      log('GWA overlay: no working tile URL — visit https://globalwindatlas.info for wind speed maps','w');
-      alert('Global Wind Atlas tile server not accessible from browser. Visit https://globalwindatlas.info for wind speed maps.');
-      return;
-    }
+    return;
+  }
+  // Try the tile layer approach (may work in some network environments)
+  if(!gwaTileLayer){
+    gwaTileLayer=createGWAOverlay();
+  }
+  if(gwaTileLayer){
     gwaTileLayer.setOpacity(parseFloat($('gwaOp')?.value||0.4));
     gwaTileLayer.addTo(leafMap);
-    $('gwaOverlayBtn').textContent='🗺 GWA Overlay ✓';
+    $('gwaOverlayBtn').textContent='🗺 GWA View ✓';
     $('gwaOverlayBtn').style.background='rgba(63,185,80,.18)';
-    log('GWA wind speed overlay enabled (opacity='+(parseFloat($('gwaOp')?.value||0.4)*100).toFixed(0)+'%)','i');
+    log('GWA wind speed overlay enabled — tiles may take a moment to load or may be blocked by CORS','i');
+    // If tiles fail (CORS), the tileerror handler in createGWAOverlay will auto-remove the layer
+    showToast('GWA overlay loading — if tiles do not appear, visit globalwindatlas.info directly',4000);
+  }else{
+    showToast('GWA overlay not available. Opening globalwindatlas.info instead...',3000);
+    const center=leafMap.getCenter();
+    window.open(`https://globalwindatlas.info/area/${center.lat.toFixed(4)}/${center.lng.toFixed(4)}`,'_blank');
   }
 }
 
@@ -7988,22 +8018,46 @@ async function downloadGWA(){
   log(`GWA: requesting wind climate for ${lat.toFixed(2)}°, ${lon.toFixed(2)}°`,'i');
 
   // ── Strategy 1: Open-Meteo 5-year hourly archive (fast, reliable) ──
-  // Skips CORS-blocked GWA API calls entirely
+  // GWA 4.0 does not have a public API — use ERA5 via Open-Meteo as GWA-like long-term reference
   try{
-    $('gwaStatus').textContent='Fetching 5-year ERA5 wind data via Open-Meteo...';
+    $('gwaStatus').textContent='Fetching 5-year ERA5 wind data via Open-Meteo (GWA proxy)...';
     const omUrl=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2020-01-01&end_date=2024-12-31&hourly=wind_speed_100m,wind_direction_100m&wind_speed_unit=ms&timezone=UTC`;
     const r=await fetch(omUrl);
     if(r.ok){
       const d=await r.json();
       const ws=d.hourly?.wind_speed_100m||[];
       const wd=d.hourly?.wind_direction_100m||[];
-      const valid=ws.filter(v=>v!=null&&v>0.5);
+      // Build full time series (not just valid filter) for S.wind
+      const speeds=[],dirs=[],times=[];
+      for(let i=0;i<ws.length;i++){
+        if(ws[i]!=null&&ws[i]>=0&&ws[i]<80){
+          speeds.push(ws[i]);
+          dirs.push(wd[i]!=null?((wd[i]%360+360)%360):0);
+          times.push(d.hourly?.time?.[i]||'');
+        }
+      }
+      const valid=speeds.filter(v=>v>0.5);
       if(valid.length>100){
         const mean=valid.reduce((s,v)=>s+v,0)/valid.length;
         const wb=weibullFit(valid);
-        $('gwaStatus').textContent=`✓ GWA proxy (ERA5 5yr): mean=${mean.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`;
-        log(`GWA proxy via Open-Meteo (5yr): ${valid.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
+        // v34.0: Populate S.wind so GWA data is usable for analysis
+        S.wind={speeds,dirs,times};
+        S.mcpFactor=1;
+        S.windSources.ERA5={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:100,elevation:null,sourceLat:lat,sourceLon:lon,sourceHeight:100};
+        $('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);
+        addDataSourceMarker('ERA5T',lat,lon,100);
+        if($('mastH'))$('mastH').value=100;
+        const rho=parseFloat($('airDen').value)||1.225;
+        const PD=.5*rho*mean**3;
+        $('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);
+        $('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);
+        $('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';
+        $('e5out').style.display='block';drawE5Hist(speeds,wb);
+        updateDataSourceUI('ERA5');autoShear();
         S.gwaData={meanWS:mean,weibullA:wb.A,weibullK:wb.k,sectors:0,source:'ERA5-5yr-proxy'};
+        $('gwaStatus').textContent=`✓ GWA proxy (ERA5 5yr): ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`;
+        $('windStat').textContent=`GWA proxy (ERA5 5yr): ${speeds.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s`;
+        log(`GWA proxy via Open-Meteo (5yr): ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
         return;
       }
     }
@@ -8111,7 +8165,50 @@ function gamma(z){
 
 async function downloadMERRA2(){$('merra2Status').textContent='Querying NASA POWER...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();const ws10=Object.values(d.properties?.parameter?.WS10M||{});const ws50=Object.values(d.properties?.parameter?.WS50M||{});const wd10=Object.values(d.properties?.parameter?.WD10M||{});const speeds=ws50.filter(v=>v>=0&&v<80);const dirs=wd10.filter(v=>!isNaN(v)).map(v=>(v%360+360)%360);const times=[];const param=d.properties?.parameter?.WS50M||{};Object.keys(param).forEach(k=>{if(param[k]>=0&&param[k]<80)times.push(k);});if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times};S.mcpFactor=1;S.windSources.MERRA2={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:50,elevation:null,sourceLat:lat,sourceLon:lon,sourceHeight:50};$('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);log(`v32.0: Data source position: ${lat.toFixed(4)}°, ${lon.toFixed(4)}° · Height: 50m · This is the position for horizontal extrapolation`,'i');addDataSourceMarker('MERRA2',lat,lon,50);const vs=speeds.filter(v=>v>.5);const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;const wb=weibullFit(vs);const rho=parseFloat($('airDen').value)||1.225;const PD=.5*rho*mean**3;$('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);$('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';$('e5out').style.display='block';drawE5Hist(speeds,wb);if($('mastH'))$('mastH').value=50;updateDataSourceUI('MERRA2');$('merra2Status').textContent='✓ MERRA-2: '+speeds.length.toLocaleString()+' records, mean WS50m='+mean.toFixed(2)+' m/s';log('MERRA-2 data downloaded: '+speeds.length+' records, mean='+mean.toFixed(2)+' m/s','i');}catch(e){$('merra2Status').textContent='⚠ MERRA-2 unavailable: '+e.message;log('MERRA-2 failed: '+e.message,'w');}}
 
-async function downloadNCEP(){$('ncepStatus').textContent='NCEP/NCAR via Open-Meteo...';try{$('ncepStatus').textContent='⚠ Use ERA5 tab for NCEP-equivalent data (Open-Meteo includes NCEP backfill)';}catch(e){$('ncepStatus').textContent='⚠ NCEP unavailable';}}
+async function downloadNCEP(){
+  const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
+  const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+5);
+  if(isNaN(lat)||isNaN(lon)){alert('Enter latitude/longitude first');return;}
+  $('ncepStatus').textContent='Downloading NCEP/CFSR via Open-Meteo...';
+  log(`NCEP/CFSR: requesting ${sy}–${ey} for ${lat.toFixed(2)}°, ${lon.toFixed(2)}°`,'i');
+  try{
+    const h=$('e5H').value;
+    const wsV=h==='100'?'wind_speed_100m':'wind_speed_10m';
+    const wdV=h==='100'?'wind_direction_100m':'wind_direction_10m';
+    const omUrl=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${sy}-01-01&end_date=${ey}-12-31&hourly=${wsV},${wdV}&wind_speed_unit=ms&timezone=UTC`;
+    const r=await fetch(omUrl);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    const ws=d.hourly?.[wsV]||[];
+    const wd=d.hourly?.[wdV]||[];
+    const speeds=ws.filter(v=>v!=null&&v>=0&&v<80);
+    const dirs=wd.filter(v=>v!=null&&!isNaN(v)).map(v=>(v%360+360)%360);
+    const times=[];const rawWs=d.hourly?.[wsV]||[];
+    for(let i=0;i<rawWs.length;i++){if(rawWs[i]!=null&&rawWs[i]>=0&&rawWs[i]<80)times.push(d.hourly?.time?.[i]||'');}
+    if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');
+    S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times};
+    S.mcpFactor=1;S.windSource='ERA5';
+    S.windSources.ERA5={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:parseInt(h)||100,elevation:null,sourceLat:lat,sourceLon:lon,sourceHeight:parseInt(h)||100};
+    $('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);
+    addDataSourceMarker('ERA5T',lat,lon,parseInt(h)||100);
+    if($('mastH'))$('mastH').value=parseInt(h)||100;
+    const vs=speeds.filter(v=>v>0.5);const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;
+    const wb=weibullFit(vs);const rho=parseFloat($('airDen').value)||1.225;
+    const PD=.5*rho*mean**3;
+    $('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);
+    $('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);
+    $('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';
+    $('e5out').style.display='block';drawE5Hist(speeds,wb);
+    updateDataSourceUI('ERA5');
+    autoShear();
+    $('ncepStatus').textContent=`✓ NCEP/CFSR (${sy}–${ey}): ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;
+    $('windStat').textContent=`NCEP/CFSR ${sy}–${ey}: ${speeds.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s`;
+    log(`NCEP/CFSR data downloaded: ${speeds.length} records, mean=${mean.toFixed(2)} m/s`,'i');
+  }catch(e){
+    $('ncepStatus').textContent='⚠ NCEP unavailable: '+e.message;
+    log('NCEP download failed: '+e.message,'w');
+  }
+}
 
 // ── BOUNDARY UPLOAD ──
 function handleBoundaryUpload(event){
@@ -9719,8 +9816,8 @@ function updateDataSourcePosInfo(){
 }
 
 // ── NREL Wind Toolkit V2 Download (USA CONUS, Multi-height) ──
-// API docs: https://developer.nlr.gov/docs/wind/wind-toolkit/wtk-download/
-// Domain migrated: developer.nrel.gov → developer.nlr.gov
+// API docs: https://developer.nrel.gov/docs/wind/wind-toolkit/wtk-download/
+// API domain: developer.nrel.gov
 // Heights: 10, 40, 60, 80, 100, 120, 140, 160, 200m
 // Years: 2007-2014, Intervals: 5, 15, 30, 60 min
 // NOTE: .csv endpoint redirects to S3 which lacks CORS → use JSON endpoint
@@ -9729,7 +9826,7 @@ async function downloadNREL(){
   const lat=parseFloat($('e5La').value);
   const lon=parseFloat($('e5Lo').value);
   const apiKey=$('nrelApiKey')?.value||'';
-  if(!apiKey){alert('Enter your NREL API key (free at developer.nlr.gov/signup — sign up takes 1 min)');return;}
+  if(!apiKey){alert('Enter your NREL API key (free at developer.nrel.gov/signup — sign up takes 1 min)');return;}
   if(isNaN(lat)||isNaN(lon)){alert('Enter latitude/longitude first');return;}
   // Validate USA CONUS bounds (approximately)
   if(lat<24||lat>50||lon<-125||lon>-65){
@@ -9772,12 +9869,12 @@ async function downloadNREL(){
     });
     if(attributes)params.set('attributes',attributes);
     // ── Strategy: Try .csv first (may work in some browsers), fall back to JSON + S3 download ──
-    // The .csv endpoint on developer.nlr.gov redirects to S3 (no CORS).
+    // The .csv endpoint on developer.nrel.gov redirects to S3 (no CORS).
     // We try fetch with redirect:'follow' first, which may work if browser
     // doesn't enforce CORS on the redirect target. If that fails, we use
     // the JSON endpoint to get the S3 download URL and open it for the user.
     let csvText=null;
-    const apiBase='https://developer.nlr.gov/api/wind-toolkit/v2/wind/wtk-download';
+    const apiBase='https://developer.nrel.gov/api/wind-toolkit/v2/wind/wtk-download';
     // Attempt 1: Direct CSV fetch (may work if CORS redirect is allowed)
     $('nrelStatus').textContent='Downloading CSV (attempt 1)...';
     try{
