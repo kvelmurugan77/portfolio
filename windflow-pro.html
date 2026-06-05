@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 35.0</title>
+<title>WindFlow Pro 35.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 35.0</span></div><div class="brand-sub">A: ① Site → ② Power Curve → ③ Wind Data → ④ MCP &amp; Extrapolation │ B: ⑤ Terrain → ⑥ Flow Model → ⑦ Reporting</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 35.1</span></div><div class="brand-sub">A: ① Site → ② Power Curve → ③ Wind Data → ④ MCP &amp; Extrapolation │ B: ⑤ Terrain → ⑥ Flow Model → ⑦ Reporting</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -170,8 +170,9 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       </div>
       <div class="card"><div class="card-title sky">Turbine Parameters</div>
         <div class="g3" style="gap:.4rem"><div class="fg"><label class="fl">Hub Height (m)</label><input class="fi" id="hubH" type="number" value="120" onchange="onHubHeightChange()" oninput="onHubHeightChange()"></div><div class="fg"><label class="fl">Rotor Ø (m)</label><input class="fi" id="rotD" type="number" value="150"></div><div class="fg"><label class="fl">Rated (kW)</label><input class="fi" id="ratedPow" type="number" value="4000" onchange="onHubHeightChange()"></div></div>
-        <div class="g3" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wake k</label><input class="fi" id="wakeK" type="number" value="0.04" step="0.005"></div><div class="fg"><label class="fl">Losses %</label><input class="fi" id="otherLoss" type="number" value="5" step="0.5"></div><div class="fg"><label class="fl">Sectors</label><select class="fs" id="sects"><option value="12">12</option><option value="16" selected>16</option><option value="24">24</option></select></div></div>
-        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wake Model</label><select class="fs" id="wakeModel"><option value="jensen">Jensen/PARK</option><option value="eddy">Eddy Viscosity</option></select></div><div class="fg"><label class="fl">&nbsp;</label><div style="padding-top:.25rem"><label style="font-size:.62rem;cursor:pointer;display:flex;align-items:center;gap:.3rem"><input type="checkbox" id="rotorAvgCB" checked style="accent-color:var(--mint)"><span>Rotor-averaged WS</span></label></div></div></div>
+        <div class="g3" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wake k</label><input class="fi" id="wakeK" type="number" value="0.04" step="0.005" onfocus="if(!this.dataset.set)this.value=(0.5/Math.log(Math.max(120,1)/(parseFloat($('z0val')?.value)||0.03))).toFixed(3);this.dataset.set=1"></div><div class="fg"><label class="fl">Losses %</label><input class="fi" id="otherLoss" type="number" value="5" step="0.5"></div><div class="fg"><label class="fl">Sectors</label><select class="fs" id="sects"><option value="12">12</option><option value="16" selected>16</option><option value="24">24</option></select></div></div>
+        <div class="g3" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wake Model</label><select class="fs" id="wakeModel"><option value="jensen">Jensen/PARK</option><option value="eddy">Eddy Viscosity</option></select></div><div class="fg"><label class="fl">Wake Combination</label><select class="fs" id="wakeCombination"><option value="linear">Linear Sum</option><option value="rss">Root-Sum-Square</option><option value="energy">Energy Balance</option></select></div><div class="fg"><label class="fl">&nbsp;</label><div style="padding-top:.25rem"><label style="font-size:.62rem;cursor:pointer;display:flex;align-items:center;gap:.3rem"><input type="checkbox" id="rotorAvgCB" checked style="accent-color:var(--mint)"><span>Rotor-averaged WS</span></label></div></div></div>
+        <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Ambient TI %</label><input class="fi" id="ambientTI" type="number" value="" step="0.5" placeholder="Auto from z₀"></div><div class="fg"><label class="fl">Availability %</label><input class="fi" id="availabilityPct" type="number" value="95" min="80" max="100" step="0.5"></div></div>
       </div>
     </div>
     <div>
@@ -249,6 +250,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <!-- ① VERTICAL EXTRAPOLATION -->
       <div class="card"><div class="card-title">① Vertical Extrapolation <span id="pipe1Badge" style="font-size:.5rem;padding:.1rem .3rem;border-radius:3px;background:rgba(255,255,255,.05);color:var(--text3)">AUTO</span></div>
         <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem">Data height → Hub height via log-law + stability correction. Only requires roughness at mast location (a single value, not a map).</div>
+        <div class="g2" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Method</label><select class="fs" id="veMethod" onchange="updateVerticalExtrapolationUI()"><option value="logstab" selected>Log-law + Stability (Businger-Dyer)</option><option value="logsimple">Simple Log-law</option><option value="powerlaw">Power Law (1/7 default)</option><option value="powercustom">Power Law (custom α)</option></select></div><div class="fg"><label class="fl">Power α</label><input class="fi" id="vePowerAlpha" type="number" value="0.143" step="0.01" disabled></div></div>
         <div class="g3" style="gap:.4rem">
           <div class="metric-item"><div class="metric-val" id="ve1MastWS">—</div><div class="metric-label">Mast WS m/s</div></div>
           <div class="metric-item"><div class="metric-val sky" id="ve1HubWS">—</div><div class="metric-label">Hub WS m/s</div></div>
@@ -273,6 +275,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <!-- ③ OBSTACLES (terrain-independent — Perera shelter) -->
       <div class="card"><div class="card-title">③ Obstacles — Perera 1981 Shelter</div>
         <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem">Nearby obstacles reduce wind speed. Applied before generalization. No terrain map required — only obstacle geometry.</div>
+        <div class="alert alert-warn" style="font-size:.52rem;padding:.3rem .5rem;margin-bottom:.3rem">⚠ Perera 1981 is an approximation. For modern WAsP-accuracy, use terrain/roughness modelling instead. Obstacles are most important near buildings/trees — typically negligible for large wind farms (>500m from obstacles).</div>
         <div class="tbl-wrap" style="max-height:100px"><table class="dt"><thead><tr><th>Dir°</th><th>H(m)</th><th>W(m)</th><th>D(m)</th><th>Por%</th><th>✕</th></tr></thead><tbody id="obsBody"></tbody></table></div>
         <div class="g3" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl">Height</label><input class="fi" id="obsH" type="number" value="10" min="1"></div><div class="fg"><label class="fl">Width</label><input class="fi" id="obsW" type="number" value="20" min="1"></div><div class="fg"><label class="fl">Distance</label><input class="fi" id="obsD" type="number" value="50" min="1"></div></div>
         <div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl">Dir (°)</label><input class="fi" id="obsDir" type="number" value="0" min="0" max="359" step="22.5"></div><div class="fg"><label class="fl">Porosity %</label><input class="fi" id="obsPor" type="number" value="0" min="0" max="90" step="10"></div></div>
@@ -1501,7 +1504,8 @@ function jensenWake(txy,ws,dir,lut,kw){
   // Base k from user input (0.04 default)
   let k_eff = kw;
   // TI from roughness
-  const TI=1/Math.log(Math.max(hubH,z0*1.1)/Math.max(z0,1e-6));
+  const userTI=parseFloat($('ambientTI')?.value);
+  const TI=userTI>0?userTI/100:1/Math.log(Math.max(hubH,z0*1.1)/Math.max(z0,1e-6));
   const TI_ref=0.08; // reference TI for standard k
   // Stability adjustment:
   // Unstable: enhanced mixing → faster wake recovery → larger k
@@ -1531,7 +1535,7 @@ function jensenWake(txy,ws,dir,lut,kw){
 
   // v11.0: Deep-array wake correction (Frandsen 2007, Crespo-Hernández 1996)
   // Added TI from upstream wakes increases wake decay rate
-  const ambient_TI = 1 / Math.log(Math.max(hubH, z0*1.1) / Math.max(z0, 1e-6));
+  const ambient_TI = TI; // Use same TI (either user input or roughness-derived)
   const addedTI = new Float64Array(n); // added TI from upstream wakes
 
   for(let j=0;j<n;j++){
@@ -1582,15 +1586,17 @@ function jensenWake(txy,ws,dir,lut,kw){
     }
   }
   // Mixed RSS/linear superposition (WAsP-style)
-  // For small deficits (<10%): use RSS (sqrt of sum of squares)
-  // For larger deficits: blend toward linear sum
   for(let j=0;j<n;j++){
     if(deficits[j].length===0)continue;
-    const maxDef=Math.max(...deficits[j].map(d=>d.def));
-    const alpha=Math.max(0,1-0.1/Math.max(0.001,maxDef)); // blend toward linear for large deficits
-    const rssDef=Math.sqrt(deficits[j].reduce((s,d)=>s+d.def*d.def,0));
-    const linDef=deficits[j].reduce((s,d)=>s+d.def,0);
-    const totalDef=alpha*linDef+(1-alpha)*rssDef;
+    let totalDef;
+    const combMethod=$('wakeCombination')?.value||'linear';
+    if(combMethod==='rss'){
+      totalDef=Math.sqrt(deficits[j].reduce((s,d)=>s+d.def*d.def,0));
+    }else if(combMethod==='energy'){
+      totalDef=1-Math.sqrt(Math.max(0,deficits[j].reduce((s,d)=>s+(1-d.def)*(1-d.def),0)/Math.max(1,deficits[j].length)));
+    }else{
+      totalDef=deficits[j].reduce((s,d)=>s+d.def,0);
+    }
     sp[j]=Math.max(0,ws*(1-totalDef));
   }
   // v11.0: Deep-array correction pass
@@ -2803,7 +2809,12 @@ function calcAEP(){
 
   // v10.0: Rotor-averaged wind speed
   const useRotorAvg=$('rotorAvgCB')?.checked!==false; // default ON
-  const rotAvgFactor=useRotorAvg?rotorAvgRatio(hubHH,rotorD,z0,L):1.0;
+  // v35.0: Use REWS from Step 4 if available, otherwise compute from rotorAvgRatio
+  const rewsRatio=$('reRatio')&&$('reRatio').textContent!=='—'?parseFloat($('reRatio').textContent):null;
+  const rotAvgFactor=useRotorAvg?(rewsRatio&&isFinite(rewsRatio)?rewsRatio:rotorAvgRatio(hubHH,rotorD,z0,L)):1.0;
+  if(rewsRatio&&isFinite(rewsRatio)&&useRotorAvg){
+    log(`v35.0: Using REWS ratio from Step 4: ${rewsRatio.toFixed(4)} (integrated over rotor disk)`,'i');
+  }
   const shearCorrFactor=shearProfileMismatchCorrection(mastH,hubHH,z0,L,parseFloat($('shearA').value)||0.14);
   const rotorMeanWS=hubMean*rotAvgFactor*shearCorrFactor;
 
@@ -3035,7 +3046,9 @@ function calcAEP(){
     calNetWake = Math.min(grossG, calNetWake);
   }
   // v22.1 FIX: netF computed AFTER all corrections (offshore, wake efficiency)
-  const netF=calNetWake*lossM;
+  const availPct=parseFloat($('availabilityPct')?.value)||95;
+  const availM=availPct/100;
+  const netF=calNetWake*lossM*availM;
   // Installed capacity: sum per-turbine rated power (same for all, but future-proof)
   const instMW=n*pc.rated/1000,CF=netF*1000/(instMW*8760)*100;
   // Component uncertainty model (RSS)
@@ -3128,6 +3141,7 @@ function calcAEP(){
   const iec=checkIECClass(rotorMeanWS,pc);if(!iec.ok)log(`⚠ IEC class warning: rotor-avg WS ${rotorMeanWS.toFixed(2)} m/s exceeds ${iec.cls} limit (${iec.limit} m/s)!`,'w');
   if(useRotorAvg&&Math.abs(rotAvgFactor-1)>0.001)log(`Rotor-averaged WS: factor=${rotAvgFactor.toFixed(4)}, hub=${hubMean.toFixed(2)} m/s → rotor-avg=${rotorMeanWS.toFixed(2)} m/s (${((rotAvgFactor-1)*100).toFixed(1)}%)`,'i');
   // v22.0: Log chain diagnostics for verification
+  log(`AEP integration: bin resolution=${dv} m/s, ${nSect} sectors, ${hubSp.length.toLocaleString()} hourly records → ${sectors.reduce((s,sec)=>s+(sec.n>0?1:0),0)} active sectors`,'i');
   const undoExtrapolation = logWS_stab(1.0, mastH, hubHH, z0, L);
   if(hasRoughRose){
     const sampleOwcGwcR = owcToGWC(1.0, mastH, getSectorEffectiveZ0('mast',0,hubHH,nSect), hubHH, 0.03, L);
@@ -4042,7 +4056,7 @@ try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 35.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → Flow Model → Reporting','i');
+log('WindFlow Pro 35.1 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → Flow Model → Reporting','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 // v33.3: Safety net — if leafMap failed to init, retry after DOM is fully settled
@@ -5576,6 +5590,11 @@ function waspGeneralize(A_obs, k_obs, mastDeltaS, z0_mast, z_obs, latitude_deg, 
   // roughnessRatio: per-sector roughness ratio from IBL (scalar or array)
   // stabCorrection: stability correction multiplier (scalar)
   
+  // v35.0: Validate latitude for Coriolis parameter
+  if(!latitude_deg || Math.abs(latitude_deg) < 1) {
+    console.warn('waspGeneralize: latitude_deg is near zero — Coriolis parameter will be very small, GDL may not converge. Use site coordinates from map.');
+  }
+
   const kappa = 0.4;
   const nSectors = A_obs.length;
   const A_gwc = new Array(nSectors);
@@ -7198,6 +7217,7 @@ async function runBZModel(){
 
   // Domain size in metres
   const clat=(lat0+lat1)/2;
+  log(`v35.0: Latitude=${clat.toFixed(2)}° → Coriolis f=${(2*7.2921e-5*Math.sin(Math.abs(clat)*Math.PI/180)).toExponential(3)} rad/s`,'i');
   const Ly=(lat1-lat0)*111320;
   const Lx=(lon1-lon0)*111320*Math.cos(clat*Math.PI/180);
 
@@ -7352,6 +7372,11 @@ async function runBZModel(){
     sectSU.push(meanSU);
   }
   BZ.sectorSU=sectSU;
+  // v35.0: Log wind turning (cross-isobaric flow deviation) from BZ model
+  const meanTurn=BZ.mastSectorTurning.reduce((s,v)=>s+Math.abs(v),0)/Math.max(1,BZ.mastSectorTurning.length);
+  const maxTurn=Math.max(...BZ.mastSectorTurning.map(v=>Math.abs(v)));
+  log(`v35.0 Wind turning: mean |Δθ|=${meanTurn.toFixed(1)}°, max |Δθ|=${maxTurn.toFixed(1)}° — cross-isobaric flow deviation from Jackson-Hunt model`,'i');
+  if(maxTurn>10)log(`⚠ Large wind turning (${maxTurn.toFixed(0)}°) — flow separation may occur, BZ model may be less accurate`,'w');
 
   // Full speedup grid for visualisation
   // v27.0: Using precomputed spectrum — much faster than calling bzDeltaAt per grid point
@@ -7807,8 +7832,28 @@ function updateVerticalExtrapolationUI(){
   const srcH=parseFloat($('mastH')?.value)||100;
   const targetHH=parseInt($('hubH')?.value)||120;
   const z0=parseFloat($('z0val')?.value)||0.03;
-  const hubWS=logWS(mean,srcH,targetHH,z0);
-  const alpha=Math.log(hubWS/mean)/Math.log(targetHH/srcH);
+  const L=getStabilityL();
+  
+  const method=$('veMethod')?.value||'logstab';
+  // Enable/disable power alpha input based on method
+  const alphaInput=$('vePowerAlpha');
+  if(alphaInput)alphaInput.disabled=(method!=='powercustom');
+  
+  let hubWS, alpha;
+  if(method==='logstab'){
+    hubWS=logWS_stab(mean,srcH,targetHH,z0,L);
+    alpha=Math.log(hubWS/mean)/Math.log(targetHH/srcH);
+  }else if(method==='logsimple'){
+    hubWS=logWS(mean,srcH,targetHH,z0);
+    alpha=Math.log(hubWS/mean)/Math.log(targetHH/srcH);
+  }else if(method==='powerlaw'){
+    alpha=1/7; // standard power law
+    hubWS=mean*Math.pow(targetHH/srcH,alpha);
+  }else{ // powercustom
+    alpha=parseFloat(alphaInput?.value)||0.14;
+    hubWS=mean*Math.pow(targetHH/srcH,alpha);
+  }
+  
   if($('ve1MastWS'))$('ve1MastWS').textContent=mean.toFixed(2);
   if($('ve1HubWS'))$('ve1HubWS').textContent=hubWS.toFixed(2);
   if($('ve1Shear'))$('ve1Shear').textContent=isFinite(alpha)?alpha.toFixed(3):'—';
