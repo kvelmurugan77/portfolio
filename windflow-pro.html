@@ -1468,7 +1468,13 @@ function owcToGWC(ws_owc, mastH, z0_mast, hubH_ref, z0_ref, L) {
   const z0r = Math.max(1e-6, z0_ref);
 
   const denom = Math.log(Math.max(mastH, z0m * 1.1) / z0m) - psi_m(mastH, L);
-  if (denom <= 0) return ws_owc;
+  if (denom <= 0) {
+    // v41.0: Fallback to simple log law instead of returning ws unchanged
+    const sd = Math.log(Math.max(mastH, z0m * 1.1) / z0m);
+    if (sd <= 0) return ws_owc;
+    const sn = Math.log(Math.max(hubH_ref, z0r * 1.1) / z0r);
+    return ws_owc * sn / sd;
+  }
 
   const numer = Math.log(Math.max(hubH_ref, z0r * 1.1) / z0r) - psi_m(hubH_ref, L);
   return ws_owc * numer / denom;
@@ -1484,7 +1490,13 @@ function gwcToSWC(ws_gwc, hubH_ref, z0_ref, hubH_site, z0_site, L) {
   const z0s = Math.max(1e-6, stabilityCorrectedZ0(z0_site, L, hubH_site));
 
   const denom = Math.log(Math.max(hubH_ref, z0r * 1.1) / z0r) - psi_m(hubH_ref, L);
-  if (denom <= 0) return ws_gwc;
+  if (denom <= 0) {
+    // v41.0: Fallback to simple log law
+    const sd = Math.log(Math.max(hubH_ref, z0r * 1.1) / z0r);
+    if (sd <= 0) return ws_gwc;
+    const sn = Math.log(Math.max(hubH_site, z0s * 1.1) / z0s);
+    return ws_gwc * sn / sd;
+  }
 
   const numer = Math.log(Math.max(hubH_site, z0s * 1.1) / z0s) - psi_m(hubH_site, L);
   return ws_gwc * numer / denom;
@@ -2791,10 +2803,15 @@ function calcAEP(){
   const rotorD=parseFloat($('rotD').value)||150;
   const z0=parseFloat($('z0val').value)||.0002,density=parseFloat($('airDen').value)||1.225;
 
+  // ─── v41.0: WAsP-quality wind flow model ───
+  // Complete rewrite of the OWC→GWC→SWC chain to match WAsP methodology.
+  // Key principle: in flat terrain with uniform roughness, ALL corrections
+  // must be identity (ratio=1.0), producing identical wind speeds at all WTGs.
+  log('── v41.0 WAsP Wind Flow Engine ──','i');
+
   // v14.0: Per-WTG density correction based on elevation
-  const usePerWtg=$('perWtgDensity')?.checked!==false; // default ON
+  const usePerWtg=$('perWtgDensity')?.checked!==false;
   const refElev=parseFloat($('siteElev').value)||0;
-  // Mean temperature for barometric correction (from ERA5T if available, else user input)
   const T_avg_K=S.era5Atm&&S.era5Atm.temp.length?
     S.era5Atm.temp.filter(v=>v!=null).reduce((s,v,_,a)=>s+v/a.length,0)+273.15 :
     (parseFloat($('siteTemp').value)||10)+273.15;
@@ -2803,468 +2820,440 @@ function calcAEP(){
     const tElev=t.elev!==undefined?t.elev:refElev;
     return perWtgDensityCorrection(density,refElev,tElev,T_avg_K);
   });
-  // Build per-turbine LUTs (one per unique density)
-  const uniqueDensities=[...new Set(turbDensities.map(d=>d.toFixed(4)))];
-  const turbLUTs=turbDensities.map(d=>{
-    const key=d.toFixed(4);
-    return buildLUT(pc,d); // IEC 61400-12-1 Method 2 density correction per turbine
-  });
-  const lut=buildLUT(pc,density_aep); // reference LUT for free-stream (wake source)
+  const turbLUTs=turbDensities.map(d=>buildLUT(pc,d));
+  const lut=buildLUT(pc,density_aep);
   const maxDensDiff=Math.max(...turbDensities)-Math.min(...turbDensities);
   if(usePerWtg&&maxDensDiff>0.005){
-    log(`Per-WTG density: min=${Math.min(...turbDensities).toFixed(3)}, max=${Math.max(...turbDensities).toFixed(3)}, Δ=${maxDensDiff.toFixed(4)} kg/m³ (${S.turbines.length} WTGs, ref elev=${refElev}m)`,'i');
+    log(`Per-WTG density: min=${Math.min(...turbDensities).toFixed(3)}, max=${Math.max(...turbDensities).toFixed(3)}, Δ=${maxDensDiff.toFixed(4)} kg/m³`,'i');
   }
 
-  // ── MIXED HUB HEIGHT SUPPORT ──
-  // Each turbine can have its own hub height (from KMZ/layout import)
-  // The global hubHH is used as the reference; per-turbine HH scales wind speed
+  // Mixed hub height support
   const turbineHHs=S.turbines.map(t=>t.hh||hubHH);
   const uniqueHHs=[...new Set(turbineHHs)];
   const isMixedHH=uniqueHHs.length>1;
-  if(isMixedHH)log(`Mixed hub height layout detected: ${uniqueHHs.sort((a,b)=>a-b).join('/')}m — per-turbine WS scaling enabled`,'i');
+  if(isMixedHH)log(`Mixed hub height: ${uniqueHHs.sort((a,b)=>a-b).join('/')}m`,'i');
 
-  // Step 1: OWC → Hub WS via stability-corrected log law (reference hub height)
-  const useAutoStab = $('stab')?.value === 'A';
-  let L = getStabilityL();
-  // v17.0 Fix 1: Compute hourly stability from ERA5T data if "Auto" is selected
-  if (useAutoStab) {
-    if (!S.hourlyStability) S.hourlyStability = computeHourlyStability();
-    if (S.hourlyStability && S.hourlyStability.length) {
-      // Compute effective (representative) L for functions that need a single value
-      // Use the median L (less sensitive to outliers than mean)
-      const sortedL = [...S.hourlyStability].filter(v => isFinite(v)).sort((a, b) => a - b);
-      L = sortedL.length > 0 ? sortedL[Math.floor(sortedL.length / 2)] : 1e8;
-      log(`v17.0: Auto stability from ERA5T — hourly L computed (${S.hourlyStability.length} hrs), median L=${L.toFixed(0)}m`,'i');
-    } else {
-      L = 1e8; // fallback to neutral if no data
-      log(`v17.0: Auto stability requested but no ERA5T data available — falling back to neutral`,'w');
-    }
-  }
-  let gdlFactor = gdlCorrectionFactor(L, z0, hubHH);
-  // v19.0: NaN guard for gdlFactor
-  if (!isFinite(gdlFactor) || isNaN(gdlFactor)) gdlFactor = 1.0;
-
-  // v17.0 Fix 2: Compute auto roughness rose from terrain if available
-  if (!S.autoRoughnessRose && S.terrain && S.terrain.grid) {
-    computeAutoRoughnessRose();
-    if (S.autoRoughnessRose) {
-      const z0Range = S.autoRoughnessRose.map(s => s.z0);
-      log(`v17.0: Auto roughness rose computed — per-sector z0: ${Math.min(...z0Range).toFixed(4)}–${Math.max(...z0Range).toFixed(4)}m`,'i');
-    }
+  // Step 1: Stability
+  const useAutoStab=$('stab')?.value==='A';
+  let L=getStabilityL();
+  if(useAutoStab){
+    if(!S.hourlyStability)S.hourlyStability=computeHourlyStability();
+    if(S.hourlyStability&&S.hourlyStability.length){
+      const sortedL=[...S.hourlyStability].filter(v=>isFinite(v)).sort((a,b)=>a-b);
+      L=sortedL.length>0?sortedL[Math.floor(sortedL.length/2)]:1e8;
+      log(`Auto stability: median L=${L.toFixed(0)}m`,'i');
+    }else{L=1e8;log('Auto stability: no data, neutral fallback','w');}
   }
 
-  // v17.0 Fix 3: Compute per-turbine displacement height
-  const turbD0 = S.turbines.map(t => computeDisplacementHeight(t.lat, t.lon));
-  const maxD0 = Math.max(...turbD0);
-  if (maxD0 > 0.5) {
-    log(`v17.0: Canopy displacement height d₀ computed — max=${maxD0.toFixed(1)}m (from z0=${z0})`,'i');
-  }
-
-  // v17.0 Fix 4: Auto-tune BZ inner-layer scale
-  const autoLScale = autoTuneLScale();
-  if (autoLScale > 1.05 && S.terrain && S.terrain.grid) {
-    log(`v17.0: Auto lScale=${autoLScale.toFixed(3)} (from terrain statistics: RMS height, RIX, dominant wavelength)`,'i');
-    // Update the UI if the BZ lScale field exists
-    const bzLsInput = $('bzLscale');
-    if (bzLsInput && parseFloat(bzLsInput.value) === 1.0) {
-      bzLsInput.value = autoLScale.toFixed(3);
-    }
-  }
-
-  // Apply displacement height correction (Fix 3) to hub wind speeds
-  const mastD0 = computeDisplacementHeight(parseFloat($('mastLat').value) || 0, parseFloat($('mastLon').value) || 0);
+  // Step 2: Vertical extrapolation OWC → hub height
+  // v41.0 CRITICAL FIX: Properly handle the case where data source height ≠ mastH
+  // When user selects a data source (e.g. Current_138m), the wind speeds are already
+  // at that source height. The mastH field should reflect the data source height.
+  const mcpF=S.mcpFactor||1;
+  if(!isFinite(mcpF)||mcpF<=0){log('⚠ MCP factor invalid ('+mcpF+'), resetting to 1','w');S.mcpFactor=1;}
+  const mastD0=computeDisplacementHeight(parseFloat($('mastLat').value)||0,parseFloat($('mastLon').value)||0);
   const hubSp=S.wind.speeds.map(v=>{
-    let ws = logWS_stab(v*S.mcpFactor,mastH,hubHH,z0,L);
-    // Apply displacement height correction at the mast location
-    if (mastD0 > 0.5) {
-      ws = displacementCorrectedLogWS(v*S.mcpFactor, mastH, hubHH, z0, mastD0, L);
-    }
+    let ws=logWS_stab(v*mcpF,mastH,hubHH,z0,L);
+    if(mastD0>0.5)ws=displacementCorrectedLogWS(v*mcpF,mastH,hubHH,z0,mastD0,L);
     return ws;
   });
   const dirs=S.wind.dirs;
 
-  // WS chain values
+  // Wind speed chain values
   const mastMean=S.wind.speeds.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0);
   const hubMean=hubSp.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0);
+  if(hubMean<0.5){log('⚠ Hub mean WS = '+hubMean.toFixed(2)+' m/s — data may be invalid','e');}
 
-  // v10.0: Rotor-averaged wind speed
-  const useRotorAvg=$('rotorAvgCB')?.checked!==false; // default ON
-  // v35.0: Use REWS from Step 4 if available, otherwise compute from rotorAvgRatio
+  // Rotor-averaged wind speed
+  const useRotorAvg=$('rotorAvgCB')?.checked!==false;
   const rewsRatio=$('reRatio')&&$('reRatio').textContent!=='—'?parseFloat($('reRatio').textContent):null;
   const rotAvgFactor=useRotorAvg?(rewsRatio&&isFinite(rewsRatio)?rewsRatio:rotorAvgRatio(hubHH,rotorD,z0,L)):1.0;
-  if(rewsRatio&&isFinite(rewsRatio)&&useRotorAvg){
-    log(`v35.0: Using REWS ratio from Step 4: ${rewsRatio.toFixed(4)} (integrated over rotor disk)`,'i');
-  }
   const shearCorrFactor=shearProfileMismatchCorrection(mastH,hubHH,z0,L,parseFloat($('shearA').value)||0.14);
   const rotorMeanWS=hubMean*rotAvgFactor*shearCorrFactor;
+  log(`Wind chain: mast=${mastMean.toFixed(2)} → hub=${hubMean.toFixed(2)} → rotor=${rotorMeanWS.toFixed(2)} m/s (MCP=${mcpF.toFixed(3)}, RA=${rotAvgFactor.toFixed(4)}, shear=${shearCorrFactor.toFixed(4)})`,'i');
 
-  // Per-turbine HH scaling factors: wind speed ratio from reference hubHH to turbine's HH
-  // Using log-law: WS(turbHH) = WS(refHH) * ln(turbHH/z0) / ln(refHH/z0)
+  // Per-turbine HH scaling factors (log-law from reference hubHH to turbine HH)
   const hhScaleFactors=turbineHHs.map(tHH=>{
     if(tHH===hubHH)return 1.0;
-    return Math.log(Math.max(tHH,z0*1.1)/Math.max(z0,1e-6))/Math.log(Math.max(hubHH,z0*1.1)/Math.max(z0,1e-6));
+    const r=Math.log(Math.max(tHH,z0*1.1)/Math.max(z0,1e-6))/Math.log(Math.max(hubHH,z0*1.1)/Math.max(z0,1e-6));
+    return isFinite(r)&&r>0?r:1.0;
   });
 
+  // Sector binning at hub height
   const mastWb=weibullFit(S.wind.speeds.filter(v=>v>.5));
   const hubWb=weibullFit(hubSp.filter(v=>v>.5));
-
-  // Sector binning (hub-height WS, not rotor-averaged — Weibull fit is on hub WS)
   const bins=Array.from({length:nSect},()=>[]);
   for(let i=0;i<hubSp.length;i++){if(hubSp[i]<.5)continue;bins[Math.floor(((dirs[i]%360)+sz/2)/sz)%nSect].push(hubSp[i]);}
   const tot=bins.reduce((s,b)=>s+b.length,0)||1;
-  let sectors=bins.map((b,i)=>{const freq=b.length/tot;const wb=b.length>5?weibullFitCalms(b):{A:8,k:2};const ms=b.length?b.reduce((s,v)=>s+v,0)/b.length:0;return{freq,A:wb.A,k:wb.k,ms,dir:(i+.5)*sz,n:b.length};});
-  // Apply Weibull improvements: neighbour borrowing and sector k-smoothing
-  sectors = borrowNeighbourK(sectors, 30);
-  sectors = smoothSectorK(sectors, 1); // v16.0: 1 iteration (WAsP-aligned, prevents over-smoothing)
-  // v11.0: WAsP-style directional smoothing proxy
-  sectors = directionalSmoothing(sectors);
+  let sectors=bins.map((b,i)=>{const freq=b.length/tot;const wb=b.length>5?weibullFitCalms(b):{A:hubWb.A||8,k:hubWb.k||2};const ms=b.length?b.reduce((s,v)=>s+v,0)/b.length:0;return{freq,A:Math.max(0.1,wb.A),k:Math.max(0.5,Math.min(5,wb.k)),ms,dir:(i+.5)*sz,n:b.length};});
+  sectors=borrowNeighbourK(sectors,30);
+  sectors=smoothSectorK(sectors,1);
+  sectors=directionalSmoothing(sectors);
 
   const n=txy.length;
   const gross=new Float64Array(n),net=new Float64Array(n);
   const dv=.5,vMax=28;
-  // v16.0: Pre-compute per-turbine, per-sector Jackson-Hunt terrain speedups
-  // This replaces the old single-speedup-per-turbine approach with direction-dependent
-  // speedups from the Jackson-Hunt linearized potential flow model
-  const jhSpeedups = computeAllJHSpeedups(sectors, hubHH, z0);
-  // v39.1: Flat terrain guard — if terrain is flat or no terrain data, all speedups = 1.0
-  const isFlatTerrain = !S.terrain || !S.terrain.grid || !S.terrain.grid.length || ((S.terrain.maxE||0)-(S.terrain.minE||0)) < 20;
-  // v40.1: CRITICAL — Force BZ state to flat-terrain when isFlatTerrain
-  // Stale BZ speedups from a previous terrain run would otherwise cause wild per-WTG WS variation
-  if(isFlatTerrain && BZ.enabled){
-    BZ.speedups = S.turbines.map(() => 1.0);
-    for(let si=0;si<sectors.length;si++){
-      if(BZ.sectorSpeedups[si]) BZ.sectorSpeedups[si] = S.turbines.map(() => 1.0);
-      if(BZ.mastSectorSU) BZ.mastSectorSU[si] = 1.0;
-    }
-    BZ.mastSU = 1.0;
-    BZ.rix = 0;
-    log('v40.1: Flat terrain detected — BZ speedups forced to 1.0 (no orographic effect)','i');
+
+  // ─── v41.0: Determine terrain classification ───
+  // CRITICAL: This drives ALL speedup decisions
+  const hasTerrainData=S.terrain&&S.terrain.grid&&S.terrain.grid.length>0;
+  const terrainRange=hasTerrainData?(S.terrain.maxE-S.terrain.minE):0;
+  // Flat: range < 20m OR no terrain data
+  const isFlatTerrain=!hasTerrainData||terrainRange<20;
+  // Complex: range > 100m and RIX > 5%
+  const isComplexTerrain=hasTerrainData&&terrainRange>100;
+
+  // ─── v41.0: Compute terrain speedups ───
+  // In flat terrain: ALL speedups = 1.0 (WAsP principle)
+  // In complex terrain: BZ or JH speedups apply
+  let jhSpeedups=[];
+  if(!isFlatTerrain){
+    jhSpeedups=computeAllJHSpeedups(sectors,hubHH,z0);
   }
-  // For display: compute average speedup per turbine (using prevailing direction)
-  const prevDir=parseFloat($('prevWD')?.value||270);
+
+  // v41.0: Force BZ state to match terrain classification
+  if(isFlatTerrain){
+    // FLAT TERRAIN: Disable BZ entirely, force all speedups to 1.0
+    BZ.enabled=false;
+    BZ.speedups=S.turbines.map(()=>1.0);
+    BZ.sectorSpeedups=[];
+    BZ.mastSectorSU=[];
+    BZ.mastSU=1.0;
+    BZ.rix=0;
+    BZ.sectorRoughRC=[];
+    BZ.turbRoughRC=[];
+    BZ.sectorTurning=[];
+    BZ.mastSectorTurning=[];
+    BZ.sectorInclination=[];
+    log('v41.0: Flat terrain — ALL speedups = 1.0, BZ disabled','i');
+  }else if(BZ.enabled){
+    // COMPLEX TERRAIN with BZ: Validate speedups are physically reasonable
+    // Clamp per-sector speedups to [0.7, 1.3] range (WAsP never exceeds ±30%)
+    for(let si=0;si<sectors.length;si++){
+      if(BZ.sectorSpeedups[si]){
+        BZ.sectorSpeedups[si]=BZ.sectorSpeedups[si].map(su=>Math.max(0.7,Math.min(1.3,su)));
+      }
+      if(BZ.mastSectorSU&&BZ.mastSectorSU[si]){
+        BZ.mastSectorSU[si]=Math.max(0.7,Math.min(1.3,BZ.mastSectorSU[si]));
+      }
+    }
+    BZ.mastSU=Math.max(0.7,Math.min(1.3,BZ.mastSU));
+    log('v41.0: Complex terrain BZ — speedups clamped to [0.7, 1.3]','i');
+  }
+
+  // Per-turbine average speedup for display (frequency-weighted)
   const tSpeedups=S.turbines.map((t,ti)=>{
-    if(isFlatTerrain) return 1.0; // v39.1: No orographic speedup in flat terrain
+    if(isFlatTerrain)return 1.0;
     if(!jhSpeedups[ti])return 1.0;
-    // Average across all sectors (frequency-weighted)
-    let wSum=0, suSum=0;
-    sectors.forEach((sec,si)=>{
-      wSum+=sec.freq;
-      suSum+=sec.freq*jhSpeedups[ti][si].speedup;
-    });
+    let wSum=0,suSum=0;
+    sectors.forEach((sec,si)=>{wSum+=sec.freq;suSum+=sec.freq*jhSpeedups[ti][si].speedup;});
     return wSum>0?suSum/wSum:1.0;
   });
-  // v22.0 FIX: Redesigned OWC→GWC→SWC chain ratio
-  // The Weibull is already fitted at HUB HEIGHT (not mast height).
-  // Therefore the chain should only apply the ROUGHNESS CHANGE from global z0
-  // to per-sector z0 — NOT the vertical extrapolation from mastH to hubHH.
-  // The old code tried to undo the vertical extrapolation via /logRatioGlobal,
-  // but this was approximate and caused 3× errors on flat terrain.
-  //
-  // Correct approach: compute the ratio of "WS at hubHH with per-sector z0"
-  // to "WS at hubHH with global z0" — this is purely a roughness correction.
-  // On flat terrain (z0_mast ≈ z0_site ≈ z0), this ratio is exactly 1.0.
-  const hasRoughRose = (S.autoRoughnessRose && S.autoRoughnessRose.length) ||
-                       (S.roughnessRose && S.roughnessRose.length);
+
+  // ─── v41.0: GDL and roughness corrections ───
+  // On flat terrain with uniform z0: GDL factor = 1.0, roughness ratio = 1.0
+  // This is the WAsP principle: no correction needed when site ≈ mast conditions
+  let gdlFactor=gdlCorrectionFactor(L,z0,hubHH);
+  if(!isFinite(gdlFactor))gdlFactor=1.0;
+  // On flat terrain: force GDL to 1.0 (removes any numerical noise)
+  if(isFlatTerrain)gdlFactor=1.0;
+
+  const hasRoughRose=(S.autoRoughnessRose&&S.autoRoughnessRose.length)||(S.roughnessRose&&S.roughnessRose.length);
+
+  // Auto-compute roughness rose if terrain data available and not already done
+  if(!S.autoRoughnessRose&&hasTerrainData){
+    computeAutoRoughnessRose();
+    if(S.autoRoughnessRose){
+      const z0Range=S.autoRoughnessRose.map(s=>s.z0);
+      log(`Auto roughness rose: z0 range ${Math.min(...z0Range).toFixed(4)}–${Math.max(...z0Range).toFixed(4)}m`,'i');
+    }
+  }
+
+  // Displacement height per turbine
+  const turbD0=S.turbines.map(t=>computeDisplacementHeight(t.lat,t.lon));
+  const maxD0=Math.max(...turbD0);
+
+  // ─── v41.0: MAIN AEP INTEGRATION LOOP ───
+  // WAsP methodology:
+  //   For each sector × wind speed bin:
+  //     1. Start with Weibull-distributed OWC at hub height
+  //     2. Apply OWC→GWC→SWC chain (or identity on flat terrain)
+  //     3. Apply per-turbine orographic speedup (1.0 on flat terrain)
+  //     4. Apply per-turbine HH scaling (if mixed HH)
+  //     5. Compute wake effects
+  //     6. Accumulate gross and net energy
 
   sectors.forEach((sec,si)=>{if(sec.freq<1e-5)return;
-    // v22.0: Compute per-sector chain ratio properly
-    // Since Weibull A is already at hub height with global z0,
-    // the chain ratio should only convert from global z0 to per-sector z0
-    let chainRatio;
-    // v22.1 FIX: Define roughRatioIBL and z0_site_sec outside hasRoughRose block
-    // so they're available in the BZ per-turbine path below
-    const z0_mast_sec = hasRoughRose ? getSectorEffectiveZ0('mast', si, hubHH, nSect) : z0;
-    const z0_site_sec = hasRoughRose ? getSectorEffectiveZ0('site', si, hubHH, nSect) : z0;
-    const roughRatioIBL = hasRoughRose ? getSectorRoughnessRatio(si, hubHH, nSect) : 1.0;
-    if (hasRoughRose) {
-      // Full OWC→GWC→SWC chain: mast height + mast z0 → hub height + site z0
-      // But Weibull is already at hub height, so we need to undo the initial
-      // vertical extrapolation (mastH → hubHH with global z0) then apply
-      // the full chain (mastH + z0_mast → hubHH + z0_site + IBL + GDL)
-      const owcGwcR = owcToGWC(1.0, mastH, z0_mast_sec, hubHH, 0.03, L);
-      const gwcSwcR = gwcToSWC(1.0, hubHH, 0.03, hubHH, z0_site_sec, L);
-      // Undo: the Weibull A was scaled by this factor (mastH → hubHH, global z0)
-      const undoExtrapolation = logWS_stab(1.0, mastH, hubHH, z0, L);
-      chainRatio = (owcGwcR * gwcSwcR * roughRatioIBL * gdlFactor) / Math.max(undoExtrapolation, 0.01);
-      // v22.0: On flat terrain (z0_mast ≈ z0_site ≈ z0), verify chainRatio ≈ 1
-      // If all z0 are equal, owcGwcR * gwcSwcR ≈ undoExtrapolation
-      if (!isFinite(chainRatio) || isNaN(chainRatio)) chainRatio = 1.0;
-      // v22.0: Physical clamp — on truly flat terrain, ratio should be very close to 1
-      // Allow ±15% for roughness variation, but not 3× errors
-      chainRatio = Math.max(0.7, Math.min(1.3, chainRatio));
-    } else {
-      // No roughness rose: z0 is uniform, chain ratio is just GDL correction
-      // On uniform z0, OWC→GWC→SWC should be identity (ratio = 1)
-      // Only GDL (geostrophic departure) provides a small correction
-      chainRatio = gdlFactor;
-      if (!isFinite(chainRatio) || isNaN(chainRatio)) chainRatio = 1.0;
-      // GDL factor is small (typically 0.98-1.02), clamp tightly
-      chainRatio = Math.max(0.95, Math.min(1.05, chainRatio));
+
+    // Per-sector roughness and chain ratio
+    const z0_mast_sec=hasRoughRose?getSectorEffectiveZ0('mast',si,hubHH,nSect):z0;
+    const z0_site_sec=hasRoughRose?getSectorEffectiveZ0('site',si,hubHH,nSect):z0;
+    const roughRatioIBL=hasRoughRose?getSectorRoughnessRatio(si,hubHH,nSect):1.0;
+
+    // v41.0: Compute chain ratio for the NON-BZ path
+    // On flat terrain with uniform z0: chainRatio = 1.0 (identity)
+    // On terrain with roughness rose: proper OWC→GWC→SWC through z0_ref=0.03
+    let chainRatio=1.0; // default: identity
+    if(hasRoughRose&&!isFlatTerrain){
+      const owcGwcR=owcToGWC(1.0,mastH,z0_mast_sec,hubHH,0.03,L);
+      const gwcSwcR=gwcToSWC(1.0,hubHH,0.03,hubHH,z0_site_sec,L);
+      const undoExtrap=logWS_stab(1.0,mastH,hubHH,z0,L);
+      chainRatio=(owcGwcR*gwcSwcR*roughRatioIBL*gdlFactor)/Math.max(undoExtrap,0.01);
+      if(!isFinite(chainRatio))chainRatio=1.0;
+      chainRatio=Math.max(0.7,Math.min(1.3,chainRatio));
+    }else if(!isFlatTerrain){
+      // No roughness rose but terrain exists: just GDL
+      chainRatio=gdlFactor;
+      if(!isFinite(chainRatio))chainRatio=1.0;
+      chainRatio=Math.max(0.95,Math.min(1.05,chainRatio));
+    }
+    // On flat terrain: chainRatio stays 1.0
+
+    // BZ per-sector values (only used when BZ is enabled)
+    const bzActive=BZ.enabled&&BZ.sectorSpeedups&&BZ.sectorSpeedups[si];
+    const mastOrSU=bzActive?(BZ.mastSectorSU?BZ.mastSectorSU[si]:BZ.mastSU):1.0;
+    const meanTurbSU=bzActive?BZ.sectorSpeedups[si].reduce((s,v)=>s+v,0)/Math.max(1,BZ.sectorSpeedups[si].length):1.0;
+    const meanRoughRC=bzActive?(BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC.reduce((s,v)=>s+v,0)/Math.max(1,BZ.turbRoughRC.length):1)):1.0;
+
+    // Flow turning
+    let effectiveDir=sec.dir;
+    if(bzActive&&BZ.sectorTurning&&BZ.sectorTurning[si]){
+      const meanTurn=BZ.sectorTurning[si].reduce((s,val)=>s+val,0)/Math.max(1,BZ.sectorTurning[si].length);
+      effectiveDir=sec.dir+meanTurn;
     }
 
     for(let v=.5;v<=vMax;v+=dv){
       const prob=wbPdf(v,sec.A,sec.k)*dv;if(prob<1e-9)continue;
-      // Apply obstacle shelter at mast (reduces OWC)
-      const shelterRC = sectorShelterFactor(sec.dir, hubHH);
-      const shelteredV = v * shelterRC;
-      // Apply rotor-averaged factor (multiplicative, shear-dependent)
-      const rotorV = shelteredV * rotAvgFactor;
-      // Flow model: convert OWC to SWC
-      let correctedV=rotorV;
-      // v19.0: NaN guard for correctedV
-      if (!isFinite(correctedV)) correctedV = rotorV;
-      // Flow turning — adjust effective wind direction
-      let effectiveDir=sec.dir;
-      if(BZ.enabled&&BZ.sectorTurning&&BZ.sectorTurning[si]){
-        const meanTurn=BZ.sectorTurning[si].reduce((s,val)=>s+val,0)/Math.max(1,BZ.sectorTurning[si].length);
-        effectiveDir=sec.dir+meanTurn;
+
+      // Obstacle shelter at mast
+      const shelterRC=sectorShelterFactor(sec.dir,hubHH);
+      const shelteredV=v*shelterRC;
+
+      // Rotor averaging
+      const rotorV=shelteredV*rotAvgFactor;
+
+      // OWC→SWC conversion: compute the "reference site" wind speed
+      // This is the free-stream wind speed at the reference hub height
+      let correctedV;
+      if(bzActive){
+        // BZ path: OWC → GWC (remove mast orographic SU) → SWC (apply mean turbine SU + roughness + GDL)
+        correctedV=rotorV/Math.max(mastOrSU,0.5)*meanTurbSU*meanRoughRC*gdlFactor;
+      }else{
+        // Non-BZ path: apply chain ratio (1.0 on flat terrain)
+        correctedV=rotorV*chainRatio;
       }
-      if(BZ.enabled&&BZ.sectorSpeedups&&BZ.sectorSpeedups[si]){
-        // Per-turbine BZ-corrected free stream
-        const meanTurbSU=BZ.sectorSpeedups[si].reduce((s,val)=>s+val,0)/Math.max(1,BZ.sectorSpeedups[si].length);
-        const meanRoughRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC.reduce((s,val)=>s+val,0)/Math.max(1,BZ.turbRoughRC.length):1);
-        const mastOrSU=BZ.mastSectorSU?BZ.mastSectorSU[si]:BZ.mastSU;
-        // OWC → GWC → SWC: remove mast SU, apply turbine SU + roughness (IBL-corrected)
-        correctedV=rotorV/mastOrSU*meanTurbSU*roughRatioIBL*gdlFactor;
-      } else {
-        // v13.1: Non-BZ path — proper OWC→GWC→SWC wind atlas chain
-        // Undo the global-z0 extrapolation, apply per-sector chain through GWC:
-        //   OWC(mastH, z0_global) → GWC(hubH, z0_ref=0.03) → SWC(hubH, z0_site + IBL)
-        // The chainRatio captures the full conversion including IBL growth and GDL
-        correctedV = rotorV * chainRatio;
-      }
-      // v19.0: NaN guard after flow model correction
-      if (!isFinite(correctedV) || correctedV < 0) correctedV = rotorV;
-      // v20.0: Physical clamp — wind speed cannot exceed realistic maximum
-      correctedV = Math.min(correctedV, 30);
-      // Wake with direction variability (Gaussian cone spreading)
-      const wsp=wakeRunWithDirVar(txy,correctedV,effectiveDir,lut,kw);const gp=lutGet(lut,correctedV).power;
-      // Per-turbine energy accumulation (v14.0: uses per-WTG density LUTs)
-      if(BZ.enabled&&BZ.sectorSpeedups&&BZ.sectorSpeedups[si]){
+
+      // Safety guards
+      if(!isFinite(correctedV)||correctedV<0)correctedV=rotorV;
+      correctedV=Math.min(correctedV,30);
+      if(correctedV<0.3)continue; // skip unphysically low wind speeds
+
+      // Wake calculation for the reference free-stream WS
+      const wsp=wakeRunWithDirVar(txy,correctedV,effectiveDir,lut,kw);
+
+      // ─── v41.0: Per-turbine wind speed calculation ───
+      // PRINCIPLE: Each turbine's wind speed is derived from the reference
+      // free-stream WS by applying:
+      //   1. Orographic speedup (BZ or JH) — 1.0 on flat terrain
+      //   2. Roughness change ratio (IBL) — 1.0 on flat terrain
+      //   3. Hub height scaling — only if mixed HH layout
+      //   4. Displacement height correction — only if canopy present
+      //
+      // On flat terrain with uniform z0 and same HH: all turbines get
+      // the SAME wind speed (= correctedV), which is physically correct.
+
+      if(bzActive){
+        // BZ per-turbine path
         for(let t=0;t<n;t++){
           const turbSU=BZ.sectorSpeedups[si][t]||1;
-          // v32.0 FIX: Use sector-specific roughness ratio (roughRatioIBL) for per-turbine path
-          // Previously used omnidirectional BZ.turbRoughRC[t] which ignored roughness rose
           const turbRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC[t]:roughRatioIBL);
-          const mastOrSU=BZ.mastSectorSU?BZ.mastSectorSU[si]:BZ.mastSU;
-          // v32.0: GDL-based downscale (if selected)
-          const useGDL=$('downscaleMethod')?.value!=='simple';
-          let turbV;
-          if(useGDL&&S.gwcSectors){
-            // Use GDL pathway: OWC→u*→Ug→u*_target→SWC (proper WAsP chain)
-            const swcResult=waspDownscale(
-              S.gwcSectors.map(s=>s.A),S.gwcSectors.map(s=>s.k),
-              [turbSU-1],z0_site_sec,hubHH,
-              parseFloat($('mastLat')?.value||55.5),
-              parseFloat($('gwcH')?.value||100),
-              parseFloat($('gwcZ0')?.value||0.03),
-              turbRC,gdlFactor
-            );
-            turbV=swcResult.A[0]*(rotorV/sec.A)*rotAvgFactor*hhScaleFactors[t];
-          } else {
-            // Legacy simple method: SWC = OWC / mast_oro_SU × turb_oro_SU × roughness_ratio(IBL) × GDL × HH_scale
-            turbV=rotorV/mastOrSU*turbSU*turbRC*gdlFactor;
-            turbV*=hhScaleFactors[t];
+          let turbV=rotorV/Math.max(mastOrSU,0.5)*turbSU*turbRC*gdlFactor;
+
+          // Hub height scaling
+          turbV*=hhScaleFactors[t];
+
+          // Displacement height correction
+          if(turbD0[t]>0.5){
+            const d0Ratio=displacementCorrectedLogWS(1.0,hubHH,turbineHHs[t],z0_site_sec,turbD0[t],L)/Math.max(0.01,logWS_stab(1.0,hubHH,turbineHHs[t],z0_site_sec,L));
+            if(isFinite(d0Ratio))turbV*=d0Ratio;
           }
-          // v20.0: NaN/Infinity guard for turbV in BZ per-turbine path
-          if (!isFinite(turbV) || turbV < 0 || turbV > 30) continue;
-          const inclFactor = (BZ.sectorInclination && BZ.sectorInclination[si]) ? (BZ.sectorInclination[si][t] || 1) : 1;
-          const turbV_adj = turbV * inclFactor;
-          if (!isFinite(turbV_adj) || turbV_adj < 0) continue;
-          const turbLut=turbLUTs[t]; // v14.0: per-WTG density LUT
-          const turbGp=lutGet(turbLut,turbV_adj).power;
-          const wakeRatio=correctedV>0.5?wsp[t]/correctedV:1;
-          const turbWsp=turbV_adj*wakeRatio;
-          if (isFinite(turbGp)) gross[t]+=turbGp*sec.freq*prob*8760;
-          const netPwr=lutGet(turbLut,turbWsp).power;
-          if (isFinite(netPwr)) net[t]+=netPwr*sec.freq*prob*8760;
-        }
-      } else {
-        // v16.0: Non-BZ path — per-turbine with OWC→GWC→SWC chain + Jackson-Hunt terrain speedup + flow turning + HH scaling + per-WTG density
-        for(let t=0;t<n;t++){
-          const tHH=turbineHHs[t];
-          // v16.0: Use per-sector Jackson-Hunt speedup (direction-dependent)
-          const jhSU = jhSpeedups[t] && jhSpeedups[t][si] ? jhSpeedups[t][si].speedup : tSpeedups[t];
-          const jhTurn = jhSpeedups[t] && jhSpeedups[t][si] ? jhSpeedups[t][si].turning : 0;
-          // Per-turbine HH scaling: project from reference HH to turbine HH using site z0
-          let hhRoughScale = tHH !== hubHH ?
-            owcToSWC_sector(1.0, hubHH, z0_site_sec, tHH, z0_site_sec, L) : 1.0;
-          // v19.0: NaN guard for hhRoughScale
-          if (!isFinite(hhRoughScale) || isNaN(hhRoughScale)) hhRoughScale = 1.0;
-          // v17.0 Fix 3: Displacement height correction per turbine
-          let d0Corr = turbD0[t] > 0.5 ?
-            displacementCorrectedLogWS(1.0, hubHH, tHH, z0_site_sec, turbD0[t], L) / Math.max(0.01, logWS_stab(1.0, hubHH, tHH, z0_site_sec, L)) : 1.0;
-          // v19.0: NaN guard for d0Corr
-          if (!isFinite(d0Corr) || isNaN(d0Corr)) d0Corr = 1.0;
-          // Gross wind speed: SWC × Jackson-Hunt terrain speedup × HH scaling × d₀ correction
-          // v19.0: Clamp jhSU to physical range and guard NaN
-          const safeJhSU = isFinite(jhSU) && jhSU > 0.5 && jhSU < 2.0 ? jhSU : 1.0;
-          const turbV=correctedV*safeJhSU*hhRoughScale*d0Corr;
-          // v19.0: Skip if turbV is NaN or negative (protects gross/net accumulation)
-          if (!isFinite(turbV) || turbV < 0) continue;
-          const turbLut=turbLUTs[t]; // v14.0: per-WTG density LUT
+
+          // Inclination correction
+          const inclFactor=(BZ.sectorInclination&&BZ.sectorInclination[si])?(BZ.sectorInclination[si][t]||1):1;
+          turbV*=inclFactor;
+
+          if(!isFinite(turbV)||turbV<0||turbV>30)continue;
+
+          const turbLut=turbLUTs[t];
           const turbGp=lutGet(turbLut,turbV).power;
           const wakeRatio=correctedV>0.5?wsp[t]/correctedV:1;
           const turbWsp=turbV*wakeRatio;
-          if (isFinite(turbGp)) gross[t]+=turbGp*sec.freq*prob*8760;
+          if(isFinite(turbGp)&&turbGp>0)gross[t]+=turbGp*sec.freq*prob*8760;
           const netPwr=lutGet(turbLut,turbWsp).power;
-          if (isFinite(netPwr)) net[t]+=netPwr*sec.freq*prob*8760;
+          if(isFinite(netPwr)&&netPwr>0)net[t]+=netPwr*sec.freq*prob*8760;
+        }
+      }else{
+        // Non-BZ path (flat terrain or terrain without BZ)
+        for(let t=0;t<n;t++){
+          // On flat terrain: safeJhSU = 1.0, hhRoughScale = 1.0 (same HH),
+          // d0Corr = 1.0, so turbV = correctedV (all turbines identical)
+          const jhSU=jhSpeedups[t]&&jhSpeedups[t][si]?jhSpeedups[t][si].speedup:tSpeedups[t];
+          const safeJhSU=isFinite(jhSU)&&jhSU>0.5&&jhSU<2.0?jhSU:1.0;
+
+          // HH scaling with roughness (only matters for mixed HH)
+          let hhRoughScale=1.0;
+          if(turbineHHs[t]!==hubHH){
+            hhRoughScale=owcToSWC_sector(1.0,hubHH,z0_site_sec,turbineHHs[t],z0_site_sec,L);
+            if(!isFinite(hhRoughScale))hhRoughScale=hhScaleFactors[t]; // fallback to simple log ratio
+          }
+
+          // Displacement height
+          let d0Corr=1.0;
+          if(turbD0[t]>0.5){
+            d0Corr=displacementCorrectedLogWS(1.0,hubHH,turbineHHs[t],z0_site_sec,turbD0[t],L)/Math.max(0.01,logWS_stab(1.0,hubHH,turbineHHs[t],z0_site_sec,L));
+            if(!isFinite(d0Corr))d0Corr=1.0;
+          }
+
+          const turbV=correctedV*safeJhSU*hhRoughScale*d0Corr;
+          if(!isFinite(turbV)||turbV<0)continue;
+
+          const turbLut=turbLUTs[t];
+          const turbGp=lutGet(turbLut,turbV).power;
+          const wakeRatio=correctedV>0.5?wsp[t]/correctedV:1;
+          const turbWsp=turbV*wakeRatio;
+          if(isFinite(turbGp)&&turbGp>0)gross[t]+=turbGp*sec.freq*prob*8760;
+          const netPwr=lutGet(turbLut,turbWsp).power;
+          if(isFinite(netPwr)&&netPwr>0)net[t]+=netPwr*sec.freq*prob*8760;
         }
       }
     }
   });
 
-  // v19.0: NaN guard for totals
+  // ─── v41.0: Post-processing ───
   let grossG=Array.from(gross).reduce((s,e)=>s+(isFinite(e)?e:0),0)/1e6;
   let netWake=Array.from(net).reduce((s,e)=>s+(isFinite(e)?e:0),0)/1e6;
-  // v39.1: Diagnostic for AEP = 0 bug — log detailed info when no energy is accumulated
+
+  // Diagnostic
   if(grossG<=0){
     const activeSectors=sectors.filter(s=>s.freq>=1e-5).length;
     const hubSpValid=hubSp.filter(v=>v>0.5).length;
-    log(`⚠ AEP = 0.00 GWh diagnostic: hubSp valid=${hubSpValid}/${hubSp.length}, activeSectors=${activeSectors}/${sectors.length}, mastMean=${mastMean.toFixed(2)}, hubMean=${hubMean.toFixed(2)}, mcpFactor=${S.mcpFactor.toFixed(3)}, BZ=${BZ.enabled}, isFlatTerrain=${isFlatTerrain}`,'w');
-    if(hubSpValid===0)log('  → All hub-height wind speeds ≤ 0.5 m/s — check wind data and MCP factor','w');
-    if(activeSectors===0)log('  → No active sectors (all freq < 1e-5) — check wind direction data','w');
+    log(`⚠ AEP = 0 diagnostic: hubSp valid=${hubSpValid}/${hubSp.length}, sectors=${activeSectors}/${sectors.length}, mastMean=${mastMean.toFixed(2)}, hubMean=${hubMean.toFixed(2)}, MCP=${mcpF.toFixed(3)}, BZ=${BZ.enabled}, flat=${isFlatTerrain}`,'w');
+    if(hubSpValid===0)log('  → All hub WS ≤ 0.5 — check wind data source and mastH/hubH settings','w');
+    if(activeSectors===0)log('  → No active sectors — check wind direction data','w');
   }
-  // v10.0: Apply empirical calibration — roughness and wake corrections
-  let calNetWake = netWake;
-  let calRoughRC = 1;
-  if (BZ.enabled && BZ.rix) {
-    const cal = getCalibrationFactors(BZ.rix);
-    // Apply roughness calibration: slightly reduce roughness ratios for complex terrain
-    calRoughRC = cal.roughCorrection;
-    // Apply wake calibration: slightly increase wake loss for complex terrain
-    // calNetWake represents the wake-affected AEP after applying the wake correction
-    const grossMinusCalNet = grossG - (grossG - netWake) * cal.wakeCorrection;
-    calNetWake = Math.max(0, grossMinusCalNet);
+
+  // Empirical calibration for complex terrain
+  let calNetWake=netWake;
+  let calRoughRC=1;
+  if(BZ.enabled&&BZ.rix){
+    const cal=getCalibrationFactors(BZ.rix);
+    calRoughRC=cal.roughCorrection;
+    const grossMinusCalNet=grossG-(grossG-netWake)*cal.wakeCorrection;
+    calNetWake=Math.max(0,grossMinusCalNet);
   }
   let wakeL=grossG>0?(grossG-calNetWake)/grossG*100:0;
-  // v11.0: WAsP wake efficiency proxy
-  wakeL = waspWakeEfficiency(wakeL, n, z0);
-  // v11.0: Offshore calibration correction (Lange et al. 2006)
-  // Offshore sites have lower roughness and different wake characteristics
-  // v22.1 FIX: Moved offshore correction BEFORE netF/CF calculation
-  if (z0 <= 0.001) {
-    // Offshore: reduce wake losses by ~5% (offshore wakes are shorter due to lower TI)
-    calNetWake = calNetWake + (grossG - calNetWake) * 0.05;
-    calNetWake = Math.min(grossG, calNetWake);
+  wakeL=waspWakeEfficiency(wakeL,n,z0);
+  if(z0<=0.001){
+    calNetWake=calNetWake+(grossG-calNetWake)*0.05;
+    calNetWake=Math.min(grossG,calNetWake);
   }
-  // v22.1 FIX: netF computed AFTER all corrections (offshore, wake efficiency)
   const availPct=parseFloat($('availabilityPct')?.value)||95;
   const availM=availPct/100;
   const netF=calNetWake*lossM*availM;
-  // Installed capacity: sum per-turbine rated power (same for all, but future-proof)
   const instMW=n*pc.rated/1000,CF=netF*1000/(instMW*8760)*100;
-  // Component uncertainty model (RSS)
+
+  // Uncertainty model
   const u_wind_r=sectors.reduce((s,sec)=>s+(sec.n<200?0.08:sec.n<1000?0.05:0.03)*sec.freq,0);
   const u_wake_r=wakeL>15?0.035:0.020;
   const u_pc_r=0.015;const u_den_r=Math.abs(density-1.225)/1.225*0.5;
   const u_other_r=0.015;
-  // v12.1: Add HH uncertainty for mixed hub height layouts
   const u_hh_r=isMixedHH?0.01:0;
   const sig=Math.sqrt(u_wind_r**2+u_wake_r**2+u_pc_r**2+u_den_r**2+u_other_r**2+u_hh_r**2);
   const P50=netF,P75=P50*(1-0.674*sig),P90=P50*(1-1.282*sig),P99=P50*(1-2.326*sig);
 
-  // Per-turbine with free WS using actual flow model corrections
-  // v25.0 FIX: Use BZ speedups (not just JH) in free WS so each turbine shows different values
+  // ─── v41.0: Per-turbine free-stream wind speed ───
+  // On flat terrain: ALL turbines get the same free WS = rotorMeanWS
+  // This is the fundamental WAsP principle for flat terrain
+  const prevDir=parseFloat($('prevWD')?.value||270);
   const freeSpWind=wakeRun(txy,rotorMeanWS,prevDir,lut,kw);
-  // v25.0: Compute per-turbine effective speedup from the ACTUAL flow model used in AEP
-  // This combines: BZ orographic speedup + roughness change + HH scaling
-  // v26.0 FIX: Use sector-frequency-weighted directional speedups instead of
-  // omnidirectional BZ.speedups[i] — on moderate terrain, the omnidirectional SU
-  // is nearly identical for all turbines (averaged over directions), but the
-  // DIRECTIONAL speedups vary significantly per location.
+
   const perTEffSU=S.turbines.map((t,i)=>{
-    if(BZ.enabled&&BZ.speedups.length){
-      // v26.0: Frequency-weighted directional speedup (not omnidirectional average)
-      // This ensures different turbines get different speedups based on their
-      // directional orographic exposure, not just their averaged terrain position
-      const freqWeightedSU = sectors.reduce((sum, sec, si) => {
-        const turbSecSU = BZ.sectorSpeedups?.[si]?.[i] || BZ.speedups[i] || 1;
-        const mastSecSU = BZ.mastSectorSU?.[si] || BZ.mastSU || 1;
-        return sum + sec.freq * (turbSecSU / mastSecSU);
-      }, 0);
-      // v26.0: Sector-frequency-weighted roughness ratio (not just turbRoughRC)
-      const freqWeightedRC = sectors.reduce((sum, sec, si) => {
-        const secRC = BZ.sectorRoughRC?.[si] || (BZ.turbRoughRC?.[i] || 1);
-        return sum + sec.freq * secRC;
-      }, 0);
-      const hhS=hhScaleFactors[i];
-      return freqWeightedSU * freqWeightedRC * gdlFactor * hhS;
+    if(isFlatTerrain){
+      // Flat terrain: only HH scaling applies (if mixed HH)
+      return hhScaleFactors[i];
     }
-    // Non-BZ path: JH terrain speedup + HH scaling + roughness ratio + GDL
+    if(BZ.enabled&&BZ.speedups.length){
+      // BZ path: frequency-weighted speedup + roughness + GDL + HH
+      const freqWeightedSU=sectors.reduce((sum,sec,si)=>{
+        const turbSecSU=BZ.sectorSpeedups?.[si]?.[i]||BZ.speedups[i]||1;
+        const mastSecSU=BZ.mastSectorSU?.[si]||BZ.mastSU||1;
+        return sum+sec.freq*(turbSecSU/Math.max(mastSecSU,0.5));
+      },0);
+      const freqWeightedRC=sectors.reduce((sum,sec,si)=>{
+        const secRC=BZ.sectorRoughRC?.[si]||(BZ.turbRoughRC?.[i]||1);
+        return sum+sec.freq*secRC;
+      },0);
+      return freqWeightedSU*freqWeightedRC*gdlFactor*hhScaleFactors[i];
+    }
+    // JH path
     const jhSU=tSpeedups[i];
-    // Frequency-weighted roughness ratio across sectors (not just sector 0)
     const roughRC=hasRoughRose?sectors.reduce((sum,sec,si)=>sum+sec.freq*getSectorRoughnessRatio(si,hubHH,nSect),0):1;
     return jhSU*hhScaleFactors[i]*gdlFactor*(hasRoughRose?roughRC:1);
   });
-  // tSpeedups is frequency-weighted average per turbine (computed above from JH)
+
   const perT=txy.map((_,i)=>{
     const wl=gross[i]>0?(gross[i]-net[i])/gross[i]*100:0;
     const nt=net[i]*lossM/1e6;const cf=nt*1e6/(pc.rated*8760)*100;
-    // v25.0 FIX: Per-turbine free-stream WS using ACTUAL effective speedup
-    // This now properly accounts for BZ orographic speedups + roughness + HH scaling
-    // so different turbines at different locations get different free-stream WS
     const freeWS=rotorMeanWS*perTEffSU[i];
-    // Wake WS = free-stream WS reduced by wake model at prevailing direction
-    // Use the same effective speedup applied to the wake model output
     const wakeWS=freeSpWind[i]/Math.max(0.1,rotorMeanWS)*freeWS;
-    const turbLut=turbLUTs[i]; // v14.0: per-WTG density LUT for display
-    // v25.0: Store effective speedup for display in table
+    const turbLut=turbLUTs[i];
     const effSU=perTEffSU[i];
     return{i:i+1,ws:freeWS.toFixed(2),hubWS:(hubMean*hhScaleFactors[i]).toFixed(2),rotorWS:(rotorMeanWS*tSpeedups[i]*hhScaleFactors[i]).toFixed(2),wake:wl.toFixed(1),wakeWS:wakeWS.toFixed(2),net:nt.toFixed(3),cf:cf.toFixed(1),gross:(gross[i]/1e6).toFixed(3),power:lutGet(turbLut,wakeWS).power.toFixed(0),hh:turbineHHs[i],speedup:effSU.toFixed(4),rho:turbDensities[i].toFixed(4),effSU:effSU};
   });
 
-  // GWC — WAsP-aligned OWC→GWC→SWC per sector
+  // GWC sectors
   const gwcSectors=sectors.map((s,si)=>{
     let gwcA,swcA,SR;
     if(BZ.enabled&&BZ.sectorSpeedups&&BZ.sectorSpeedups[si]){
-      const mastOrSU=BZ.mastSectorSU?BZ.mastSectorSU[si]:BZ.mastSU;
-      const meanTurbSU=BZ.sectorSpeedups[si].reduce((s,v)=>s+v,0)/Math.max(1,BZ.sectorSpeedups[si].length);
-      const roughRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC.reduce((s,v)=>s+v,0)/Math.max(1,BZ.turbRoughRC.length):1);
-      gwcA=Math.max(0,s.A/mastOrSU*gdlFactor);
-      swcA=Math.max(0,gwcA*meanTurbSU*roughRC);
+      const mOrSU=BZ.mastSectorSU?BZ.mastSectorSU[si]:BZ.mastSU;
+      const mTurbSU=BZ.sectorSpeedups[si].reduce((s,v)=>s+v,0)/Math.max(1,BZ.sectorSpeedups[si].length);
+      const rRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC.reduce((s,v)=>s+v,0)/Math.max(1,BZ.turbRoughRC.length):1);
+      gwcA=Math.max(0,s.A/Math.max(mOrSU,0.5)*gdlFactor);
+      swcA=Math.max(0,gwcA*mTurbSU*rRC);
       SR=gwcA>0?swcA/gwcA:1;
-    } else {
-      // v13.1: Proper OWC→GWC→SWC with per-sector roughness rose + IBL growth
-      const z0_mast_sec = getSectorEffectiveZ0('mast', si, hubHH, nSect);
-      const z0_site_sec = getSectorEffectiveZ0('site', si, hubHH, nSect);
-      const roughRatio = getSectorRoughnessRatio(si, hubHH, nSect);
-      // OWC → GWC: remove mast roughness, project to standard reference
-      const owcToGwcRatio = owcToGWC(1.0, mastH, z0_mast_sec, hubHH, 0.03, L);
-      // GWC → SWC: apply site roughness from standard reference (with IBL + GDL)
-      const gwcToSwcRatio = gwcToSWC(1.0, hubHH, 0.03, hubHH, z0_site_sec, L);
-      gwcA = Math.max(0, s.A * owcToGwcRatio);
-      swcA = Math.max(0, gwcA * gwcToSwcRatio * roughRatio * gdlFactor);
-      SR = gwcA > 0 ? swcA / gwcA : 1;
+    }else{
+      const z0m=hasRoughRose?getSectorEffectiveZ0('mast',si,hubHH,nSect):z0;
+      const z0s=hasRoughRose?getSectorEffectiveZ0('site',si,hubHH,nSect):z0;
+      const rr=hasRoughRose?getSectorRoughnessRatio(si,hubHH,nSect):1;
+      const o2g=owcToGWC(1.0,mastH,z0m,hubHH,0.03,L);
+      const g2s=gwcToSWC(1.0,hubHH,0.03,hubHH,z0s,L);
+      gwcA=Math.max(0,s.A*o2g);
+      swcA=Math.max(0,gwcA*g2s*rr*gdlFactor);
+      SR=gwcA>0?swcA/gwcA:1;
     }
     return{...s,gwcA:Math.max(0,gwcA),swcA:Math.max(0,swcA),SR};
   });
+
   const shearProfile=[20,40,60,80,100,120,140,160,180,200].map(h=>({h,ws:logWS_stab(hubMean,hubHH,h,z0,L)}));
-  const rix=S.terrain?Math.max(0,(S.terrain.maxE-S.terrain.minE)/Math.max(1,S.terrain.maxE)*5):0;
+  const rix=hasTerrainData?Math.max(0,terrainRange/Math.max(1,S.terrain.maxE)*5):0;
 
   const iec=checkIECClass(rotorMeanWS,pc);if(!iec.ok)log(`⚠ IEC class warning: rotor-avg WS ${rotorMeanWS.toFixed(2)} m/s exceeds ${iec.cls} limit (${iec.limit} m/s)!`,'w');
-  if(useRotorAvg&&Math.abs(rotAvgFactor-1)>0.001)log(`Rotor-averaged WS: factor=${rotAvgFactor.toFixed(4)}, hub=${hubMean.toFixed(2)} m/s → rotor-avg=${rotorMeanWS.toFixed(2)} m/s (${((rotAvgFactor-1)*100).toFixed(1)}%)`,'i');
-  // v22.0: Log chain diagnostics for verification
-  log(`AEP integration: bin resolution=${dv} m/s, ${nSect} sectors, ${hubSp.length.toLocaleString()} hourly records → ${sectors.reduce((s,sec)=>s+(sec.n>0?1:0),0)} active sectors`,'i');
-  const undoExtrapolation = logWS_stab(1.0, mastH, hubHH, z0, L);
-  if(hasRoughRose){
-    const sampleOwcGwcR = owcToGWC(1.0, mastH, getSectorEffectiveZ0('mast',0,hubHH,nSect), hubHH, 0.03, L);
-    const sampleGwcSwcR = gwcToSWC(1.0, hubHH, 0.03, hubHH, getSectorEffectiveZ0('site',0,hubHH,nSect), L);
-    const sampleChainR = (sampleOwcGwcR * sampleGwcSwcR * getSectorRoughnessRatio(0, hubHH, nSect) * gdlFactor) / Math.max(undoExtrapolation, 0.01);
-    log(`v22.0 OWC→GWC→SWC chain: Sector 0 ratio=${sampleChainR.toFixed(4)} (z0_mast=${getSectorEffectiveZ0('mast',0,hubHH,nSect).toFixed(4)} z0_site=${getSectorEffectiveZ0('site',0,hubHH,nSect).toFixed(4)} IBL=${getSectorRoughnessRatio(0,hubHH,nSect).toFixed(4)} GDL=${gdlFactor.toFixed(4)})`,'i');
-  } else {
-    log(`v22.0 OWC→GWC→SWC chain: No roughness rose — using GDL=${gdlFactor.toFixed(4)} (uniform z0=${z0})`,'i');
+  if(useRotorAvg&&Math.abs(rotAvgFactor-1)>0.001)log(`Rotor-averaged WS: factor=${rotAvgFactor.toFixed(4)}, hub=${hubMean.toFixed(2)} → rotor-avg=${rotorMeanWS.toFixed(2)} m/s (${((rotAvgFactor-1)*100).toFixed(1)}%)`,'i');
+
+  // Log per-turbine free WS range for verification
+  if(perT.length>1){
+    const freeWSvals=perT.map(t=>parseFloat(t.ws));
+    const minFree=Math.min(...freeWSvals).toFixed(2),maxFree=Math.max(...freeWSvals).toFixed(2);
+    const delta=(Math.max(...freeWSvals)-Math.min(...freeWSvals)).toFixed(2);
+    log(`Free-stream WS: ${minFree}–${maxFree} m/s (Δ=${delta} m/s, ${freeWSvals.length} WTGs)${isFlatTerrain?' [FLAT — Δ should be ~0]':''}`,'i');
+    // v41.0: Warn if flat terrain shows unrealistic variation
+    if(isFlatTerrain&&parseFloat(delta)>0.5){
+      log(`⚠ FLAT TERRAIN WARNING: Δ=${delta} m/s is too large for flat terrain — check data source settings`,'w');
+    }
   }
-  // v17.0: Log terrain model status with all v17.0 features
-  const jhActive = S.terrain && S.terrain.grid && S.terrain.grid.length && (S.terrain.maxE - S.terrain.minE) >= 5;
-  if (jhActive) {
-    const suRange = tSpeedups.reduce((r, su) => ({ min: Math.min(r.min, su), max: Math.max(r.max, su) }), { min: 2, max: 0 });
-    log(`Jackson-Hunt terrain model: ACTIVE (terrain range ${(S.terrain.maxE-S.terrain.minE).toFixed(0)}m, speedup range ${suRange.min.toFixed(4)}–${suRange.max.toFixed(4)}, ${S.turbines.length} WTGs × ${sectors.length} sectors)`,'i');
-    log(`v17.0 complex terrain: Stability=${useAutoStab?'Auto(ERA5T)':'Fixed'} | RoughRose=${S.autoRoughnessRose?'Auto':'Manual'} | d₀=${maxD0.toFixed(1)}m | lScale=${autoLScale.toFixed(3)}`,'i');
-  } else {
-    log(`Jackson-Hunt terrain model: INACTIVE (flat terrain or no grid) — using elevation proxy`,'i');
-  }
-  return{mastH,hubHH,z0,mastMean,hubMean,rotorMeanWS,rotAvgFactor,mastWb,hubWb,mcpFactor:S.mcpFactor,density,PD:.5*density*hubMean**3,grossAEP:grossG,wakeLoss:wakeL,netAEP:netF,CF,instMW,P50,P75,P90,P99,sigma:sig,u_wind_r,u_wake_r,u_pc_r,u_den_r:Math.abs(density-1.225)/1.225*0.5,perTurbine:perT,sectors,gwcSectors,shearProfile,rix,lut,iec,bzEnabled:BZ.enabled,rotorAvgUsed:useRotorAvg,isMixedHH,turbineHHs,hhScaleFactors,densitySource:$('densMethod')?.textContent||'ISA',turbDensities,perWtgDensityUsed:usePerWtg};
+  log(`AEP: gross=${grossG.toFixed(2)} GWh, wake=${wakeL.toFixed(1)}%, net=${netF.toFixed(2)} GWh, CF=${CF.toFixed(1)}%${BZ.enabled?' [BZ]':''}${isFlatTerrain?' [FLAT]':''}`,'i');
+
+  return{mastH,hubHH,z0,mastMean,hubMean,rotorMeanWS,rotAvgFactor,mastWb,hubWb,mcpFactor:mcpF,density,PD:.5*density*hubMean**3,grossAEP:grossG,wakeLoss:wakeL,netAEP:netF,CF,instMW,P50,P75,P90,P99,sigma:sig,u_wind_r,u_wake_r,u_pc_r,u_den_r:Math.abs(density-1.225)/1.225*0.5,perTurbine:perT,sectors,gwcSectors,shearProfile,rix,lut,iec,bzEnabled:BZ.enabled,rotorAvgUsed:useRotorAvg,isMixedHH,turbineHHs,hhScaleFactors,densitySource:$('densMethod')?.textContent||'ISA',turbDensities,perWtgDensityUsed:usePerWtg,isFlatTerrain};
 }
 
 function runAnalysis(){
@@ -5201,10 +5190,17 @@ function psi_h(z, L) {
 
 function logWS_stab(ws, fromH, toH, z0, L) {
   if (L === undefined || L === null) L = getStabilityL();
+  if (fromH === toH) return ws; // v41.0: no extrapolation needed
   // v11.0: Stability-corrected z0 (Beljaars & Holtslag 1991)
   const z0_eff = stabilityCorrectedZ0(z0, L, fromH);
   const denom = Math.log(Math.max(fromH, z0_eff * 1.1) / Math.max(z0_eff, 1e-6)) - psi_m(fromH, L);
-  if (denom <= 0) return ws;
+  if (denom <= 0) {
+    // v41.0: Fallback to simple log law (no stability) instead of returning ws unchanged
+    const simpleDenom = Math.log(Math.max(fromH, z0 * 1.1) / Math.max(z0, 1e-6));
+    if (simpleDenom <= 0) return ws;
+    const simpleNumer = Math.log(Math.max(toH, z0 * 1.1) / Math.max(z0, 1e-6));
+    return ws * simpleNumer / simpleDenom;
+  }
   const numer = Math.log(Math.max(toH, z0_eff * 1.1) / Math.max(z0_eff, 1e-6)) - psi_m(toH, L);
   return ws * numer / denom;
 }
@@ -11811,18 +11807,43 @@ async function runWAsPAnalysis(){
   const useREWS = $('useREWS')?.checked || false;
   const useGeo = $('useGeostrophic')?.checked || false;
 
-  log('\u2500\u2500 WAsP Analysis (v40.0 one-button) \u2500\u2500', 'i');
+  log('── WAsP Analysis (v41.0) ──', 'i');
   log('  Options: REWS='+useREWS+', Geostrophic='+useGeo, 'i');
 
-  // Stage 1: Auto-apply VE if not done
-  statusEl.textContent = 'Applying Vertical Extrapolation...';
+  // v41.0 CRITICAL FIX: Sync data source with analysis
+  // When user selects a data source in the dropdown, S.wind must be updated
+  // AND mastH must match the data source height. Otherwise vertical extrapolation
+  // produces wrong results (e.g. data at 138m but mastH=100m → double extrapolation)
+  const srcName = $('analysisSource')?.value || '';
+  if(srcName && S.windSources[srcName]){
+    const ws=S.windSources[srcName];
+    S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[]};
+    S.mcpFactor=ws.mcpFactor||1;
+    S.windSource=srcName;
+    if(ws.sourceHeight&&$('mastH'))$('mastH').value=ws.sourceHeight;
+    else if(ws.mastH&&$('mastH'))$('mastH').value=ws.mastH;
+    if(ws.sourceLat!=null&&ws.sourceLon!=null){
+      $('mastLat').value=ws.sourceLat.toFixed(3);$('mastLon').value=ws.sourceLon.toFixed(3);
+    }
+    log('  Data source: '+srcName+' @ '+((ws.sourceHeight||ws.mastH)||'?')+'m, mean='+(ws.meanWS||0).toFixed(2)+' m/s','i');
+  }else if(!srcName){
+    // Using current primary data — ensure mastH matches
+    log('  Using current primary wind data','i');
+  }
+
+  // Stage 1: Auto-apply VE if needed
+  // v41.0 FIX: Only auto-apply VE if the current data source height ≠ hub height
+  // This prevents double-extrapolation when user already selected an extrapolated source
+  statusEl.textContent = 'Checking vertical extrapolation...';
   pbEl.style.width = '5%';
   statusEl.style.color = 'var(--sky)';
-  log('  \u2460 Auto-applying Vertical Extrapolation...', 'i');
-  try {
-    if(S.wind && S.wind.speeds) runVertExtrap();
-  } catch(e) {
-    log('VE auto-apply warning: ' + e.message, 'w');
+  const curSrcH = srcName && S.windSources[srcName] ? (S.windSources[srcName].sourceHeight || S.windSources[srcName].mastH) : parseFloat($('mastH')?.value || 100);
+  const targetHH = parseFloat($('hubH')?.value || 120);
+  if (Math.abs(curSrcH - targetHH) > 1 && S.wind && S.wind.speeds) {
+    log('  ① Auto-applying VE: source=' + curSrcH + 'm → target=' + targetHH + 'm', 'i');
+    try { runVertExtrap(); } catch(e) { log('VE auto-apply warning: ' + e.message, 'w'); }
+  } else {
+    log('  ① VE skipped: source height (' + curSrcH + 'm) ≈ hub height (' + targetHH + 'm)', 'i');
   }
 
   // Stage 2: Check terrain data
@@ -11971,8 +11992,23 @@ function runWAsPFlow() {
   const useREWS = $('useREWS')?.checked || false;
   const useGeo = $('useGeostrophic')?.checked || false;
 
-  log('── WAsP Analysis (v39.1 one-button) ──', 'i');
+  log('── WAsP Flow (v41.0) ──', 'i');
   log(`  Options: REWS=${useREWS}, Geostrophic=${useGeo}`, 'i');
+
+  // v41.0: Sync data source with analysis (same as runWAsPAnalysis)
+  const srcName2 = $('analysisSource')?.value || '';
+  if(srcName2 && S.windSources[srcName2]){
+    const ws=S.windSources[srcName2];
+    S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[]};
+    S.mcpFactor=ws.mcpFactor||1;
+    S.windSource=srcName2;
+    if(ws.sourceHeight&&$('mastH'))$('mastH').value=ws.sourceHeight;
+    else if(ws.mastH&&$('mastH'))$('mastH').value=ws.mastH;
+    if(ws.sourceLat!=null&&ws.sourceLon!=null){
+      $('mastLat').value=ws.sourceLat.toFixed(3);$('mastLon').value=ws.sourceLon.toFixed(3);
+    }
+    log('  Data source: '+srcName2+' @ '+((ws.sourceHeight||ws.mastH)||'?')+'m','i');
+  }
 
   // Stage 1: Generalize (OWC → GWC)
   async function stage1() {
