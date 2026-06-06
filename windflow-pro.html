@@ -215,7 +215,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <div class="ds-card" id="ds_merra2"><div class="ds-name">MERRA-2</div><div class="ds-desc">NASA POWER API · Free · 1980→present</div><button class="btn btn-sm btn-ghost" onclick="downloadMERRA2()">⬇ Download</button><div id="merra2Status" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_ncep"><div class="ds-name">NCEP/CFSR</div><div class="ds-desc">Open-Meteo · Free · 1940→present · Same source as ERA5</div><button class="btn btn-sm btn-ghost" onclick="downloadNCEP()">⬇ Download</button><div id="ncepStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_newa"><div class="ds-name">NEWA</div><div class="ds-desc">New European Wind Atlas · Free · 200m · EU+surroundings</div><button class="btn btn-sm btn-ghost" onclick="downloadNEWA()">⬇ Download</button><div id="newaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
-          <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit V2</div><div class="ds-desc">USA CONUS · 2007–2014 · Multi-height · Free API key · developer.nrel.gov</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key (developer.nrel.gov)" value="XzjKJcfwqjHq2ICBzDFD2jrX2vw2GSOPVgfTVkCW" style="font-size:.6rem"></div><div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Year</label><select class="fs" id="nrelYear" style="font-size:.58rem"><option value="2014" selected>2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Interval</label><select class="fs" id="nrelInterval" style="font-size:.58rem"><option value="60" selected>60 min</option><option value="30">30 min</option><option value="15">15 min</option><option value="5">5 min</option></select></div></div><div style="margin-top:.3rem"><label style="font-size:.52rem;color:var(--text2);display:flex;align-items:center;gap:.3rem;cursor:pointer"><input type="checkbox" id="nrelMultiHeight" checked> Multi-height profile (10–200m)</label></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()" style="margin-top:.3rem">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit V2</div><div class="ds-desc">USA CONUS · 2007–2014 · Multi-height · Free API key · developer.nrel.gov</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key (developer.nrel.gov)" placeholder="Enter your NREL API Key (developer.nrel.gov)" style="font-size:.6rem"></div><div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Year</label><select class="fs" id="nrelYear" style="font-size:.58rem"><option value="2014" selected>2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Interval</label><select class="fs" id="nrelInterval" style="font-size:.58rem"><option value="60" selected>60 min</option><option value="30">30 min</option><option value="15">15 min</option><option value="5">5 min</option></select></div></div><div style="margin-top:.3rem"><label style="font-size:.52rem;color:var(--text2);display:flex;align-items:center;gap:.3rem;cursor:pointer"><input type="checkbox" id="nrelMultiHeight" checked> Multi-height profile (10–200m)</label></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()" style="margin-top:.3rem">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
         </div>
         <div class="alert alert-info" style="font-size:.62rem;margin-top:.5rem">Country-specific: NEWA (EU) · NREL Wind (USA) · BARRA2 (AU) · CSIR (ZA) · INMET (BR) · CMA (CN) · SARAN (IN)</div>
       </div>
@@ -506,7 +506,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <div class="card"><div class="card-title green">Export Data</div>
         <div style="display:flex;flex-direction:column;gap:.4rem">
           <button class="btn btn-primary" style="width:100%" onclick="exportReport()">📄 Full HTML Report</button>
-          <button class="btn btn-primary" style="width:100%;background:#1a6b3c;border-color:#2ea043" onclick="exportPDFReport()">📑 PDF Report (BAE Format)</button>
+          <button class="btn btn-primary" style="width:100%;background:#1a6b3c;border-color:#2ea043" onclick="exportPDFReport()">📑 Export Report Data (JSON)</button>
           <button class="btn btn-gold" style="width:100%" onclick="exportAEPCSV()">📊 AEP Results CSV</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportLayoutCSV()">📍 Layout CSV</button>
           <button class="btn btn-ghost" style="width:100%" onclick="exportLayoutKML()">📍 Layout KML</button>
@@ -2641,8 +2641,14 @@ async function downloadERA5(){
     S.era5Raw={sp,dr,ts:allTs,lat,lon,h};S.wind={speeds:[...sp],dirs:[...dr],times:[...allTs]};S.mcpFactor=1;
     S.windSources.ERA5={speeds:[...sp],dirs:[...dr],times:[...allTs],mcpFactor:1,mastH:parseInt(h)||100,elevation:elev||null,sourceLat:lat,sourceLon:lon,sourceHeight:parseInt(h)||100};
     // v32.0: Update mast coordinates to match ERA5 data source position
-    $('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);
-    log(`v32.0: Data source position: ${lat.toFixed(4)}°, ${lon.toFixed(4)}° · Height: ${h}m · This is the position for horizontal extrapolation`,'i');
+    // v42.1: Only update mast position if user hasn't explicitly set it
+    if(!S._mastUserSet){
+      $('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);
+      log(`v42.1: Mast position auto-set to ERA5 grid point: ${lat.toFixed(4)}°, ${lon.toFixed(4)}°`,'i');
+    }else{
+      log(`v42.1: Mast position preserved (user-configured). ERA5 grid point: ${lat.toFixed(4)}°, ${lon.toFixed(4)}°`,'i');
+    }
+    log(`Data source position: ${lat.toFixed(4)}°, ${lon.toFixed(4)}° · Height: ${h}m · This is the position for horizontal extrapolation`,'i');
     // v33.3: Show ERA5T data point on map with label
     addDataSourceMarker('ERA5T',lat,lon,parseInt(h)||100);
     // v14.0: Store ERA5 atmospheric data for density calculation
@@ -2663,7 +2669,23 @@ async function downloadERA5(){
     else if (mean < 3) log(`ERA5T quality: mean WS=${mean.toFixed(2)} m/s is unusually low — verify coordinates and height setting`,'w');
     // 5. ERA5T vs ERA5 warning for recent data
     const endYear = parseInt($('e5Ey').value);
-    if (endYear >= 2024) log(`ERA5T quality: Data includes ERA5T (near-real-time) which is less quality-controlled than ERA5. Recent months may differ from final ERA5 release.`,'w');
+    if (endYear >= 2024){
+      log(`ERA5T quality: Data includes ERA5T (near-real-time) which is less quality-controlled than ERA5. Recent months may differ from final ERA5 release.`,'w');
+      // v42.1: Show prominent on-screen warning (not just log) for bankability
+      const e5Warn=document.getElementById('e5out');
+      if(e5Warn){
+        const existingWarn=e5Warn.querySelector('.era5t-warning');
+        if(!existingWarn){
+          const warnDiv=document.createElement('div');
+          warnDiv.className='alert alert-warn era5t-warning';
+          warnDiv.style.fontSize='.68rem';
+          warnDiv.innerHTML='<b>ERA5T Data Notice:</b> This dataset includes ERA5T (near-real-time) data which is less quality-controlled than final ERA5. For bankable assessments, consider using data through 2023 only. Recent months (2024+) may be revised.';
+          e5warn=e5Warn.querySelector('.card');
+          if(e5warn)e5warn.insertBefore(warnDiv,e5warn.firstChild.nextSibling);
+          else e5Warn.insertBefore(warnDiv,e5Warn.firstChild);
+        }
+      }
+    }
     // 6. Check Weibull k for physical plausibility
     if (wb.k < 1.0 || wb.k > 4.0) log(`ERA5T quality: Weibull k=${wb.k.toFixed(2)} is outside typical range (1.0–4.0) — check data quality`,'w');
     // 7. Check for step changes (common ERA5T issue when switching from ERA5 to ERA5T)
@@ -4355,9 +4377,18 @@ function processKMLLayout(kmlText,fileName){
   // Then coordinates are likely swapped
   const meanLon=ts.reduce((s,t)=>s+t.lon,0)/ts.length;
   const meanLat=ts.reduce((s,t)=>s+t.lat,0)/ts.length;
-  const allLonInLatRange=ts.every(t=>t.lon>=25&&t.lon<=70);
-  const allLatInLonRange=ts.every(t=>t.lat>=-10&&t.lat<=45);
-  const looksSwapped=allLonInLatRange&&allLatInLonRange&&meanLat<35&&meanLon>30;
+  // v42.1: Generalized swap detection for all regions (not just Europe)
+  // Heuristic: if ALL 'lon' values could be valid latitudes AND
+  // ALL 'lat' values could be valid longitudes AND
+  // the swap makes the center point closer to a land mass (simple check:
+  // swapped mean lat is in a major wind region [20-70])
+  const allLonValidLat=ts.every(t=>Math.abs(t.lon)<=90);
+  const allLatValidLon=ts.every(t=>Math.abs(t.lat)<=180);
+  const swappedMeanLat=meanLon; // if swapped, old 'lon' becomes new 'lat'
+  const swappedMeanLon=meanLat; // if swapped, old 'lat' becomes new 'lon'
+  const looksSwapped=allLonValidLat&&allLatValidLon&&
+    ((Math.abs(swappedMeanLat)>=20&&Math.abs(swappedMeanLat)<=70)&&
+     (Math.abs(meanLat)<Math.abs(meanLon)));
   if(looksSwapped){
     const doSwap=confirm(
       '⚠ Swapped coordinates detected!\n\n'+
@@ -4469,9 +4500,11 @@ function processLayoutText(text,fileName){
   // v42.0: Auto-detect swapped lat/lon coordinates (same as processKMLLayout)
   const mLon2=ts.reduce((s,t)=>s+t.lon,0)/ts.length;
   const mLat2=ts.reduce((s,t)=>s+t.lat,0)/ts.length;
-  const allLonOk2=ts.every(t=>t.lon>=25&&t.lon<=70);
-  const allLatOk2=ts.every(t=>t.lat>=-10&&t.lat<=45);
-  if(allLonOk2&&allLatOk2&&mLat2<35&&mLon2>30){
+  const allLonValidLat2=ts.every(t=>Math.abs(t.lon)<=90);
+  const allLatValidLon2=ts.every(t=>Math.abs(t.lat)<=180);
+  const swappedMeanLat2=mLon2;
+  const swappedMeanLon2=mLat2;
+  if(allLonValidLat2&&allLatValidLon2&&(Math.abs(swappedMeanLat2)>=20&&Math.abs(swappedMeanLat2)<=70)&&(Math.abs(mLat2)<Math.abs(mLon2))){
     const doSwap=confirm(
       '⚠ Swapped coordinates detected!\n\n'+
       'Current: lon='+mLon2.toFixed(2)+'°, lat='+mLat2.toFixed(2)+'° (likely WRONG)\n'+
@@ -9307,6 +9340,7 @@ function saveMast(){
   const m=S.masts[idx];
   m.name=$('mastName').value;m.height=parseFloat($('mastH').value)||100;
   m.lat=parseFloat($('mastLat').value)||55.5;m.lon=parseFloat($('mastLon').value)||7.9;
+  S._mastUserSet=true; // v42.1: Mark mast as user-configured
   m.primary=$('mastPrimary').value==='1';m.startDate=$('mastStart').value;m.endDate=$('mastEnd').value;
   // If this mast is set as primary, clear others
   if(m.primary)S.masts.forEach((mm,i)=>{if(i!==idx)mm.primary=false;});
@@ -9824,8 +9858,9 @@ function updateReportingDashboard(){
 // ── SAVE/LOAD PROJECT ──
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
-  const data={version:'39.1',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0'}};
-  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v39.1)','i');
+  // v42.1: Also save S.results so user doesn't have to re-run analysis after loading
+  const data={version:'42.1',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0'}};
+  const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v42.1, results included)','i');
 }
 
 // v22.0: WAsP-compatible project export
@@ -9850,7 +9885,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 40.0`);
+  lines.push(`WAsP Project Export - WindFlow Pro 42.0`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
