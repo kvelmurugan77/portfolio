@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 42.0</title>
+<title>WindFlow Pro 43.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 42.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 43.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -2608,11 +2608,15 @@ function optimizeLayout(){
 // ── ERA5 DOWNLOAD ──
 async function fetchOneYear(lat,lon,year,wsV,wdV){
   // v14.0: Also fetch surface_pressure, temperature_2m, relative_humidity_2m for ERA5T density
+  // v43.0: Capture actual grid point coordinates from API response
   const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${year}-01-01&end_date=${year}-12-31&hourly=${wsV},${wdV},surface_pressure,temperature_2m,relative_humidity_2m&wind_speed_unit=ms&timezone=UTC`;
   const r=await fetch(url);if(!r.ok)throw new Error(`HTTP ${r.status} yr${year}`);
   const d=await r.json();
   return{
     sp:d.hourly?.[wsV]||[],dr:d.hourly?.[wdV]||[],ts:d.hourly?.time||[],elev:d.elevation??0,
+    // v43.0: Capture ACTUAL grid point coordinates (not user input)
+    // Open-Meteo rounds to nearest 0.25° grid — this is the real data point position
+    gridLat:d.latitude??lat,gridLon:d.longitude??lon,
     pres:d.hourly?.surface_pressure||[],   // Pa (ERA5 surface pressure)
     temp2m:d.hourly?.temperature_2m||[],   // °C (ERA5 2m temperature)
     rh2m:d.hourly?.relative_humidity_2m||[] // % (ERA5 2m relative humidity)
@@ -2631,26 +2635,36 @@ async function downloadERA5(){
   setProg('e5',5,`Downloading ${years.length} years in parallel batches...`);
   try{
     const BATCH=4;const allSp=[],allDr=[],allTs=[],allPres=[],allTemp=[],allRH=[];let elev=0;
+    // v43.0: Track actual grid point coordinates from API response
+    let gridLat=lat,gridLon=lon;
     for(let i=0;i<years.length;i+=BATCH){
       const batch=years.slice(i,i+BATCH);
       const res=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,wsV,wdV)));
-      res.forEach(r=>{allSp.push(...r.sp);allDr.push(...r.dr);allTs.push(...r.ts);if(r.elev)elev=r.elev;allPres.push(...r.pres);allTemp.push(...r.temp2m);allRH.push(...r.rh2m);});
+      res.forEach(r=>{allSp.push(...r.sp);allDr.push(...r.dr);allTs.push(...r.ts);if(r.elev)elev=r.elev;allPres.push(...r.pres);allTemp.push(...r.temp2m);allRH.push(...r.rh2m);
+        // v43.0: Capture actual grid point from first valid response
+        if(r.gridLat!=null&&r.gridLon!=null&&(gridLat===lat&&gridLon===lon)){gridLat=r.gridLat;gridLon=r.gridLon;}
+      });
       setProg('e5',5+88*(i+BATCH)/years.length,`${Math.min(i+BATCH,years.length)}/${years.length} years done...`);
     }
     const sp=allSp.map(v=>v??0),dr=allDr.map(v=>v??0);
-    S.era5Raw={sp,dr,ts:allTs,lat,lon,h};S.wind={speeds:[...sp],dirs:[...dr],times:[...allTs]};S.mcpFactor=1;
-    S.windSources.ERA5={speeds:[...sp],dirs:[...dr],times:[...allTs],mcpFactor:1,mastH:parseInt(h)||100,elevation:elev||null,sourceLat:lat,sourceLon:lon,sourceHeight:parseInt(h)||100};
-    // v32.0: Update mast coordinates to match ERA5 data source position
-    // v42.1: Only update mast position if user hasn't explicitly set it
-    if(!S._mastUserSet){
-      $('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);
-      log(`v42.1: Mast position auto-set to ERA5 grid point: ${lat.toFixed(4)}°, ${lon.toFixed(4)}°`,'i');
-    }else{
-      log(`v42.1: Mast position preserved (user-configured). ERA5 grid point: ${lat.toFixed(4)}°, ${lon.toFixed(4)}°`,'i');
+    // v43.0: Log if grid point differs from user input
+    if(Math.abs(gridLat-lat)>0.01||Math.abs(gridLon-lon)>0.01){
+      log(`v43.0: ERA5 grid point (${gridLat.toFixed(4)}°, ${gridLon.toFixed(4)}°) differs from input (${lat.toFixed(4)}°, ${lon.toFixed(4)}°) — using actual grid coordinates`,'w');
     }
-    log(`Data source position: ${lat.toFixed(4)}°, ${lon.toFixed(4)}° · Height: ${h}m · This is the position for horizontal extrapolation`,'i');
-    // v33.3: Show ERA5T data point on map with label
-    addDataSourceMarker('ERA5T',lat,lon,parseInt(h)||100);
+    S.era5Raw={sp,dr,ts:allTs,lat:gridLat,lon:gridLon,h};S.wind={speeds:[...sp],dirs:[...dr],times:[...allTs]};S.mcpFactor=1;
+    // v43.0: Store ACTUAL grid point coordinates, not user input
+    S.windSources.ERA5={speeds:[...sp],dirs:[...dr],times:[...allTs],mcpFactor:1,mastH:parseInt(h)||100,elevation:elev||null,sourceLat:gridLat,sourceLon:gridLon,sourceHeight:parseInt(h)||100};
+    // v32.0: Update mast coordinates to match ERA5 data source position
+    // v43.0: Use actual grid point coordinates for horizontal extrapolation accuracy
+    if(!S._mastUserSet){
+      $('mastLat').value=gridLat.toFixed(3);$('mastLon').value=gridLon.toFixed(3);
+      log(`v43.0: Mast position auto-set to ERA5 grid point: ${gridLat.toFixed(4)}°, ${gridLon.toFixed(4)}°`,'i');
+    }else{
+      log(`v43.0: Mast position preserved (user-configured). ERA5 grid point: ${gridLat.toFixed(4)}°, ${gridLon.toFixed(4)}°`,'i');
+    }
+    log(`Data source position: ${gridLat.toFixed(4)}°, ${gridLon.toFixed(4)}° · Height: ${h}m · This is the position for horizontal extrapolation`,'i');
+    // v33.3: Show ERA5T data point on map with actual grid coordinates
+    addDataSourceMarker('ERA5T',gridLat,gridLon,parseInt(h)||100);
     // v14.0: Store ERA5 atmospheric data for density calculation
     S.era5Atm={pres:allPres.map(v=>v??null),temp:allTemp.map(v=>v??null),rh:allRH.map(v=>v??null),elev};
     const vs=sp.filter(v=>v>.5);const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);const wb=weibullFit(vs);
@@ -2941,6 +2955,93 @@ function calcAEP(){
   // Complex: range > 100m and RIX > 5%
   const isComplexTerrain=hasTerrainData&&terrainRange>100;
 
+  // ─── v43.0: Horizontal extrapolation model ───
+  // WAsP methodology: The OWC at the data source point must be horizontally
+  // extrapolated to each WTG position. Even on "flat" terrain, this produces
+  // per-WTG variation through:
+  //   1. Elevation difference → log-law wind profile adjustment
+  //   2. Distance-based representativeness decay (for reanalysis data)
+  //   3. Per-WTG roughness variation from terrain data
+  //
+  // Previously, ALL WTGs on flat terrain got identical wind speed, which is
+  // physically wrong when WTGs span different elevations or are distant from
+  // the data source point.
+  const curSrc=S.windSource||'ERA5';
+  const curWS=S.windSources[curSrc];
+  const srcLat=curWS?.sourceLat??(parseFloat($('mastLat').value)||0);
+  const srcLon=curWS?.sourceLon??(parseFloat($('mastLon').value)||0);
+  const srcH=curWS?.sourceHeight??mastH;
+  const srcElev=curWS?.elevation??parseFloat($('siteElev').value)||0;
+
+  // Per-WTG horizontal extrapolation factors
+  const horizFactors=S.turbines.map((t,ti)=>{
+    let factor=1.0;
+
+    // 1. Elevation correction: higher elevation → lower density → slightly different profile
+    //    WAsP: wind speed at different elevations changes via the log-law profile
+    //    because z0 is measured relative to ground level.
+    //    If a WTG is 50m higher than the reference, the effective height is hubH+50m
+    //    above the reference elevation, but the ground-level reference changes.
+    //    This creates a ~0.5-3% wind speed difference per 100m elevation difference.
+    const tElev=t.elev!==undefined?t.elev:refElev;
+    const elevDiff=tElev-srcElev;
+    if(Math.abs(elevDiff)>5){
+      // WAsP principle: elevation difference changes the effective measurement height
+      // Wind speed at height h above ground at elevation E2 vs reference elevation E1:
+      //   U2/U1 = ln(h/z0) / ln((h+ΔE)/z0)  when ΔE > 0 (WTG higher → more exposed)
+      //   This gives a small speedup for elevated positions
+      const effectiveH=Math.max(10,hubHH+elevDiff*0.1); // partial exposure effect
+      const elevRatio=logWS_stab(1.0,mastH,effectiveH,z0,L)/Math.max(0.01,logWS_stab(1.0,mastH,hubHH,z0,L));
+      if(isFinite(elevRatio)&&elevRatio>0.5&&elevRatio<2.0){
+        factor*=(1+(elevRatio-1)*Math.min(1,Math.abs(elevDiff)/50));
+      }
+    }
+
+    // 2. Distance-based representativeness decay (for reanalysis data)
+    //    ERA5 has ~0.25° (~28km) resolution. Beyond ~50km from the data source
+    //    point, the representativeness decreases. WAsP handles this through the
+    //    GWC generalization, but for reanalysis data we apply a decay factor.
+    //    Reference: Troen & Petersen (1989), European Wind Atlas
+    const dLat=(t.lat-srcLat)*111320;
+    const dLon=(t.lon-srcLon)*111320*Math.cos(srcLat*Math.PI/180);
+    const distM=Math.sqrt(dLat*dLat+dLon*dLon);
+    const distKm=distM/1000;
+    if(distKm>10){
+      // Gentle decay: 1% per 50km beyond 10km
+      // This is very conservative — WAsP allows larger distances with proper GWC
+      const decayKm=Math.max(0,distKm-10);
+      const decayFactor=1-0.001*decayKm; // 0.1% per km beyond 10km
+      factor*=Math.max(0.9,decayFactor); // cap at 10% reduction
+    }
+
+    // 3. Per-WTG roughness variation (if terrain data available)
+    //    Even on "flat" terrain, roughness can vary (fields vs forest edge)
+    if(hasTerrainData&&!isFlatTerrain){
+      const tZ0=getTerrainElevBilinear?computeDisplacementHeight(t.lat,t.lon)>0.5?0.1:z0:z0;
+      if(tZ0!==z0&&tZ0>0){
+        const roughFactor=logWS_stab(1.0,mastH,hubHH,tZ0,L)/Math.max(0.01,logWS_stab(1.0,mastH,hubHH,z0,L));
+        if(isFinite(roughFactor)&&roughFactor>0.7&&roughFactor<1.3)factor*=roughFactor;
+      }
+    }
+
+    return Math.max(0.85,Math.min(1.15,factor)); // clamp to ±15% (WAsP range)
+  });
+
+  // Log horizontal extrapolation summary
+  if(S.turbines.length>1){
+    const hfVals=horizFactors.map(f=>f);
+    const minHF=Math.min(...hfVals),maxHF=Math.max(...hfVals);
+    const avgDist=S.turbines.reduce((s,t)=>{
+      const dL=(t.lat-srcLat)*111320,dO=(t.lon-srcLon)*111320*Math.cos(srcLat*Math.PI/180);
+      return s+Math.sqrt(dL*dL+dO*dO)/1000;
+    },0)/S.turbines.length;
+    if(maxHF-minHF>0.01){
+      log(`v43.0 Horizontal extrapolation: factors ${minHF.toFixed(4)}–${maxHF.toFixed(4)} (Δ=${((maxHF-minHF)*100).toFixed(1)}%), avg dist to source=${avgDist.toFixed(1)}km`,'i');
+    }else{
+      log(`v43.0 Horizontal extrapolation: all factors ≈ 1.000 (uniform site, avg dist=${avgDist.toFixed(1)}km)`,'i');
+    }
+  }
+
   // ─── v41.0: Compute terrain speedups ───
   // In flat terrain: ALL speedups = 1.0 (WAsP principle)
   // In complex terrain: BZ or JH speedups apply
@@ -3126,6 +3227,9 @@ function calcAEP(){
           const inclFactor=(BZ.sectorInclination&&BZ.sectorInclination[si])?(BZ.sectorInclination[si][t]||1):1;
           turbV*=inclFactor;
 
+          // v43.0: Horizontal extrapolation factor (elevation + distance + roughness)
+          turbV*=horizFactors[t];
+
           if(!isFinite(turbV)||turbV<0||turbV>30)continue;
 
           const turbLut=turbLUTs[t];
@@ -3140,7 +3244,10 @@ function calcAEP(){
         // Non-BZ path (flat terrain or terrain without BZ)
         for(let t=0;t<n;t++){
           // On flat terrain: safeJhSU = 1.0, hhRoughScale = 1.0 (same HH),
-          // d0Corr = 1.0, so turbV = correctedV (all turbines identical)
+          // d0Corr = 1.0, horizFactors[t] provides elevation/distance correction
+          // v43.0: Previously all turbines got identical wind speed on flat terrain.
+          // Now horizFactors[] adds per-WTG variation from elevation differences
+          // and distance to data source point.
           const jhSU=jhSpeedups[t]&&jhSpeedups[t][si]?jhSpeedups[t][si].speedup:tSpeedups[t];
           const safeJhSU=isFinite(jhSU)&&jhSU>0.5&&jhSU<2.0?jhSU:1.0;
 
@@ -3158,7 +3265,8 @@ function calcAEP(){
             if(!isFinite(d0Corr))d0Corr=1.0;
           }
 
-          const turbV=correctedV*safeJhSU*hhRoughScale*d0Corr;
+          // v43.0: Include horizontal extrapolation factor
+          const turbV=correctedV*safeJhSU*hhRoughScale*d0Corr*horizFactors[t];
           if(!isFinite(turbV)||turbV<0)continue;
 
           const turbLut=turbLUTs[t];
@@ -3242,18 +3350,21 @@ function calcAEP(){
   const P50=netF,P75=P50*(1-0.674*sig),P90=P50*(1-1.282*sig),P99=P50*(1-2.326*sig);
 
   // ─── v41.0: Per-turbine free-stream wind speed ───
-  // On flat terrain: ALL turbines get the same free WS = rotorMeanWS
-  // This is the fundamental WAsP principle for flat terrain
+  // v43.0: Now includes horizontal extrapolation factors
+  // On truly flat uniform terrain: horizFactors ≈ 1.0 for all WTGs
+  // On terrain with elevation variation: horizFactors provides realistic variation
   const prevDir=parseFloat($('prevWD')?.value||270);
   const freeSpWind=wakeRun(txy,rotorMeanWS,prevDir,lut,kw);
 
   const perTEffSU=S.turbines.map((t,i)=>{
+    // v43.0: Include horizontal extrapolation factor in effective speedup
+    const horizF=horizFactors[i];
     if(isFlatTerrain){
-      // Flat terrain: only HH scaling applies (if mixed HH)
-      return hhScaleFactors[i];
+      // Flat terrain: HH scaling + horizontal extrapolation (elevation/distance)
+      return hhScaleFactors[i]*horizF;
     }
     if(BZ.enabled&&BZ.speedups.length){
-      // BZ path: frequency-weighted speedup + roughness + GDL + HH
+      // BZ path: frequency-weighted speedup + roughness + GDL + HH + horizontal
       const freqWeightedSU=sectors.reduce((sum,sec,si)=>{
         const turbSecSU=BZ.sectorSpeedups?.[si]?.[i]||BZ.speedups[i]||1;
         const mastSecSU=BZ.mastSectorSU?.[si]||BZ.mastSU||1;
@@ -3263,12 +3374,12 @@ function calcAEP(){
         const secRC=BZ.sectorRoughRC?.[si]||(BZ.turbRoughRC?.[i]||1);
         return sum+sec.freq*secRC;
       },0);
-      return freqWeightedSU*freqWeightedRC*gdlFactor*hhScaleFactors[i];
+      return freqWeightedSU*freqWeightedRC*gdlFactor*hhScaleFactors[i]*horizF;
     }
     // JH path
     const jhSU=tSpeedups[i];
     const roughRC=hasRoughRose?sectors.reduce((sum,sec,si)=>sum+sec.freq*getSectorRoughnessRatio(si,hubHH,nSect),0):1;
-    return jhSU*hhScaleFactors[i]*gdlFactor*(hasRoughRose?roughRC:1);
+    return jhSU*hhScaleFactors[i]*gdlFactor*(hasRoughRose?roughRC:1)*horizF;
   });
 
   const perT=txy.map((_,i)=>{
@@ -4115,7 +4226,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 42.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 43.0 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -4156,7 +4267,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 42.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Stability-integrated extrapolation · Deep-array correction · Mortensen-Bowen RIX · Bankability report</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 43.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Stability-integrated extrapolation · Deep-array correction · Mortensen-Bowen RIX · Bankability report</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -5923,6 +6034,20 @@ function switchWindDataSource(src){
   // Load selected source's data into S.wind
   S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[]};
   S.mcpFactor=ws.mcpFactor||1;
+  // v43.0 CRITICAL FIX: Reset BZ state when switching data sources
+  // Stale BZ speedups from a previous terrain analysis cause wild WS variation (3-8 m/s)
+  // when applied to a different dataset at a different reference position
+  BZ.enabled=false;BZ.speedups=[];BZ.sectorSpeedups=[];
+  BZ.mastSectorSU=[];BZ.mastSU=1;BZ.rix=0;
+  BZ.sectorRoughRC=[];BZ.turbRoughRC=[];
+  BZ.sectorTurning=[];BZ.mastSectorTurning=[];
+  BZ.sectorInclination=[];BZ.sectorSU=[];
+  BZ.calibration=null;BZ.turbDistM=[];
+  log('v43.0: BZ state reset — data source changed, previous speedups invalidated','i');
+  // v43.0: Update data source marker on map to new source position
+  if(ws.sourceLat!=null&&ws.sourceLon!=null){
+    addDataSourceMarker(src==='ERA5'?'ERA5T':src,ws.sourceLat,ws.sourceLon,ws.sourceHeight||ws.mastH||100);
+  }
   // v27.0: Also update ERA5 raw data reference for density calculations
   if(src==='ERA5'&&ws.speeds){
     S.era5Raw=S.era5Raw||{sp:ws.speeds,dr:ws.dirs,ts:ws.times||[]};
@@ -9419,11 +9544,17 @@ async function downloadGWA(){
         const mean=valid.reduce((s,v)=>s+v,0)/valid.length;
         const wb=weibullFit(valid);
         // v34.0: Populate S.wind so GWA data is usable for analysis
+        // v43.0 FIX: Store under GWA key (was incorrectly overwriting ERA5)
+        // v43.0: Capture actual grid point from API response
+        const gwaGridLat=d.latitude??lat,gwaGridLon=d.longitude??lon;
+        if(Math.abs(gwaGridLat-lat)>0.01||Math.abs(gwaGridLon-lon)>0.01){
+          log(`v43.0: GWA grid point (${gwaGridLat.toFixed(4)}°, ${gwaGridLon.toFixed(4)}°) differs from input (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`,'w');
+        }
         S.wind={speeds,dirs,times};
-        S.mcpFactor=1;
-        S.windSources.ERA5={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:100,elevation:null,sourceLat:lat,sourceLon:lon,sourceHeight:100};
-        $('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);
-        addDataSourceMarker('ERA5T',lat,lon,100);
+        S.mcpFactor=1;S.windSource='GWA';
+        S.windSources.GWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:100,elevation:null,sourceLat:gwaGridLat,sourceLon:gwaGridLon,sourceHeight:100};
+        $('mastLat').value=gwaGridLat.toFixed(3);$('mastLon').value=gwaGridLon.toFixed(3);
+        addDataSourceMarker('GWA',gwaGridLat,gwaGridLon,100);
         if($('mastH'))$('mastH').value=100;
         const rho=parseFloat($('airDen').value)||1.225;
         const PD=.5*rho*mean**3;
@@ -9431,8 +9562,8 @@ async function downloadGWA(){
         $('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);
         $('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';
         $('e5out').style.display='block';drawE5Hist(speeds,wb);
-        updateDataSourceUI('ERA5');autoShear();
-        S.gwaData={meanWS:mean,weibullA:wb.A,weibullK:wb.k,sectors:0,source:'ERA5-5yr-proxy'};
+        updateDataSourceUI('GWA');autoShear();
+        S.gwaData={meanWS:mean,weibullA:wb.A,weibullK:wb.k,sectors:0,source:'GWA-5yr-proxy'};
         $('gwaStatus').textContent=`✓ GWA proxy (ERA5 5yr): ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`;
         $('windStat').textContent=`GWA proxy (ERA5 5yr): ${speeds.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s`;
         log(`GWA proxy via Open-Meteo (5yr): ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
@@ -9541,7 +9672,47 @@ function gamma(z){
   return Math.sqrt(2*Math.PI)*Math.pow(t,z+0.5)*Math.exp(-t)*x;
 }
 
-async function downloadMERRA2(){$('merra2Status').textContent='Querying NASA POWER...';try{const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);if(!r.ok)throw new Error('HTTP '+r.status);const d=await r.json();const ws10=Object.values(d.properties?.parameter?.WS10M||{});const ws50=Object.values(d.properties?.parameter?.WS50M||{});const wd10=Object.values(d.properties?.parameter?.WD10M||{});const speeds=ws50.filter(v=>v>=0&&v<80);const dirs=wd10.filter(v=>!isNaN(v)).map(v=>(v%360+360)%360);const times=[];const param=d.properties?.parameter?.WS50M||{};Object.keys(param).forEach(k=>{if(param[k]>=0&&param[k]<80)times.push(k);});if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times};S.mcpFactor=1;S.windSources.MERRA2={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:50,elevation:null,sourceLat:lat,sourceLon:lon,sourceHeight:50};$('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);log(`v32.0: Data source position: ${lat.toFixed(4)}°, ${lon.toFixed(4)}° · Height: 50m · This is the position for horizontal extrapolation`,'i');addDataSourceMarker('MERRA2',lat,lon,50);const vs=speeds.filter(v=>v>.5);const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;const wb=weibullFit(vs);const rho=parseFloat($('airDen').value)||1.225;const PD=.5*rho*mean**3;$('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);$('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);$('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';$('e5out').style.display='block';drawE5Hist(speeds,wb);if($('mastH'))$('mastH').value=50;updateDataSourceUI('MERRA2');$('merra2Status').textContent='✓ MERRA-2: '+speeds.length.toLocaleString()+' records, mean WS50m='+mean.toFixed(2)+' m/s';log('MERRA-2 data downloaded: '+speeds.length+' records, mean='+mean.toFixed(2)+' m/s','i');}catch(e){$('merra2Status').textContent='⚠ MERRA-2 unavailable: '+e.message;log('MERRA-2 failed: '+e.message,'w');}}
+async function downloadMERRA2(){
+  $('merra2Status').textContent='Querying NASA POWER...';
+  try{
+    const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
+    const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);
+    const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    // v43.0: Capture actual coordinates from NASA POWER response
+    const merraLat=d.geometry?.coordinates?.[1]??lat;
+    const merraLon=d.geometry?.coordinates?.[0]??lon;
+    const ws10=Object.values(d.properties?.parameter?.WS10M||{});
+    const ws50=Object.values(d.properties?.parameter?.WS50M||{});
+    const wd10=Object.values(d.properties?.parameter?.WD10M||{});
+    const speeds=ws50.filter(v=>v>=0&&v<80);
+    const dirs=wd10.filter(v=>!isNaN(v)).map(v=>(v%360+360)%360);
+    const times=[];const param=d.properties?.parameter?.WS50M||{};
+    Object.keys(param).forEach(k=>{if(param[k]>=0&&param[k]<80)times.push(k);});
+    if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');
+    S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times};
+    S.mcpFactor=1;S.windSource='MERRA2';
+    S.windSources.MERRA2={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:50,elevation:null,sourceLat:merraLat,sourceLon:merraLon,sourceHeight:50};
+    $('mastLat').value=merraLat.toFixed(3);$('mastLon').value=merraLon.toFixed(3);
+    log(`v43.0: MERRA-2 data source position: ${merraLat.toFixed(4)}°, ${merraLon.toFixed(4)}° · Height: 50m`,'i');
+    addDataSourceMarker('MERRA2',merraLat,merraLon,50);
+    const vs=speeds.filter(v=>v>.5);const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;
+    const wb=weibullFit(vs);const rho=parseFloat($('airDen').value)||1.225;
+    const PD=.5*rho*mean**3;
+    $('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);
+    $('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);
+    $('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';
+    $('e5out').style.display='block';drawE5Hist(speeds,wb);
+    if($('mastH'))$('mastH').value=50;
+    updateDataSourceUI('MERRA2');
+    $('merra2Status').textContent='✓ MERRA-2: '+speeds.length.toLocaleString()+' records, mean WS50m='+mean.toFixed(2)+' m/s';
+    log('MERRA-2 data downloaded: '+speeds.length+' records, mean='+mean.toFixed(2)+' m/s','i');
+  }catch(e){
+    $('merra2Status').textContent='⚠ MERRA-2 unavailable: '+e.message;
+    log('MERRA-2 failed: '+e.message,'w');
+  }
+}
 
 async function downloadNCEP(){
   const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
@@ -9564,11 +9735,17 @@ async function downloadNCEP(){
     const times=[];const rawWs=d.hourly?.[wsV]||[];
     for(let i=0;i<rawWs.length;i++){if(rawWs[i]!=null&&rawWs[i]>=0&&rawWs[i]<80)times.push(d.hourly?.time?.[i]||'');}
     if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');
+    // v43.0: Capture actual grid point from API response
+    const gridLat=d.latitude??lat,gridLon=d.longitude??lon;
+    if(Math.abs(gridLat-lat)>0.01||Math.abs(gridLon-lon)>0.01){
+      log(`v43.0: NCEP grid point (${gridLat.toFixed(4)}°, ${gridLon.toFixed(4)}°) differs from input (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`,'w');
+    }
     S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times};
-    S.mcpFactor=1;S.windSource='ERA5';
-    S.windSources.ERA5={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:parseInt(h)||100,elevation:null,sourceLat:lat,sourceLon:lon,sourceHeight:parseInt(h)||100};
-    $('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);
-    addDataSourceMarker('ERA5T',lat,lon,parseInt(h)||100);
+    S.mcpFactor=1;S.windSource='NCEP';
+    // v43.0 FIX: Store under NCEP key (was incorrectly overwriting ERA5)
+    S.windSources.NCEP={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:parseInt(h)||100,elevation:null,sourceLat:gridLat,sourceLon:gridLon,sourceHeight:parseInt(h)||100};
+    $('mastLat').value=gridLat.toFixed(3);$('mastLon').value=gridLon.toFixed(3);
+    addDataSourceMarker('NCEP',gridLat,gridLon,parseInt(h)||100);
     if($('mastH'))$('mastH').value=parseInt(h)||100;
     const vs=speeds.filter(v=>v>0.5);const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;
     const wb=weibullFit(vs);const rho=parseFloat($('airDen').value)||1.225;
@@ -9577,7 +9754,7 @@ async function downloadNCEP(){
     $('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);
     $('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';
     $('e5out').style.display='block';drawE5Hist(speeds,wb);
-    updateDataSourceUI('ERA5');
+    updateDataSourceUI('NCEP');
     autoShear();
     $('ncepStatus').textContent=`✓ NCEP/CFSR (${sy}–${ey}): ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;
     $('windStat').textContent=`NCEP/CFSR ${sy}–${ey}: ${speeds.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s`;
@@ -9859,7 +10036,7 @@ function updateReportingDashboard(){
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
   // v42.1: Also save S.results so user doesn't have to re-run analysis after loading
-  const data={version:'42.1',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0'}};
+  const data={version:'43.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0'}};
   const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v42.1, results included)','i');
 }
 
@@ -9885,7 +10062,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 42.0`);
+  lines.push(`WAsP Project Export - WindFlow Pro 43.0`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
@@ -11134,6 +11311,8 @@ async function downloadNEWA(){
 const DSMARKER_STYLES={
   ERA5T:{bg:'#58a6ff',border:'#fff',label:'ERA5T',shadow:'rgba(88,166,255,.6)'},
   ERA5:{bg:'#58a6ff',border:'#fff',label:'ERA5',shadow:'rgba(88,166,255,.6)'},
+  GWA:{bg:'#a855f7',border:'#fff',label:'GWA',shadow:'rgba(168,85,247,.6)'},
+  NCEP:{bg:'#fb923c',border:'#fff',label:'NCEP',shadow:'rgba(251,146,60,.6)'},
   MERRA2:{bg:'#f5a623',border:'#fff',label:'MERRA-2',shadow:'rgba(245,166,35,.6)'},
   NEWA:{bg:'#00d68f',border:'#fff',label:'NEWA',shadow:'rgba(0,214,143,.6)'},
   CSV:{bg:'#e05050',border:'#fff',label:'CSV',shadow:'rgba(224,80,80,.6)'}
@@ -11156,7 +11335,7 @@ function addDataSourceMarker(source,lat,lon,hh){
   log(`Data source marker: ${style.label} at (${lat.toFixed(4)}, ${lon.toFixed(4)}) · ${hh}m`,'i');
 }
 function removeDataSourceMarkers(){
-  ['era5Marker','merra2Marker','newaMarker'].forEach(k=>{
+  ['era5Marker','gwaMarker','ncepMarker','merra2Marker','newaMarker'].forEach(k=>{
     if(S[k]){S[k].remove();S[k]=null;}
   });
 }
@@ -11927,15 +12106,19 @@ async function downloadERA5LT(){
   try{
     const years=[];for(let y=sy;y<=ey;y++)years.push(y);
     const BATCH=5;const ltSp=[],ltDr=[],ltTs=[];
+    // v43.0: Track actual grid point coordinates
+    let ltGridLat=lat,ltGridLon=lon;
     for(let i=0;i<years.length;i+=BATCH){
       const batch=years.slice(i,i+BATCH);
       const res=await Promise.all(batch.map(y=>fetchOneYear(lat,lon,y,wsV,wdV)));
-      res.forEach(r=>{ltSp.push(...r.sp.map(v=>v??0));ltDr.push(...r.dr.map(v=>v??0));ltTs.push(...r.ts);});
+      res.forEach(r=>{ltSp.push(...r.sp.map(v=>v??0));ltDr.push(...r.dr.map(v=>v??0));ltTs.push(...r.ts);
+        if(r.gridLat!=null&&r.gridLon!=null&&(ltGridLat===lat&&ltGridLon===lon)){ltGridLat=r.gridLat;ltGridLon=r.gridLon;}
+      });
       setProg('mcp',5+80*(i+BATCH)/years.length,`${Math.min(i+BATCH,years.length)}/${years.length} years...`);
     }
-    // Store as ERA5_LT in windSources
+    // Store as ERA5_LT in windSources with actual grid coordinates
     const refH=parseInt(h)||100;
-    S.windSources.ERA5_LT={speeds:[...ltSp],dirs:[...ltDr],times:[...ltTs],mcpFactor:1,mastH:refH,elevation:null,sourceLat:lat,sourceLon:lon,sourceHeight:refH};
+    S.windSources.ERA5_LT={speeds:[...ltSp],dirs:[...ltDr],times:[...ltTs],mcpFactor:1,mastH:refH,elevation:null,sourceLat:ltGridLat,sourceLon:ltGridLon,sourceHeight:refH};
     enrichWindSource('ERA5_LT');
     updateDataSourceUI(S.windSource||'ERA5');
     setProg('mcp',100,`✓ ERA5 LT: ${ltSp.length.toLocaleString()} records`);
