@@ -2928,6 +2928,18 @@ function calcAEP(){
   const jhSpeedups = computeAllJHSpeedups(sectors, hubHH, z0);
   // v39.1: Flat terrain guard — if terrain is flat or no terrain data, all speedups = 1.0
   const isFlatTerrain = !S.terrain || !S.terrain.grid || !S.terrain.grid.length || ((S.terrain.maxE||0)-(S.terrain.minE||0)) < 20;
+  // v40.1: CRITICAL — Force BZ state to flat-terrain when isFlatTerrain
+  // Stale BZ speedups from a previous terrain run would otherwise cause wild per-WTG WS variation
+  if(isFlatTerrain && BZ.enabled){
+    BZ.speedups = S.turbines.map(() => 1.0);
+    for(let si=0;si<sectors.length;si++){
+      if(BZ.sectorSpeedups[si]) BZ.sectorSpeedups[si] = S.turbines.map(() => 1.0);
+      if(BZ.mastSectorSU) BZ.mastSectorSU[si] = 1.0;
+    }
+    BZ.mastSU = 1.0;
+    BZ.rix = 0;
+    log('v40.1: Flat terrain detected — BZ speedups forced to 1.0 (no orographic effect)','i');
+  }
   // For display: compute average speedup per turbine (using prevailing direction)
   const prevDir=parseFloat($('prevWD')?.value||270);
   const tSpeedups=S.turbines.map((t,ti)=>{
@@ -3033,7 +3045,7 @@ function calcAEP(){
           const turbSU=BZ.sectorSpeedups[si][t]||1;
           // v32.0 FIX: Use sector-specific roughness ratio (roughRatioIBL) for per-turbine path
           // Previously used omnidirectional BZ.turbRoughRC[t] which ignored roughness rose
-          const turbRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC[t]:roughRC);
+          const turbRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC[t]:roughRatioIBL);
           const mastOrSU=BZ.mastSectorSU?BZ.mastSectorSU[si]:BZ.mastSU;
           // v32.0: GDL-based downscale (if selected)
           const useGDL=$('downscaleMethod')?.value!=='simple';
@@ -3179,10 +3191,11 @@ function calcAEP(){
       const hhS=hhScaleFactors[i];
       return freqWeightedSU * freqWeightedRC * gdlFactor * hhS;
     }
-    // Non-BZ path: JH terrain speedup + HH scaling + roughness ratio
+    // Non-BZ path: JH terrain speedup + HH scaling + roughness ratio + GDL
     const jhSU=tSpeedups[i];
-    const roughRC=hasRoughRose?getSectorRoughnessRatio(0,hubHH,nSect):1;
-    return jhSU*hhScaleFactors[i]*(hasRoughRose?roughRC*gdlFactor:1);
+    // Frequency-weighted roughness ratio across sectors (not just sector 0)
+    const roughRC=hasRoughRose?sectors.reduce((sum,sec,si)=>sum+sec.freq*getSectorRoughnessRatio(si,hubHH,nSect),0):1;
+    return jhSU*hhScaleFactors[i]*gdlFactor*(hasRoughRose?roughRC:1);
   });
   // tSpeedups is frequency-weighted average per turbine (computed above from JH)
   const perT=txy.map((_,i)=>{
@@ -8318,6 +8331,11 @@ function runFlatTerrainAnalysis(){
   const flatElev=parseFloat($('flatElev')?.value)||0;
   // Set flat terrain in state
   S.terrain={grid:null,elevations:null,flat:true,flatZ0:flatZ0,flatElev:flatElev};
+  // v40.1: Reset BZ state for flat terrain
+  BZ.enabled=false;BZ.speedups=[];BZ.sectorSpeedups=[];BZ.mastSectorSU=[];
+  BZ.mastSU=1;BZ.rix=0;BZ.sectorRoughRC=[];BZ.turbRoughRC=[];
+  BZ.sectorTurning=[];BZ.mastSectorTurning=[];BZ.sectorInclination=[];
+  BZ.sectorSU=[];BZ.calibration=null;BZ.turbDistM=[];
   $('siteElev').value=flatElev.toFixed(0);calcDensity();
   // Set roughness
   if($('z0sel'))$('z0sel').value=String(flatZ0);
@@ -8325,7 +8343,7 @@ function runFlatTerrainAnalysis(){
   // Set flat roughness rose
   S.roughnessRose={sectors:16,z0:flatZ0,flat:true};
   log('Flat terrain fallback: z0='+flatZ0+'m, elev='+flatElev+'m — no orographic speed-ups','w');
-  $('flatResult').innerHTML='<span style="color:var(--mint)">✓ Flat terrain set (z\u2080='+flatZ0+'m, elev='+flatElev+'m). Go to Step 6 \u2192 WAsP Flow to run analysis.</span>';
+  $('flatResult').innerHTML='<span style="color:var(--mint)">✓ Flat terrain set (z\u2080='+flatZ0+'m, elev='+flatElev+'m). Go to Step 5 \u2192 WAsP Analysis to run analysis.</span>';
   S._windValidated=true;
   validateCheckpoint();
   // Unblock step 6
@@ -9503,7 +9521,7 @@ function loadProject(event){
 
 function clearAll(){
   if(!confirm('Clear all data?'))return;
-  S.turbines=[];S.wind=null;S.era5Raw=null;S.mcpFactor=1;S.tsData=null;S.results=null;S.terrain=null;S.contoursData=[];S.boundary=[];S.obstacles=[];S.masts=[];S.waspCalibration=null;S.hourlyStability=null;S.autoRoughnessRose=null;S.roughnessZones=null;S.windSources={};S.windSource='ERA5';S._terrProfRef=null;S._terrProfData=null;S._windValidated=false;BZ.enabled=false;BZ.speedups=[];BZ.grid=null;BZ.sectorSU=[];BZ.sectorTurning=[];BZ.sectorRoughRC=[];BZ.turbRoughRC=[];BZ.mastSU=1;BZ.showLayer=false;
+  S.turbines=[];S.wind=null;S.era5Raw=null;S.mcpFactor=1;S.tsData=null;S.results=null;S.terrain=null;S.contoursData=[];S.boundary=[];S.obstacles=[];S.masts=[];S.waspCalibration=null;S.hourlyStability=null;S.autoRoughnessRose=null;S.roughnessZones=null;S.windSources={};S.windSource='ERA5';S._terrProfRef=null;S._terrProfData=null;S._windValidated=false;BZ.enabled=false;BZ.speedups=[];BZ.grid=null;BZ.sectorSU=[];BZ.sectorSpeedups=[];BZ.mastSectorSU=[];BZ.sectorTurning=[];BZ.mastSectorTurning=[];BZ.sectorRoughRC=[];BZ.turbRoughRC=[];BZ.mastSU=1;BZ.showLayer=false;BZ.sectorInclination=[];BZ.turbDistM=[];BZ.calibration=null;
   // v33.3: Remove all data source markers from map
   removeDataSourceMarkers();
   refreshTable();updateMarkers();clearBoundary();renderMastList();
@@ -11822,13 +11840,31 @@ async function runWAsPAnalysis(){
   pbEl.style.width = '25%';
   log('  \u2462 Running BZ generalization (OWC \u2192 GWC)...', 'i');
   try {
-    if (S.terrain) {
+    if (S.terrain && S.terrain.grid && S.terrain.grid.length) {
       await runBZModel();
     } else {
-      log('  No terrain data \u2014 skipping BZ generalization', 'w');
+      // CRITICAL: Reset BZ state when terrain is unavailable
+      // Stale BZ speedups from a previous terrain run cause wild per-WTG WS variation
+      BZ.enabled = false;
+      BZ.speedups = [];
+      BZ.sectorSpeedups = [];
+      BZ.mastSectorSU = [];
+      BZ.mastSU = 1;
+      BZ.rix = 0;
+      BZ.sectorRoughRC = [];
+      BZ.turbRoughRC = [];
+      BZ.sectorTurning = [];
+      BZ.mastSectorTurning = [];
+      BZ.sectorInclination = [];
+      BZ.sectorSU = [];
+      BZ.calibration = null;
+      BZ.turbDistM = [];
+      log('  No terrain data \u2014 BZ state reset, using flat terrain assumptions', 'w');
     }
   } catch (e) {
     log('BZ model warning: ' + e.message, 'w');
+    // Also reset BZ on error
+    BZ.enabled = false; BZ.mastSU = 1;
   }
 
   // Stage 4: Downscale (GWC -> SWC)
@@ -11945,13 +11981,21 @@ function runWAsPFlow() {
     statusEl.style.color = 'var(--sky)';
     log('  ① Generalizing OWC → GWC (BZ model)...', 'i');
     try {
-      if (S.terrain) {
+      if (S.terrain && S.terrain.grid && S.terrain.grid.length) {
         await runBZModel();
       } else {
-        log('  No terrain data — skipping BZ generalization (will use simple speedup)', 'w');
+        // v40.1: Reset BZ state when terrain is unavailable
+        BZ.enabled = false; BZ.speedups = []; BZ.sectorSpeedups = [];
+        BZ.mastSectorSU = []; BZ.mastSU = 1; BZ.rix = 0;
+        BZ.sectorRoughRC = []; BZ.turbRoughRC = [];
+        BZ.sectorTurning = []; BZ.mastSectorTurning = [];
+        BZ.sectorInclination = []; BZ.sectorSU = [];
+        BZ.calibration = null; BZ.turbDistM = [];
+        log('  No terrain data — BZ state reset, using flat terrain assumptions', 'w');
       }
     } catch (e) {
       log('BZ model warning: ' + e.message, 'w');
+      BZ.enabled = false; BZ.mastSU = 1;
     }
     stage2();
   }
