@@ -181,7 +181,8 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       </div>
     </div>
   <div class="nav-row"><div></div><button class="btn btn-primary" onclick="goToStep(2)">Next: Wind Data &#8594;</button></div>
-</div>
+  </div><!-- close g2 (Power Curve) -->
+</div><!-- close step1 -->
 
 <!-- ===== STEP 2: WIND DATA ===== -->
 <div class="step-panel" id="step2">
@@ -595,11 +596,12 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <button class="btn btn-sm btn-sky" onclick="drawBankabilityMaps()">🗺 Generate Map Overview</button>
       <button class="btn btn-sm btn-ghost" onclick="exportBankabilityReport()">📄 Export Bankability Report (HTML)</button>
     </div>
-  </div>
+  </div><!-- close bankability card -->
+  </div><!-- close padding wrapper -->
   </details>
 
   <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(4)">&#8592; Terrain</button><div></div></div>
-</div>
+</div><!-- close step5 -->
 
 <!-- Hidden elements for backward compatibility with computation engine -->
 <div class="hidden">
@@ -9186,8 +9188,8 @@ function processBoundaryKML(kmlText,fileName){
 
 // ── FLOW TABS ──
 function showFlowTab(idx,btn){
-  document.querySelectorAll('#step6 .tab-panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('#step6 .tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#step5 .tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('#step5 .tab-btn').forEach(b=>b.classList.remove('active'));
   const panel=$('flowTab'+idx);if(panel)panel.classList.add('active');
   if(btn)btn.classList.add('active');
 }
