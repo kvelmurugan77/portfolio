@@ -2955,17 +2955,47 @@ function calcAEP(){
   const gross=new Float64Array(n),net=new Float64Array(n);
   const dv=.5,vMax=28;
 
-  // ─── v41.0: Determine terrain classification ───
+  // ─── v45.0: Determine terrain classification ───
   // CRITICAL: This drives ALL speedup decisions
+  // WAsP classifies terrain based on the orographic speedup significance.
+  // A site is "flat" when the terrain-induced wind speed variation is < 3%
+  // (i.e., speedup factors are all within 0.97–1.03).
   const hasTerrainData=S.terrain&&S.terrain.grid&&S.terrain.grid.length>0;
   const terrainRange=hasTerrainData?(S.terrain.maxE-S.terrain.minE):0;
-  // Flat: range < 20m OR no terrain data
-  const isFlatTerrain=!hasTerrainData||terrainRange<20;
-  // Complex: range > 100m and RIX > 5%
-  const isComplexTerrain=hasTerrainData&&terrainRange>100;
+  // Compute maximum terrain slope across the layout
+  // Sample a reasonable number of WTG pairs (not all O(n²))
+  let maxSlope=0;
+  if(hasTerrainData&&S.turbines.length>1){
+    const tElevs=S.turbines.map(t=>t.elev!==undefined&&t.elev!==null?t.elev:
+      (typeof getTerrainElevBilinear==='function'?getTerrainElevBilinear(t.lat,t.lon):0));
+    const nT=S.turbines.length;
+    // Sample up to 200 pairs (enough for slope statistics)
+    const maxPairs=Math.min(200,nT*(nT-1)/2);
+    let pairCount=0;
+    for(let i=0;i<nT&&pairCount<maxPairs;i++){
+      for(let j=i+1;j<nT&&pairCount<maxPairs;j++){
+        const dElev=Math.abs(tElevs[i]-tElevs[j]);
+        const dLat=(S.turbines[i].lat-S.turbines[j].lat)*111320;
+        const dLon=(S.turbines[i].lon-S.turbines[j].lon)*111320*Math.cos(S.turbines[i].lat*Math.PI/180);
+        const dist=Math.sqrt(dLat*dLat+dLon*dLon);
+        if(dist>100){ // only count pairs > 100m apart
+          const slope=dElev/dist;
+          if(slope>maxSlope)maxSlope=slope;
+        }
+        pairCount++;
+      }
+    }
+  }
+  // v45.0: Flat terrain criteria — much more realistic thresholds
+  // Flat: no terrain data, OR range < 50m AND max slope < 3%
+  // The 50m threshold covers gently rolling terrain (e.g. Dobrogea, Denmark)
+  // The 3% slope threshold ensures speedups are < 3% (WAsP flat territory)
+  const isFlatTerrain=!hasTerrainData||(terrainRange<50&&maxSlope<0.03);
+  // Complex: range > 100m AND max slope > 10% (mountainous)
+  const isComplexTerrain=hasTerrainData&&(terrainRange>100||maxSlope>0.10);
+  log(`v45.0 Terrain classification: range=${terrainRange.toFixed(0)}m, maxSlope=${(maxSlope*100).toFixed(1)}%, flat=${isFlatTerrain}, complex=${isComplexTerrain}`,'i');
 
-  // ─── v44.0: Pre-compute JH speedups BEFORE horizontal extrapolation ───
-  // Needed because horizFactors uses jhSpeedups for speedup uncertainty
+  // ─── v45.0: Pre-compute JH speedups ───
   let jhSpeedups=[];
   if(!isFlatTerrain){
     jhSpeedups=computeAllJHSpeedups(sectors,hubHH,z0);
@@ -3282,9 +3312,28 @@ function calcAEP(){
       if(bzActive){
         // BZ per-turbine path
         for(let t=0;t<n;t++){
-          const turbSU=BZ.sectorSpeedups[si][t]||1;
-          const turbRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC[t]:roughRatioIBL);
-          let turbV=rotorV/Math.max(mastOrSU,0.5)*turbSU*turbRC*gdlFactor;
+          let turbV;
+
+          if(isFlatTerrain){
+            // v45.0: On flat terrain, bypass BZ entirely
+            // BZ speedups are 1.0 on flat terrain, but the ratio turbSU/mastOrSU
+            // can still produce numerical noise. Use simple chain instead.
+            turbV=rotorV*horizFactors[t];
+          }else if(terrainRange<100){
+            // v45.0: Near-flat terrain — clamp BZ speedup ratio to ±5%
+            // On gently rolling terrain, BZ can produce speedup ratios that
+            // are too large for the actual terrain complexity
+            const turbSU=BZ.sectorSpeedups[si][t]||1;
+            const turbRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC[t]:roughRatioIBL);
+            const suRatio=turbSU/Math.max(mastOrSU,0.5);
+            const clampedRatio=Math.max(0.95,Math.min(1.05,suRatio));
+            turbV=rotorV*clampedRatio*turbRC*gdlFactor*horizFactors[t];
+          }else{
+            // Complex terrain — full BZ path
+            const turbSU=BZ.sectorSpeedups[si][t]||1;
+            const turbRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC[t]:roughRatioIBL);
+            turbV=rotorV/Math.max(mastOrSU,0.5)*turbSU*turbRC*gdlFactor*horizFactors[t];
+          }
 
           // Hub height scaling
           turbV*=hhScaleFactors[t];
@@ -3298,9 +3347,6 @@ function calcAEP(){
           // Inclination correction
           const inclFactor=(BZ.sectorInclination&&BZ.sectorInclination[si])?(BZ.sectorInclination[si][t]||1):1;
           turbV*=inclFactor;
-
-          // v43.0: Horizontal extrapolation factor (elevation + distance + roughness)
-          turbV*=horizFactors[t];
 
           if(!isFinite(turbV)||turbV<0||turbV>30)continue;
 
@@ -3430,13 +3476,13 @@ function calcAEP(){
   const freeSpWind=wakeRun(txy,rotorMeanWS,prevDir,lut,kw);
 
   const perTEffSU=S.turbines.map((t,i)=>{
-    // v44.0: Include horizontal extrapolation factor in effective speedup
+    // v45.0: Include horizontal extrapolation factor in effective speedup
     const horizF=horizFactors[i];
+    let effSU;
     if(isFlatTerrain){
-      // Flat terrain: HH scaling + horizontal extrapolation (distance/uncertainty)
-      return hhScaleFactors[i]*horizF;
-    }
-    if(BZ.enabled&&BZ.speedups.length){
+      // Flat terrain: HH scaling + horizontal extrapolation (representativeness only)
+      effSU=hhScaleFactors[i]*horizF;
+    }else if(BZ.enabled&&BZ.speedups.length){
       // BZ path: frequency-weighted speedup + roughness + GDL + HH + horizontal
       const freqWeightedSU=sectors.reduce((sum,sec,si)=>{
         const turbSecSU=BZ.sectorSpeedups?.[si]?.[i]||BZ.speedups[i]||1;
@@ -3447,13 +3493,36 @@ function calcAEP(){
         const secRC=BZ.sectorRoughRC?.[si]||(BZ.turbRoughRC?.[i]||1);
         return sum+sec.freq*secRC;
       },0);
-      return freqWeightedSU*freqWeightedRC*gdlFactor*hhScaleFactors[i]*horizF;
+      effSU=freqWeightedSU*freqWeightedRC*gdlFactor*hhScaleFactors[i]*horizF;
+    }else{
+      // JH path
+      const jhSU=tSpeedups[i];
+      const roughRC=hasRoughRose?sectors.reduce((sum,sec,si)=>sum+sec.freq*getSectorRoughnessRatio(si,hubHH,nSect),0):1;
+      effSU=jhSU*hhScaleFactors[i]*gdlFactor*(hasRoughRose?roughRC:1)*horizF;
     }
-    // JH path
-    const jhSU=tSpeedups[i];
-    const roughRC=hasRoughRose?sectors.reduce((sum,sec,si)=>sum+sec.freq*getSectorRoughnessRatio(si,hubHH,nSect),0):1;
-    return jhSU*hhScaleFactors[i]*gdlFactor*(hasRoughRose?roughRC:1)*horizF;
+    // v45.0 CRITICAL: Clamp effective speedup on flat/near-flat terrain
+    // On flat terrain: all WTGs must have essentially the same wind speed.
+    // WAsP never produces >3% variation on flat terrain.
+    // If effSU is far from 1.0 on flat terrain, something is wrong.
+    if(isFlatTerrain){
+      effSU=Math.max(0.97,Math.min(1.03,effSU)); // ±3% max on flat terrain
+    }else if(terrainRange<100){
+      // Gently rolling terrain (20-100m range): ±5% max variation
+      effSU=Math.max(0.95,Math.min(1.05,effSU));
+    }
+    return effSU;
   });
+
+  // v45.0: Diagnostic — log per-WTG effective speedup range
+  {
+    const suVals=perTEffSU.map(s=>s);
+    const minSU=Math.min(...suVals),maxSU=Math.max(...suVals);
+    const freeWSmin=rotorMeanWS*minSU,freeWSmax=rotorMeanWS*maxSU;
+    log(`v45.0 Per-WTG speedup: ${minSU.toFixed(4)}–${maxSU.toFixed(4)} → free WS ${freeWSmin.toFixed(2)}–${freeWSmax.toFixed(2)} m/s (Δ=${((maxSU-minSU)*rotorMeanWS).toFixed(2)} m/s)${isFlatTerrain?' [FLAT — Δ should be <0.3 m/s]':''}`,'i');
+    if(isFlatTerrain&&(maxSU-minSU)>0.03){
+      log(`⚠ FLAT TERRAIN but per-WTG speedup varies by ${((maxSU-minSU)*100).toFixed(1)}% — BZ/JH speedups may be noisy. Clamping applied.`,'w');
+    }
+  }
 
   const perT=txy.map((_,i)=>{
     const wl=gross[i]>0?(gross[i]-net[i])/gross[i]*100:0;
