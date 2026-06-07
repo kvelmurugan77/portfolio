@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 46.1</title>
+<title>WindFlow Pro 47.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 46.1</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 47.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -1018,6 +1018,16 @@ function computeHillParameters(profile) {
 
   const refElev = profile[0].elev; // elevation at the turbine point
 
+  // v47.0 CRITICAL FIX: Find the valley floor (minimum elevation) in the profile
+  // Previously, hill height H was measured from the turbine's own elevation (refElev),
+  // which meant ridge-top turbines got H≈0 (no speedup). But ridge-top turbines should
+  // get MAXIMUM speedup because they're at the crest where wind accelerates most.
+  // The correct reference is the valley floor: the lowest point in the terrain profile.
+  let minElev = refElev;
+  for (let k = 1; k < profile.length; k++) {
+    if (profile[k].elev < minElev) minElev = profile[k].elev;
+  }
+
   // Find the crest: maximum elevation in the upwind profile
   let maxElev = refElev, crestIdx = 0;
   for (let k = 1; k < profile.length; k++) {
@@ -1027,21 +1037,21 @@ function computeHillParameters(profile) {
     }
   }
 
-  const H = maxElev - refElev; // hill height above reference
+  // v47.0: Hill height measured from valley floor, NOT from turbine elevation
+  // This means even a turbine AT the crest gets H = crest - valley_floor > 0
+  const H = maxElev - minElev; // hill height above valley floor
   if (H < 1.0) return { H: 0, L: 1000, distToCrest: 0, shape: 'flat' }; // negligible terrain
 
   const distToCrest = profile[crestIdx].dist;
 
-  // Find half-length L: distance from crest to where elevation = refElev + H/2
-  // Search both upwind and downwind of the crest
-  const halfH = refElev + H / 2;
+  // Find half-length L: distance from crest to where elevation = minElev + H/2
+  const halfH = minElev + H / 2;
   let L_upwind = profile[crestIdx].dist; // distance upwind of crest to half-height
   let L_downwind = 5000; // default
 
   // Search upwind from crest (toward larger dist)
   for (let k = crestIdx + 1; k < profile.length; k++) {
     if (profile[k].elev <= halfH) {
-      // Interpolate
       const frac = (halfH - profile[k - 1].elev) / Math.max(0.1, profile[k].elev - profile[k - 1].elev);
       L_upwind = profile[k - 1].dist + frac * (profile[k].dist - profile[k - 1].dist) - distToCrest;
       break;
@@ -1062,14 +1072,17 @@ function computeHillParameters(profile) {
 
   // Detect shape from the profile
   let shape = '3D_hill'; // default
-  // If the profile is asymmetric (escarpment: steep upwind, gentle downwind)
   if (L_downwind > 0 && L_upwind / Math.max(1, L_downwind) > 2) {
     shape = 'escarpment';
   } else if (L_downwind > 0 && L_downwind / Math.max(1, L_upwind) > 2) {
     shape = 'cliff';
   }
 
-  return { H: Math.max(0, H), L: Math.max(100, L), distToCrest, shape, maxElev, refElev };
+  // v47.0: Compute the turbine's position relative to the crest
+  // crestProximity: 0 at valley floor, 1 at crest — scales speedup by position
+  const crestProximity = maxElev > minElev ? (refElev - minElev) / (maxElev - minElev) : 0;
+
+  return { H: Math.max(0, H), L: Math.max(100, L), distToCrest, shape, maxElev, refElev, minElev, crestProximity };
 }
 
 // Jackson-Hunt speedup formula for 2D ridge
@@ -1218,18 +1231,12 @@ function terrainSpeedupJH(turbIdx, sectorDir, hubH, z0) {
     return { speedup: terrainSpeedup(turbElev, mastElev, hubH, z0), turning: 0, inclination: 0 };
   }
 
-  // Check if terrain is flat (min-max range < 20m across the domain) — skip JH computation
-  // WAsP: on flat terrain (RIX < 5%), orographic speedup is negligible (<1%).
-  // The 20m threshold is conservative: a 20m range over a 10km domain = 0.2% slope = flat.
-  // The old 5m threshold was too aggressive — 10m elevation variation over 10km is still flat.
-  const terrainRange = (S.terrain.maxE || 0) - (S.terrain.minE || 0);
-  const domainSizeKm = Math.max(
-    (S.terrain.lat1 - S.terrain.lat0) * 111,
-    (S.terrain.lon1 - S.terrain.lon0) * 111 * Math.cos((S.terrain.lat0 + S.terrain.lat1) / 2 * Math.PI / 180)
-  );
-  const effectiveSlope = domainSizeKm > 0 ? terrainRange / (domainSizeKm * 1000) : 0;
-  // Flat terrain: slope < 3% (WAsP RIX < 5% threshold)
-  if (effectiveSlope < 0.03 || terrainRange < 20) return { speedup: 1.0, turning: 0, inclination: 0 };
+  // v47.0 CRITICAL FIX: Removed grid-wide slope check that was returning speedup=1.0
+  // for ALL turbines when the grid-wide average slope < 3%. This incorrectly classified
+  // complex terrain (e.g. 500m range over 30km = 1.7% average) as "flat", killing all
+  // orographic speedups. Now we ALWAYS compute the LOCAL speedup from the terrain profile
+  // extracted at each turbine location. The local profile analysis handles flat terrain
+  // correctly via hill.H < 1.0 and slope < 0.01 checks below.
 
   const lat = turb.lat;
   const lon = turb.lon;
@@ -1259,6 +1266,14 @@ function terrainSpeedupJH(turbIdx, sectorDir, hubH, z0) {
 
   // 3. Compute Jackson-Hunt speedup for the dominant hill
   let deltaS_2D = jacksonHuntSpeedup2D(hill.H, hill.L, hubH, z0);
+
+  // v47.0: Apply crest proximity factor — speedup depends on turbine position
+  // relative to the hill crest. JH gives MAX speedup at the crest. Scale deltaS
+  // by crestProximity (0 at valley floor, 1 at crest).
+  if (hill.crestProximity !== undefined && hill.crestProximity < 1.0) {
+    const proximityFactor = 0.3 + 0.7 * hill.crestProximity;
+    deltaS_2D *= proximityFactor;
+  }
 
   // 4. Apply 3D correction
   const aspectRatio = computeCrossWindAspect(lat, lon, sectorDir, maxDistKm);
@@ -1291,16 +1306,15 @@ function terrainSpeedupJH(turbIdx, sectorDir, hubH, z0) {
   deltaS *= sepCorr;
 
   // 8. RIX-based correction for very complex terrain
-  // The RIX (Ruggedness Index) measures how complex the terrain is
-  // For RIX > 5%, the Jackson-Hunt linear theory starts to break down
-  // Apply empirical correction based on Mortensen & Bowen (2004)
-  if (S.terrain) {
-    const rix = Math.max(0, (S.terrain.maxE - S.terrain.minE) / Math.max(1, S.terrain.maxE) * 5);
-    if (rix > 5) {
-      // Over-prediction correction: reduce speedup for very complex terrain
-      const rixCorr = 1 - 0.03 * (rix - 5);
-      deltaS *= Math.max(0.7, rixCorr);
-    }
+  // v47.0 FIX: Use the actual BZ.rix from computeRIX() instead of the bogus
+  // (range/maxE)*5 formula. WAsP's RIX = % of terrain with slope > 0.30 in local area.
+  // For RIX > 5%, the Jackson-Hunt linear theory starts to break down.
+  // Apply empirical correction based on Mortensen & Bowen (2004).
+  const rix = BZ.rix || 0;
+  if (rix > 5) {
+    // Over-prediction correction: reduce speedup for very complex terrain
+    const rixCorr = 1 - 0.03 * (rix - 5);
+    deltaS *= Math.max(0.7, rixCorr);
   }
 
   // 9. Compute flow turning from cross-wind terrain gradient
@@ -2852,8 +2866,8 @@ function calcAEP(){
   // Complete rewrite of the OWC→GWC→SWC chain to match WAsP methodology.
   // Key principle: in flat terrain with uniform roughness, ALL corrections
   // must be identity (ratio=1.0), producing identical wind speeds at all WTGs.
-  log('── v46.0 WAsP Wind Flow Engine ──','i');
-  log('v46.0 CRITICAL FIXES: (1) GDL forward/inverse formula mismatch fixed, (2) horizFactors removed from P50 (WAsP: distance→uncertainty not wind speed), (3) symmetric k adjustment (5% both directions)','i');
+  log('── v47.0 WAsP Wind Flow Engine ──','i');
+  log('v47.0 CRITICAL FIXES: (1) Removed grid-wide slope exit from terrainSpeedupJH — local profile always computed, (2) computeHillParameters uses valley floor ref — ridge-top turbines get speedup, (3) BZ model flat terrain: removed isFlatByRIX, only local range check, (4) Replaced bogus RIX formula with BZ.rix','i');
 
   // v14.0: Per-WTG density correction based on elevation
   const usePerWtg=$('perWtgDensity')?.checked!==false;
@@ -3541,7 +3555,7 @@ function calcAEP(){
   });
 
   const shearProfile=[20,40,60,80,100,120,140,160,180,200].map(h=>({h,ws:logWS_stab(hubMean,hubHH,h,z0,L)}));
-  const rix=hasTerrainData?Math.max(0,terrainRange/Math.max(1,S.terrain.maxE)*5):0;
+  const rix=hasTerrainData?(BZ.rix||0):0; // v47.0: Use actual computed RIX, not bogus formula
 
   const iec=checkIECClass(rotorMeanWS,pc);if(!iec.ok)log(`⚠ IEC class warning: rotor-avg WS ${rotorMeanWS.toFixed(2)} m/s exceeds ${iec.cls} limit (${iec.limit} m/s)!`,'w');
   if(useRotorAvg&&Math.abs(rotAvgFactor-1)>0.001)log(`Rotor-averaged WS: factor=${rotAvgFactor.toFixed(4)}, hub=${hubMean.toFixed(2)} → rotor-avg=${rotorMeanWS.toFixed(2)} m/s (${((rotAvgFactor-1)*100).toFixed(1)}%)`,'i');
@@ -4351,7 +4365,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 46.1 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 47.0 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -8537,13 +8551,19 @@ async function runBZModel(){
   const isModerate = !isFlat && rangePerKm < 10; // moderate: 2-10 m/km
   const BZ_prevRix = BZ.rix;
   BZ.rix=computeRIX(S.terrain,rixThr);
-  const isFlatByRIX = BZ.rix < 3; // WAsP: RIX < 3% = flat terrain
+  // v47.0 FIX: Do NOT use RIX for flat terrain detection in the BZ model.
+  // RIX from coarse DEM ≈ 0% even on complex terrain because large grid cells
+  // smooth out slopes. Using isFlatByRIX incorrectly disabled BZ speedups on
+  // genuinely complex terrain. Now only isFlat (based on local range) determines
+  // if speedups should be forced to 1.0. The BZ FFT naturally produces speedups
+  // near 1.0 on flat terrain, so this is safe.
   const nSect=parseInt($('sects').value)||16;
-  log(`v46.1 BZ terrain: gridRange=${(S.terrain.maxE-S.terrain.minE).toFixed(0)}m, localRange=${terrainRange.toFixed(0)}m, RIX=${BZ.rix.toFixed(1)}%, rangePerKm=${rangePerKm.toFixed(1)}m/km, isFlat=${isFlat}, isFlatByRIX=${isFlatByRIX}`,'i');
+  log(`v47.0 BZ terrain: gridRange=${(S.terrain.maxE-S.terrain.minE).toFixed(0)}m, localRange=${terrainRange.toFixed(0)}m, RIX=${BZ.rix.toFixed(1)}%, rangePerKm=${rangePerKm.toFixed(1)}m/km, isFlat=${isFlat}`,'i');
 
-  if (isFlat || isFlatByRIX) {
-    // v22.0: On flat terrain, BZ speedups are physically meaningless (no orographic effect)
-    // Set ALL speedups to exactly 1.0 to prevent FFT noise artifacts
+  if (isFlat) {
+    // v47.0: Only force speedups=1.0 on GENUINELY flat terrain (local range <5m AND <2m/km)
+    // The BZ FFT correctly produces speedups near 1.0 on flat terrain naturally.
+    // Do NOT use isFlatByRIX — it's unreliable for coarse DEMs.
     BZ.mastSU = 1.0;
     BZ.speedups = S.turbines.map(() => 1.0);
     BZ.sectorSpeedups = [];
@@ -8560,7 +8580,7 @@ async function runBZModel(){
       BZ.sectorInclination.push(S.turbines.map(() => 1.0));
       BZ.sectorSU.push(1.0);
     }
-    log(`v46.1 BZ: Flat terrain detected (localRange=${terrainRange.toFixed(0)}m, RIX=${BZ.rix.toFixed(1)}%, rangePerKm=${rangePerKm.toFixed(1)}m/km) — all orographic speedups set to 1.0`,'i');
+    log(`v47.0 BZ: Genuinely flat terrain (localRange=${terrainRange.toFixed(0)}m, rangePerKm=${rangePerKm.toFixed(1)}m/km) — all orographic speedups set to 1.0`,'i');
   } else {
   // v22.0: Non-flat terrain — compute full BZ speedups
 
