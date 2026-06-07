@@ -2956,21 +2956,50 @@ function calcAEP(){
   const gross=new Float64Array(n),net=new Float64Array(n);
   const dv=.5,vMax=28;
 
-  // ─── v45.0: Determine terrain classification ───
+  // ─── v46.1: Determine terrain classification ───
   // CRITICAL: This drives ALL speedup decisions
-  // WAsP classifies terrain based on the orographic speedup significance.
-  // A site is "flat" when the terrain-induced wind speed variation is < 3%
-  // (i.e., speedup factors are all within 0.97–1.03).
+  // WAsP classifies terrain based on LOCAL orographic speedup significance.
+  // v46.1 FIX: Use LOCAL turbine-area terrain range, NOT the entire grid range.
+  // Previous bug: terrainRange = maxE - minE over the ENTIRE grid, so distant
+  // mountains (outside the wind farm) caused flat terrain to be classified as
+  // complex. This produced RIX = 83% and ΔS = 0.13 on flat terrain.
   const hasTerrainData=S.terrain&&S.terrain.grid&&S.terrain.grid.length>0;
-  const terrainRange=hasTerrainData?(S.terrain.maxE-S.terrain.minE):0;
+
+  // v46.1: Compute terrain range only in the LOCAL area around turbines
+  // Sample elevation at turbine positions + a few surrounding points
+  let terrainRange=0;
+  if(hasTerrainData){
+    const tElevs=S.turbines.map(t=>t.elev!==undefined&&t.elev!==null?t.elev:
+      (typeof getTerrainElevBilinear==='function'?getTerrainElevBilinear(t.lat,t.lon):0));
+    if(tElevs.length>1){
+      terrainRange=Math.max(...tElevs)-Math.min(...tElevs);
+    }else{
+      terrainRange=S.terrain.maxE-S.terrain.minE; // fallback for single WTG
+    }
+    // Also check the terrain within 5km of the turbine centroid
+    if(S.turbines.length>0){
+      const tcLat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
+      const tcLon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
+      const SAMPLE_RADIUS=5; // km
+      const sampleElevs=[...tElevs];
+      for(let a=0;a<8;a++){
+        const ang=a*Math.PI/4;
+        const sLat=tcLat+SAMPLE_RADIUS/111320*Math.cos(ang);
+        const sLon=tcLon+SAMPLE_RADIUS/(111320*Math.cos(tcLat*Math.PI/180))*Math.sin(ang);
+        const sElev=typeof getTerrainElevBilinear==='function'?getTerrainElevBilinear(sLat,sLon):0;
+        if(sElev&&sElev>0)sampleElevs.push(sElev);
+      }
+      const localRange=Math.max(...sampleElevs)-Math.min(...sampleElevs);
+      if(localRange>terrainRange)terrainRange=localRange;
+    }
+  }
+
   // Compute maximum terrain slope across the layout
-  // Sample a reasonable number of WTG pairs (not all O(n²))
   let maxSlope=0;
   if(hasTerrainData&&S.turbines.length>1){
     const tElevs=S.turbines.map(t=>t.elev!==undefined&&t.elev!==null?t.elev:
       (typeof getTerrainElevBilinear==='function'?getTerrainElevBilinear(t.lat,t.lon):0));
     const nT=S.turbines.length;
-    // Sample up to 200 pairs (enough for slope statistics)
     const maxPairs=Math.min(200,nT*(nT-1)/2);
     let pairCount=0;
     for(let i=0;i<nT&&pairCount<maxPairs;i++){
@@ -2979,7 +3008,7 @@ function calcAEP(){
         const dLat=(S.turbines[i].lat-S.turbines[j].lat)*111320;
         const dLon=(S.turbines[i].lon-S.turbines[j].lon)*111320*Math.cos(S.turbines[i].lat*Math.PI/180);
         const dist=Math.sqrt(dLat*dLat+dLon*dLon);
-        if(dist>100){ // only count pairs > 100m apart
+        if(dist>100){
           const slope=dElev/dist;
           if(slope>maxSlope)maxSlope=slope;
         }
@@ -2987,14 +3016,10 @@ function calcAEP(){
       }
     }
   }
-  // v45.0: Flat terrain criteria — much more realistic thresholds
-  // Flat: no terrain data, OR range < 50m AND max slope < 3%
-  // The 50m threshold covers gently rolling terrain (e.g. Dobrogea, Denmark)
-  // The 3% slope threshold ensures speedups are < 3% (WAsP flat territory)
+  // WAsP flat terrain criteria: local range < 50m AND max slope < 3%
   const isFlatTerrain=!hasTerrainData||(terrainRange<50&&maxSlope<0.03);
-  // Complex: range > 100m AND max slope > 10% (mountainous)
   const isComplexTerrain=hasTerrainData&&(terrainRange>100||maxSlope>0.10);
-  log(`v46.0 Terrain classification: range=${terrainRange.toFixed(0)}m, maxSlope=${(maxSlope*100).toFixed(1)}%, flat=${isFlatTerrain}, complex=${isComplexTerrain}`,'i');
+  log(`v46.1 Terrain classification: localRange=${terrainRange.toFixed(0)}m, maxSlope=${(maxSlope*100).toFixed(1)}%, flat=${isFlatTerrain}, complex=${isComplexTerrain}`,'i');
 
   // ─── v45.0: Pre-compute JH speedups ───
   let jhSpeedups=[];
@@ -8320,22 +8345,60 @@ function computeRIX(terrain,threshold){
   const dLat=(lat1-lat0)/(ny-1),dLon=(lon1-lon0)/(nx-1);
   const mLat=111320,mLon=111320*Math.cos((lat0+lat1)/2*Math.PI/180);
   const dY=dLat*mLat,dX=dLon*mLon; // cell size in metres
-  // v33.1: Auto-scale threshold for grid resolution
-  // WAsP RIX is defined at ~100m DEM resolution with threshold=0.30
-  // At coarser resolution, slopes are proportionally smaller
-  // Scale factor: (reference_res / actual_res) where reference=100m
   const cellSize=Math.max(dX,dY);
-  const resScale=Math.min(1, 100/Math.max(cellSize,50)); // only scale down for coarser grids
-  const effectiveThreshold=threshold*resScale;
+
+  // v46.1: Compute RIX only in a LOCAL area around the turbine layout
+  // WAsP defines RIX within ~5 km radius of the site, NOT the entire DEM.
+  // Previous bug: computed RIX over entire grid, so distant mountains
+  // caused RIX = 83% even when the wind farm was on flat terrain.
+  const RIX_RADIUS_KM = 10; // 10 km radius (WAsP standard)
+  let iMin=0,iMax=ny-1,jMin=0,jMax=nx-1;
+  if(S.turbines&&S.turbines.length>0){
+    // Compute turbine centroid
+    const tcLat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
+    const tcLon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
+    // Convert radius to grid indices
+    const dLatR=RIX_RADIUS_KM*1000/mLat; const dLonR=RIX_RADIUS_KM*1000/mLon;
+    const iCenter=(tcLat-lat0)/(lat1-lat0)*(ny-1);
+    const jCenter=(tcLon-lon0)/(lon1-lon0)*(nx-1);
+    const iSpan=dLatR/(lat1-lat0)*(ny-1);
+    const jSpan=dLonR/(lon1-lon0)*(nx-1);
+    iMin=Math.max(0,Math.floor(iCenter-iSpan));
+    iMax=Math.min(ny-1,Math.ceil(iCenter+iSpan));
+    jMin=Math.max(0,Math.floor(jCenter-jSpan));
+    jMax=Math.min(nx-1,Math.ceil(jCenter+jSpan));
+  }
+
+  // v46.1: WAsP RIX threshold = 0.30 (30% slope ≈ 17°) — this is the STANDARD
+  // Do NOT auto-scale for grid resolution — that was causing RIX = 83% on flat terrain
+  // because for coarse grids (cellSize > 100m), the threshold was scaled down to
+  // 0.005, making even 0.5% slopes count as "steep".
+  // WAsP's RIX is defined at the native DEM resolution with threshold = 0.30.
+  // The threshold is NOT resolution-dependent.
+  const effectiveThreshold = 0.30; // WAsP standard: 30% slope (Mortensen & Petersen 1997)
+
   let steep=0,total=0;
-  for(let i=0;i<ny-1;i++)for(let j=0;j<nx-1;j++){
-    const dh=Math.abs(grid[i+1][j]-grid[i][j]);
-    const slope=dh/dY;
-    if(slope>effectiveThreshold)steep++;
-    total++;
+  // Count slopes in BOTH X and Y directions within the local area
+  for(let i=iMin;i<iMax;i++){
+    for(let j=jMin;j<jMax;j++){
+      // Y-direction slope (between rows)
+      if(i+1<=iMax){
+        const dh=Math.abs(grid[i+1][j]-grid[i][j]);
+        const slopeY=dh/dY;
+        if(slopeY>effectiveThreshold)steep++;
+        total++;
+      }
+      // X-direction slope (between columns)
+      if(j+1<=jMax){
+        const dh=Math.abs(grid[i][j+1]-grid[i][j]);
+        const slopeX=dh/dX;
+        if(slopeX>effectiveThreshold)steep++;
+        total++;
+      }
+    }
   }
   const rix=total>0?100*steep/total:0;
-  if(resScale<1)log(`RIX: threshold auto-scaled ${threshold}→${effectiveThreshold.toFixed(4)} (cell=${cellSize.toFixed(0)}m, scale=${resScale.toFixed(2)})`,'i');
+  log(`v46.1 RIX: ${rix.toFixed(1)}% (threshold=0.30, local area ${iMax-iMin+1}×${jMax-jMin+1} cells, cell=${cellSize.toFixed(0)}m, radius=${RIX_RADIUS_KM}km)`,'i');
   return rix;
 }
 
@@ -8425,20 +8488,58 @@ async function runBZModel(){
   BZ.mastSU=Math.max(0.5,Math.min(2.0,rawMastSU));
   if(Math.abs(rawMastSU-BZ.mastSU)>0.01)log(`BZ mastSU clamped: raw=${rawMastSU.toFixed(4)} → clamped=${BZ.mastSU.toFixed(4)}`,'w');
 
-  // v22.0 FIX: Improved BZ terrain speedup
-  // v33.1: "Flat terrain" detection must be resolution-aware — with 1km grid cells,
-  // even 50m terrain range can appear flat due to smoothing, but it's NOT flat.
-  // Use RIX (which is now resolution-scaled) as the primary flat terrain indicator.
-  // Also use a relative threshold: terrain is "flat" if range < 5m per km of radius
-  const terrainRange = S.terrain.maxE - S.terrain.minE;
-  const gridRadiusKm = Math.max(Ly, Lx) / 2000; // Ly and Lx are full span in metres; radius = half
-  const rangePerKm = terrainRange / Math.max(gridRadiusKm, 1);
+  // v46.1 FIX: BZ terrain classification uses LOCAL range around turbines
+  // Previous bug: terrainRange = maxE - minE over ENTIRE grid, causing
+  // distant mountains to classify flat terrain as complex (RIX=83%, ΔS=0.13)
+  // Now: compute local range from turbine positions + 5km surrounding area
+  let terrainRange = S.terrain.maxE - S.terrain.minE; // default: full grid
+  let rangePerKm;
+  if(S.turbines&&S.turbines.length>0){
+    // Compute local elevation range around turbines
+    const tElevs=S.turbines.map(t=>{
+      const tx=(t.lon-lon0)/(lon1-lon0)*Lx;
+      const ty=(t.lat-lat0)/(lat1-lat0)*Ly;
+      const gi=Math.round(ty/Ly*(ny-1));
+      const gj=Math.round(tx/Lx*(nx-1));
+      if(gi>=0&&gi<ny&&gj>=0&&gj<nx)return grid[gi][gj];
+      return hmean;
+    });
+    const localMin=Math.min(...tElevs);
+    const localMax=Math.max(...tElevs);
+    terrainRange=localMax-localMin;
+    // Also sample terrain within 5km radius of turbine centroid
+    const tcLat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
+    const tcLon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
+    const sampleElevs=[...tElevs];
+    for(let a=0;a<8;a++){
+      const ang=a*Math.PI/4;
+      const sLat=tcLat+5/111320*Math.cos(ang);
+      const sLon=tcLon+5/(111320*Math.cos(tcLat*Math.PI/180))*Math.sin(ang);
+      const sElev=getTerrainElevBilinear(sLat,sLon);
+      if(sElev!==null&&sElev!==undefined)sampleElevs.push(sElev);
+    }
+    const localRange2=Math.max(...sampleElevs)-Math.min(...sampleElevs);
+    if(localRange2>terrainRange)terrainRange=localRange2;
+
+    // Compute range per km based on the turbine area extent
+    const layoutRadiusKm=Math.max(5,
+      Math.sqrt(
+        Math.pow(Math.max(...S.turbines.map(t=>t.lat))-Math.min(...S.turbines.map(t=>t.lat)),2)+
+        Math.pow(Math.max(...S.turbines.map(t=>t.lon))-Math.min(...S.turbines.map(t=>t.lon)),2)
+      )*111320/2000
+    );
+    rangePerKm=terrainRange/Math.max(layoutRadiusKm,1);
+  }else{
+    const gridRadiusKm=Math.max(Ly,Lx)/2000;
+    rangePerKm=terrainRange/Math.max(gridRadiusKm,1);
+  }
   const isFlat = terrainRange < 5 && rangePerKm < 2; // truly flat: <5m range AND <2m/km
   const isModerate = !isFlat && rangePerKm < 10; // moderate: 2-10 m/km
   const BZ_prevRix = BZ.rix;
   BZ.rix=computeRIX(S.terrain,rixThr);
-  const isFlatByRIX = BZ.rix < 3; // v33.1: lowered from 5% to 3% (RIX is now resolution-scaled)
-  const nSect=parseInt($('sects').value)||16; // v26.0: define nSect early so flat terrain path can use it
+  const isFlatByRIX = BZ.rix < 3; // WAsP: RIX < 3% = flat terrain
+  const nSect=parseInt($('sects').value)||16;
+  log(`v46.1 BZ terrain: gridRange=${(S.terrain.maxE-S.terrain.minE).toFixed(0)}m, localRange=${terrainRange.toFixed(0)}m, RIX=${BZ.rix.toFixed(1)}%, rangePerKm=${rangePerKm.toFixed(1)}m/km, isFlat=${isFlat}, isFlatByRIX=${isFlatByRIX}`,'i');
 
   if (isFlat || isFlatByRIX) {
     // v22.0: On flat terrain, BZ speedups are physically meaningless (no orographic effect)
@@ -8459,7 +8560,7 @@ async function runBZModel(){
       BZ.sectorInclination.push(S.turbines.map(() => 1.0));
       BZ.sectorSU.push(1.0);
     }
-    log(`v22.0 BZ: Flat terrain detected (range=${terrainRange.toFixed(0)}m, RIX=${BZ.rix.toFixed(1)}%) — all orographic speedups set to 1.0 (no terrain effect)`,'i');
+    log(`v46.1 BZ: Flat terrain detected (localRange=${terrainRange.toFixed(0)}m, RIX=${BZ.rix.toFixed(1)}%, rangePerKm=${rangePerKm.toFixed(1)}m/km) — all orographic speedups set to 1.0`,'i');
   } else {
   // v22.0: Non-flat terrain — compute full BZ speedups
 
