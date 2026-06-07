@@ -2852,7 +2852,8 @@ function calcAEP(){
   // Complete rewrite of the OWC→GWC→SWC chain to match WAsP methodology.
   // Key principle: in flat terrain with uniform roughness, ALL corrections
   // must be identity (ratio=1.0), producing identical wind speeds at all WTGs.
-  log('── v41.0 WAsP Wind Flow Engine ──','i');
+  log('── v46.0 WAsP Wind Flow Engine ──','i');
+  log('v46.0 CRITICAL FIXES: (1) GDL forward/inverse formula mismatch fixed, (2) horizFactors removed from P50 (WAsP: distance→uncertainty not wind speed), (3) symmetric k adjustment (5% both directions)','i');
 
   // v14.0: Per-WTG density correction based on elevation
   const usePerWtg=$('perWtgDensity')?.checked!==false;
@@ -2993,7 +2994,7 @@ function calcAEP(){
   const isFlatTerrain=!hasTerrainData||(terrainRange<50&&maxSlope<0.03);
   // Complex: range > 100m AND max slope > 10% (mountainous)
   const isComplexTerrain=hasTerrainData&&(terrainRange>100||maxSlope>0.10);
-  log(`v45.0 Terrain classification: range=${terrainRange.toFixed(0)}m, maxSlope=${(maxSlope*100).toFixed(1)}%, flat=${isFlatTerrain}, complex=${isComplexTerrain}`,'i');
+  log(`v46.0 Terrain classification: range=${terrainRange.toFixed(0)}m, maxSlope=${(maxSlope*100).toFixed(1)}%, flat=${isFlatTerrain}, complex=${isComplexTerrain}`,'i');
 
   // ─── v45.0: Pre-compute JH speedups ───
   let jhSpeedups=[];
@@ -3052,99 +3053,53 @@ function calcAEP(){
   const DS_LAMBDA={ERA5:0.04,ERA5T:0.04,ERA5_LT:0.04,MERRA2:0.06,NEWA:0.02,GWA:0.005,NREL:0.015,NCEP:0.08,CSV:0.01};
   const lambda=DS_LAMBDA[curSrc]??0.05;
 
-  // Per-WTG horizontal extrapolation factors
-  // WAsP principle: this factor ONLY accounts for measurement representativeness
-  // It represents how well the data source point represents conditions at each WTG
-  // On flat terrain with nearby measurement: factor ≈ 1.0 for all WTGs
-  // On flat terrain with distant measurement: mild reduction (1-4%) for far WTGs
-  // Terrain effects are handled by BZ/JH speedups in the main AEP loop
-  const horizFactors=S.turbines.map((t,ti)=>{
-    let factor=1.0;
+  // ─── v46.0: WAsP-CORRECT Horizontal Extrapolation ───
+  // CRITICAL PRINCIPLE: In WAsP, there is NO distance-based wind speed reduction.
+  // Horizontal extrapolation IS the OWC→GWC→SWC chain (roughness + orographic).
+  // On flat terrain with uniform roughness, ALL WTGs get the SAME wind speed.
+  // Period. No exceptions.
+  //
+  // Distance from the measurement/reanalysis point affects UNCERTAINTY (P90/P99),
+  // NOT the best estimate (P50). This is exactly how WAsP works:
+  //   - P50 = OWC→GWC→SWC chain result (identical for all WTGs on flat terrain)
+  //   - Distance uncertainty increases the confidence interval, not the P50
+  //
+  // Previous versions (v43-v45) incorrectly applied a "representativeness decay"
+  // factor that reduced the P50 wind speed at distant WTGs. This is NOT WAsP.
+  // WAsP never reduces the wind speed estimate due to distance.
+  //
+  // The per-WTG wind speed is determined by:
+  //   1. BZ/JH orographic speedup (1.0 on flat terrain)
+  //   2. Roughness change ratio (1.0 on flat terrain with uniform z0)
+  //   3. GDL stability correction (same for all WTGs)
+  //   4. HH scaling (1.0 if same hub height)
+  // That's it. No distance factor.
+  //
+  // Distance-based representativeness uncertainty is computed below and added
+  // to the P90/P99 uncertainty budget, but does NOT change P50.
+  const horizFactors=S.turbines.map(()=>1.0); // Always 1.0 — WAsP principle
 
-    // Distance from data source to this WTG
+  // v46.0: Compute distance-based representativeness UNCERTAINTY (not wind speed factor)
+  // This uncertainty is added to the P90/P99 uncertainty budget
+  const horizUncertainty=S.turbines.map((t,ti)=>{
     const dLat_m=(t.lat-srcLat)*111320;
     const dLon_m=(t.lon-srcLon)*111320*Math.cos(srcLat*Math.PI/180);
     const distM=Math.sqrt(dLat_m*dLat_m+dLon_m*dLon_m);
     const distKm=distM/1000;
-
-    // ── Representativeness decay (Clerc/Bechmann model) ──
-    // u_D = λ × (1 - e^(-d/L))
-    // This is the ONLY component: how representative is the data source at this distance
-    // At d=0: perfectly representative (factor=1.0)
-    // At d→∞: factor saturates at (1 - 0.5λ) — a mild, conservative reduction
-    // The 0.5 factor reflects that only ~half the uncertainty is systematic bias
     const u_D=lambda*(1-Math.exp(-distKm/charLength));
-    const distFactor=1-0.5*u_D;
-    factor*=distFactor;
-
-    // ── NO elevation correction here ──
-    // Elevation effects are handled by BZ/JH orographic speedups in the main loop.
-    // Adding elevation correction here would double-count with BZ/JH.
-    // WAsP separates horizontal extrapolation (representativeness) from
-    // vertical/orographic extrapolation (BZ/JH).
-
-    // ── NO speedup uncertainty here ──
-    // Speedup effects are already in BZ.sectorSpeedups or jhSpeedups.
-    // Adding speedup uncertainty here would double-count.
-
-    // ── NO roughness correction here ──
-    // Roughness is handled by IBL/roughRC in the main loop.
-
-    return Math.max(0.96,Math.min(1.0,factor)); // clamp: only reduction, max 4% loss
+    return u_D; // uncertainty σ from distance
   });
+  const meanHorizUncertainty=horizUncertainty.reduce((s,v)=>s+v,0)/Math.max(1,horizUncertainty.length);
 
-  // v45.0: Multi-source representativeness blending
-  // When multiple data sources exist, closer/higher-resolution sources are
-  // more representative. Blend their representativeness factors.
-  const availableSources=Object.keys(S.windSources||{}).filter(k=>S.windSources[k]?.speeds?.length>0);
-  if(availableSources.length>1){
-    // Compute per-source representativeness factor for each WTG
-    const srcFactors={};
-    availableSources.forEach(src=>{
-      const ws=S.windSources[src];
-      const sLat=ws?.sourceLat??srcLat;
-      const sLon=ws?.sourceLon??srcLon;
-      const sRes=DS_RESOLUTION[src]??50;
-      const sLam=DS_LAMBDA[src]??0.05;
-      const sCharLen=sRes*2;
-      srcFactors[src]=S.turbines.map(t=>{
-        const dL=(t.lat-sLat)*111320;
-        const dO=(t.lon-sLon)*111320*Math.cos(sLat*Math.PI/180);
-        const dKm=Math.sqrt(dL*dL+dO*dO)/1000;
-        const uD=sLam*(1-Math.exp(-dKm/sCharLen));
-        return Math.max(0.96,1-0.5*uD);
-      });
-    });
-    // Primary source gets 80% weight, secondary sources share 20%
-    const primaryIdx=availableSources.indexOf(curSrc);
-    S.turbines.forEach((t,ti)=>{
-      let blendedFactor=horizFactors[ti]*0.8;
-      let secondaryWeight=0.2;
-      availableSources.forEach((src,si)=>{
-        if(si===primaryIdx)return;
-        blendedFactor+=srcFactors[src][ti]*(secondaryWeight/(availableSources.length-1));
-      });
-      horizFactors[ti]=Math.max(0.96,Math.min(1.0,blendedFactor));
-    });
-    log(`v45.0 Multi-source representativeness: ${availableSources.length} sources (${availableSources.join(', ')}), primary=${curSrc}`,'i');
-  }
-
-  // Log horizontal extrapolation summary
-  if(S.turbines.length>1){
-    const hfVals=horizFactors.map(f=>f);
-    const minHF=Math.min(...hfVals),maxHF=Math.max(...hfVals);
+  // v46.0: Log horizontal extrapolation summary
+  {
     const avgDist=S.turbines.reduce((s,t)=>{
       const dL=(t.lat-srcLat)*111320,dO=(t.lon-srcLon)*111320*Math.cos(srcLat*Math.PI/180);
       return s+Math.sqrt(dL*dL+dO*dO)/1000;
-    },0)/S.turbines.length;
-    if(maxHF-minHF>0.002){
-      log(`v45.0 Horizontal extrapolation (representativeness): factors ${minHF.toFixed(4)}–${maxHF.toFixed(4)} (Δ=${((maxHF-minHF)*100).toFixed(2)}%), avg dist to ${curSrc}=${avgDist.toFixed(1)}km, λ=${lambda}`,'i');
-    }else{
-      log(`v45.0 Horizontal extrapolation: all factors ≈ 1.000 (uniform representativeness, avg dist=${avgDist.toFixed(1)}km)`,'i');
-    }
-    // Sanity check — on flat terrain, per-WTG variation should be < 0.5%
-    if(isFlatTerrain&&(maxHF-minHF)>0.005){
-      log(`⚠ Flat terrain but horizFactors vary by ${((maxHF-minHF)*100).toFixed(2)}% — this should be near-zero. Check data source coordinates.`,'w');
+    },0)/Math.max(1,S.turbines.length);
+    log(`v46.0 Horizontal extrapolation (WAsP): horizFactors=1.0 for all WTGs (P50 unchanged by distance). Distance uncertainty σ=${meanHorizUncertainty.toFixed(4)} added to P90/P99. Avg dist to ${curSrc}=${avgDist.toFixed(1)}km`,'i');
+    if(isFlatTerrain){
+      log(`v46.0 FLAT TERRAIN: All WTGs will receive identical free-stream wind speed (WAsP principle). Distance from data source affects uncertainty only.`,'i');
     }
   }
 
@@ -3315,10 +3270,11 @@ function calcAEP(){
           let turbV;
 
           if(isFlatTerrain){
-            // v45.0: On flat terrain, bypass BZ entirely
-            // BZ speedups are 1.0 on flat terrain, but the ratio turbSU/mastOrSU
-            // can still produce numerical noise. Use simple chain instead.
-            turbV=rotorV*horizFactors[t];
+            // v46.0: On flat terrain, bypass BZ entirely — WAsP principle
+            // On flat terrain with uniform roughness, ALL WTGs get the SAME wind speed.
+            // No orographic speedup (BZ=1.0), no roughness change (RC=1.0),
+            // no GDL correction (GDL=1.0), no distance reduction (horizF=1.0).
+            turbV=rotorV; // horizFactors[t] = 1.0 always (v46.0)
           }else if(terrainRange<100){
             // v45.0: Near-flat terrain — clamp BZ speedup ratio to ±5%
             // On gently rolling terrain, BZ can produce speedup ratios that
@@ -3361,11 +3317,8 @@ function calcAEP(){
       }else{
         // Non-BZ path (flat terrain or terrain without BZ)
         for(let t=0;t<n;t++){
-          // On flat terrain: safeJhSU = 1.0, hhRoughScale = 1.0 (same HH),
-          // d0Corr = 1.0, horizFactors[t] provides elevation/distance correction
-          // v43.0: Previously all turbines got identical wind speed on flat terrain.
-          // Now horizFactors[] adds per-WTG variation from elevation differences
-          // and distance to data source point.
+          // v46.0: On flat terrain, only BZ/JH + roughness + GDL + HH affect wind speed
+          // horizFactors is always 1.0 (WAsP: no distance-based P50 reduction)
           const jhSU=jhSpeedups[t]&&jhSpeedups[t][si]?jhSpeedups[t][si].speedup:tSpeedups[t];
           const safeJhSU=isFinite(jhSU)&&jhSU>0.5&&jhSU<2.0?jhSU:1.0;
 
@@ -3383,8 +3336,9 @@ function calcAEP(){
             if(!isFinite(d0Corr))d0Corr=1.0;
           }
 
-          // v43.0: Include horizontal extrapolation factor
-          const turbV=correctedV*safeJhSU*hhRoughScale*d0Corr*horizFactors[t];
+          // v46.0: Per-WTG wind speed from OWC→GWC→SWC chain + orographic + roughness
+          // horizFactors[t] = 1.0 always (WAsP: distance only affects uncertainty, not P50)
+          const turbV=correctedV*safeJhSU*hhRoughScale*d0Corr; // horizFactors[t]=1.0
           if(!isFinite(turbV)||turbV<0)continue;
 
           const turbLut=turbLUTs[t];
@@ -3464,26 +3418,34 @@ function calcAEP(){
   const u_pc_r=0.015;const u_den_r=Math.abs(density-1.225)/1.225*0.5;
   const u_other_r=0.015;
   const u_hh_r=isMixedHH?0.01:0;
-  const sig=Math.sqrt(u_wind_r**2+u_wake_r**2+u_pc_r**2+u_den_r**2+u_other_r**2+u_hh_r**2);
+  // v46.0: Distance-based representativeness uncertainty (WAsP approach)
+  // This captures how distance from the measurement/reanalysis point affects
+  // the confidence in the wind speed estimate. It goes into P90/P99 but NOT P50.
+  const u_horiz_r=meanHorizUncertainty*0.5; // half of representativeness uncertainty is systematic
+  const sig=Math.sqrt(u_wind_r**2+u_wake_r**2+u_pc_r**2+u_den_r**2+u_other_r**2+u_hh_r**2+u_horiz_r**2);
   const P50=netF,P75=P50*(1-0.674*sig),P90=P50*(1-1.282*sig),P99=P50*(1-2.326*sig);
 
-  // ─── v41.0: Per-turbine free-stream wind speed ───
-  // v43.0: Now includes horizontal extrapolation factors
-  // v44.0: Now includes inverse-uncertainty horizontal extrapolation factors
-  // On truly flat uniform terrain: horizFactors ≈ 1.0 for all WTGs
+  // ─── v46.0: Per-turbine free-stream wind speed ───
+  // WAsP principle: On flat terrain with uniform roughness, ALL WTGs get
+  // the SAME free-stream wind speed. Variation comes ONLY from:
+  //   1. Orographic speedup (BZ/JH) — 1.0 on flat terrain
+  //   2. Roughness change — 1.0 on flat terrain with uniform z0
+  //   3. Hub height scaling — 1.0 if same hub height
+  // No distance-based reduction (that's uncertainty, not wind speed).
   // On terrain with elevation variation: horizFactors provides realistic variation
   const prevDir=parseFloat($('prevWD')?.value||270);
   const freeSpWind=wakeRun(txy,rotorMeanWS,prevDir,lut,kw);
 
   const perTEffSU=S.turbines.map((t,i)=>{
-    // v45.0: Include horizontal extrapolation factor in effective speedup
-    const horizF=horizFactors[i];
+    // v46.0: Effective speedup = orographic + roughness + GDL + HH only
+    // NO horizFactor (WAsP doesn't reduce P50 by distance)
     let effSU;
     if(isFlatTerrain){
-      // Flat terrain: HH scaling + horizontal extrapolation (representativeness only)
-      effSU=hhScaleFactors[i]*horizF;
+      // Flat terrain: only HH scaling (1.0 if same hub height)
+      // WAsP: ALL WTGs get the same wind speed on flat terrain
+      effSU=hhScaleFactors[i];
     }else if(BZ.enabled&&BZ.speedups.length){
-      // BZ path: frequency-weighted speedup + roughness + GDL + HH + horizontal
+      // BZ path: frequency-weighted speedup + roughness + GDL + HH
       const freqWeightedSU=sectors.reduce((sum,sec,si)=>{
         const turbSecSU=BZ.sectorSpeedups?.[si]?.[i]||BZ.speedups[i]||1;
         const mastSecSU=BZ.mastSectorSU?.[si]||BZ.mastSU||1;
@@ -3493,34 +3455,30 @@ function calcAEP(){
         const secRC=BZ.sectorRoughRC?.[si]||(BZ.turbRoughRC?.[i]||1);
         return sum+sec.freq*secRC;
       },0);
-      effSU=freqWeightedSU*freqWeightedRC*gdlFactor*hhScaleFactors[i]*horizF;
+      effSU=freqWeightedSU*freqWeightedRC*gdlFactor*hhScaleFactors[i];
     }else{
       // JH path
       const jhSU=tSpeedups[i];
       const roughRC=hasRoughRose?sectors.reduce((sum,sec,si)=>sum+sec.freq*getSectorRoughnessRatio(si,hubHH,nSect),0):1;
-      effSU=jhSU*hhScaleFactors[i]*gdlFactor*(hasRoughRose?roughRC:1)*horizF;
+      effSU=jhSU*hhScaleFactors[i]*gdlFactor*(hasRoughRose?roughRC:1);
     }
-    // v45.0 CRITICAL: Clamp effective speedup on flat/near-flat terrain
-    // On flat terrain: all WTGs must have essentially the same wind speed.
-    // WAsP never produces >3% variation on flat terrain.
-    // If effSU is far from 1.0 on flat terrain, something is wrong.
+    // v46.0: On flat terrain, effective speedup should be exactly 1.0
+    // (or HH scaling if mixed hub heights). No clamping needed if pipeline
+    // is correct — but add sanity clamp for robustness.
     if(isFlatTerrain){
-      effSU=Math.max(0.97,Math.min(1.03,effSU)); // ±3% max on flat terrain
-    }else if(terrainRange<100){
-      // Gently rolling terrain (20-100m range): ±5% max variation
-      effSU=Math.max(0.95,Math.min(1.05,effSU));
+      effSU=Math.max(0.99,Math.min(1.01,effSU)); // ±1% tolerance for numerical noise
     }
     return effSU;
   });
 
-  // v45.0: Diagnostic — log per-WTG effective speedup range
+  // v46.0: Diagnostic — log per-WTG effective speedup range
   {
     const suVals=perTEffSU.map(s=>s);
     const minSU=Math.min(...suVals),maxSU=Math.max(...suVals);
     const freeWSmin=rotorMeanWS*minSU,freeWSmax=rotorMeanWS*maxSU;
-    log(`v45.0 Per-WTG speedup: ${minSU.toFixed(4)}–${maxSU.toFixed(4)} → free WS ${freeWSmin.toFixed(2)}–${freeWSmax.toFixed(2)} m/s (Δ=${((maxSU-minSU)*rotorMeanWS).toFixed(2)} m/s)${isFlatTerrain?' [FLAT — Δ should be <0.3 m/s]':''}`,'i');
-    if(isFlatTerrain&&(maxSU-minSU)>0.03){
-      log(`⚠ FLAT TERRAIN but per-WTG speedup varies by ${((maxSU-minSU)*100).toFixed(1)}% — BZ/JH speedups may be noisy. Clamping applied.`,'w');
+    log(`v46.0 Per-WTG speedup: ${minSU.toFixed(4)}–${maxSU.toFixed(4)} → free WS ${freeWSmin.toFixed(2)}–${freeWSmax.toFixed(2)} m/s (Δ=${((maxSU-minSU)*rotorMeanWS).toFixed(3)} m/s)${isFlatTerrain?' [FLAT — Δ should be 0.00]':''}`,'i');
+    if(isFlatTerrain&&(maxSU-minSU)>0.01){
+      log(`⚠ FLAT TERRAIN but per-WTG speedup varies by ${((maxSU-minSU)*100).toFixed(2)}% — pipeline issue detected, clamping applied.`,'w');
     }
   }
 
@@ -6391,13 +6349,20 @@ function waspGeneralize(A_obs, k_obs, mastDeltaS, z0_mast, z_obs, latitude_deg, 
     // u* from log law: u* = κ × U / ln(z/z0)
     const uStar_mast = kappa * A_flat_corr / Math.log(z_obs_safe / z0_m);
     
-    // Ug from GDL forward: Ug = (u*/κ) × sqrt(ln(u*/(f·z0))² + A²)
+    // v46.0 FIX: Ug from GDL forward using CORRECT formula matching solveGDL()
+    // GDL: Ug = (u*/κ) × [ln(Ro) - A + B·log10(Ro)]
+    // This MUST match the formula in solveGDL() so the chain cancels on flat terrain
+    // Previous bug: used sqrt(ln(Ro)² + 4.5²) which doesn't match solveGDL(),
+    // causing spurious wind speed variation even on flat terrain
     const f = 2 * 7.2921e-5 * Math.sin(Math.abs(latitude_deg) * Math.PI / 180);
     const fz0 = f * Math.max(z0_m, 1e-7);
     const Ro = uStar_mast / Math.max(fz0, 1e-10);
     if (Ro < 1) { A_gwc[i] = A_flat_corr * stab; k_gwc[i] = k_obs[i]; continue; }
     const lnRo = Math.log(Ro);
-    const Ug = (uStar_mast / kappa) * Math.sqrt(lnRo * lnRo + 4.5 * 4.5); // A=4.5 neutral
+    const log10Ro = Math.log10(Ro);
+    // Use neutral GDL constants (same as solveGDL with L=1e8)
+    const gdlA = 1.8, gdlB = 4.5;
+    const Ug = (uStar_mast / kappa) * (lnRo - gdlA + gdlB * log10Ro);
     
     if (Ug <= 0) {
       // Fallback: direct power-law
@@ -6442,7 +6407,8 @@ function waspDownscale(A_gwc, k_gwc, targetDeltaS, z0_target, z_target, latitude
     // u* from log law at GWC conditions
     const uStar_gwc = kappa * A_gwc[i] / Math.log(z_gwc_safe / z0_g);
     
-    // Ug from GDL forward
+    // v46.0 FIX: Ug from GDL forward using CORRECT formula matching solveGDL()
+    // Must use same GDL form: Ug = (u*/κ) × [ln(Ro) - A + B·log10(Ro)]
     const f = 2 * 7.2921e-5 * Math.sin(Math.abs(latitude_deg) * Math.PI / 180);
     const fz0 = f * Math.max(z0_g, 1e-7);
     const Ro = uStar_gwc / Math.max(fz0, 1e-10);
@@ -6453,7 +6419,9 @@ function waspDownscale(A_gwc, k_gwc, targetDeltaS, z0_target, z_target, latitude
       continue;
     }
     const lnRo = Math.log(Ro);
-    const Ug = (uStar_gwc / kappa) * Math.sqrt(lnRo * lnRo + 4.5 * 4.5);
+    const log10Ro = Math.log10(Ro);
+    const gdlA = 1.8, gdlB = 4.5; // neutral constants (matching solveGDL with L=1e8)
+    const Ug = (uStar_gwc / kappa) * (lnRo - gdlA + gdlB * log10Ro);
     
     let A_surface;
     if (Ug <= 0) {
@@ -6474,8 +6442,10 @@ function waspDownscale(A_gwc, k_gwc, targetDeltaS, z0_target, z_target, latitude
     const totalSU = Math.max(0.5, 1 + targetDeltaS[i]);
     A_target[i] = A_surface * totalSU;
     
-    // Step 6c: Adjust k
-    k_target[i] = Math.max(0.5, Math.min(5, k_gwc[i] * (1 + 0.1 * targetDeltaS[i])));
+    // v46.0 FIX: Step 6c: Adjust k — use same 5% per unit ΔS as generalize
+    // WAsP uses symmetric k adjustment in both directions (generalize and downscale)
+    // Previous bug: 10% in downscale vs 5% in generalize — not WAsP-like
+    k_target[i] = Math.max(0.5, Math.min(5, k_gwc[i] * (1 + 0.05 * targetDeltaS[i])));
     
     // Physical bounds
     A_target[i] = Math.max(0.1, A_target[i]);
