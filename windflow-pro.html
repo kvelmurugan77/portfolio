@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 44.1</title>
+<title>WindFlow Pro 45.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 44.1</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 45.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -209,6 +209,8 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <div class="card"><div class="card-title green">Download Reference Wind Data</div>
         <div class="g2" style="gap:.4rem;margin-bottom:.5rem"><div class="fg"><label class="fl">Height</label><select class="fs" id="e5H"><option value="100" selected>100m</option><option value="10">10m</option></select></div><div class="fg"><label class="fl">Period</label><div class="g2" style="gap:.3rem"><input class="fi" id="e5Sy" type="number" value="2020" min="1940" max="2025" style="font-size:.7rem"><input class="fi" id="e5Ey" type="number" value="2023" min="1940" max="2025" style="font-size:.7rem"></div></div></div>
         <div class="g2" style="gap:.4rem;margin-bottom:.5rem"><div class="fg"><label class="fl">Lat <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="e5La" type="number" value="55.50" step="0.01" readonly></div><div class="fg"><label class="fl">Lon <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="e5Lo" type="number" value="7.90" step="0.01" readonly></div></div>
+        <div style="display:flex;gap:.4rem;margin-bottom:.5rem;flex-wrap:wrap"><button class="btn btn-sm btn-ghost" onclick="showGridNodes('ERA5')">📍 ERA5</button><button class="btn btn-sm btn-ghost" onclick="showGridNodes('GWA')">📍 GWA</button><button class="btn btn-sm btn-ghost" onclick="showGridNodes('NCEP')">📍 NCEP</button><button class="btn btn-sm btn-ghost" onclick="showGridNodes('MERRA2')">📍 MERRA2</button><button class="btn btn-sm btn-ghost" onclick="showGridNodes('NEWA')">📍 NEWA</button></div>
+        <div id="gridNodeSelector" style="display:none;padding:.7rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:.5rem"></div>
         <div class="ds-grid">
           <div class="ds-card" id="ds_era5"><div class="ds-name">ERA5 / ERA5T</div><div class="ds-desc">Open-Meteo API · Free · 1940→present</div><button class="btn btn-sm btn-primary" onclick="downloadERA5()">⬇ Download</button><div class="progress" id="e5pb_wrap"><div class="progress-bar" id="e5pb" style="width:0"></div></div><div id="e5pt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 4.0 (ERA5 Proxy)</div><div class="ds-desc">ERA5 5yr proxy via Open-Meteo · Long-term reference · 100m</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
@@ -2630,7 +2632,7 @@ async function fetchOneYear(lat,lon,year,wsV,wdV){
   };
 }
 async function downloadERA5(){
-  const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
+  const gc=getGridAwareCoords('ERA5'),lat=gc.lat,lon=gc.lon;
   const sy=parseInt($('e5Sy').value),ey=parseInt($('e5Ey').value);
   if(ey<sy){alert('End year ≥ start year');return;}
   const siteCheck=validateSite(lat,lon);
@@ -2969,205 +2971,132 @@ function calcAEP(){
     jhSpeedups=computeAllJHSpeedups(sectors,hubHH,z0);
   }
 
-  // ─── v44.0: Horizontal extrapolation model (DTU inverse-uncertainty) ───
-  // WAsP methodology: The OWC at the data source point must be horizontally
-  // extrapolated to each WTG position. The key insight from Bechmann (2019)
-  // and Clerc et al. (2012) is that extrapolation uncertainty u_E combines:
-  //   u_E² = u_D² + u_S²
-  // where u_D = distance uncertainty, u_S = speedup uncertainty
+  // ─── v45.0: Horizontal extrapolation — WAsP-correct implementation ───
+  // WAsP methodology: Horizontal extrapolation transfers the wind climate from
+  // the measurement/data-source point to each WTG position.
   //
-  // BUG FIX v44.0: Previous v43.0 had two critical issues:
-  //   1. srcElev was null for GWA/MERRA2/NEWA (elevation field not populated),
-  //      causing artificial 0m reference elevation → huge elevation corrections →
-  //      wild WS variation (3-8 m/s)
-  //   2. When all WTGs are at similar elevation AND srcElev was properly set,
-  //      horizFactors ≈ 1.0 for all WTGs → all got identical wind speed
+  // CRITICAL WAsP PRINCIPLE: Horizontal extrapolation ONLY accounts for the
+  // REPRESENTATIVENESS UNCERTAINTY of using a distant measurement point.
+  // It does NOT re-apply terrain corrections that are already handled by:
+  //   - BZ orographic speedups (in the BZ path)
+  //   - JH terrain speedups (in the non-BZ path)
+  //   - Roughness change corrections (IBL/roughRC)
+  //   - GDL stability corrections
   //
-  // v44.0 fixes:
-  //   - Robust srcElev resolution: uses turbine centroid elevation as fallback
-  //   - Per-WTG elevation from terrain data (not just reference point)
-  //   - Inverse-uncertainty weighting when multiple data sources exist
-  //   - Speedup-based uncertainty component (Clerc et al. 2012)
+  // The previous implementation (v43-v44) had CRITICAL bugs:
+  //   1. Double-counting: horizFactors included elevation and speedup corrections
+  //      that were ALSO applied via BZ/JH, causing wild WS variation (3-8 m/s)
+  //   2. srcElev fallback used turbine centroid → artificial elevation differences
+  //   3. Speedup uncertainty component (Clerc) was applied ON TOP of BZ/JH speedups
+  //
+  // v45.0 fix: horizFactors is now ONLY a representativeness decay factor
+  // that accounts for how well the measurement point represents each WTG.
+  // Terrain effects are handled exclusively by BZ/JH in the AEP loop.
   const curSrc=S.windSource||'ERA5';
   const curWS=S.windSources[curSrc];
   const srcLat=curWS?.sourceLat??(parseFloat($('mastLat').value)||0);
   const srcLon=curWS?.sourceLon??(parseFloat($('mastLon').value)||0);
   const srcH=curWS?.sourceHeight??mastH;
 
-  // v44.0 FIX: Robust source elevation resolution
-  // BUG: curWS.elevation was null for GWA/MERRA2/NEWA, causing srcElev=0
-  // which created massive artificial elevation differences with WTGs at 200-500m
-  // FIX: Use turbine centroid elevation as fallback, then site elevation, then 0
-  const turbCentroidElev=S.turbines.length?S.turbines.reduce((s,t)=>s+(t.elev!==undefined?t.elev:0),0)/S.turbines.length:0;
+  // Source elevation for display only — NOT used in horizFactor computation
+  // to avoid artificial elevation-based corrections that double-count with BZ/JH
   const siteElevVal=parseFloat($('siteElev')?.value)||0;
-  const srcElev=curWS?.elevation??((Math.abs(turbCentroidElev)>1?turbCentroidElev:siteElevVal)||0);
+  const srcElev=curWS?.elevation??siteElevVal;
 
-  // Data source resolution and characteristic distance (for uncertainty model)
-  // Reference: ERA5 = 0.25° (~31km), MERRA-2 = 0.5°×0.625° (~50km),
-  // NEWA = 3km, GWA = 250m, NREL WTK = 2km
+  // Data source resolution and characteristic distance
   const DS_RESOLUTION={
     ERA5:31,ERA5T:31,ERA5_LT:31,
     MERRA2:50,
     NEWA:3,
     GWA:0.25,
     NREL:2,
-    NCEP:210,  // ~1.875° × 1.9°
-    CSV:0       // point measurement
+    NCEP:210,
+    CSV:0
   };
-  const srcResKm=DS_RESOLUTION[curSrc]??50; // default 50km for unknown sources
-  const charLength=srcResKm*2; // L in Clerc model: correlation length scale
+  const srcResKm=DS_RESOLUTION[curSrc]??50;
+  const charLength=srcResKm*2;
 
-  // v44.0: Inverse-uncertainty weighting for multi-source extrapolation
-  // Bechmann (2019): w_hi = 1/u_E(hi) where u_E combines distance + speedup
-  // Clerc et al. (2012): u_E² = λ²(1 - e^(-d/L))² + A²·ΔS²
-  // λ = saturated distance uncertainty (source-dependent, ~7% for ERA5)
-  // A = speedup sensitivity coefficient (~0.3 from Clerc validation)
-  const DS_LAMBDA={ERA5:0.07,ERA5T:0.07,ERA5_LT:0.07,MERRA2:0.09,NEWA:0.03,GWA:0.01,NREL:0.02,NCEP:0.12,CSV:0.05};
-  const lambda=DS_LAMBDA[curSrc]??0.08;
-  const A_sens=0.3; // Speedup sensitivity coefficient (Clerc et al. 2012)
+  // Distance-uncertainty parameter λ (saturated representativeness uncertainty)
+  // These values represent the typical WS bias at large distances from the source
+  // Reference: Bechmann (2019), Clerc et al. (2012)
+  const DS_LAMBDA={ERA5:0.04,ERA5T:0.04,ERA5_LT:0.04,MERRA2:0.06,NEWA:0.02,GWA:0.005,NREL:0.015,NCEP:0.08,CSV:0.01};
+  const lambda=DS_LAMBDA[curSrc]??0.05;
 
-  // Per-WTG horizontal extrapolation factors using inverse-uncertainty model
+  // Per-WTG horizontal extrapolation factors
+  // WAsP principle: this factor ONLY accounts for measurement representativeness
+  // It represents how well the data source point represents conditions at each WTG
+  // On flat terrain with nearby measurement: factor ≈ 1.0 for all WTGs
+  // On flat terrain with distant measurement: mild reduction (1-4%) for far WTGs
+  // Terrain effects are handled by BZ/JH speedups in the main AEP loop
   const horizFactors=S.turbines.map((t,ti)=>{
     let factor=1.0;
 
-    // Compute distance from source to this WTG
+    // Distance from data source to this WTG
     const dLat_m=(t.lat-srcLat)*111320;
     const dLon_m=(t.lon-srcLon)*111320*Math.cos(srcLat*Math.PI/180);
     const distM=Math.sqrt(dLat_m*dLat_m+dLon_m*dLon_m);
     const distKm=distM/1000;
 
-    // ── Component 1: Distance-based uncertainty ──
-    // Clerc model: u_D = λ × (1 - e^(-d/L))
-    // This saturates at λ for large distances (realistic for reanalysis)
-    // For high-res data (NEWA, GWA), the distance effect is minimal
+    // ── Representativeness decay (Clerc/Bechmann model) ──
+    // u_D = λ × (1 - e^(-d/L))
+    // This is the ONLY component: how representative is the data source at this distance
+    // At d=0: perfectly representative (factor=1.0)
+    // At d→∞: factor saturates at (1 - 0.5λ) — a mild, conservative reduction
+    // The 0.5 factor reflects that only ~half the uncertainty is systematic bias
     const u_D=lambda*(1-Math.exp(-distKm/charLength));
-    // Convert uncertainty to a mild correction factor
-    // At d=0: u_D=0, no correction; at d→∞: u_D=λ, mild reduction
-    // The correction should be conservative: only ~half the uncertainty
-    // is systematic (the other half is random, averaging out over time)
-    const distFactor=1-0.5*u_D; // conservative: use half the uncertainty as systematic
+    const distFactor=1-0.5*u_D;
     factor*=distFactor;
 
-    // ── Component 2: Elevation correction (log-law profile) ──
-    // v44.0 FIX: Properly resolve WTG elevation from terrain data
-    const tElev=t.elev!==undefined&&t.elev!==null?t.elev:
-      (hasTerrainData&&typeof getTerrainElevBilinear==='function'?
-        getTerrainElevBilinear(t.lat,t.lon):refElev);
-    const elevDiff=tElev-srcElev;
+    // ── NO elevation correction here ──
+    // Elevation effects are handled by BZ/JH orographic speedups in the main loop.
+    // Adding elevation correction here would double-count with BZ/JH.
+    // WAsP separates horizontal extrapolation (representativeness) from
+    // vertical/orographic extrapolation (BZ/JH).
 
-    // v44.0: Only apply elevation correction when we have confident elevation data
-    // On truly flat terrain (range < 20m), elevation differences are noise
-    if(!isFlatTerrain&&Math.abs(elevDiff)>5){
-      // WAsP principle: elevation difference changes effective measurement height
-      // Speedup from elevation: ΔS_elev ≈ (elevDiff/100) × 0.02 per 100m
-      // This is VERY conservative: ~2% per 100m elevation difference
-      // Matches WAsP behavior: orographic speedup is captured by BZ/JH separately
-      const elevSpeedup=1+0.0002*elevDiff; // 0.02% per meter = 2% per 100m
-      factor*=Math.max(0.95,Math.min(1.05,elevSpeedup)); // clamp to ±5%
-    }
+    // ── NO speedup uncertainty here ──
+    // Speedup effects are already in BZ.sectorSpeedups or jhSpeedups.
+    // Adding speedup uncertainty here would double-count.
 
-    // ── Component 3: Speedup-based uncertainty (Clerc et al. 2012) ──
-    // u_S = A × |ΔS| where ΔS is the orographic speedup difference
-    // between the data source point and the WTG position
-    // This captures that sites with different orographic effects are less similar
-    if(!isFlatTerrain){
-      // Estimate speedup difference: if JH speedups are available, use them
-      // Otherwise, use a terrain-slope proxy for ΔS
-      let deltaS=0;
-      if(jhSpeedups&&jhSpeedups[ti]){
-        // Average speedup across sectors at this WTG
-        let suSum=0,freqSum=0;
-        sectors.forEach((sec,si)=>{
-          if(jhSpeedups[ti][si]){
-            suSum+=sec.freq*(jhSpeedups[ti][si].speedup-1); // ΔS = SU - 1
-            freqSum+=sec.freq;
-          }
-        });
-        deltaS=freqSum>0?Math.abs(suSum/freqSum):0;
-      }else if(hasTerrainData){
-        // Proxy: terrain slope at WTG position
-        const localSlope=Math.abs(elevDiff)/Math.max(100,distM);
-        deltaS=Math.min(0.3,2*localSlope); // rough estimate from slope
-      }
-      const u_S=A_sens*deltaS;
-      // Apply as a mild correction (conservative: half of systematic component)
-      factor*=(1-0.3*u_S); // even more conservative than distance
-    }
+    // ── NO roughness correction here ──
+    // Roughness is handled by IBL/roughRC in the main loop.
 
-    // ── Component 4: Per-WTG roughness variation ──
-    if(hasTerrainData&&!isFlatTerrain&&typeof computeDisplacementHeight==='function'){
-      const d0=computeDisplacementHeight(t.lat,t.lon);
-      if(d0>0.5){
-        const tZ0=0.1; // forest roughness proxy
-        const roughFactor=logWS_stab(1.0,mastH,hubHH,tZ0,L)/Math.max(0.01,logWS_stab(1.0,mastH,hubHH,z0,L));
-        if(isFinite(roughFactor)&&roughFactor>0.85&&roughFactor<1.15)factor*=roughFactor;
-      }
-    }
-
-    return Math.max(0.9,Math.min(1.1,factor)); // clamp to ±10% (WAsP conservative range)
+    return Math.max(0.96,Math.min(1.0,factor)); // clamp: only reduction, max 4% loss
   });
 
-  // v44.0: Multi-source inverse-uncertainty weighting
-  // When multiple data sources exist, compute weights for each source
-  // at each WTG position, then blend the horizFactors
+  // v45.0: Multi-source representativeness blending
+  // When multiple data sources exist, closer/higher-resolution sources are
+  // more representative. Blend their representativeness factors.
   const availableSources=Object.keys(S.windSources||{}).filter(k=>S.windSources[k]?.speeds?.length>0);
-  let multiSourceWeights=null;
   if(availableSources.length>1){
-    // Compute per-source, per-WTG extrapolation uncertainty
-    multiSourceWeights={};
+    // Compute per-source representativeness factor for each WTG
+    const srcFactors={};
     availableSources.forEach(src=>{
       const ws=S.windSources[src];
       const sLat=ws?.sourceLat??srcLat;
       const sLon=ws?.sourceLon??srcLon;
       const sRes=DS_RESOLUTION[src]??50;
-      const sLam=DS_LAMBDA[src]??0.08;
+      const sLam=DS_LAMBDA[src]??0.05;
       const sCharLen=sRes*2;
-      const sElev=ws?.elevation??srcElev;
-
-      multiSourceWeights[src]=S.turbines.map(t=>{
-        const dL=(t.lat-sLat)*111320;
-        const dO=(t.lon-sLon)*111320*Math.cos(sLat*Math.PI/180);
-        const d=Math.sqrt(dL*dL+dO*dO)/1000; // km
-        const uD=sLam*(1-Math.exp(-d/sCharLen));
-        // Elevation uncertainty component
-        const tEl=t.elev!==undefined&&t.elev!==null?t.elev:refElev;
-        const dElev=Math.abs(tEl-sElev);
-        const uElev=Math.min(0.05,dElev/2000); // 0.5% per 10m, capped at 5%
-        const uE_total=Math.sqrt(uD*uD+uElev*uElev);
-        return Math.max(0.01,uE_total); // avoid division by zero
-      });
-    });
-
-    // Normalize: inverse-uncertainty weights that sum to 1 per WTG
-    const primaryIdx=availableSources.indexOf(curSrc);
-    S.turbines.forEach((t,ti)=>{
-      const invUncs=availableSources.map(src=>1/multiSourceWeights[src][ti]);
-      const sumInv=invUncs.reduce((s,v)=>s+v,0);
-      // Primary source gets at least 60% weight (it's the selected source)
-      const primaryWeight=0.6;
-      const secondaryWeight=0.4;
-      let blendedFactor=0;
-      availableSources.forEach((src,si)=>{
-        const w=si===primaryIdx?primaryWeight:secondaryWeight*(invUncs[si]/Math.max(0.01,sumInv-invUncs[primaryIdx]));
-        // Compute this source's horizFactor for this WTG
-        const ws=S.windSources[src];
-        const sLat=ws?.sourceLat??srcLat;
-        const sLon=ws?.sourceLon??srcLon;
+      srcFactors[src]=S.turbines.map(t=>{
         const dL=(t.lat-sLat)*111320;
         const dO=(t.lon-sLon)*111320*Math.cos(sLat*Math.PI/180);
         const dKm=Math.sqrt(dL*dL+dO*dO)/1000;
-        const sRes=DS_RESOLUTION[src]??50;
-        const sLam=DS_LAMBDA[src]??0.08;
-        const srcHF=1-0.5*sLam*(1-Math.exp(-dKm/(sRes*2)));
-        blendedFactor+=w*srcHF;
+        const uD=sLam*(1-Math.exp(-dKm/sCharLen));
+        return Math.max(0.96,1-0.5*uD);
       });
-      // Blend with the primary source's horizFactor (which includes terrain effects)
-      horizFactors[ti]=horizFactors[ti]*0.85+blendedFactor*0.15;
     });
-
-    if(availableSources.length>1){
-      log(`v44.0 Multi-source inverse-uncertainty weighting: ${availableSources.length} sources (${availableSources.join(', ')}), primary=${curSrc}`,'i');
-    }
+    // Primary source gets 80% weight, secondary sources share 20%
+    const primaryIdx=availableSources.indexOf(curSrc);
+    S.turbines.forEach((t,ti)=>{
+      let blendedFactor=horizFactors[ti]*0.8;
+      let secondaryWeight=0.2;
+      availableSources.forEach((src,si)=>{
+        if(si===primaryIdx)return;
+        blendedFactor+=srcFactors[src][ti]*(secondaryWeight/(availableSources.length-1));
+      });
+      horizFactors[ti]=Math.max(0.96,Math.min(1.0,blendedFactor));
+    });
+    log(`v45.0 Multi-source representativeness: ${availableSources.length} sources (${availableSources.join(', ')}), primary=${curSrc}`,'i');
   }
 
   // Log horizontal extrapolation summary
@@ -3178,14 +3107,14 @@ function calcAEP(){
       const dL=(t.lat-srcLat)*111320,dO=(t.lon-srcLon)*111320*Math.cos(srcLat*Math.PI/180);
       return s+Math.sqrt(dL*dL+dO*dO)/1000;
     },0)/S.turbines.length;
-    if(maxHF-minHF>0.005){
-      log(`v44.0 Horizontal extrapolation (inverse-uncertainty): factors ${minHF.toFixed(4)}–${maxHF.toFixed(4)} (Δ=${((maxHF-minHF)*100).toFixed(1)}%), avg dist to ${curSrc} source=${avgDist.toFixed(1)}km, srcRes=${srcResKm}km, λ=${lambda}`,'i');
+    if(maxHF-minHF>0.002){
+      log(`v45.0 Horizontal extrapolation (representativeness): factors ${minHF.toFixed(4)}–${maxHF.toFixed(4)} (Δ=${((maxHF-minHF)*100).toFixed(2)}%), avg dist to ${curSrc}=${avgDist.toFixed(1)}km, λ=${lambda}`,'i');
     }else{
-      log(`v44.0 Horizontal extrapolation: all factors ≈ 1.000 (uniform site, avg dist=${avgDist.toFixed(1)}km, srcRes=${srcResKm}km)`,'i');
+      log(`v45.0 Horizontal extrapolation: all factors ≈ 1.000 (uniform representativeness, avg dist=${avgDist.toFixed(1)}km)`,'i');
     }
-    // v44.0: Sanity check — if variation > 10%, flag a warning
-    if(maxHF-minHF>0.10){
-      log(`⚠ Horizontal extrapolation variation >10% (${((maxHF-minHF)*100).toFixed(1)}%) — check data source coordinates and terrain elevation data`,'w');
+    // Sanity check — on flat terrain, per-WTG variation should be < 0.5%
+    if(isFlatTerrain&&(maxHF-minHF)>0.005){
+      log(`⚠ Flat terrain but horizFactors vary by ${((maxHF-minHF)*100).toFixed(2)}% — this should be near-zero. Check data source coordinates.`,'w');
     }
   }
 
@@ -4370,7 +4299,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 44.1 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 45.0 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -4411,7 +4340,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 44.1 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Stability-integrated extrapolation · Deep-array correction · Mortensen-Bowen RIX · DTU inverse-uncertainty horizontal extrapolation · Bankability report</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 45.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Stability-integrated extrapolation · Deep-array correction · Mortensen-Bowen RIX · WAsP-correct horizontal extrapolation · Bankability report</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -4808,7 +4737,7 @@ try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 44.1 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
+log('WindFlow Pro 45.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 // v33.3: Safety net — if leafMap failed to init, retry after DOM is fully settled
@@ -5246,7 +5175,7 @@ function exportBankabilityReport(){
 <div class="cover">
   <h1>${pn}</h1>
   <p>Wind Energy Assessment Report</p>
-  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 44.1 &mdash; ${now}</p>
+  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 45.0 &mdash; ${now}</p>
 </div>
 
 <h2>1. Executive Summary</h2>
@@ -5313,7 +5242,7 @@ ${terrCanvasImg?`<h2>8. Detailed Terrain Elevation Map</h2><p><img src="${terrCa
 ${roughCanvasImg?`<h2>9. Detailed Roughness Map</h2><p><img src="${roughCanvasImg}" style="max-width:100%;border:1px solid #d1d5db;border-radius:6px" alt="Roughness"></p>`:''}
 
 <p style="color:#9ca3af;font-size:9px;margin-top:30px;border-top:1px solid #e5e7eb;padding-top:10px">
-Generated by WindFlow Pro 44.1 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; DTU inverse-uncertainty horizontal extrapolation &middot; Bankability report format</p>
+Generated by WindFlow Pro 45.0 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; WAsP-correct horizontal extrapolation &middot; Bankability report format</p>
 </body></html>`;
 
   dlFile(h,`WindAssessment_${pn.replace(/\s+/g,'_')}.html`,'text/html');
@@ -9659,7 +9588,7 @@ function importMastData(event){
 
 // ── ADDITIONAL DATA SOURCES ──
 async function downloadGWA(){
-  const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
+  const gc=getGridAwareCoords('GWA'),lat=gc.lat,lon=gc.lon;
   if(isNaN(lat)||isNaN(lon)){alert('Set ERA5 lat/lon first');return;}
   $('gwaStatus').textContent='Querying wind climate data...';
   log(`GWA: requesting wind climate for ${lat.toFixed(2)}°, ${lon.toFixed(2)}°`,'i');
@@ -9820,7 +9749,7 @@ function gamma(z){
 async function downloadMERRA2(){
   $('merra2Status').textContent='Querying NASA POWER...';
   try{
-    const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
+    const gc=getGridAwareCoords('MERRA2'),lat=gc.lat,lon=gc.lon;
     const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+2);
     const r=await fetch(`https://power.larc.nasa.gov/api/temporal/hourly/point?start=${sy}0101&end=${ey}1231&latitude=${lat}&longitude=${lon}&community=RE&parameters=WS10M,WD10M,WS50M&format=JSON`);
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -9877,7 +9806,7 @@ async function downloadMERRA2(){
 }
 
 async function downloadNCEP(){
-  const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
+  const gc=getGridAwareCoords('NCEP'),lat=gc.lat,lon=gc.lon;
   const sy=parseInt($('e5Sy').value),ey=Math.min(parseInt($('e5Ey').value),sy+5);
   if(isNaN(lat)||isNaN(lon)){alert('Enter latitude/longitude first');return;}
   $('ncepStatus').textContent='Downloading NCEP/CFSR via Open-Meteo...';
@@ -10224,7 +10153,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 44.1`);
+  lines.push(`WAsP Project Export - WindFlow Pro 45.0`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
@@ -11339,8 +11268,7 @@ async function downloadRoughnessEnhanced(){
 
 // ── NEWA (New European Wind Atlas) Download ──
 async function downloadNEWA(){
-  const lat=parseFloat($('e5La').value);
-  const lon=parseFloat($('e5Lo').value);
+  const gc=getGridAwareCoords('NEWA'),lat=gc.lat,lon=gc.lon;
   const hh=parseFloat($('e5H').value)||100;
   $('newaStatus').textContent='Querying NEWA...';
   try{
@@ -12270,8 +12198,7 @@ function runVertExtrap(){
 
 // v36.0: Download ERA5 long-term data specifically for MCP reference
 async function downloadERA5LT(){
-  const lat=parseFloat($('mastLat').value)||parseFloat($('e5La').value);
-  const lon=parseFloat($('mastLon').value)||parseFloat($('e5Lo').value);
+  const gc=getGridAwareCoords('ERA5_LT'),lat=gc.lat,lon=gc.lon;
   const sy=parseInt($('mcpSy').value)||1991;
   const ey=parseInt($('mcpEy').value)||2020;
   const h=$('e5H').value;
@@ -13222,6 +13149,133 @@ function generateWindMap() {
   $('windMapStatus').textContent = `✓ ${points.length} grid points rendered (${viewType})`;
   $('windMapStatus').style.color = 'var(--mint)';
   log(`Wind map generated: ${points.length} points, ${viewType} range ${minVal.toFixed(2)}–${maxVal.toFixed(2)}`, 'i');
+}
+
+// ── GRID NODE SELECTOR ──
+// Computes the 4 surrounding grid nodes for a given data source resolution
+function computeGridNodes(lat,lon,sourceType){
+  const R=6371; // Earth radius km
+  function haversine(la1,lo1,la2,lo2){
+    const dLa=(la2-la1)*Math.PI/180,dLo=(lo2-lo1)*Math.PI/180;
+    const a=Math.sin(dLa/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)**2;
+    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  }
+  // Grid resolutions per source
+  let dLat,dLon,label;
+  switch(sourceType){
+    case'ERA5':case'ERA5T':case'ERA5_LT':dLat=0.25;dLon=0.25;label='ERA5 0.25°';break;
+    case'MERRA2':dLat=0.5;dLon=0.625;label='MERRA-2 0.5°×0.625°';break;
+    case'NEWA':dLat=0.027;dLon=0.027;label='NEWA ~3km';break;
+    case'GWA':dLat=0.25;dLon=0.25;label='GWA 0.25°';break;
+    case'NCEP':dLat=1.875;dLon=1.875;label='NCEP ~1.875°';break;
+    default:dLat=0.25;dLon=0.25;label='0.25°';
+  }
+  // Snap to grid: find the floor and ceil grid points
+  const latFloor=Math.floor(lat/dLat)*dLat;
+  const latCeil=latFloor+dLat;
+  const lonFloor=Math.floor(lon/dLon)*dLon;
+  const lonCeil=lonFloor+dLon;
+  // 4 surrounding nodes
+  const nodes=[
+    {lat:latFloor,lon:lonFloor},
+    {lat:latFloor,lon:lonCeil},
+    {lat:latCeil,lon:lonFloor},
+    {lat:latCeil,lon:lonCeil}
+  ];
+  // Compute distance and label for each
+  nodes.forEach(n=>{
+    n.distKm=haversine(lat,lon,n.lat,n.lon);
+    n.label=`(${n.lat.toFixed(sourceType==='NEWA'?3:2)}°, ${n.lon.toFixed(sourceType==='NEWA'?3:2)}°)`;
+  });
+  // Sort by distance (nearest first)
+  nodes.sort((a,b)=>a.distKm-b.distKm);
+  // Mark nearest
+  nodes[0].nearest=true;
+  return{nodes,gridLabel:label,dLat,dLon};
+}
+
+// Currently selected grid node per source (stored as {lat,lon})
+let _selectedGridNode=null;
+let _currentGridSource=null;
+
+// Show/hide the grid node selector panel and compute nodes
+function showGridNodes(sourceType){
+  const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
+  if(isNaN(lat)||isNaN(lon)){alert('Set site lat/lon first');return;}
+  const panel=$('gridNodeSelector');
+  const result=computeGridNodes(lat,lon,sourceType);
+  _currentGridSource=sourceType;
+  // Build HTML
+  let html=`<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem"><span style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sky);font-family:var(--mono)">${result.gridLabel} Grid Nodes</span><span style="font-size:.52rem;color:var(--text3)">Input: ${lat.toFixed(4)}°, ${lon.toFixed(4)}°</span></div>`;
+  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem">`;
+  result.nodes.forEach((n,i)=>{
+    const isNearest=n.nearest;
+    const bg=isNearest?'rgba(0,214,143,.1)':'var(--bg3)';
+    const border=isNearest?'1px solid rgba(0,214,143,.3)':'1px solid var(--border)';
+    const checked=i===0?'checked':'';
+    html+=`<label style="display:flex;align-items:center;gap:.4rem;padding:.5rem .6rem;background:${bg};border:${border};border-radius:var(--radius2);cursor:pointer;font-size:.68rem;color:var(--text)"><input type="radio" name="gridNode" value="${i}" ${checked} onchange="selectGridNode(${i})" style="accent-color:var(--mint)"><div><div style="font-family:var(--mono);font-size:.72rem;font-weight:600;color:${isNearest?'var(--mint)':'var(--text)'}">${n.label}</div><div style="font-size:.52rem;color:var(--text3)">${n.distKm.toFixed(1)} km${isNearest?' · Nearest':''}</div></div></label>`;
+  });
+  html+=`</div>`;
+  // Apply/Reset buttons
+  html+=`<div style="display:flex;gap:.4rem;margin-top:.5rem"><button class="btn btn-sm btn-primary" onclick="applyGridNode()">✓ Apply Node</button><button class="btn btn-sm btn-ghost" onclick="resetGridNode()">↩ Reset to Input</button><button class="btn btn-sm btn-ghost" onclick="$('gridNodeSelector').style.display='none'">✕ Close</button></div>`;
+  panel.innerHTML=html;
+  panel.style.display='block';
+  // Auto-select nearest
+  _selectedGridNode={lat:result.nodes[0].lat,lon:result.nodes[0].lon};
+  // Show notification
+  log(`Grid nodes computed for ${sourceType}: nearest=${result.nodes[0].label} (${result.nodes[0].distKm.toFixed(1)} km)`,'i');
+}
+
+// Select a grid node by index
+function selectGridNode(idx){
+  const lat=parseFloat($('e5La').value),lon=parseFloat($('e5Lo').value);
+  if(isNaN(lat)||isNaN(lon))return;
+  const result=computeGridNodes(lat,lon,_currentGridSource||'ERA5');
+  if(result.nodes[idx]){
+    _selectedGridNode={lat:result.nodes[idx].lat,lon:result.nodes[idx].lon};
+  }
+}
+
+// Apply selected grid node to the lat/lon fields
+function applyGridNode(){
+  if(!_selectedGridNode){alert('Select a grid node first');return;}
+  $('e5La').value=_selectedGridNode.lat.toFixed(4);
+  $('e5Lo').value=_selectedGridNode.lon.toFixed(4);
+  log(`Applied grid node: ${_selectedGridNode.lat.toFixed(4)}°, ${_selectedGridNode.lon.toFixed(4)}° for ${_currentGridSource||'selected source'}`,'i');
+  $('gridNodeSelector').style.display='none';
+}
+
+// Reset lat/lon to original site coordinates
+function resetGridNode(){
+  _selectedGridNode=null;
+  _currentGridSource=null;
+  // Re-read from site centroid
+  if(S.turbines&&S.turbines.length){
+    const cLat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
+    const cLon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
+    $('e5La').value=cLat.toFixed(4);
+    $('e5Lo').value=cLon.toFixed(4);
+  }
+  log('Grid node selection reset — using original site coordinates','i');
+  $('gridNodeSelector').style.display='none';
+}
+
+// Get effective lat/lon: if a grid node is selected, use it; otherwise use e5La/e5Lo
+function getGridAwareCoords(sourceType){
+  const rawLat=parseFloat($('e5La').value),rawLon=parseFloat($('e5Lo').value);
+  if(_selectedGridNode&&_currentGridSource===sourceType){
+    return{lat:_selectedGridNode.lat,lon:_selectedGridNode.lon};
+  }
+  // ERA5_LT shares ERA5 grid — if ERA5 node was selected, use it
+  if(sourceType==='ERA5_LT'&&_selectedGridNode&&_currentGridSource==='ERA5'){
+    return{lat:_selectedGridNode.lat,lon:_selectedGridNode.lon};
+  }
+  // For ERA5_LT, also try mastLat/mastLon as fallback
+  if(sourceType==='ERA5_LT'){
+    const ml=parseFloat($('mastLat').value),mo=parseFloat($('mastLon').value);
+    if(!isNaN(ml)&&!isNaN(mo)&&ml!==0)return{lat:ml,lon:mo};
+  }
+  return{lat:rawLat,lon:rawLon};
 }
 
 </script></body></html>
