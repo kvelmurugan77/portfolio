@@ -2970,24 +2970,33 @@ function calcAEP(){
   const gross=new Float64Array(n),net=new Float64Array(n);
   const dv=.5,vMax=28;
 
-  // ─── v46.1: Determine terrain classification ───
+  // ─── v47.0: Determine terrain classification ───
   // CRITICAL: This drives ALL speedup decisions
   // WAsP classifies terrain based on LOCAL orographic speedup significance.
   // v46.1 FIX: Use LOCAL turbine-area terrain range, NOT the entire grid range.
   // Previous bug: terrainRange = maxE - minE over the ENTIRE grid, so distant
   // mountains (outside the wind farm) caused flat terrain to be classified as
   // complex. This produced RIX = 83% and ΔS = 0.13 on flat terrain.
+  //
+  // v47.0 FIX: The v46.1 threshold (terrainRange<50, maxSlope<3%) was too
+  // aggressive — it classified terrain with 30-50m range as "flat", killing
+  // all per-WTG orographic speedups. This caused all WTGs to show identical
+  // free stream wind speed even in terrain with significant elevation differences.
+  // WAsP considers terrain "flat" only when orographic speedups are negligible
+  // (<3%), which requires terrainRange < ~10m and slope < ~2%.
   const hasTerrainData=S.terrain&&S.terrain.grid&&S.terrain.grid.length>0;
 
-  // v46.1: Compute terrain range only in the LOCAL area around turbines
+  // v47.0: Compute terrain range only in the LOCAL area around turbines
   // Sample elevation at turbine positions + a few surrounding points
   let terrainRange=0;
   if(hasTerrainData){
+    // v47.0: Filter out null/undefined elevation lookups instead of defaulting to 0
     const tElevs=S.turbines.map(t=>t.elev!==undefined&&t.elev!==null?t.elev:
-      (typeof getTerrainElevBilinear==='function'?getTerrainElevBilinear(t.lat,t.lon):0));
+      (typeof getTerrainElevBilinear==='function'?getTerrainElevBilinear(t.lat,t.lon):null))
+      .filter(e=>e!==null&&e!==undefined&&isFinite(e));
     if(tElevs.length>1){
       terrainRange=Math.max(...tElevs)-Math.min(...tElevs);
-    }else{
+    }else if(S.terrain.maxE!==undefined){
       terrainRange=S.terrain.maxE-S.terrain.minE; // fallback for single WTG
     }
     // Also check the terrain within 5km of the turbine centroid
@@ -3000,40 +3009,50 @@ function calcAEP(){
         const ang=a*Math.PI/4;
         const sLat=tcLat+SAMPLE_RADIUS/111320*Math.cos(ang);
         const sLon=tcLon+SAMPLE_RADIUS/(111320*Math.cos(tcLat*Math.PI/180))*Math.sin(ang);
-        const sElev=typeof getTerrainElevBilinear==='function'?getTerrainElevBilinear(sLat,sLon):0;
-        if(sElev&&sElev>0)sampleElevs.push(sElev);
+        const sElev=typeof getTerrainElevBilinear==='function'?getTerrainElevBilinear(sLat,sLon):null;
+        if(sElev!==null&&sElev!==undefined&&sElev>0)sampleElevs.push(sElev);
       }
-      const localRange=Math.max(...sampleElevs)-Math.min(...sampleElevs);
-      if(localRange>terrainRange)terrainRange=localRange;
+      if(sampleElevs.length>1){
+        const localRange=Math.max(...sampleElevs)-Math.min(...sampleElevs);
+        if(localRange>terrainRange)terrainRange=localRange;
+      }
     }
   }
 
   // Compute maximum terrain slope across the layout
   let maxSlope=0;
   if(hasTerrainData&&S.turbines.length>1){
+    // v47.0: Filter out null/undefined elevation lookups
     const tElevs=S.turbines.map(t=>t.elev!==undefined&&t.elev!==null?t.elev:
-      (typeof getTerrainElevBilinear==='function'?getTerrainElevBilinear(t.lat,t.lon):0));
-    const nT=S.turbines.length;
-    const maxPairs=Math.min(200,nT*(nT-1)/2);
-    let pairCount=0;
-    for(let i=0;i<nT&&pairCount<maxPairs;i++){
-      for(let j=i+1;j<nT&&pairCount<maxPairs;j++){
-        const dElev=Math.abs(tElevs[i]-tElevs[j]);
-        const dLat=(S.turbines[i].lat-S.turbines[j].lat)*111320;
-        const dLon=(S.turbines[i].lon-S.turbines[j].lon)*111320*Math.cos(S.turbines[i].lat*Math.PI/180);
-        const dist=Math.sqrt(dLat*dLat+dLon*dLon);
-        if(dist>100){
-          const slope=dElev/dist;
-          if(slope>maxSlope)maxSlope=slope;
+      (typeof getTerrainElevBilinear==='function'?getTerrainElevBilinear(t.lat,t.lon):null))
+      .filter(e=>e!==null&&e!==undefined&&isFinite(e));
+    const nT=tElevs.length;
+    if(nT>1){
+      const maxPairs=Math.min(200,nT*(nT-1)/2);
+      let pairCount=0;
+      for(let i=0;i<nT&&pairCount<maxPairs;i++){
+        for(let j=i+1;j<nT&&pairCount<maxPairs;j++){
+          const dElev=Math.abs(tElevs[i]-tElevs[j]);
+          const dLat=(S.turbines[i].lat-S.turbines[j].lat)*111320;
+          const dLon=(S.turbines[i].lon-S.turbines[j].lon)*111320*Math.cos(S.turbines[i].lat*Math.PI/180);
+          const dist=Math.sqrt(dLat*dLat+dLon*dLon);
+          if(dist>100){
+            const slope=dElev/dist;
+            if(slope>maxSlope)maxSlope=slope;
+          }
+          pairCount++;
         }
-        pairCount++;
       }
     }
   }
-  // WAsP flat terrain criteria: local range < 50m AND max slope < 3%
-  const isFlatTerrain=!hasTerrainData||(terrainRange<50&&maxSlope<0.03);
+  // v47.0: WAsP flat terrain criteria — ONLY genuinely flat terrain
+  // Previous v46.1 used terrainRange<50 && maxSlope<3% which was too aggressive
+  // and classified complex terrain (30-50m range) as flat, killing all per-WTG
+  // orographic speedups. WAsP considers terrain flat only when orographic
+  // speedups are negligible (<3%), requiring range < ~10m and slope < 2%.
+  const isFlatTerrain=!hasTerrainData||(terrainRange<10&&maxSlope<0.02);
   const isComplexTerrain=hasTerrainData&&(terrainRange>100||maxSlope>0.10);
-  log(`v46.1 Terrain classification: localRange=${terrainRange.toFixed(0)}m, maxSlope=${(maxSlope*100).toFixed(1)}%, flat=${isFlatTerrain}, complex=${isComplexTerrain}`,'i');
+  log(`v47.0 Terrain classification: localRange=${terrainRange.toFixed(0)}m, maxSlope=${(maxSlope*100).toFixed(1)}%, flat=${isFlatTerrain}, complex=${isComplexTerrain}`,'i');
 
   // ─── v45.0: Pre-compute JH speedups ───
   let jhSpeedups=[];
@@ -3142,13 +3161,21 @@ function calcAEP(){
     }
   }
 
-  // ─── v41.0→v44.0: Terrain speedup state (JH already computed above) ───
-  // In flat terrain: ALL speedups = 1.0 (WAsP principle)
+  // ─── v47.0: Terrain speedup state (JH already computed above) ───
+  // In genuinely flat terrain: ALL speedups = 1.0 (WAsP principle)
   // In complex terrain: BZ or JH speedups apply (jhSpeedups computed above)
+  //
+  // v47.0 FIX: Previous code (v41-v46) blindly overrode BZ speedups when
+  // isFlatTerrain=true, destroying per-WTG variation computed by runBZModel().
+  // This was the root cause of all WTGs showing identical free stream wind speed
+  // in complex terrain — calcAEP's aggressive terrain classification (range<50m)
+  // killed BZ speedups that runBZModel correctly computed.
+  // Now: Respect BZ speedups if they were already computed by runBZModel().
 
-  // v41.0: Force BZ state to match terrain classification
-  if(isFlatTerrain){
-    // FLAT TERRAIN: Disable BZ entirely, force all speedups to 1.0
+  const bzWasComputed=BZ.enabled&&BZ.sectorSpeedups&&BZ.sectorSpeedups.length>0;
+
+  if(isFlatTerrain&&!bzWasComputed){
+    // TRULY FLAT TERRAIN without BZ: all speedups = 1.0
     BZ.enabled=false;
     BZ.speedups=S.turbines.map(()=>1.0);
     BZ.sectorSpeedups=[];
@@ -3160,7 +3187,23 @@ function calcAEP(){
     BZ.sectorTurning=[];
     BZ.mastSectorTurning=[];
     BZ.sectorInclination=[];
-    log('v41.0: Flat terrain — ALL speedups = 1.0, BZ disabled','i');
+    log('v47.0: Genuinely flat terrain — ALL speedups = 1.0, BZ disabled','i');
+  }else if(isFlatTerrain&&bzWasComputed){
+    // v47.0: Terrain classified as flat by calcAEP but BZ was already run.
+    // This can happen when calcAEP's criterion (range<10m) is met but
+    // runBZModel found minor orographic effects. Respect the BZ results
+    // but clamp tightly since terrain is nearly flat.
+    for(let si=0;si<sectors.length;si++){
+      if(BZ.sectorSpeedups[si]){
+        BZ.sectorSpeedups[si]=BZ.sectorSpeedups[si].map(su=>Math.max(0.97,Math.min(1.03,su)));
+      }
+      if(BZ.mastSectorSU&&BZ.mastSectorSU[si]){
+        BZ.mastSectorSU[si]=Math.max(0.97,Math.min(1.03,BZ.mastSectorSU[si]));
+      }
+    }
+    BZ.mastSU=Math.max(0.97,Math.min(1.03,BZ.mastSU));
+    BZ.speedups=BZ.speedups.map(su=>Math.max(0.97,Math.min(1.03,su)));
+    log('v47.0: Near-flat terrain — BZ speedups clamped to ±3%','i');
   }else if(BZ.enabled){
     // COMPLEX TERRAIN with BZ: Validate speedups are physically reasonable
     // Clamp per-sector speedups to [0.7, 1.3] range (WAsP never exceeds ±30%)
@@ -3177,8 +3220,9 @@ function calcAEP(){
   }
 
   // Per-turbine average speedup for display (frequency-weighted)
+  // v47.0: Use JH speedups even when isFlatTerrain if they were computed
   const tSpeedups=S.turbines.map((t,ti)=>{
-    if(isFlatTerrain)return 1.0;
+    if(isFlatTerrain&&!bzWasComputed&&jhSpeedups.length===0)return 1.0; // truly flat, no speedups
     if(!jhSpeedups[ti])return 1.0;
     let wSum=0,suSum=0;
     sectors.forEach((sec,si)=>{wSum+=sec.freq;suSum+=sec.freq*jhSpeedups[ti][si].speedup;});
@@ -3308,9 +3352,9 @@ function calcAEP(){
         for(let t=0;t<n;t++){
           let turbV;
 
-          if(isFlatTerrain){
-            // v46.0: On flat terrain, bypass BZ entirely — WAsP principle
-            // On flat terrain with uniform roughness, ALL WTGs get the SAME wind speed.
+          if(isFlatTerrain&&!bzWasComputed){
+            // v47.0: Genuinely flat terrain WITHOUT BZ speedups — WAsP principle
+            // On genuinely flat terrain with uniform roughness, ALL WTGs get the SAME wind speed.
             // No orographic speedup (BZ=1.0), no roughness change (RC=1.0),
             // no GDL correction (GDL=1.0), no distance reduction (horizF=1.0).
             turbV=rotorV; // horizFactors[t] = 1.0 always (v46.0)
@@ -3442,6 +3486,8 @@ function calcAEP(){
   const netF=calNetWake*lossM*availM;
   const instMW=n*pc.rated/1000,CF=netF*1000/(instMW*8760)*100;
 
+  // v47.0: bzWasComputed is already defined above — no need to re-declare
+
   // v42.0: Flow separation detection
   if(!isFlatTerrain&&hasTerrainData){
     const fs=detectFlowSeparation();
@@ -3476,12 +3522,12 @@ function calcAEP(){
   const freeSpWind=wakeRun(txy,rotorMeanWS,prevDir,lut,kw);
 
   const perTEffSU=S.turbines.map((t,i)=>{
-    // v46.0: Effective speedup = orographic + roughness + GDL + HH only
+    // v47.0: Effective speedup = orographic + roughness + GDL + HH only
     // NO horizFactor (WAsP doesn't reduce P50 by distance)
     let effSU;
-    if(isFlatTerrain){
-      // Flat terrain: only HH scaling (1.0 if same hub height)
-      // WAsP: ALL WTGs get the same wind speed on flat terrain
+    if(isFlatTerrain&&!bzWasComputed){
+      // Genuinely flat terrain without BZ: only HH scaling (1.0 if same hub height)
+      // WAsP: ALL WTGs get the same wind speed on genuinely flat terrain
       effSU=hhScaleFactors[i];
     }else if(BZ.enabled&&BZ.speedups.length){
       // BZ path: frequency-weighted speedup + roughness + GDL + HH
@@ -3501,10 +3547,10 @@ function calcAEP(){
       const roughRC=hasRoughRose?sectors.reduce((sum,sec,si)=>sum+sec.freq*getSectorRoughnessRatio(si,hubHH,nSect),0):1;
       effSU=jhSU*hhScaleFactors[i]*gdlFactor*(hasRoughRose?roughRC:1);
     }
-    // v46.0: On flat terrain, effective speedup should be exactly 1.0
-    // (or HH scaling if mixed hub heights). No clamping needed if pipeline
-    // is correct — but add sanity clamp for robustness.
-    if(isFlatTerrain){
+    // v47.0: On genuinely flat terrain without BZ, effective speedup should be ~1.0
+    // (or HH scaling if mixed hub heights). On near-flat terrain with BZ,
+    // the BZ speedups provide legitimate per-WTG variation.
+    if(isFlatTerrain&&!bzWasComputed){
       effSU=Math.max(0.99,Math.min(1.01,effSU)); // ±1% tolerance for numerical noise
     }
     return effSU;
@@ -3515,8 +3561,8 @@ function calcAEP(){
     const suVals=perTEffSU.map(s=>s);
     const minSU=Math.min(...suVals),maxSU=Math.max(...suVals);
     const freeWSmin=rotorMeanWS*minSU,freeWSmax=rotorMeanWS*maxSU;
-    log(`v46.0 Per-WTG speedup: ${minSU.toFixed(4)}–${maxSU.toFixed(4)} → free WS ${freeWSmin.toFixed(2)}–${freeWSmax.toFixed(2)} m/s (Δ=${((maxSU-minSU)*rotorMeanWS).toFixed(3)} m/s)${isFlatTerrain?' [FLAT — Δ should be 0.00]':''}`,'i');
-    if(isFlatTerrain&&(maxSU-minSU)>0.01){
+    log(`v47.0 Per-WTG speedup: ${minSU.toFixed(4)}–${maxSU.toFixed(4)} → free WS ${freeWSmin.toFixed(2)}–${freeWSmax.toFixed(2)} m/s (Δ=${((maxSU-minSU)*rotorMeanWS).toFixed(3)} m/s)${isFlatTerrain&&!bzWasComputed?' [FLAT — Δ should be 0.00]':''}`,'i');
+    if(isFlatTerrain&&!bzWasComputed&&(maxSU-minSU)>0.01){
       log(`⚠ FLAT TERRAIN but per-WTG speedup varies by ${((maxSU-minSU)*100).toFixed(2)}% — pipeline issue detected, clamping applied.`,'w');
     }
   }
@@ -4406,7 +4452,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 45.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Stability-integrated extrapolation · Deep-array correction · Mortensen-Bowen RIX · WAsP-correct horizontal extrapolation · Bankability report</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 47.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Stability-integrated extrapolation · Deep-array correction · Mortensen-Bowen RIX · WAsP-correct horizontal extrapolation · Bankability report</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -4803,7 +4849,7 @@ try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 45.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
+log('WindFlow Pro 47.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 // v33.3: Safety net — if leafMap failed to init, retry after DOM is fully settled
@@ -5241,7 +5287,7 @@ function exportBankabilityReport(){
 <div class="cover">
   <h1>${pn}</h1>
   <p>Wind Energy Assessment Report</p>
-  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 45.0 &mdash; ${now}</p>
+  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 47.0 &mdash; ${now}</p>
 </div>
 
 <h2>1. Executive Summary</h2>
@@ -5308,7 +5354,7 @@ ${terrCanvasImg?`<h2>8. Detailed Terrain Elevation Map</h2><p><img src="${terrCa
 ${roughCanvasImg?`<h2>9. Detailed Roughness Map</h2><p><img src="${roughCanvasImg}" style="max-width:100%;border:1px solid #d1d5db;border-radius:6px" alt="Roughness"></p>`:''}
 
 <p style="color:#9ca3af;font-size:9px;margin-top:30px;border-top:1px solid #e5e7eb;padding-top:10px">
-Generated by WindFlow Pro 45.0 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; WAsP-correct horizontal extrapolation &middot; Bankability report format</p>
+Generated by WindFlow Pro 47.0 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; WAsP-correct horizontal extrapolation &middot; Bankability report format</p>
 </body></html>`;
 
   dlFile(h,`WindAssessment_${pn.replace(/\s+/g,'_')}.html`,'text/html');
@@ -10313,7 +10359,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 45.0`);
+  lines.push(`WAsP Project Export - WindFlow Pro 47.0`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
