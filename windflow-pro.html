@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 47.0</title>
+<title>WindFlow Pro 48.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 47.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 48.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -458,7 +458,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       </div>
       <div id="bzOut" style="display:none"><div class="card"><div class="card-title sky">Generalization Results (OWC → GWC)</div>
         <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem">Removed mast orographic speed-up + roughness → GWC at standard height/roughness (via GDL pathway)</div>
-        <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="bzMaSU">—</div><div class="metric-label">Mast ΔS</div></div><div class="metric-item"><div class="metric-val gold" id="bzRixV">—</div><div class="metric-label">RIX %</div></div><div class="metric-item"><div class="metric-val sky" id="bzGws">—</div><div class="metric-label">GWC WS m/s</div></div><div class="metric-item"><div class="metric-val" id="bzGwcA">—</div><div class="metric-label">GWC A m/s</div></div></div>
+        <div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="bzMaSU">—</div><div class="metric-label">Mast ΔS %</div></div><div class="metric-item"><div class="metric-val gold" id="bzRixV">—</div><div class="metric-label">RIX %</div></div><div class="metric-item"><div class="metric-val sky" id="bzGws">—</div><div class="metric-label">GWC WS m/s</div></div><div class="metric-item"><div class="metric-val" id="bzGwcA">—</div><div class="metric-label">GWC A m/s</div></div><div class="metric-item"><div class="metric-val" id="bzTerrClass" style="font-size:.72rem">—</div><div class="metric-label">Terrain</div></div></div>
         <div id="bzRixWarn" style="display:none;margin-top:.3rem" class="alert alert-warn">⚠ RIX warning</div>
         <div style="display:flex;gap:.4rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" onclick="toggleBZLayer()">🗺 Toggle SU Map</button></div>
       </div></div>
@@ -3238,6 +3238,15 @@ function calcAEP(){
   let gdlFactor;
   if(isFlatTerrain){
     gdlFactor=1.0; // WAsP principle: no correction on flat terrain
+  }else if(terrainRange<30){
+    // v48.0: Near-flat terrain — GDL correction is very small, clamp to ±1%
+    // On near-flat terrain, the GDL correction should be negligible since
+    // roughness change effects are minimal and terrain is nearly uniform.
+    const rawGdl=S.hourlyStability&&S.hourlyStability.length>=100
+      ? stabilityWeightedGDL(z0,hubHH)
+      : gdlCorrectionFactor(L,z0,hubHH);
+    gdlFactor=isFinite(rawGdl)?Math.max(0.99,Math.min(1.01,rawGdl)):1.0;
+    log('v48.0: Near-flat GDL clamped to ±1%: '+gdlFactor.toFixed(4),'i');
   }else if(S.hourlyStability&&S.hourlyStability.length>=100){
     gdlFactor=stabilityWeightedGDL(z0,hubHH);
     log('v42.0: Stability-weighted GDL='+gdlFactor.toFixed(4),'i');
@@ -3361,6 +3370,16 @@ function calcAEP(){
             // No orographic speedup (BZ=1.0), no roughness change (RC=1.0),
             // no GDL correction (GDL=1.0), no distance reduction (horizF=1.0).
             turbV=rotorV; // horizFactors[t] = 1.0 always (v46.0)
+          }else if(terrainRange<30){
+            // v48.0: Near-flat terrain (range<30m) — very tight clamp on BZ speedup ratio
+            // BZ FFT can produce spurious 10-20% speedups on gentle/coastal terrain
+            // even when the actual terrain variation is minimal. WAsP expects <3%
+            // orographic effects on near-flat terrain, so we clamp tightly.
+            const turbSU=BZ.sectorSpeedups[si][t]||1;
+            const turbRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC[t]:roughRatioIBL);
+            const suRatio=turbSU/Math.max(mastOrSU,0.5);
+            const clampedRatio=Math.max(0.97,Math.min(1.03,suRatio)); // ±3% for near-flat
+            turbV=rotorV*clampedRatio*turbRC*gdlFactor*horizFactors[t];
           }else if(terrainRange<100){
             // v45.0: Near-flat terrain — clamp BZ speedup ratio to ±5%
             // On gently rolling terrain, BZ can produce speedup ratios that
@@ -3555,6 +3574,11 @@ function calcAEP(){
     // the BZ speedups provide legitimate per-WTG variation.
     if(isFlatTerrain&&!bzWasComputed){
       effSU=Math.max(0.99,Math.min(1.01,effSU)); // ±1% tolerance for numerical noise
+    }else if(terrainRange<30&&BZ.enabled){
+      // v48.0: Near-flat terrain with BZ — clamp effective speedup tightly
+      // BZ FFT can produce spurious speedups on gentle/coastal terrain.
+      // WAsP expects <3% total variation on near-flat terrain.
+      effSU=Math.max(0.97,Math.min(1.03,effSU));
     }
     return effSU;
   });
@@ -8598,8 +8622,16 @@ async function runBZModel(){
     const gridRadiusKm=Math.max(Ly,Lx)/2000;
     rangePerKm=terrainRange/Math.max(gridRadiusKm,1);
   }
-  const isFlat = terrainRange < 5 && rangePerKm < 2; // truly flat: <5m range AND <2m/km
-  const isModerate = !isFlat && rangePerKm < 10; // moderate: 2-10 m/km
+  // v48.0: Three-tier terrain classification for BZ speedup damping
+  // WAsP principle: orographic speedups should be negligible (<3%) on flat terrain.
+  // The BZ FFT can produce spurious speedups on gentle/coastal terrain because
+  // it treats coastline transitions and gentle hills as orographic features.
+  // Tier 1: Flat (range<10m, slope<2%) → force SU=1.0 (no orographic effect)
+  // Tier 2: Near-flat (range 10-30m, slope<5%) → clamp SU to ±3%
+  // Tier 3: Moderate (range 30-100m or slope 2-10m/km) → clamp SU to ±10%
+  const isFlat = terrainRange < 10 && rangePerKm < 2; // v48.0: raised from 5m to 10m (matching calcAEP)
+  const isNearFlat = !isFlat && terrainRange < 30 && rangePerKm < 5; // v48.0: near-flat damping
+  const isModerate = !isFlat && !isNearFlat && rangePerKm < 10; // moderate terrain
   const BZ_prevRix = BZ.rix;
   BZ.rix=computeRIX(S.terrain,rixThr);
   // v47.0 FIX: Do NOT use RIX for flat terrain detection in the BZ model.
@@ -8609,10 +8641,20 @@ async function runBZModel(){
   // if speedups should be forced to 1.0. The BZ FFT naturally produces speedups
   // near 1.0 on flat terrain, so this is safe.
   const nSect=parseInt($('sects').value)||16;
-  log(`v47.0 BZ terrain: gridRange=${(S.terrain.maxE-S.terrain.minE).toFixed(0)}m, localRange=${terrainRange.toFixed(0)}m, RIX=${BZ.rix.toFixed(1)}%, rangePerKm=${rangePerKm.toFixed(1)}m/km, isFlat=${isFlat}`,'i');
+  // v48.0: Re-apply terrain-based clamping to mastSU (computed before terrain classification)
+  if (isFlat) {
+    BZ.mastSU = 1.0; // flat terrain: no orographic speedup
+  } else if (isNearFlat) {
+    BZ.mastSU = Math.max(0.97, Math.min(1.03, BZ.mastSU)); // near-flat: ±3%
+  } else if (isModerate) {
+    BZ.mastSU = Math.max(0.90, Math.min(1.10, BZ.mastSU)); // moderate: ±10%
+  }
+  // else: complex terrain — keep the [0.5, 2.0] clamping from line above
+
+  log(`v48.0 BZ terrain: gridRange=${(S.terrain.maxE-S.terrain.minE).toFixed(0)}m, localRange=${terrainRange.toFixed(0)}m, RIX=${BZ.rix.toFixed(1)}%, rangePerKm=${rangePerKm.toFixed(1)}m/km, isFlat=${isFlat}, isNearFlat=${isNearFlat}, isModerate=${isModerate}, mastSU=${BZ.mastSU.toFixed(4)}`,'i');
 
   if (isFlat) {
-    // v47.0: Only force speedups=1.0 on GENUINELY flat terrain (local range <5m AND <2m/km)
+    // v48.0: Flat terrain (local range <10m AND <2m/km)
     // The BZ FFT correctly produces speedups near 1.0 on flat terrain naturally.
     // Do NOT use isFlatByRIX — it's unreliable for coarse DEMs.
     BZ.mastSU = 1.0;
@@ -8631,7 +8673,7 @@ async function runBZModel(){
       BZ.sectorInclination.push(S.turbines.map(() => 1.0));
       BZ.sectorSU.push(1.0);
     }
-    log(`v47.0 BZ: Genuinely flat terrain (localRange=${terrainRange.toFixed(0)}m, rangePerKm=${rangePerKm.toFixed(1)}m/km) — all orographic speedups set to 1.0`,'i');
+    log(`v48.0 BZ: Flat terrain (localRange=${terrainRange.toFixed(0)}m < 10m, rangePerKm=${rangePerKm.toFixed(1)}m/km) — all orographic speedups set to 1.0`,'i');
   } else {
   // v22.0: Non-flat terrain — compute full BZ speedups
 
@@ -8641,8 +8683,12 @@ async function runBZModel(){
     const ty=(t.lat-lat0)/(lat1-lat0)*Ly;
     const delta=bzDeltaFast(precompSite,tx,ty,null);
     let rawSU = 1+delta;
-    // v22.0: Moderate terrain — limit speedup to ±15% to prevent over-prediction
-    if (isModerate) rawSU = Math.max(0.85, Math.min(1.15, rawSU));
+    // v48.0: Three-tier terrain damping to prevent over-prediction
+    // Near-flat (10-30m range): BZ FFT amplifies coastline/gentle terrain effects
+    // producing spurious 10-20% speedups. WAsP expects <3% on near-flat terrain.
+    if (isNearFlat) rawSU = Math.max(0.97, Math.min(1.03, rawSU));
+    // Moderate terrain: ±10% (was ±15%, reduced after real-world validation)
+    else if (isModerate) rawSU = Math.max(0.90, Math.min(1.10, rawSU));
     return rawSU;
   });
 
@@ -8665,8 +8711,12 @@ async function runBZModel(){
     if(si%4===0){setProg('bz',60+si/nSect*30,`FFT Engine: Sector ${si+1}/${nSect}...`);await new Promise(r=>setTimeout(r,0));}
     // Directional speedup at mast for this sector (v26.0: fast version)
     const mastDeltaDir=bzDeltaFast(precompMast,mx,my,dirDeg);
-    // v20.0: Clamp mast sector speedup to physical range [0.5, 2.0]
-    BZ.mastSectorSU.push(Math.max(0.5,Math.min(2.0,1+mastDeltaDir)));
+    // v48.0: Apply same terrain-class-based clamping to mast sector speedup
+    let mastSecSU = 1+mastDeltaDir;
+    if (isNearFlat) mastSecSU = Math.max(0.97, Math.min(1.03, mastSecSU));
+    else if (isModerate) mastSecSU = Math.max(0.90, Math.min(1.10, mastSecSU));
+    else mastSecSU = Math.max(0.5, Math.min(2.0, mastSecSU));
+    BZ.mastSectorSU.push(mastSecSU);
     // Flow turning at mast for this sector (v26.0: fast version)
     const mastTurnRad=flowTurningFast(precompTurnMast,mx,my,dirDeg);
     BZ.mastSectorTurning.push(mastTurnRad*180/Math.PI); // convert to degrees
@@ -8686,8 +8736,9 @@ async function runBZModel(){
       }
       // v11.0: WAsP orographic saturation proxy — soft cap on speedup
       rawSU = waspOrographicSaturation(rawSU, BZ.rix);
-      // v22.0: Moderate terrain — limit speedup to ±15%
-      if (isModerate) rawSU = Math.max(0.85, Math.min(1.15, rawSU));
+      // v48.0: Three-tier terrain damping (same as omnidirectional)
+      if (isNearFlat) rawSU = Math.max(0.97, Math.min(1.03, rawSU));
+      else if (isModerate) rawSU = Math.max(0.90, Math.min(1.10, rawSU));
       turbSU.push(rawSU);
       // Flow turning at turbine for this sector (v26.0: fast version)
       const turnRad=flowTurningFast(precompTurnSite,tx,ty,dirDeg);
@@ -8798,10 +8849,20 @@ async function runBZModel(){
   // v20.0: Guard against NaN/Infinity in GWC display
   const gwcWSsafe=isFinite(gwcWS)&&gwcWS>0?gwcWS:0;
 
-  $('bzMaSU').textContent=BZ.mastSU.toFixed(4);
+  // v48.0: Show Mast ΔS as percentage (not speedup factor) — much clearer
+  const mastDeltaPct = (BZ.mastSU - 1) * 100;
+  $('bzMaSU').textContent = (mastDeltaPct >= 0 ? '+' : '') + mastDeltaPct.toFixed(2) + '%';
+  $('bzMaSU').style.color = Math.abs(mastDeltaPct) < 3 ? 'var(--mint)' : Math.abs(mastDeltaPct) < 10 ? 'var(--gold)' : 'var(--red)';
   $('bzMnSU').textContent=meanSU.toFixed(4);
   $('bzRixV').textContent=BZ.rix.toFixed(1)+'%';
   $('bzGws').textContent=gwcWSsafe.toFixed(2);
+  // v48.0: Show terrain classification
+  if($('bzTerrClass')){
+    const tClass = isFlat ? 'Flat' : isNearFlat ? 'Near-flat' : isModerate ? 'Moderate' : 'Complex';
+    const tColor = isFlat ? 'var(--mint)' : isNearFlat ? 'var(--sky)' : isModerate ? 'var(--gold)' : 'var(--red)';
+    $('bzTerrClass').textContent = tClass + ' (' + terrainRange.toFixed(0) + 'm)';
+    $('bzTerrClass').style.color = tColor;
+  }
   $('bzOut').style.display='block';
   $('bzBadge').textContent='ACTIVE';
   $('bzBadge').style.background='rgba(63,185,80,.18)';
