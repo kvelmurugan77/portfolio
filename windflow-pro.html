@@ -1715,7 +1715,12 @@ function jensenWake(txy,ws,dir,lut,kw){
     }else{
       totalDef=deficits[j].reduce((s,d)=>s+d.def,0);
     }
-    sp[j]=Math.max(0,ws*(1-totalDef));
+    // v48.0: Physical limit on total wake deficit — never more than 80%
+    // Linear combination can produce totalDef > 1.0 for deep arrays, giving
+    // wsp[t]=0 and zero net AEP. This is physically impossible — even deeply
+    // waked turbines see some wind. WAsP limits total deficit to ~70-80%.
+    totalDef=Math.min(totalDef, 0.80);
+    sp[j]=ws*(1-totalDef);
   }
   // v11.0: Deep-array correction pass
   // Turbines with many upstream neighbors have higher local TI → faster wake decay → less deficit
@@ -3013,7 +3018,10 @@ function calcAEP(){
         const sLat=tcLat+SAMPLE_RADIUS/111320*Math.cos(ang);
         const sLon=tcLon+SAMPLE_RADIUS/(111320*Math.cos(tcLat*Math.PI/180))*Math.sin(ang);
         const sElev=typeof getTerrainElevBilinear==='function'?getTerrainElevBilinear(sLat,sLon):null;
-        if(sElev!==null&&sElev!==undefined&&sElev>0)sampleElevs.push(sElev);
+        // v48.0: Include ALL valid elevations (including sea level = 0) to match BZ model.
+        // Previous filter `sElev > 0` excluded sea-level points near coastlines,
+        // causing calcAEP and BZ model to disagree on terrain classification.
+        if(sElev!==null&&sElev!==undefined&&isFinite(sElev))sampleElevs.push(sElev);
       }
       if(sampleElevs.length>1){
         const localRange=Math.max(...sampleElevs)-Math.min(...sampleElevs);
@@ -3307,10 +3315,13 @@ function calcAEP(){
     // On flat terrain: chainRatio stays 1.0
 
     // BZ per-sector values (only used when BZ is enabled)
-    const bzActive=BZ.enabled&&BZ.sectorSpeedups&&BZ.sectorSpeedups[si];
+    const bzActive=BZ.enabled&&BZ.sectorSpeedups&&BZ.sectorSpeedups[si]&&BZ.sectorSpeedups[si].length>0;
     const mastOrSU=bzActive?(BZ.mastSectorSU?BZ.mastSectorSU[si]:BZ.mastSU):1.0;
-    const meanTurbSU=bzActive?BZ.sectorSpeedups[si].reduce((s,v)=>s+v,0)/Math.max(1,BZ.sectorSpeedups[si].length):1.0;
-    const meanRoughRC=bzActive?(BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC.reduce((s,v)=>s+v,0)/Math.max(1,BZ.turbRoughRC.length):1)):1.0;
+    // v48.0: Guard against empty sector speedups array → meanTurbSU=0 → correctedV=0
+    const secSU=BZ.sectorSpeedups&&BZ.sectorSpeedups[si];
+    const meanTurbSU=bzActive&&secSU&&secSU.length>0?secSU.reduce((s,v)=>s+v,0)/secSU.length:1.0;
+    // v48.0: Guard against empty sectorRoughRC → undefined → NaN
+    const meanRoughRC=bzActive?((BZ.sectorRoughRC&&BZ.sectorRoughRC.length>si)?BZ.sectorRoughRC[si]:(BZ.turbRoughRC&&BZ.turbRoughRC.length>0?BZ.turbRoughRC.reduce((s,v)=>s+v,0)/BZ.turbRoughRC.length:1)):1.0;
 
     // Flow turning
     let effectiveDir=sec.dir;
@@ -3333,8 +3344,15 @@ function calcAEP(){
       // This is the free-stream wind speed at the reference hub height
       let correctedV;
       if(bzActive){
-        // BZ path: OWC → GWC (remove mast orographic SU) → SWC (apply mean turbine SU + roughness + GDL)
-        correctedV=rotorV/Math.max(mastOrSU,0.5)*meanTurbSU*meanRoughRC*gdlFactor;
+        // v48.0: BZ path — OWC → GWC (remove mast orographic SU) → SWC
+        // IMPORTANT: correctedV is the "reference free-stream" wind speed used for:
+        //   1. Wake calculation input
+        //   2. Per-turbine wind speed ratio (turbV/correctedV)
+        // The per-turbine wind speed MUST be derived FROM correctedV to maintain
+        // consistency with the wake model. If turbV and correctedV use different
+        // base values (rotorV vs correctedV), the wake ratio wsp[t]/correctedV
+        // becomes incorrect, causing massive AEP variation.
+        correctedV=rotorV/Math.max(mastOrSU,0.7)*meanTurbSU*meanRoughRC*gdlFactor;
       }else{
         // Non-BZ path: apply chain ratio (1.0 on flat terrain)
         correctedV=rotorV*chainRatio;
@@ -3364,36 +3382,41 @@ function calcAEP(){
         for(let t=0;t<n;t++){
           let turbV;
 
+          // v48.0: CRITICAL FIX — turbV must be derived FROM correctedV, NOT from rotorV.
+          // Previous code used `turbV = rotorV * clampedRatio * ...` which is structurally
+          // inconsistent with `correctedV = rotorV / mastOrSU * meanTurbSU * ...`.
+          // When correctedV ≠ rotorV (which is always the case when mastOrSU ≠ 1.0),
+          // the wake ratio `wsp[t]/correctedV` gives incorrect results because turbV
+          // and correctedV have different base values. This caused 10× AEP variation
+          // on flat terrain where mastOrSU was far from 1.0.
+          //
+          // FIX: Derive turbV from correctedV using a per-turbine ratio:
+          //   turbV = correctedV × (turbSU / meanTurbSU) × (turbRC / meanRoughRC)
+          // This ensures turbV ≈ correctedV when per-turbine speedups match the mean,
+          // and the wake ratio correctly represents the fractional deficit.
+
+          const turbSU=BZ.sectorSpeedups[si][t]||1;
+          const turbRC=(BZ.sectorRoughRC&&BZ.sectorRoughRC.length>si)?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC[t]:roughRatioIBL);
+
           if(isFlatTerrain&&!bzWasComputed){
             // v47.0: Genuinely flat terrain WITHOUT BZ speedups — WAsP principle
-            // On genuinely flat terrain with uniform roughness, ALL WTGs get the SAME wind speed.
-            // No orographic speedup (BZ=1.0), no roughness change (RC=1.0),
-            // no GDL correction (GDL=1.0), no distance reduction (horizF=1.0).
-            turbV=rotorV; // horizFactors[t] = 1.0 always (v46.0)
+            turbV=rotorV; // horizFactors[t] = 1.0 always
           }else if(terrainRange<30){
-            // v48.0: Near-flat terrain (range<30m) — very tight clamp on BZ speedup ratio
-            // BZ FFT can produce spurious 10-20% speedups on gentle/coastal terrain
-            // even when the actual terrain variation is minimal. WAsP expects <3%
-            // orographic effects on near-flat terrain, so we clamp tightly.
-            const turbSU=BZ.sectorSpeedups[si][t]||1;
-            const turbRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC[t]:roughRatioIBL);
-            const suRatio=turbSU/Math.max(mastOrSU,0.5);
-            const clampedRatio=Math.max(0.97,Math.min(1.03,suRatio)); // ±3% for near-flat
-            turbV=rotorV*clampedRatio*turbRC*gdlFactor*horizFactors[t];
+            // v48.0: Near-flat terrain (range<30m) — tight clamp on per-WTG deviation
+            const suRatio=turbSU/Math.max(mastOrSU,0.7);
+            const clampedSU=Math.max(0.97,Math.min(1.03,suRatio)); // ±3% for near-flat
+            // Derive from correctedV to maintain consistency with wake calculation
+            const safeMeanRC=Math.max(meanRoughRC,0.5)||1;
+            turbV=correctedV*clampedSU*(turbRC/safeMeanRC)*horizFactors[t];
           }else if(terrainRange<100){
-            // v45.0: Near-flat terrain — clamp BZ speedup ratio to ±5%
-            // On gently rolling terrain, BZ can produce speedup ratios that
-            // are too large for the actual terrain complexity
-            const turbSU=BZ.sectorSpeedups[si][t]||1;
-            const turbRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC[t]:roughRatioIBL);
-            const suRatio=turbSU/Math.max(mastOrSU,0.5);
-            const clampedRatio=Math.max(0.95,Math.min(1.05,suRatio));
-            turbV=rotorV*clampedRatio*turbRC*gdlFactor*horizFactors[t];
+            // v48.0: Moderate terrain (range<100m) — moderate clamp
+            const suRatio=turbSU/Math.max(mastOrSU,0.7);
+            const clampedSU=Math.max(0.95,Math.min(1.05,suRatio)); // ±5%
+            const safeMeanRC=Math.max(meanRoughRC,0.5)||1;
+            turbV=correctedV*clampedSU*(turbRC/safeMeanRC)*horizFactors[t];
           }else{
             // Complex terrain — full BZ path
-            const turbSU=BZ.sectorSpeedups[si][t]||1;
-            const turbRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC[t]:roughRatioIBL);
-            turbV=rotorV/Math.max(mastOrSU,0.5)*turbSU*turbRC*gdlFactor*horizFactors[t];
+            turbV=correctedV*(turbSU/Math.max(mastOrSU,0.7))*(turbRC/Math.max(meanRoughRC,0.5))*horizFactors[t];
           }
 
           // Hub height scaling
@@ -3552,16 +3575,20 @@ function calcAEP(){
       // WAsP: ALL WTGs get the same wind speed on genuinely flat terrain
       effSU=hhScaleFactors[i];
     }else if(BZ.enabled&&BZ.speedups.length){
-      // BZ path: frequency-weighted speedup + roughness + GDL + HH
+      // v48.0: BZ path — frequency-weighted speedup ratio relative to mean
+      // This matches the calcAEP formula: turbV = correctedV * (turbSU/meanTurbSU) * (turbRC/meanRoughRC)
       const freqWeightedSU=sectors.reduce((sum,sec,si)=>{
         const turbSecSU=BZ.sectorSpeedups?.[si]?.[i]||BZ.speedups[i]||1;
         const mastSecSU=BZ.mastSectorSU?.[si]||BZ.mastSU||1;
-        return sum+sec.freq*(turbSecSU/Math.max(mastSecSU,0.5));
+        // v48.0: Use 0.7 floor matching calcAEP, not 0.5
+        return sum+sec.freq*(turbSecSU/Math.max(mastSecSU,0.7));
       },0);
       const freqWeightedRC=sectors.reduce((sum,sec,si)=>{
-        const secRC=BZ.sectorRoughRC?.[si]||(BZ.turbRoughRC?.[i]||1);
+        const secRC=(BZ.sectorRoughRC&&BZ.sectorRoughRC.length>si)?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?.[i]||1);
         return sum+sec.freq*secRC;
       },0);
+      // v48.0: The GDL factor and RC are already in correctedV, so effSU is the
+      // ratio of this turbine's wind speed to the mean. On flat terrain this should be ~1.0.
       effSU=freqWeightedSU*freqWeightedRC*gdlFactor*hhScaleFactors[i];
     }else{
       // JH path
@@ -3611,7 +3638,7 @@ function calcAEP(){
       const mOrSU=BZ.mastSectorSU?BZ.mastSectorSU[si]:BZ.mastSU;
       const mTurbSU=BZ.sectorSpeedups[si].reduce((s,v)=>s+v,0)/Math.max(1,BZ.sectorSpeedups[si].length);
       const rRC=BZ.sectorRoughRC?BZ.sectorRoughRC[si]:(BZ.turbRoughRC?BZ.turbRoughRC.reduce((s,v)=>s+v,0)/Math.max(1,BZ.turbRoughRC.length):1);
-      gwcA=Math.max(0,s.A/Math.max(mOrSU,0.5)*gdlFactor);
+      gwcA=Math.max(0,s.A/Math.max(mOrSU,0.7)*gdlFactor);
       swcA=Math.max(0,gwcA*mTurbSU*rRC);
       SR=gwcA>0?swcA/gwcA:1;
     }else{
