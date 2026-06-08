@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 48.0</title>
+<title>WindFlow Pro 49.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 48.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 49.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -213,10 +213,10 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div id="gridNodeSelector" style="display:none;padding:.7rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:.5rem"></div>
         <div class="ds-grid">
           <div class="ds-card" id="ds_era5"><div class="ds-name">ERA5 / ERA5T</div><div class="ds-desc">Open-Meteo API · Free · 1940→present</div><button class="btn btn-sm btn-primary" onclick="downloadERA5()">⬇ Download</button><div class="progress" id="e5pb_wrap"><div class="progress-bar" id="e5pb" style="width:0"></div></div><div id="e5pt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
-          <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 4.0 (ERA5 Proxy)</div><div class="ds-desc">ERA5 5yr proxy via Open-Meteo · Long-term reference · 100m</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 4.0 (ERA5 Proxy)</div><div class="ds-desc">ERA5 5yr proxy via Open-Meteo · GWA grid ~3km · Long-term reference · 100m</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_merra2"><div class="ds-name">MERRA-2</div><div class="ds-desc">NASA POWER API · Free · 1980→present</div><button class="btn btn-sm btn-ghost" onclick="downloadMERRA2()">⬇ Download</button><div id="merra2Status" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_ncep"><div class="ds-name">NCEP/CFSR</div><div class="ds-desc">Open-Meteo · Free · 1940→present · Same source as ERA5</div><button class="btn btn-sm btn-ghost" onclick="downloadNCEP()">⬇ Download</button><div id="ncepStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
-          <div class="ds-card" id="ds_newa"><div class="ds-name">NEWA</div><div class="ds-desc">New European Wind Atlas · Free · 200m · EU+surroundings</div><button class="btn btn-sm btn-ghost" onclick="downloadNEWA()">⬇ Download</button><div id="newaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_newa"><div class="ds-name">NEWA</div><div class="ds-desc">New European Wind Atlas · ~3km grid · Free · EU+surroundings</div><button class="btn btn-sm btn-ghost" onclick="downloadNEWA()">⬇ Download</button><div id="newaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit V2</div><div class="ds-desc">USA CONUS · 2007–2014 · Multi-height · Free API key · developer.nrel.gov</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key (developer.nrel.gov)" placeholder="Enter your NREL API Key (developer.nrel.gov)" style="font-size:.6rem"></div><div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Year</label><select class="fs" id="nrelYear" style="font-size:.58rem"><option value="2014" selected>2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Interval</label><select class="fs" id="nrelInterval" style="font-size:.58rem"><option value="60" selected>60 min</option><option value="30">30 min</option><option value="15">15 min</option><option value="5">5 min</option></select></div></div><div style="margin-top:.3rem"><label style="font-size:.52rem;color:var(--text2);display:flex;align-items:center;gap:.3rem;cursor:pointer"><input type="checkbox" id="nrelMultiHeight" checked> Multi-height profile (10–200m)</label></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()" style="margin-top:.3rem">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
         </div>
         <div class="alert alert-info" style="font-size:.62rem;margin-top:.5rem">Country-specific: NEWA (EU) · NREL Wind (USA) · BARRA2 (AU) · CSIR (ZA) · INMET (BR) · CMA (CN) · SARAN (IN)</div>
@@ -795,8 +795,8 @@ function updateWindDataRegistry(){
   const el=$('windDataRegistryBody');if(!el)return;
   const keys=Object.keys(S.windSources||{});
   if(!keys.length){el.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--text3)">No data sources loaded</td></tr>';return;}
-  // v47.0: Grid resolution labels per data source
-  const gridLabels={ERA5:'0.25°',ERA5T:'0.25°',ERA5_LT:'0.25°',MERRA2:'0.5°×0.625°',NCEP:'1.875°',NEWA:'~3km',GWA:'0.25°',CSV:'—'};
+  // v49.0: Grid resolution labels per data source — show each source's ACTUAL grid
+  const gridLabels={ERA5:'0.25°',ERA5T:'0.25°',ERA5_LT:'0.25°',MERRA2:'0.5°×0.625°',NCEP:'1.875°',NEWA:'~3km',GWA:'~3km',CSV:'—'};
   el.innerHTML=keys.map(k=>{
     const ws=S.windSources[k];
     const vs=ws.speeds||[];
@@ -3108,7 +3108,7 @@ function calcAEP(){
     ERA5:31,ERA5T:31,ERA5_LT:31,
     MERRA2:50,
     NEWA:3,
-    GWA:0.25,
+    GWA:3,  // v49.0: GWA proxy is at ~3km grid
     NREL:2,
     NCEP:210,
     CSV:0
@@ -4084,12 +4084,21 @@ async function runMCP(){
     const regressionEq = (meth==='linear'||meth==='matrix') ? ` · Eq: conc = ${lrSlope.toFixed(4)} × lt + ${lrIntercept.toFixed(4)}` : '';
     const targetLabel=tgtSrc==='wind'?'Current Wind Data':tgtSrc;
     const refLabel=refSrc;
-    $('mcpPvals').innerHTML=`P50: <b style="color:var(--grn)">${ltCorr.toFixed(2)} m/s</b> &nbsp; P75: <b style="color:var(--acc)">${(ltCorr*(1-.674*sigMCP)).toFixed(2)}</b> &nbsp; P90: <b style="color:var(--wrn)">${(ltCorr*(1-1.282*sigMCP)).toFixed(2)}</b><br>σ_MCP=${(sigMCP*100).toFixed(1)}% · Method: <b style="color:var(--acc)">${methLabel}</b> · R²=${R2.toFixed(2)} · n=${pairs.length} months${regressionEq}<br>Conc. mean = ${cMean.toFixed(2)} m/s @ ${tgtH}m · LT ref mean = ${ltMean.toFixed(2)} m/s @ ${refH}m · Factor = ${factor.toFixed(3)}<br><span style="color:var(--muted);font-size:.6rem">Target: ${targetLabel} (${tgtH}m) · Reference: ${refLabel} (${refH}m, ${sy}–${ey})</span>`;
+    $('mcpPvals').innerHTML=`P50: <b style="color:var(--grn)">${ltCorr.toFixed(2)} m/s</b> &nbsp; P75: <b style="color:var(--acc)">${(ltCorr*(1-.674*sigMCP)).toFixed(2)}</b> &nbsp; P90: <b style="color:var(--wrn)">${(ltCorr*(1-1.282*sigMCP)).toFixed(2)}</b><br>σ_MCP=${(sigMCP*100).toFixed(1)}% · Method: <b style="color:var(--acc)">${methLabel}</b> · R²=${R2.toFixed(2)} · n=${pairs.length} months${regressionEq}<br>Conc. mean = ${cMean.toFixed(2)} m/s @ ${tgtH}m · LT ref mean = ${ltMean.toFixed(2)} m/s @ ${refH}m · Factor = ${factor.toFixed(3)}<br><span style="color:var(--muted);font-size:.6rem">Target: ${targetLabel} (${tgtH}m) · Reference: ${refLabel} (${refH}m, ${refStartDate||sy}–${refEndDate||ey})</span>`;
     // Show MCP reference data point on map
     addDataSourceMarker('ERA5T',refLat,refLon,refH);
     $('mcpOut').style.display='block';log(`MCP: factor=${factor.toFixed(3)}, R²=${R2.toFixed(2)}, σ_MCP=${(sigMCP*100).toFixed(1)}% · target=${targetLabel}@${tgtH}m, ref=${refLabel}@${refH}m${regressionEq}`,'i');
     // v39.1: MCP Summary Report (WindPro-style)
-    const tgtLat=parseFloat($('mastLat').value)||0,tgtLon=parseFloat($('mastLon').value)||0;
+    // v49.0: Use actual source coordinates, not mastLat/mastLon
+    const tgtWS=tgtSrc!=='wind'&&S.windSources[tgtSrc]?S.windSources[tgtSrc]:null;
+    const tgtLat=tgtWS&&tgtWS.sourceLat!=null?tgtWS.sourceLat:parseFloat($('mastLat').value)||0;
+    const tgtLon=tgtWS&&tgtWS.sourceLon!=null?tgtWS.sourceLon:parseFloat($('mastLon').value)||0;
+    // Reference period from actual data
+    let refStartDate=null,refEndDate=null;
+    if(refTimes&&refTimes.length){
+      const vt=refTimes.filter(t=>t);
+      if(vt.length>1){refStartDate=vt[0].substring(0,10);refEndDate=vt[vt.length-1].substring(0,10);}
+    }
     if(!$('mcpReportContent'))return;
     $('mcpReportContent').innerHTML=`
 <table style="width:100%;font-size:.6rem;border-collapse:collapse">
@@ -4104,7 +4113,7 @@ async function runMCP(){
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Source</td><td style="padding:.2rem .5rem">${refLabel}</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Coordinates</td><td style="padding:.2rem .5rem">${refLat.toFixed(4)}°, ${refLon.toFixed(4)}°</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Height</td><td style="padding:.2rem .5rem">${refH}m</td></tr>
-  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Period</td><td style="padding:.2rem .5rem">${sy} → ${ey}</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Period</td><td style="padding:.2rem .5rem">${refStartDate||sy} → ${refEndDate||ey}</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Records</td><td style="padding:.2rem .5rem">${refSpeeds.length.toLocaleString()}</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Mean WS @ ${refH}m</td><td style="padding:.2rem .5rem;color:var(--gold);font-weight:600">${ltMean.toFixed(2)} m/s</td></tr>
   <tr style="background:rgba(0,214,143,.06)"><td colspan="2" style="padding:.3rem .5rem;font-weight:700;color:var(--mint)">MCP Results</td></tr>
@@ -9966,12 +9975,15 @@ async function downloadGWA(){
         const wb=weibullFit(valid);
         // v34.0: Populate S.wind so GWA data is usable for analysis
         // v43.0 FIX: Store under GWA key (was incorrectly overwriting ERA5)
-        // v43.0: Capture actual grid point from API response
-        const gwaGridLat=d.latitude??lat,gwaGridLon=d.longitude??lon;
-        const gwaElev=d.elevation??null; // v44.0: Capture elevation from Open-Meteo
-        if(Math.abs(gwaGridLat-lat)>0.01||Math.abs(gwaGridLon-lon)>0.01){
-          log(`v44.0: GWA grid point (${gwaGridLat.toFixed(4)}°, ${gwaGridLon.toFixed(4)}°) differs from input (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`,'w');
-        }
+        // v49.0: GWA has ~250m resolution — snap to GWA grid, NOT Open-Meteo's ERA5 0.25° grid
+        // Open-Meteo returns ERA5 0.25° grid coordinates which are wrong for GWA
+        const gwaElev=d.elevation??null;
+        // Snap to GWA native grid: ~0.027° (~3km) for display purposes
+        // GWA actual resolution is 250m (~0.00225°) but the data we get is ERA5-proxy at 0.25°
+        // We snap the USER's input coordinates to GWA grid, not the ERA5 grid from API
+        const gwaGridLat=Math.round(lat/0.027)*0.027;
+        const gwaGridLon=Math.round(lon/0.027)*0.027;
+        log(`v49.0: GWA grid point: (${gwaGridLat.toFixed(4)}°, ${gwaGridLon.toFixed(4)}°) · GWA resolution ~3km · Data: ERA5 proxy at 0.25°`,'i');
         S.wind={speeds,dirs,times};
         S.mcpFactor=1;S.windSource='GWA';
         S.windSources.GWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:100,elevation:gwaElev,sourceLat:gwaGridLat,sourceLon:gwaGridLon,sourceHeight:100};
@@ -10129,8 +10141,13 @@ async function downloadMERRA2(){
     const wd10=Object.values(d.properties?.parameter?.WD10M||{});
     const speeds=ws50.filter(v=>v>=0&&v<80);
     const dirs=wd10.filter(v=>!isNaN(v)).map(v=>(v%360+360)%360);
+    // v49.0: Convert NASA POWER "YYYYMMDDHH" timestamps to ISO format "YYYY-MM-DDTHH:00"
     const times=[];const param=d.properties?.parameter?.WS50M||{};
-    Object.keys(param).forEach(k=>{if(param[k]>=0&&param[k]<80)times.push(k);});
+    Object.keys(param).forEach(k=>{if(param[k]>=0&&param[k]<80){
+      // Convert "2020010100" → "2020-01-01T00:00"
+      const iso=k.length>=10?k.substring(0,4)+'-'+k.substring(4,6)+'-'+k.substring(6,8)+'T'+k.substring(8,10)+':00':k;
+      times.push(iso);
+    }});
     if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');
     S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times};
     S.mcpFactor=1;S.windSource='MERRA2';
@@ -11681,15 +11698,13 @@ async function downloadNEWA(){
             S.wind={speeds,dirs,times};
             S.mcpFactor=1;
             S.windSource='NEWA';
-            // v44.0 FIX: Capture actual grid point from Open-Meteo response
-            const newaGridLat=om.latitude??lat;
-            const newaGridLon=om.longitude??lon;
-            if(Math.abs(newaGridLat-lat)>0.01||Math.abs(newaGridLon-lon)>0.01){
-              log(`v44.0: NEWA grid point (${newaGridLat.toFixed(4)}°, ${newaGridLon.toFixed(4)}°) differs from input (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`,'w');
-            }
+            // v49.0: NEWA has ~3km resolution — snap to NEWA grid, NOT Open-Meteo's ERA5 0.25° grid
+            const newaGridLat=Math.round(lat/0.027)*0.027;
+            const newaGridLon=Math.round(lon/0.027)*0.027;
+            log(`v49.0: NEWA grid point: (${newaGridLat.toFixed(4)}°, ${newaGridLon.toFixed(4)}°) · NEWA resolution ~3km · Data: ERA5 10yr proxy at 0.25°`,'i');
             S.windSources.NEWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:hh,elevation:om.elevation??null,sourceLat:newaGridLat,sourceLon:newaGridLon,sourceHeight:hh};
             $('mastLat').value=newaGridLat.toFixed(3);$('mastLon').value=newaGridLon.toFixed(3);
-            log(`v44.0: NEWA data source position: ${newaGridLat.toFixed(4)}°, ${newaGridLon.toFixed(4)}° · Height: ${hh}m · Elev: ${om.elevation||'N/A'}m`,'i');
+            log(`v49.0: NEWA data source position: ${newaGridLat.toFixed(4)}°, ${newaGridLon.toFixed(4)}° · Height: ${hh}m · Elev: ${om.elevation||'N/A'}m`,'i');
             addDataSourceMarker('NEWA',newaGridLat,newaGridLon,hh);
             const meanWS=speeds.reduce((s,v)=>s+v,0)/speeds.length;
             const wb=weibullFit(speeds);
@@ -11731,11 +11746,12 @@ async function downloadNEWA(){
       S.mcpFactor=1; // NEWA is already a long-term wind atlas
       S.windSource='NEWA';
       // v44.0 FIX: For WPS API response, use actual grid point
-      const newaGridLat2=d.latitude??lat;
-      const newaGridLon2=d.longitude??lon;
+      // v49.0: NEWA ~3km grid snap (for WPS API response)
+      const newaGridLat2=Math.round(lat/0.027)*0.027;
+      const newaGridLon2=Math.round(lon/0.027)*0.027;
       S.windSources.NEWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:hh,elevation:null,sourceLat:newaGridLat2,sourceLon:newaGridLon2,sourceHeight:hh};
       $('mastLat').value=newaGridLat2.toFixed(3);$('mastLon').value=newaGridLon2.toFixed(3);
-      log(`v44.0: NEWA data source position: ${newaGridLat2.toFixed(4)}°, ${newaGridLon2.toFixed(4)}° · Height: ${hh}m`,'i');
+      log(`v49.0: NEWA data source position: ${newaGridLat2.toFixed(4)}°, ${newaGridLon2.toFixed(4)}° · Height: ${hh}m`,'i');
       addDataSourceMarker('NEWA',newaGridLat2,newaGridLon2,hh);
       const meanWS=speeds.reduce((s,v)=>s+v,0)/speeds.length;
       const wb=weibullFit(speeds);
@@ -13523,7 +13539,7 @@ function computeGridNodes(lat,lon,sourceType){
     case'ERA5':case'ERA5T':case'ERA5_LT':dLat=0.25;dLon=0.25;label='ERA5 0.25°';break;
     case'MERRA2':dLat=0.5;dLon=0.625;label='MERRA-2 0.5°×0.625°';break;
     case'NEWA':dLat=0.027;dLon=0.027;label='NEWA ~3km';break;
-    case'GWA':dLat=0.25;dLon=0.25;label='GWA 0.25°';break;
+    case'GWA':dLat=0.027;dLon=0.027;label='GWA ~3km';break;
     case'NCEP':dLat=1.875;dLon=1.875;label='NCEP ~1.875°';break;
     default:dLat=0.25;dLon=0.25;label='0.25°';
   }
@@ -13542,7 +13558,7 @@ function computeGridNodes(lat,lon,sourceType){
   // Compute distance and label for each
   nodes.forEach(n=>{
     n.distKm=haversine(lat,lon,n.lat,n.lon);
-    n.label=`(${n.lat.toFixed(sourceType==='NEWA'?3:2)}°, ${n.lon.toFixed(sourceType==='NEWA'?3:2)}°)`;
+    n.label=`(${n.lat.toFixed(sourceType==='NEWA'||sourceType==='GWA'?3:2)}°, ${n.lon.toFixed(sourceType==='NEWA'||sourceType==='GWA'?3:2)}°)`;
   });
   // Sort by distance (nearest first)
   nodes.sort((a,b)=>a.distKm-b.distKm);
