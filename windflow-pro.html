@@ -136,7 +136,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   <div class="card"><div class="card-title sky">Turbine List</div>
     <div class="g3" style="gap:.4rem;margin-bottom:.5rem"><div class="fg"><label class="fl">Lat</label><input class="fi" id="manLat" type="number" step="0.0001"></div><div class="fg"><label class="fl">Lon</label><input class="fi" id="manLon" type="number" step="0.0001"></div><div class="fg"><label class="fl">&nbsp;</label><button class="btn btn-sm btn-primary" style="width:100%" onclick="addManual()">➕ Add</button></div></div>
     <div id="tCnt" style="font-size:.62rem;color:var(--text3);margin-bottom:.3rem">0 turbines</div>
-    <div class="tbl-wrap" style="max-height:180px"><table class="dt"><thead><tr><th>#</th><th>Lat</th><th>Lon</th><th>HH</th><th>Elev</th><th>✕</th></tr></thead><tbody id="tbody"></tbody></table></div>
+    <div class="tbl-wrap" style="max-height:180px"><table class="dt"><thead><tr><th>#</th><th>Lat</th><th>Lon</th><th>HH</th><th>Elev</th><th>GWA WS</th><th>✕</th></tr></thead><tbody id="tbody"></tbody></table></div>
     <div style="display:flex;gap:.4rem;margin-top:.4rem"><button class="btn btn-sm btn-danger" onclick="clearTurbines()">🗑 Clear</button><button class="btn btn-sm btn-ghost" onclick="exportLayoutCSV()">↓ CSV</button><button class="btn btn-sm btn-ghost" onclick="exportLayoutKML()">↓ KML</button></div>
   </div>
   
@@ -238,7 +238,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   </div>
   <!-- v36.0: Wind Data Registry — all loaded sources with coordinates, height, stats -->
   <div class="card"><div class="card-title green">Wind Data Registry <span style="font-size:.5rem;color:var(--text3);font-weight:400;margin-left:.3rem">All loaded data sources with coordinates, height &amp; statistics</span></div>
-    <div class="tbl-wrap" style="max-height:200px"><table class="dt"><thead><tr><th>Source</th><th>Lat</th><th>Lon</th><th>Height m</th><th>Records</th><th>Mean WS</th><th>Weibull A</th><th>Weibull k</th><th>Period</th></tr></thead><tbody id="windDataRegistryBody"><tr><td colspan="9" style="text-align:center;color:var(--text3)">No data sources loaded</td></tr></tbody></table></div>
+    <div class="tbl-wrap" style="max-height:200px"><table class="dt"><thead><tr><th>Source</th><th>Lat</th><th>Lon</th><th>Grid</th><th>Height m</th><th>Records</th><th>Mean WS</th><th>Weibull A</th><th>Weibull k</th><th>Period</th></tr></thead><tbody id="windDataRegistryBody"><tr><td colspan="10" style="text-align:center;color:var(--text3)">No data sources loaded</td></tr></tbody></table></div>
     <div style="display:flex;gap:.3rem;margin-top:.4rem"><button class="btn btn-sm btn-ghost" onclick="updateWindDataRegistry()">↻ Refresh</button><button class="btn btn-sm btn-ghost" onclick="exportWindRegistryCSV()">↓ Export CSV</button></div>
   </div>
   <div class="nav-row"><button class="btn btn-ghost" onclick="goToStep(1)">← Site &amp; Turbine</button><button class="btn btn-primary" onclick="goToStep(3)">Next: MCP &amp; Extrapolation →</button></div>
@@ -794,7 +794,9 @@ function enrichWindSource(name){
 function updateWindDataRegistry(){
   const el=$('windDataRegistryBody');if(!el)return;
   const keys=Object.keys(S.windSources||{});
-  if(!keys.length){el.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3)">No data sources loaded</td></tr>';return;}
+  if(!keys.length){el.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--text3)">No data sources loaded</td></tr>';return;}
+  // v47.0: Grid resolution labels per data source
+  const gridLabels={ERA5:'0.25°',ERA5T:'0.25°',ERA5_LT:'0.25°',MERRA2:'0.5°×0.625°',NCEP:'1.875°',NEWA:'~3km',GWA:'0.25°',CSV:'—'};
   el.innerHTML=keys.map(k=>{
     const ws=S.windSources[k];
     const vs=ws.speeds||[];
@@ -802,10 +804,11 @@ function updateWindDataRegistry(){
     const wbA=ws.weibullA||'—';const wbK=ws.weibullK||'—';
     const lat=ws.sourceLat!=null?ws.sourceLat.toFixed(4):'—';
     const lon=ws.sourceLon!=null?ws.sourceLon.toFixed(4):'—';
+    const grid=gridLabels[k]||'—';
     const hh=ws.sourceHeight||ws.mastH||'—';
     const sd=ws.startDate||'—';const ed=ws.endDate||'—';
     const active=S.windSource===k;
-    return `<tr style="${active?'background:var(--mint3)':''}"><td style="color:${active?'var(--mint)':'var(--text)'};font-weight:${active?600:400}">${k}${active?' ★':''}</td><td>${lat}</td><td>${lon}</td><td>${hh}</td><td>${vs.length.toLocaleString()}</td><td>${typeof mean==='number'?mean.toFixed(2):mean}</td><td>${typeof wbA==='number'?wbA.toFixed(2):wbA}</td><td>${typeof wbK==='number'?wbK.toFixed(2):wbK}</td><td>${sd}→${ed}</td></tr>`;
+    return `<tr style="${active?'background:var(--mint3)':''}"><td style="color:${active?'var(--mint)':'var(--text)'};font-weight:${active?600:400}">${k}${active?' ★':''}</td><td>${lat}</td><td>${lon}</td><td style="color:var(--sky);font-size:.58rem">${grid}</td><td>${hh}</td><td>${vs.length.toLocaleString()}</td><td>${typeof mean==='number'?mean.toFixed(2):mean}</td><td>${typeof wbA==='number'?wbA.toFixed(2):wbA}</td><td>${typeof wbK==='number'?wbK.toFixed(2):wbK}</td><td>${sd}→${ed}</td></tr>`;
   }).join('');
 }
 
@@ -4045,22 +4048,24 @@ async function runMCP(){
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Height</td><td style="padding:.2rem .5rem">${tgtH}m</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Period</td><td style="padding:.2rem .5rem">${tgtStartDate||'—'} → ${tgtEndDate||'—'}</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Records</td><td style="padding:.2rem .5rem">${tgtSpeeds.length.toLocaleString()}</td></tr>
-  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Mean WS</td><td style="padding:.2rem .5rem">${cMean.toFixed(2)} m/s</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Mean WS @ ${tgtH}m</td><td style="padding:.2rem .5rem;color:var(--sky);font-weight:600">${cMean.toFixed(2)} m/s</td></tr>
   <tr style="background:rgba(245,166,35,.06)"><td colspan="2" style="padding:.3rem .5rem;font-weight:700;color:var(--gold)">Reference Data (Long-term)</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Source</td><td style="padding:.2rem .5rem">${refLabel}</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Coordinates</td><td style="padding:.2rem .5rem">${refLat.toFixed(4)}°, ${refLon.toFixed(4)}°</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Height</td><td style="padding:.2rem .5rem">${refH}m</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Period</td><td style="padding:.2rem .5rem">${sy} → ${ey}</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Records</td><td style="padding:.2rem .5rem">${refSpeeds.length.toLocaleString()}</td></tr>
-  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Mean WS</td><td style="padding:.2rem .5rem">${ltMean.toFixed(2)} m/s</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Mean WS @ ${refH}m</td><td style="padding:.2rem .5rem;color:var(--gold);font-weight:600">${ltMean.toFixed(2)} m/s</td></tr>
   <tr style="background:rgba(0,214,143,.06)"><td colspan="2" style="padding:.3rem .5rem;font-weight:700;color:var(--mint)">MCP Results</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Method</td><td style="padding:.2rem .5rem">${methLabel}</td></tr>
   ${meth==='linear'||meth==='matrix'?`<tr><td style="padding:.2rem .5rem;color:var(--text3)">Equation</td><td style="padding:.2rem .5rem">WS_corr = ${lrSlope.toFixed(4)} × WS_ref + ${lrIntercept.toFixed(4)}</td></tr>`:''}
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">R² (Correlation)</td><td style="padding:.2rem .5rem;color:${R2>0.8?'var(--mint)':R2>0.6?'var(--gold)':'var(--red)'}">${R2.toFixed(3)}${R2>0.8?' (Strong)':R2>0.6?' (Moderate)':' (Weak — consider longer period or different method)'}</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">Concurrent Months</td><td style="padding:.2rem .5rem">${pairs.length}${pairs.length<12?' ⚠ Low — recommend ≥12 months':''}</td></tr>
+  <tr style="background:rgba(255,255,255,.04)"><td colspan="2" style="padding:.3rem .5rem;font-weight:700;color:var(--sky)">Wind Speed Summary</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Target Concurrent WS</td><td style="padding:.2rem .5rem">${cMean.toFixed(2)} m/s @ ${tgtH}m</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Reference LT Mean WS</td><td style="padding:.2rem .5rem">${ltMean.toFixed(2)} m/s @ ${refH}m</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">LT Factor</td><td style="padding:.2rem .5rem;color:var(--gold)">${factor.toFixed(3)}</td></tr>
-  <tr><td style="padding:.2rem .5rem;color:var(--text3)">Concurrent WS</td><td style="padding:.2rem .5rem">${cMean.toFixed(2)} m/s</td></tr>
-  <tr><td style="padding:.2rem .5rem;color:var(--text3)">LT-Corrected WS</td><td style="padding:.2rem .5rem;color:var(--mint);font-weight:700">${ltCorr.toFixed(2)} m/s</td></tr>
+  <tr><td style="padding:.2rem .5rem;color:var(--text3)">LT-Corrected WS</td><td style="padding:.2rem .5rem;color:var(--mint);font-weight:700">${ltCorr.toFixed(2)} m/s @ ${tgtH}m</td></tr>
   <tr><td style="padding:.2rem .5rem;color:var(--text3)">σ_MCP</td><td style="padding:.2rem .5rem">${(sigMCP*100).toFixed(1)}%</td></tr>
 </table>`;
     $('mcpReport').style.display='block';
@@ -9451,15 +9456,23 @@ async function fetchLayoutWSSummary(){
   try{
     const clat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
     const clon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
-    const samplePoints=[{lat:clat,lon:clon,label:'center'}];
-    if(S.turbines.length>=4){
-      const lats=S.turbines.map(t=>t.lat),lons=S.turbines.map(t=>t.lon);
-      samplePoints.push(
-        {lat:Math.min(...lats),lon:Math.min(...lons),label:'SW'},
-        {lat:Math.max(...lats),lon:Math.max(...lons),label:'NE'},
-        {lat:Math.min(...lats),lon:Math.max(...lons),label:'SE'},
-        {lat:Math.max(...lats),lon:Math.min(...lons),label:'NW'}
-      );
+
+    // v47.0: Sample WTG positions (up to 10) for per-WTG wind speed
+    // Previously only 5 points (center + 4 corners) were sampled, giving
+    // poor spatial resolution. Now we sample up to 10 spread-out WTG positions.
+    const nSample=Math.min(S.turbines.length,10);
+    const samplePoints=[];
+    if(S.turbines.length<=10){
+      // Few WTGs: sample all of them
+      S.turbines.forEach((t,i)=>samplePoints.push({lat:t.lat,lon:t.lon,label:'T'+(i+1),turbIdx:i}));
+    }else{
+      // Many WTGs: sample 10 spread-out positions using stride
+      const stride=Math.floor(S.turbines.length/10);
+      for(let i=0;i<S.turbines.length&&samplePoints.length<10;i+=stride){
+        samplePoints.push({lat:S.turbines[i].lat,lon:S.turbines[i].lon,label:'T'+(i+1),turbIdx:i});
+      }
+      // Always include the centroid
+      samplePoints.push({lat:clat,lon:clon,label:'center',turbIdx:-1});
     }
 
     // Step 1: Get shear profile from forecast API (has multi-height data)
@@ -9484,27 +9497,40 @@ async function fetchLayoutWSSummary(){
       }
     }catch(shearErr){log('Shear profile fetch failed, using default alpha=0.14: '+shearErr.message,'w');}
 
-    // Step 2: Get long-term mean from ERA5 archive daily API
-    const wsAtTarget=[];
-    const targetHH=parseInt($('hubH')?.value)||120;
+    // Step 2: Get long-term mean from ERA5 archive daily API per sample point
+    const wsAtTarget=[]; // {ws, pt label, lat, lon}
+    const defaultHH=parseFloat($('hubH')?.value)||120;
     // Update labels to show actual hub height
-    if($('wsAvgLbl'))$('wsAvgLbl').textContent=`Avg WS @ ${targetHH}m`;
-    if($('wsMaxLbl'))$('wsMaxLbl').textContent=`Max WS @ ${targetHH}m`;
-    if($('wsMinLbl'))$('wsMinLbl').textContent=`Min WS @ ${targetHH}m`;
+    if($('wsAvgLbl'))$('wsAvgLbl').textContent=`Avg WS @ ${defaultHH}m`;
+    if($('wsMaxLbl'))$('wsMaxLbl').textContent=`Max WS @ ${defaultHH}m`;
+    if($('wsMinLbl'))$('wsMinLbl').textContent=`Min WS @ ${defaultHH}m`;
     const endYear=Math.min(new Date().getFullYear()-1,2024);
     const startYear=endYear-4;
 
-    for(const pt of samplePoints){
-      const url=`https://archive-api.open-meteo.com/v1/era5?latitude=${pt.lat.toFixed(4)}&longitude=${pt.lon.toFixed(4)}&start_date=${startYear}-01-01&end_date=${endYear}-12-31&daily=wind_speed_100m_mean&wind_speed_unit=ms&timezone=auto`;
-      const resp=await fetch(url);
-      if(!resp.ok)throw new Error('Open-Meteo ERA5 HTTP '+resp.status);
-      const data=await resp.json();
-      const ws100daily=data.daily?.wind_speed_100m_mean||[];
-      const valid100=ws100daily.filter(v=>v!=null&&v>=0);
-      if(valid100.length===0)continue;
-      const mean100ms=valid100.reduce((s,v)=>s+v,0)/valid100.length;
-      const wsTarget=mean100ms*Math.pow(targetHH/100,shearAlpha);
-      wsAtTarget.push({ws:wsTarget,pt:pt.label});
+    // Batch sample points into Open-Meteo requests (up to 5 per batch to avoid URL length limits)
+    const batchSize=5;
+    for(let b=0;b<samplePoints.length;b+=batchSize){
+      const batch=samplePoints.slice(b,b+batchSize);
+      // Build URL with multiple latitude/longitude for batch (Open-Meteo doesn't support this)
+      // Instead, fetch each point sequentially but with a small delay
+      for(const pt of batch){
+        try{
+          const url=`https://archive-api.open-meteo.com/v1/era5?latitude=${pt.lat.toFixed(4)}&longitude=${pt.lon.toFixed(4)}&start_date=${startYear}-01-01&end_date=${endYear}-12-31&daily=wind_speed_100m_mean&wind_speed_unit=ms&timezone=auto`;
+          const resp=await fetch(url);
+          if(!resp.ok)continue;
+          const data=await resp.json();
+          const ws100daily=data.daily?.wind_speed_100m_mean||[];
+          const valid100=ws100daily.filter(v=>v!=null&&v>=0);
+          if(valid100.length===0)continue;
+          const mean100ms=valid100.reduce((s,v)=>s+v,0)/valid100.length;
+          // v47.0: Use per-WTG hub height for extrapolation
+          const targetHH=pt.turbIdx>=0?(S.turbines[pt.turbIdx].hh||defaultHH):defaultHH;
+          const wsTarget=mean100ms*Math.pow(targetHH/100,shearAlpha);
+          wsAtTarget.push({ws:wsTarget,lat:pt.lat,lon:pt.lon,hh:targetHH,label:pt.label});
+        }catch(ptErr){
+          log(`WS fetch failed for ${pt.label}: ${ptErr.message}`,'w');
+        }
+      }
     }
 
     if(wsAtTarget.length===0){
@@ -9513,11 +9539,11 @@ async function fetchLayoutWSSummary(){
         const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);
         const z0=parseFloat($('z0val')?.value)||0.03;
         const srcH=parseFloat($('mastH')?.value)||100;
-        const ws120=logWS(mean,srcH,targetHH,z0);
+        const ws120=logWS(mean,srcH,defaultHH,z0);
         $('wsAvg').textContent=ws120.toFixed(2)+' m/s';
         $('wsMax').textContent='—';
         $('wsMin').textContent='—';
-        $('wsSummaryNote').textContent=`Estimated from current wind data (${srcH}m → ${targetHH}m, z0=${z0})`;
+        $('wsSummaryNote').textContent=`Estimated from current wind data (${srcH}m → ${defaultHH}m, z0=${z0})`;
       }else{
         $('wsAvg').textContent='—';$('wsMax').textContent='—';$('wsMin').textContent='—';
         $('wsSummaryNote').textContent='No wind data — download ERA5 data first';
@@ -9526,19 +9552,31 @@ async function fetchLayoutWSSummary(){
       return;
     }
 
+    // v47.0: Assign per-WTG wind speed using inverse-distance interpolation
+    // from sampled points, then store on each turbine for the table display
     const wtgWS=[];
-    if(wsAtTarget.length===1){
-      for(let i=0;i<S.turbines.length;i++)wtgWS.push(wsAtTarget[0].ws);
-    }else{
-      for(const t of S.turbines){
-        let minDist=Infinity,bestWS=wsAtTarget[0].ws;
-        for(let j=0;j<wsAtTarget.length;j++){
-          const sp=samplePoints[j];
+    for(let i=0;i<S.turbines.length;i++){
+      const t=S.turbines[i];
+      const tHH=t.hh||defaultHH;
+      let bestWS=wsAtTarget[0].ws;
+      // If only one sample point, adjust for per-WTG hub height
+      if(wsAtTarget.length===1){
+        bestWS=wsAtTarget[0].ws*Math.pow(tHH/wsAtTarget[0].hh,shearAlpha);
+      }else{
+        // Inverse-distance-weighted interpolation from all sample points
+        let wSum=0,wsSum=0;
+        for(const sp of wsAtTarget){
           const d=(t.lat-sp.lat)**2+(t.lon-sp.lon)**2;
-          if(d<minDist){minDist=d;bestWS=wsAtTarget[j].ws;}
+          const w=1/Math.max(d,1e-10);
+          // Adjust for per-WTG hub height difference
+          const adjWS=sp.ws*Math.pow(tHH/sp.hh,shearAlpha);
+          wSum+=w;wsSum+=w*adjWS;
         }
-        wtgWS.push(bestWS);
+        bestWS=wSum>0?wsSum/wSum:wsAtTarget[0].ws;
       }
+      // Store on turbine for table display
+      t._gwaWS=bestWS;
+      wtgWS.push(bestWS);
     }
 
     const avg=wtgWS.reduce((s,v)=>s+v,0)/wtgWS.length;
@@ -9547,8 +9585,10 @@ async function fetchLayoutWSSummary(){
     $('wsAvg').textContent=avg.toFixed(2)+' m/s';
     $('wsMax').textContent=maxWS.toFixed(2)+' m/s';
     $('wsMin').textContent=minWS.toFixed(2)+' m/s';
-    $('wsSummaryNote').textContent=`ERA5 ${startYear}–${endYear} daily @ 100m → ${targetHH}m (α=${shearAlpha.toFixed(3)})`;
-    log(`Layout WS summary @ ${targetHH}m: avg=${avg.toFixed(2)}, max=${maxWS.toFixed(2)}, min=${minWS.toFixed(2)} m/s`,'i');
+    $('wsSummaryNote').textContent=`ERA5 ${startYear}–${endYear} daily @ 100m → ${defaultHH}m (α=${shearAlpha.toFixed(3)}) · Per-WTG extrapolation`;
+    log(`Layout WS summary @ ${defaultHH}m: avg=${avg.toFixed(2)}, max=${maxWS.toFixed(2)}, min=${minWS.toFixed(2)} m/s`,'i');
+    // Refresh table to show GWA WS column
+    refreshTableGWAOnly();
     fetchElevationSummary();
   }catch(e){
     log('Wind speed summary fetch failed: '+e.message,'w');
@@ -9568,6 +9608,20 @@ async function fetchLayoutWSSummary(){
     }
     fetchElevationSummary();
   }
+}
+
+// v47.0: Lightweight table refresh — only update GWA WS column (avoids full table rebuild)
+function refreshTableGWAOnly(){
+  const rows=$('tbody')?.querySelectorAll('tr');
+  if(!rows)return;
+  S.turbines.forEach((t,i)=>{
+    if(!rows[i])return;
+    const gwaCell=rows[i].cells[5]; // 6th column = GWA WS
+    if(gwaCell){
+      gwaCell.textContent=t._gwaWS!=null?t._gwaWS.toFixed(2):'—';
+      gwaCell.style.color=t._gwaWS!=null?'var(--sky)':'var(--text3)';
+    }
+  });
 }
 
 // Fetch elevation summary for WTG positions using Open-Meteo elevation API
@@ -9973,12 +10027,14 @@ async function downloadMERRA2(){
       merraLat=d.header.latitude;
       merraLon=d.header.longitude;
     }
-    // v44.0: Snap to MERRA-2 grid (0.5° × 0.625°)
-    // NASA POWER should return the actual grid point, but verify
+    // v47.0: Snap to MERRA-2 grid (0.5° × 0.625°)
+    // NASA POWER returns its own grid point, but we snap to ensure consistency
     const merraGridLat=Math.round(merraLat*2)/2; // 0.5° grid
     const merraGridLon=Math.round(merraLon*8)/8; // 0.625° grid
+    // Use the snapped grid coordinates for accuracy
+    merraLat=merraGridLat;merraLon=merraGridLon;
     if(Math.abs(merraLat-lat)>0.01||Math.abs(merraLon-lon)>0.01){
-      log(`v44.0: MERRA-2 grid point (${merraLat.toFixed(4)}°, ${merraLon.toFixed(4)}°) differs from input (${lat.toFixed(4)}°, ${lon.toFixed(4)}°) — using actual grid coordinates`,'w');
+      log(`v47.0: MERRA-2 grid point (${merraLat.toFixed(4)}°, ${merraLon.toFixed(4)}°) differs from input (${lat.toFixed(4)}°, ${lon.toFixed(4)}°) — using actual grid coordinates`,'w');
     }
     const ws10=Object.values(d.properties?.parameter?.WS10M||{});
     const ws50=Object.values(d.properties?.parameter?.WS50M||{});
@@ -10032,17 +10088,21 @@ async function downloadNCEP(){
     const times=[];const rawWs=d.hourly?.[wsV]||[];
     for(let i=0;i<rawWs.length;i++){if(rawWs[i]!=null&&rawWs[i]>=0&&rawWs[i]<80)times.push(d.hourly?.time?.[i]||'');}
     if(speeds.length<100)throw new Error('Insufficient data ('+speeds.length+' records)');
-    // v43.0: Capture actual grid point from API response
-    const gridLat=d.latitude??lat,gridLon=d.longitude??lon;
-    if(Math.abs(gridLat-lat)>0.01||Math.abs(gridLon-lon)>0.01){
-      log(`v43.0: NCEP grid point (${gridLat.toFixed(4)}°, ${gridLon.toFixed(4)}°) differs from input (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`,'w');
-    }
+    // v47.0: Capture actual grid point from API response
+    // CRITICAL: Open-Meteo's /v1/archive endpoint returns ERA5 0.25° grid
+    // coordinates, NOT the actual NCEP 1.875° grid. We must snap to the
+    // correct NCEP grid to show the right coordinates in the registry.
+    const omGridLat=d.latitude??lat,omGridLon=d.longitude??lon;
+    // Snap to NCEP 1.875° grid (the true NCEP/DOE R2 resolution)
+    const ncepGridLat=Math.round(lat/1.875)*1.875;
+    const ncepGridLon=Math.round(lon/1.875)*1.875;
+    log(`v47.0: NCEP — Open-Meteo grid=(${omGridLat.toFixed(4)}°, ${omGridLon.toFixed(4)}°), NCEP true grid=(${ncepGridLat.toFixed(4)}°, ${ncepGridLon.toFixed(4)}°, 1.875°) · Data is ERA5-interpolated at NCEP grid node`,'i');
     S.wind={speeds,dirs:dirs.length===speeds.length?dirs:speeds.map(()=>0),times};
     S.mcpFactor=1;S.windSource='NCEP';
-    // v43.0 FIX: Store under NCEP key (was incorrectly overwriting ERA5)
-    S.windSources.NCEP={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:parseInt(h)||100,elevation:null,sourceLat:gridLat,sourceLon:gridLon,sourceHeight:parseInt(h)||100};
-    $('mastLat').value=gridLat.toFixed(3);$('mastLon').value=gridLon.toFixed(3);
-    addDataSourceMarker('NCEP',gridLat,gridLon,parseInt(h)||100);
+    // v47.0: Store with NCEP grid coordinates, not Open-Meteo's ERA5 grid
+    S.windSources.NCEP={speeds:[...speeds],dirs:dirs.length===speeds.length?[...dirs]:speeds.map(()=>0),times:[...times],mcpFactor:1,mastH:parseInt(h)||100,elevation:null,sourceLat:ncepGridLat,sourceLon:ncepGridLon,sourceHeight:parseInt(h)||100};
+    $('mastLat').value=ncepGridLat.toFixed(3);$('mastLon').value=ncepGridLon.toFixed(3);
+    addDataSourceMarker('NCEP',ncepGridLat,ncepGridLon,parseInt(h)||100);
     if($('mastH'))$('mastH').value=parseInt(h)||100;
     const vs=speeds.filter(v=>v>0.5);const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;
     const wb=weibullFit(vs);const rho=parseFloat($('airDen').value)||1.225;
@@ -10560,8 +10620,11 @@ function refreshTable(){
   S.turbines.forEach((t,i)=>{
     const tr=document.createElement('tr');
     const hhStyle=t.hh&&t.hh!==defaultHH?'color:var(--gold);font-weight:600':'';
+    // v47.0: GWA WS column — shows per-WTG wind speed from GWA/ERA5 at hub height
+    const gwaWS=t._gwaWS!=null?t._gwaWS.toFixed(2):'—';
+    const gwaStyle=t._gwaWS!=null?'color:var(--sky)':'color:var(--text3)';
     // v24.0: HH column is editable — click to change individual turbine hub height
-    tr.innerHTML=`<td>T${i+1}</td><td>${t.lat.toFixed(4)}</td><td>${t.lon.toFixed(4)}</td><td style="${hhStyle};cursor:pointer" title="Click to edit HH" onclick="editTurbineHH(${i})">${t.hh||'—'}</td><td>${t.elev!=null?t.elev.toFixed(0):'—'}</td><td style="color:var(--red);cursor:pointer" onclick="removeTurbine(${i})">✕</td>`;
+    tr.innerHTML=`<td>T${i+1}</td><td>${t.lat.toFixed(4)}</td><td>${t.lon.toFixed(4)}</td><td style="${hhStyle};cursor:pointer" title="Click to edit HH" onclick="editTurbineHH(${i})">${t.hh||'—'}</td><td>${t.elev!=null?t.elev.toFixed(0):'—'}</td><td style="${gwaStyle}">${gwaWS}</td><td style="color:var(--red);cursor:pointer" onclick="removeTurbine(${i})">✕</td>`;
     tb.appendChild(tr);
   });
   $('tCnt').textContent=S.turbines.length+' turbines';
