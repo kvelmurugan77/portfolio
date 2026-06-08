@@ -4085,6 +4085,12 @@ async function runMCP(){
     const regressionEq = (meth==='linear'||meth==='matrix') ? ` · Eq: conc = ${lrSlope.toFixed(4)} × lt + ${lrIntercept.toFixed(4)}` : '';
     const targetLabel=tgtSrc==='wind'?'Current Wind Data':tgtSrc;
     const refLabel=refSrc;
+    // v50.0 FIX: Compute refStartDate/refEndDate BEFORE using them in the template literal
+    let refStartDate=null,refEndDate=null;
+    if(refTimes&&refTimes.length){
+      const vt=refTimes.filter(t=>t);
+      if(vt.length>1){refStartDate=vt[0].substring(0,10);refEndDate=vt[vt.length-1].substring(0,10);}
+    }
     $('mcpPvals').innerHTML=`P50: <b style="color:var(--grn)">${ltCorr.toFixed(2)} m/s</b> &nbsp; P75: <b style="color:var(--acc)">${(ltCorr*(1-.674*sigMCP)).toFixed(2)}</b> &nbsp; P90: <b style="color:var(--wrn)">${(ltCorr*(1-1.282*sigMCP)).toFixed(2)}</b><br>σ_MCP=${(sigMCP*100).toFixed(1)}% · Method: <b style="color:var(--acc)">${methLabel}</b> · R²=${R2.toFixed(2)} · n=${pairs.length} months${regressionEq}<br>Conc. mean = ${cMean.toFixed(2)} m/s @ ${tgtH}m · LT ref mean = ${ltMean.toFixed(2)} m/s @ ${refH}m · Factor = ${factor.toFixed(3)}<br><span style="color:var(--muted);font-size:.6rem">Target: ${targetLabel} (${tgtH}m) · Reference: ${refLabel} (${refH}m, ${refStartDate||sy}–${refEndDate||ey})</span>`;
     // Show MCP reference data point on map
     addDataSourceMarker('ERA5T',refLat,refLon,refH);
@@ -4094,12 +4100,7 @@ async function runMCP(){
     const tgtWS=tgtSrc!=='wind'&&S.windSources[tgtSrc]?S.windSources[tgtSrc]:null;
     const tgtLat=tgtWS&&tgtWS.sourceLat!=null?tgtWS.sourceLat:parseFloat($('mastLat').value)||0;
     const tgtLon=tgtWS&&tgtWS.sourceLon!=null?tgtWS.sourceLon:parseFloat($('mastLon').value)||0;
-    // Reference period from actual data
-    let refStartDate=null,refEndDate=null;
-    if(refTimes&&refTimes.length){
-      const vt=refTimes.filter(t=>t);
-      if(vt.length>1){refStartDate=vt[0].substring(0,10);refEndDate=vt[vt.length-1].substring(0,10);}
-    }
+    // Reference period: refStartDate/refEndDate already computed above (v50.0 fix)
     if(!$('mcpReportContent'))return;
     $('mcpReportContent').innerHTML=`
 <table style="width:100%;font-size:.6rem;border-collapse:collapse">
