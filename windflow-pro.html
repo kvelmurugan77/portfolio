@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 49.0</title>
+<title>WindFlow Pro 50.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 49.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 50.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -423,7 +423,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <div style="color:var(--muted)">&#8594;</div>
       <div id="pipe3" style="display:flex;align-items:center;gap:.15rem;color:var(--text3)"><span style="font-size:.65rem">&#9744;</span> Terrain</div>
       <div style="color:var(--muted)">&#8594;</div>
-      <div id="pipe4" style="display:flex;align-items:center;gap:.15rem;color:var(--text3)"><span style="font-size:.65rem">&#9744;</span> BZ</div>
+      <div id="pipe4" style="display:flex;align-items:center;gap:.15rem;color:var(--text3)"><span style="font-size:.65rem">&#9744;</span> OW Flow</div>
       <div style="color:var(--muted)">&#8594;</div>
       <div id="pipe5" style="display:flex;align-items:center;gap:.15rem;color:var(--text3)"><span style="font-size:.65rem">&#9744;</span> Wake</div>
       <div style="color:var(--muted)">&#8594;</div>
@@ -436,7 +436,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
     <div>
       <!-- WAsP FLOW ANALYSIS — ONE-BUTTON CARD -->
       <div class="card" style="border-color:var(--mint);border-width:2px"><div class="card-title green">WAsP Analysis</div>
-        <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem"><b>One-button workflow:</b> VE → MCP → Terrain → BZ → Wake → AEP — everything runs automatically, just like WAsP.</div>
+        <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem"><b>One-button workflow:</b> VE → MCP → Terrain → OW Flow → Wake → AEP — everything runs automatically, just like WAsP.</div>
         <div class="g2" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Data Source</label><select class="fs" id="analysisSource" onchange="onAnalysisSourceChange()"><option value="">Current Primary</option></select></div><div class="fg"><label class="fl">&nbsp;</label><label style="font-size:.6rem;cursor:pointer;display:flex;align-items:center;gap:.3rem;padding-top:.25rem"><input type="checkbox" id="useREWS" style="accent-color:var(--mint)"><span>Use REWS for power calc</span></label></div></div>
         <div class="g2" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">&nbsp;</label><label style="font-size:.6rem;cursor:pointer;display:flex;align-items:center;gap:.3rem;padding-top:.25rem"><input type="checkbox" id="useGeostrophic" style="accent-color:var(--gold)"><span>Include geostrophic correction</span></label></div><div class="fg"></div></div>
         <!-- Advanced options collapsible -->
@@ -486,7 +486,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div class="tbl-wrap" style="max-height:150px"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Eff.SU</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="aepBody"><tr><td colspan="12" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div>
       </div>
       <div class="card"><div class="card-title">Wind Rose</div><div class="rose-canvas-wrap"><canvas id="roseCanvas" width="400" height="350"></canvas></div></div>
-      <div class="card"><div class="card-title">Sector BZ Speedup</div><div class="canvas-wrap" style="height:150px"><canvas id="bzSectChart"></canvas></div></div>
+      <div class="card"><div class="card-title">Sector OW Flow Speedup</div><div class="canvas-wrap" style="height:150px"><canvas id="bzSectChart"></canvas></div></div>
       <div class="card"><div class="card-title">AEP by Turbine</div><div class="canvas-wrap" style="height:140px"><canvas id="aepChart"></canvas></div></div>
     </div>
   </div>
@@ -2875,6 +2875,7 @@ function calcAEP(){
   // Key principle: in flat terrain with uniform roughness, ALL corrections
   // must be identity (ratio=1.0), producing identical wind speeds at all WTGs.
   log('── v47.0 WAsP Wind Flow Engine ──','i');
+  log('v50.0 OW Flow Model — Jackson-Hunt orographic (Openwind/WAsP methodology)','i');
   log('v47.0 CRITICAL FIXES: (1) Removed grid-wide slope exit from terrainSpeedupJH — local profile always computed, (2) computeHillParameters uses valley floor ref — ridge-top turbines get speedup, (3) BZ model flat terrain: removed isFlatByRIX, only local range check, (4) Replaced bogus RIX formula with BZ.rix','i');
 
   // v14.0: Per-WTG density correction based on elevation
@@ -3078,8 +3079,8 @@ function calcAEP(){
   // CRITICAL WAsP PRINCIPLE: Horizontal extrapolation ONLY accounts for the
   // REPRESENTATIVENESS UNCERTAINTY of using a distant measurement point.
   // It does NOT re-apply terrain corrections that are already handled by:
-  //   - BZ orographic speedups (in the BZ path)
-  //   - JH terrain speedups (in the non-BZ path)
+  //   - OW Flow orographic speedups (in the OW Flow path)
+  //   - JH terrain speedups (in the non-OW Flow path)
   //   - Roughness change corrections (IBL/roughRC)
   //   - GDL stability corrections
   //
@@ -3683,7 +3684,7 @@ function runAnalysis(){
   // v25.0: Log the flow model pipeline sequence for transparency
   log(`── Flow Model Pipeline ──`,'i');
   log(`  ① Measured OWC → ② Log-law extrapolation (mastH→hubHH) → ③ MCP LT correction (factor=${(S.mcpFactor||1).toFixed(3)})`,'i');
-  log(`  ④ Rotor averaging → ${BZ.enabled?'⑤ BZ orographic (mastSU='+BZ.mastSU?.toFixed(4)+')':'⑤ JH terrain speedup'} → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Horizontal extrapolation (inverse-uncertainty) → ⑨ Wake model`,'i');
+  log(`  ④ Rotor averaging → ${BZ.enabled?'⑤ OW Flow orographic (mastSU='+BZ.mastSU?.toFixed(4)+')':'⑤ JH terrain speedup'} → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Horizontal extrapolation (inverse-uncertainty) → ⑨ Wake model`,'i');
   log(`  ⑩ Site calibration (${S.waspCalibration?'applied':'default'})`,'i');
   setTimeout(()=>{try{
     let R=calcAEP();if(!R){setStatus('Error');$('runBtn').disabled=false;return;}
@@ -3770,11 +3771,11 @@ function updateWSChain(R){
     <b style="color:var(--acc)">Flow Model Pipeline (Sequential Order):</b><br>
     ① Measured OWC → ② Log-law extrapolation → ③ MCP LT correction → ④ Rotor averaging<br>`;
   if(R.bzEnabled){
-    pipelineHTML+=`⑤ BZ orographic (remove mast SU → apply turbine SU) → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Wake model → ⑨ Site calibration<br>`;
-    pipelineHTML+=`BZ mast SU = <b style="color:var(--acc)">${(BZ.mastSU||1).toFixed(4)}</b> · Mean turb SU = <b style="color:var(--acc)">${(BZ.speedups||[]).length?(BZ.speedups.reduce((s,v)=>s+v,0)/BZ.speedups.length).toFixed(4):'1.0000'}</b>`;
+    pipelineHTML+=`⑤ OW Flow orographic (remove mast SU → apply turbine SU) → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Wake model → ⑨ Site calibration<br>`;
+    pipelineHTML+=`OW Flow mast SU = <b style="color:var(--acc)">${(BZ.mastSU||1).toFixed(4)}</b> · Mean turb SU = <b style="color:var(--acc)">${(BZ.speedups||[]).length?(BZ.speedups.reduce((s,v)=>s+v,0)/BZ.speedups.length).toFixed(4):'1.0000'}</b>`;
   } else {
     pipelineHTML+=`⑤ JH terrain speedup → ⑥ Roughness change (IBL) → ⑦ GDL correction → ⑧ Wake model<br>`;
-    pipelineHTML+=`No BZ model — using Jackson-Hunt terrain speedup (directional)`;
+    pipelineHTML+=`No OW Flow model — using Jackson-Hunt terrain speedup (directional)`;
   }
   // v32.0: Dynamic data source position info
   const curSrc=S.windSource||'ERA5';
@@ -3806,7 +3807,7 @@ function updateWSChain(R){
     const meanBZSU=BZ.speedups.reduce((s,v)=>s+v,0)/BZ.speedups.length;
     const bzPct=(meanBZSU/(BZ.mastSU||1)-1)*100;
     const bzWS=(R.rotorMeanWS||R.hubMean)*meanBZSU/(BZ.mastSU||1);
-    html+=row('⑤ BZ orographic SU (OWC→SWC)',bzWS,bzWS-(R.rotorMeanWS||R.hubMean),bzPct,maxWS,'#d2a8ff');
+    html+=row('⑤ OW Flow orographic SU (OWC→SWC)',bzWS,bzWS-(R.rotorMeanWS||R.hubMean),bzPct,maxWS,'#d2a8ff');
   } else if(R.perTurbine&&R.perTurbine.length) {
     // Show average JH speedup
     const meanSU=R.perTurbine.reduce((s,t)=>s+parseFloat(t.speedup||1),0)/R.perTurbine.length;
@@ -4476,7 +4477,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 47.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 50.0 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -4517,7 +4518,7 @@ function exportReport(){
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 47.0 — WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Stability-integrated extrapolation · Deep-array correction · Mortensen-Bowen RIX · WAsP-correct horizontal extrapolation · Bankability report</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 50.0 — WAsP-aligned flow model: OW Flow Jackson-Hunt orographic + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Stability-integrated extrapolation · Deep-array correction · Mortensen-Bowen RIX · WAsP-correct horizontal extrapolation · Bankability report</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -4914,7 +4915,7 @@ try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 47.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
+log('WindFlow Pro 50.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 // v33.3: Safety net — if leafMap failed to init, retry after DOM is fully settled
@@ -5270,7 +5271,7 @@ function drawBankabilityMaps(){
         ctx.fillText(`Per-WTG Wind Speed — ${wsMin.toFixed(1)}–${wsMax.toFixed(1)} m/s`,W/2,16);
       } else {
         ctx.fillStyle='rgba(255,255,255,.3)';ctx.font='12px IBM Plex Mono';ctx.textAlign='center';
-        ctx.fillText('Run OpenWind WindMap and analysis first',W/2,H/2);
+        ctx.fillText('Run OW Flow and analysis first',W/2,H/2);
       }
     }
     log('Wind speed map drawn','i');
@@ -5352,7 +5353,7 @@ function exportBankabilityReport(){
 <div class="cover">
   <h1>${pn}</h1>
   <p>Wind Energy Assessment Report</p>
-  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 47.0 &mdash; ${now}</p>
+  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 50.0 &mdash; ${now}</p>
 </div>
 
 <h2>1. Executive Summary</h2>
@@ -5401,7 +5402,7 @@ ${resRows}</table>
   <div class="map-panel"><div class="map-title">Wind Farm Layout</div>${layoutImg?`<img src="${layoutImg}" alt="Layout">`:'<p style="color:#999;font-size:11px">No layout data</p>'}</div>
   <div class="map-panel"><div class="map-title">Terrain Elevation &amp; Contours</div>${terrainImg?`<img src="${terrainImg}" alt="Terrain">`:'<p style="color:#999;font-size:11px">No terrain data</p>'}</div>
   <div class="map-panel"><div class="map-title">Roughness Map</div>${roughnessImg?`<img src="${roughnessImg}" alt="Roughness">`:'<p style="color:#999;font-size:11px">No roughness data</p>'}</div>
-  <div class="map-panel"><div class="map-title">Wind Speed Map</div>${windSpeedImg?`<img src="${windSpeedImg}" alt="Wind Speed">`:'<p style="color:#999;font-size:11px">Run OpenWind WindMap first</p>'}</div>
+  <div class="map-panel"><div class="map-title">Wind Speed Map</div>${windSpeedImg?`<img src="${windSpeedImg}" alt="Wind Speed">`:'<p style="color:#999;font-size:11px">Run OW Flow first</p>'}</div>
 </div>
 
 ${roseImg?`<h3>Wind Rose</h3><div style="text-align:center"><img src="${roseImg}" style="max-width:350px;border:1px solid #d1d5db;border-radius:6px" alt="Wind Rose"></div>`:''}
@@ -5419,7 +5420,7 @@ ${terrCanvasImg?`<h2>8. Detailed Terrain Elevation Map</h2><p><img src="${terrCa
 ${roughCanvasImg?`<h2>9. Detailed Roughness Map</h2><p><img src="${roughCanvasImg}" style="max-width:100%;border:1px solid #d1d5db;border-radius:6px" alt="Roughness"></p>`:''}
 
 <p style="color:#9ca3af;font-size:9px;margin-top:30px;border-top:1px solid #e5e7eb;padding-top:10px">
-Generated by WindFlow Pro 47.0 &mdash; WAsP-aligned flow model: BZ orographic + JH terrain + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; WAsP-correct horizontal extrapolation &middot; Bankability report format</p>
+Generated by WindFlow Pro 50.0 &mdash; WAsP-aligned flow model: OW Flow Jackson-Hunt orographic + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; WAsP-correct horizontal extrapolation &middot; Bankability report format</p>
 </body></html>`;
 
   dlFile(h,`WindAssessment_${pn.replace(/\s+/g,'_')}.html`,'text/html');
@@ -5428,7 +5429,7 @@ Generated by WindFlow Pro 47.0 &mdash; WAsP-aligned flow model: BZ orographic + 
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 40.0  — ERA5T Density · Per-WTG ρ · Humidity · WAsP-Aligned · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Auto-Calibration · BZ · GDL Stability · Centralized Coords · Dynamic Data Source Position
+// WINDFLOW PRO 50.0  — ERA5T Density · Per-WTG ρ · Humidity · WAsP-Aligned · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Auto-Calibration · OW Flow JH · GDL Stability · Centralized Coords · Dynamic Data Source Position
 // ══════════════════════════════════════════════════════════════════════
 
 // ── ROUGHNESS ROSE ──────────────────────────────────────────────
@@ -8278,7 +8279,7 @@ function detectFlowSeparation() {
     maxSlope: maxSlope,
     steepFraction: steepFraction,
     warning: steepFraction > 0.05 ?
-      `Flow separation likely (${(steepFraction*100).toFixed(1)}% of terrain exceeds 17° slope, max=${(Math.atan(maxSlope)*180/Math.PI).toFixed(1)}°) — BZ model may overpredict speedups by 5-15%` :
+      `Flow separation likely (${(steepFraction*100).toFixed(1)}% of terrain exceeds 17° slope, max=${(Math.atan(maxSlope)*180/Math.PI).toFixed(1)}°) — JH model may overpredict speedups by 5-15%` :
       null
   };
 }
@@ -8527,18 +8528,25 @@ function computeRIX(terrain,threshold){
   return rix;
 }
 
-// ── OPENWIND WINDMAP (mass-consistent flow model) ───────────────────────
-// v49.0: Replaced BZ FFT orographic model with OpenWind-style mass-consistent
-// flow model. The BZ FFT was producing spurious speedups on flat/near-flat
-// terrain due to spectral leakage and Gibbs phenomena. The OpenWind WindMap
-// approach uses simple elevation-based speedups that are:
-//   • Exactly 1.0 on flat terrain (no FFT artifacts)
-//   • Proportional to elevation difference on complex terrain
+// v50.0: OpenWind-style Jackson-Hunt horizontal extrapolation model.
+// This replaces the v49.0 simple elevation model with the physically-based
+// Jackson-Hunt (1975) orographic speedup model that Openwind/WAsP uses.
+//
+// The JH model computes speedup from the linearized boundary layer equations:
+//   Δs = 2κ × (H/L) × ln(z/z₀) / [ln(ℓᵢ/z₀)]²   (inner layer)
+// where H = hill height, L = half-length, ℓᵢ = inner layer height
+//
+// Key properties:
+//   • Exactly 1.0 on flat terrain (H < 1m → Δs = 0)
+//   • Proportional to H/L (terrain slope) — physically correct
 //   • Directionally varying based on upwind terrain profile
+//   • Includes 3D correction (Mason-Sykes), stability, separation
+//   • Same model used by Openwind and WAsP (IBZ/MS3DJH)
+//
 // Variable name "BZ" is kept for backward compatibility with calcAEP() etc.
 async function runBZModel(){
   if(!S.terrain){
-    alert('Download terrain first (TERRAIN tab) — OpenWind WindMap needs elevation grid');
+    alert('Download terrain first (TERRAIN tab) — OW Flow Model needs elevation grid');
     return;
   }
   if(!S.turbines.length){alert('Add turbines first');return;}
@@ -8556,7 +8564,7 @@ async function runBZModel(){
   const Ly=(lat1-lat0)*111320;
   const Lx=(lon1-lon0)*111320*Math.cos(clat*Math.PI/180);
 
-  setProg('bz',5,'OpenWind WindMap: Classifying terrain...');
+  setProg('bz',5,'OW Flow: Computing Jackson-Hunt speedups...');
 
   // ── STEP 1: Compute mast position and elevation ──
   const mLat=parseFloat($('mastLat').value)||clat;
@@ -8569,15 +8577,13 @@ async function runBZModel(){
     return e!==null?e:0;
   });
 
-  // ── STEP 3: Terrain classification ──
-  // Compute local elevation range around turbines + 5km radius
-  let terrainRange = 0;
-  let rangePerKm;
+  // ── STEP 3: Compute terrain range for logging ──
+  let terrainRange=0;
   if(S.turbines&&S.turbines.length>0){
     const localMin=Math.min(...wtgElevs);
     const localMax=Math.max(...wtgElevs);
     terrainRange=localMax-localMin;
-    // Also sample terrain within 5km radius of turbine centroid
+    // Also sample terrain within 5km radius
     const tcLat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
     const tcLon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
     const sampleElevs=[...wtgElevs];
@@ -8590,57 +8596,16 @@ async function runBZModel(){
     }
     const localRange2=Math.max(...sampleElevs)-Math.min(...sampleElevs);
     if(localRange2>terrainRange)terrainRange=localRange2;
-    // Range per km based on turbine area extent
-    const layoutRadiusKm=Math.max(5,
-      Math.sqrt(
-        Math.pow(Math.max(...S.turbines.map(t=>t.lat))-Math.min(...S.turbines.map(t=>t.lat)),2)+
-        Math.pow(Math.max(...S.turbines.map(t=>t.lon))-Math.min(...S.turbines.map(t=>t.lon)),2)
-      )*111320/2000
-    );
-    rangePerKm=terrainRange/Math.max(layoutRadiusKm,1);
-  }else{
-    const gridRadiusKm=Math.max(Ly,Lx)/2000;
-    rangePerKm=terrainRange/Math.max(gridRadiusKm,1);
   }
-
-  // Four-tier terrain classification
-  const isFlat = terrainRange < 10 && rangePerKm < 2;
-  const isNearFlat = !isFlat && terrainRange < 30 && rangePerKm < 5;
-  const isModerate = !isFlat && !isNearFlat && rangePerKm < 10;
-  // else: complex terrain
 
   // ── STEP 4: Compute RIX ──
   BZ.rix=computeRIX(S.terrain,rixThr);
 
-  // ── STEP 5: Determine orographic coefficient C_oro and clamping range ──
-  // OpenWind WindMap principle: speedup = 1 + C_oro * ΔH / H_scale
-  // C_oro scales with terrain complexity — zero on flat terrain
-  let C_oro, suClampMin, suClampMax;
-  if (isFlat) {
-    C_oro = 0;     // No orographic effect on flat terrain
-    suClampMin = 1.0; suClampMax = 1.0;
-  } else if (isNearFlat) {
-    C_oro = 0.3;   // Small speedups on near-flat terrain
-    suClampMin = 0.97; suClampMax = 1.03;
-  } else if (isModerate) {
-    C_oro = 0.5;   // Moderate speedups
-    suClampMin = 0.90; suClampMax = 1.10;
-  } else {
-    C_oro = 1.0;   // Full speedups on complex terrain
-    suClampMin = 0.5; suClampMax = 2.0;
-  }
+  log(`OW Flow v50.0: terrainRange=${terrainRange.toFixed(0)}m, RIX=${BZ.rix.toFixed(1)}%, using Jackson-Hunt orographic model (same as Openwind/WAsP)`,'i');
 
-  // Characteristic height scale: prevents extreme speedups on large elevation ranges
-  const H_scale = Math.max(100, terrainRange * 2);
-
-  log(`OpenWind WindMap v49.0 terrain: localRange=${terrainRange.toFixed(0)}m, RIX=${BZ.rix.toFixed(1)}%, rangePerKm=${rangePerKm.toFixed(1)}m/km, isFlat=${isFlat}, isNearFlat=${isNearFlat}, isModerate=${isModerate}, C_oro=${C_oro}, H_scale=${H_scale.toFixed(0)}m`,'i');
-
-  // ── STEP 6: Compute per-sector per-WTG orographic speedups ──
-  // For each sector, sample the upwind terrain profile and compute speedup
-  // based on the elevation difference between the WTG and the upwind mean terrain.
-  // This provides directional variation naturally: wind from uphill → less speedup,
-  // wind from downhill → more speedup (WTG is at crest relative to upwind).
-  setProg('bz',20,'OpenWind WindMap: Computing directional speedups...');
+  // ── STEP 5: Compute per-sector per-WTG speedups using Jackson-Hunt ──
+  // This is the Openwind approach: JH model for each (WTG, sector) combination
+  setProg('bz',10,'OW Flow: Computing directional JH speedups...');
   await new Promise(r=>setTimeout(r,10));
 
   BZ.sectorSpeedups=[];
@@ -8650,62 +8615,64 @@ async function runBZModel(){
   BZ.sectorInclination=[];
   BZ.sectorSU=[];
 
-  // Pre-compute upwind mean elevations per sector per point
-  // For each sector, compute mast directional speedup and per-WTG speedups
+  // Compute mast speedups: treat mast as a "virtual turbine"
+  // We need to compute JH speedup at the mast location for each sector
+  // to properly remove mast orographic effects in the OWC→GWC step
+  const mastVirtualIdx = -1; // special index for mast
+
   for(let si=0;si<nSect;si++){
     const dirDeg=(si+.5)*360/nSect; // center of sector
 
-    if(si%4===0){setProg('bz',20+si/nSect*40,`OpenWind WindMap: Sector ${si+1}/${nSect}...`);await new Promise(r=>setTimeout(r,0));}
+    if(si%4===0){setProg('bz',10+si/nSect*50,`OW Flow: Sector ${si+1}/${nSect}...`);await new Promise(r=>setTimeout(r,0));}
 
     // --- Mast speedup for this sector ---
-    // Sample upwind terrain profile at mast (10km, 50 points)
-    const mastProfile=extractTerrainProfile(mLat,mLon,dirDeg,10,50);
-    let mastUpwindMean=mastElev;
-    if(mastProfile&&mastProfile.length>1){
-      const upwindElevs=mastProfile.slice(1).map(p=>p.elev);
-      mastUpwindMean=upwindElevs.reduce((s,v)=>s+v,0)/upwindElevs.length;
+    // Extract upwind terrain profile at mast and compute JH speedup
+    const mastProfile=extractTerrainProfile(mLat,mLon,dirDeg,10,30);
+    const mastHill=computeHillParameters(mastProfile);
+    let mastSecSU=1.0;
+    let mastSecTurning=0;
+    
+    if(mastHill.H>=1.0){
+      // Compute JH speedup at mast location
+      let deltaS_2D=jacksonHuntSpeedup2D(mastHill.H,mastHill.L,hubH,z0Mast);
+      // Apply crest proximity
+      if(mastHill.crestProximity!==undefined&&mastHill.crestProximity<1.0){
+        deltaS_2D*=0.3+0.7*mastHill.crestProximity;
+      }
+      // 3D correction
+      const aspectRatio=computeCrossWindAspect(mLat,mLon,dirDeg,10);
+      deltaS_2D*=correction3D(aspectRatio);
+      // Stability
+      const L_stab=getStabilityL();
+      const zL=hubH/L_stab;
+      if(L_stab>0&&L_stab<1e6)deltaS_2D*=1+0.15*Math.min(1,Math.abs(zL));
+      else if(L_stab<0)deltaS_2D*=1-0.08*Math.min(1,Math.abs(zL));
+      // RIX correction
+      if(BZ.rix>5)deltaS_2D*=Math.max(0.7,1-0.03*(BZ.rix-5));
+      // Separation
+      const mastSlope=terrainSlopeAlongWind(mLat,mLon,dirDeg,500);
+      deltaS_2D*=separationCorrection(-mastSlope,mastHill.distToCrest,mastHill.L);
+      // Clamp
+      mastSecSU=Math.max(0.7,Math.min(1.3,1+deltaS_2D));
+      // Flow turning
+      const crossSlope=terrainSlopeCrossWind(mLat,mLon,dirDeg,500);
+      mastSecTurning=Math.atan(0.5*crossSlope)*180/Math.PI;
+      mastSecTurning=Math.max(-15,Math.min(15,mastSecTurning));
     }
-    // Directional mast speedup: based on mast elevation vs. upwind mean
-    // If mast is higher than upwind terrain → speedup (wind accelerates uphill)
-    const mastDH=mastElev-mastUpwindMean;
-    let mastSecSU=1+C_oro*mastDH/H_scale;
-    mastSecSU=Math.max(suClampMin,Math.min(suClampMax,mastSecSU));
+    
     BZ.mastSectorSU.push(mastSecSU);
+    BZ.mastSectorTurning.push(mastSecTurning);
 
-    // No flow turning in simplified mass-consistent model
-    BZ.mastSectorTurning.push(0);
-
-    // --- Per-WTG speedups for this sector ---
+    // --- Per-WTG speedups for this sector using terrainSpeedupJH ---
     const turbSU=[];
     const turbTurning=[];
     const turbInclination=[];
     for(let ti=0;ti<S.turbines.length;ti++){
-      const t=S.turbines[ti];
-
-      // Sample upwind terrain profile at this WTG (10km, 50 points)
-      const turbProfile=extractTerrainProfile(t.lat,t.lon,dirDeg,10,50);
-      let turbUpwindMean=wtgElevs[ti];
-      if(turbProfile&&turbProfile.length>1){
-        const upwindElevs=turbProfile.slice(1).map(p=>p.elev);
-        turbUpwindMean=upwindElevs.reduce((s,v)=>s+v,0)/upwindElevs.length;
-      }
-
-      // Directional speedup: blend of elevation difference to mast and upwind profile
-      // Component 1: ΔH to mast (dominant) — how much higher/lower is WTG vs mast
-      // Component 2: Upwind profile effect — is WTG at a crest or valley?
-      const dH_mast=wtgElevs[ti]-mastElev;
-      const dH_upwind=wtgElevs[ti]-turbUpwindMean;
-      // Blend: 70% mast-relative (dominant) + 30% directional upwind profile
-      const dH_blended=0.7*dH_mast+0.3*dH_upwind;
-
-      let rawSU=1+C_oro*dH_blended/H_scale;
-      rawSU=Math.max(suClampMin,Math.min(suClampMax,rawSU));
-      turbSU.push(rawSU);
-
-      // No flow turning in simplified model
-      turbTurning.push(0);
-      // No inclination in simplified model
-      turbInclination.push(1.0);
+      // Use the existing terrainSpeedupJH function — this IS the Openwind model
+      const jh=terrainSpeedupJH(ti,dirDeg,hubH,z0Site);
+      turbSU.push(jh.speedup);
+      turbTurning.push(jh.turning||0);
+      turbInclination.push(jh.inclination?1+Math.sin(jh.inclination*Math.PI/180):1.0);
     }
 
     BZ.sectorSpeedups.push(turbSU);
@@ -8717,7 +8684,7 @@ async function runBZModel(){
     BZ.sectorSU.push(meanSecSU);
   }
 
-  // ── STEP 7: Compute mast overall speedup ──
+  // ── STEP 6: Compute mast overall speedup ──
   // Frequency-weighted average of sector mast speedups
   if(S.results&&S.results.sectors){
     let sumFreq=0,sumSU=0;
@@ -8730,9 +8697,10 @@ async function runBZModel(){
   }else{
     BZ.mastSU=BZ.mastSectorSU.reduce((s,v)=>s+v,0)/nSect;
   }
-  BZ.mastSU=Math.max(suClampMin,Math.min(suClampMax,BZ.mastSU));
+  // Clamp mast SU to physical range
+  BZ.mastSU=Math.max(0.7,Math.min(1.3,BZ.mastSU));
 
-  // ── STEP 8: Compute frequency-weighted mean speedup per WTG ──
+  // ── STEP 7: Compute frequency-weighted mean speedup per WTG ──
   if(S.results&&S.results.sectors){
     BZ.speedups=S.turbines.map((t,ti)=>{
       let sumFreq=0,sumSU=0;
@@ -8744,7 +8712,6 @@ async function runBZModel(){
       return sumFreq>0?sumSU/sumFreq:1.0;
     });
   }else{
-    // Simple mean across sectors
     BZ.speedups=S.turbines.map((t,ti)=>{
       let sum=0;
       for(let si=0;si<nSect;si++)sum+=BZ.sectorSpeedups[si][ti];
@@ -8753,9 +8720,9 @@ async function runBZModel(){
   }
 
   const meanSU=BZ.speedups.reduce((s,v)=>s+v,0)/Math.max(1,BZ.speedups.length);
-  log(`OpenWind WindMap: mastSU=${BZ.mastSU.toFixed(4)}, turb mean SU=${meanSU.toFixed(4)}, C_oro=${C_oro}, H_scale=${H_scale.toFixed(0)}m`,'i');
+  log(`OW Flow: mastSU=${BZ.mastSU.toFixed(4)}, turb mean SU=${meanSU.toFixed(4)}, RIX=${BZ.rix.toFixed(1)}%`,'i');
 
-  // ── STEP 9: Speedup grid for map visualisation ──
+  // ── STEP 8: Speedup grid for map visualisation ──
   setProg('bz',70,'Computing speedup field for map...');
   await new Promise(r=>setTimeout(r,10));
   const vizMaxGrid=nWTG>40?50:nWTG>20?60:80;
@@ -8768,10 +8735,15 @@ async function runBZModel(){
     for(let j=0;j<vizNx;j++){
       const rj=Math.min(j*vizSkipC,nx-1);
       const pElev=grid[ri][rj];
-      // Simple elevation-based speedup relative to mast
+      // Elevation-based speedup for grid visualization (faster than full JH per grid cell)
+      // Use the same JH principle but simplified for the grid
       const dH=pElev-mastElev;
+      // The speedup on the grid is a visual approximation
+      // Full JH is only computed at WTG locations
+      const H_scale=Math.max(100,terrainRange*2);
+      const C_oro=terrainRange<10?0:terrainRange<30?0.3:terrainRange<100?0.5:1.0;
       let rawSU=1+C_oro*dH/H_scale;
-      rawSU=Math.max(suClampMin,Math.min(suClampMax,rawSU));
+      rawSU=Math.max(0.7,Math.min(1.3,rawSU));
       sgrid[i][j]=rawSU;
     }
     if(i%10===0){setProg('bz',70+20*i/vizNy,`Grid row ${i}/${vizNy}...`);await new Promise(r=>setTimeout(r,0));}
@@ -8779,7 +8751,7 @@ async function runBZModel(){
   BZ.grid=sgrid;
   BZ.gridVizNy=vizNy;BZ.gridVizNx=vizNx;
 
-  // ── STEP 10: Apply empirical calibration factors (same as BZ for compatibility) ──
+  // ── STEP 9: Apply RIX-based calibration factors ──
   const cal=getCalibrationFactors(BZ.rix);
   BZ.speedups=BZ.speedups.map(su=>Math.max(0.5,Math.min(2.0,1+(su-1)*cal.oroCorrection)));
   BZ.sectorSpeedups=BZ.sectorSpeedups.map(sectorSU=>
@@ -8789,10 +8761,10 @@ async function runBZModel(){
   if($('calInfo')){
     $('calInfo').innerHTML=`Terrain class: <b style="color:var(--acc)">${cal.name}</b> (RIX=${BZ.rix.toFixed(1)}%)<br>`+
       `Orographic: ×${cal.oroCorrection.toFixed(3)} | Roughness: ×${cal.roughCorrection.toFixed(3)} | Wake: ×${cal.wakeCorrection.toFixed(3)}<br>`+
-      `<span style="color:var(--muted)">OpenWind WindMap mass-consistent model</span>`;
+      `<span style="color:var(--muted)">OW Flow Model — Jackson-Hunt orographic (Openwind/WAsP methodology)</span>`;
   }
 
-  // ── STEP 11: IBL roughness (per-sector using multi-layer model) ──
+  // ── STEP 10: IBL roughness (per-sector using multi-layer model) ──
   const mastX=(mLon-lon0)/(lon1-lon0)*Lx;
   const mastY=(mLat-lat0)/(lat1-lat0)*Ly;
   const meanDistM=S.turbines.reduce((s,t)=>{
@@ -8828,7 +8800,7 @@ async function runBZModel(){
   BZ.sectorRoughRC=sectorRoughRC;
   BZ.turbDistM=turbDistM;
 
-  // ── STEP 12: Update UI ──
+  // ── STEP 11: Update UI ──
   const hubMean=S.results?S.results.hubMean:(S.wind?S.wind.speeds.filter(v=>v>.5).reduce((s,v,_,a)=>s+v/a.length,0):8);
   const gwcWS=hubMean/BZ.mastSU*roughRC;
   const gwcWSsafe=isFinite(gwcWS)&&gwcWS>0?gwcWS:0;
@@ -8840,8 +8812,8 @@ async function runBZModel(){
   $('bzRixV').textContent=BZ.rix.toFixed(1)+'%';
   $('bzGws').textContent=gwcWSsafe.toFixed(2);
   if($('bzTerrClass')){
-    const tClass=isFlat?'Flat':isNearFlat?'Near-flat':isModerate?'Moderate':'Complex';
-    const tColor=isFlat?'var(--mint)':isNearFlat?'var(--sky)':isModerate?'var(--gold)':'var(--red)';
+    const tClass=terrainRange<10?'Flat':terrainRange<30?'Near-flat':terrainRange<100?'Moderate':'Complex';
+    const tColor=terrainRange<10?'var(--mint)':terrainRange<30?'var(--sky)':terrainRange<100?'var(--gold)':'var(--red)';
     $('bzTerrClass').textContent=tClass+' ('+terrainRange.toFixed(0)+'m)';
     $('bzTerrClass').style.color=tColor;
   }
@@ -8851,7 +8823,7 @@ async function runBZModel(){
   $('bzBadge').style.color='var(--grn)';
   if(BZ.rix>5)$('bzRixWarn').style.display='block';
   if(BZ.rix>5){
-    $('bzRixWarn').innerHTML=`⚠ RIX=${BZ.rix.toFixed(1)}%: Steep terrain detected. OpenWind WindMap applies terrain-class-based damping (C_oro=${C_oro}).`;
+    $('bzRixWarn').innerHTML=`⚠ RIX=${BZ.rix.toFixed(1)}%: Steep terrain detected. JH model applies Mortensen-Bowen RIX correction.`;
   }
 
   // Right panel results
@@ -8931,15 +8903,16 @@ async function runBZModel(){
   // Draw verification chart
   drawBesselChart();
 
-  setProg('bz',100,`✓ OpenWind WindMap complete. Mast SU=${BZ.mastSU.toFixed(4)}, mean turb SU=${meanSU.toFixed(4)}, RIX=${BZ.rix.toFixed(1)}%`);
-  log(`OpenWind WindMap v49.0 (mass-consistent flow model): mastSU=${BZ.mastSU.toFixed(4)}, turb mean SU=${meanSU.toFixed(4)}, RIX=${BZ.rix.toFixed(1)}%, IBL=${iblHeight.toFixed(0)}m, RC=${roughRC.toFixed(4)} — Elevation-based directional speedups for ${nSect} sectors, C_oro=${C_oro}, H_scale=${H_scale.toFixed(0)}m${S.roughnessRose?' · Roughness rose integrated':''}`,'i');
+  setProg('bz',100,`✓ OW Flow complete. Mast SU=${BZ.mastSU.toFixed(4)}, mean turb SU=${meanSU.toFixed(4)}, RIX=${BZ.rix.toFixed(1)}%`);
+  log(`OW Flow v50.0 (Jackson-Hunt orographic model — Openwind/WAsP methodology): mastSU=${BZ.mastSU.toFixed(4)}, turb mean SU=${meanSU.toFixed(4)}, RIX=${BZ.rix.toFixed(1)}%, IBL=${iblHeight.toFixed(0)}m, RC=${roughRC.toFixed(4)} — JH directional speedups for ${nSect} sectors${S.roughnessRose?' · Roughness rose integrated':''}`,'i');
 
   // Hook into AEP if results exist
-  if(S.results)log('Re-run analysis to apply OpenWind WindMap speedups to AEP calculation','w');
+  if(S.results)log('Re-run analysis to apply OW Flow speedups to AEP calculation','w');
 
   // Update pipeline progress bar
   updatePipelineProgress();
 }
+
 
 // ── BZ SPEEDUP MAP (canvas) ────────────────────────────────────────────
 function drawBZLayer(){
@@ -9084,7 +9057,7 @@ function testBessel(){
 }
 
 // Run Bessel tests on load
-setTimeout(()=>{log('OpenWind WindMap model loaded. Download terrain + run WindMap for orographic speedups.','i');},1500);
+setTimeout(()=>{log('OW Flow Model (Jackson-Hunt, Openwind/WAsP methodology) loaded. Download terrain + run OW Flow for orographic speedups.','i');},1500);
 
 
 // ═══════════════════════════════════════════════════════════════════
@@ -10461,7 +10434,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 47.0`);
+  lines.push(`WAsP Project Export - WindFlow Pro 50.0`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
@@ -12994,9 +12967,9 @@ async function runWAsPAnalysis(){
   }
 
   // Stage 3: Run BZ model (generalization)
-  statusEl.textContent = 'Running BZ generalization...';
+  statusEl.textContent = 'Running OW Flow generalization...';
   pbEl.style.width = '25%';
-  log('  \u2462 Running BZ generalization (OWC \u2192 GWC)...', 'i');
+  log('  \u2462 Running OW Flow generalization (OWC \u2192 GWC)...', 'i');
   try {
     if (S.terrain && S.terrain.grid && S.terrain.grid.length) {
       await runBZModel();
@@ -13020,7 +12993,7 @@ async function runWAsPAnalysis(){
       log('  No terrain data \u2014 BZ state reset, using flat terrain assumptions', 'w');
     }
   } catch (e) {
-    log('BZ model warning: ' + e.message, 'w');
+    log('OW Flow model warning: ' + e.message, 'w');
     // Also reset BZ on error
     BZ.enabled = false; BZ.mastSU = 1;
   }
@@ -13152,7 +13125,7 @@ function runWAsPFlow() {
     statusEl.textContent = 'Generalizing OWC→GWC...';
     pbEl.style.width = '10%';
     statusEl.style.color = 'var(--sky)';
-    log('  ① Generalizing OWC → GWC (BZ model)...', 'i');
+    log('  ① Generalizing OWC → GWC (OW Flow model)...', 'i');
     try {
       if (S.terrain && S.terrain.grid && S.terrain.grid.length) {
         await runBZModel();
@@ -13167,7 +13140,7 @@ function runWAsPFlow() {
         log('  No terrain data — BZ state reset, using flat terrain assumptions', 'w');
       }
     } catch (e) {
-      log('BZ model warning: ' + e.message, 'w');
+      log('OW Flow model warning: ' + e.message, 'w');
       BZ.enabled = false; BZ.mastSU = 1;
     }
     stage2();
