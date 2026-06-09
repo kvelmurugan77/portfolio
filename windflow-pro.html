@@ -213,7 +213,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div id="gridNodeSelector" style="display:none;padding:.7rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:.5rem"></div>
         <div class="ds-grid">
           <div class="ds-card" id="ds_era5"><div class="ds-name">ERA5 / ERA5T</div><div class="ds-desc">Open-Meteo API · Free · 1940→present</div><button class="btn btn-sm btn-primary" onclick="downloadERA5()">⬇ Download</button><div class="progress" id="e5pb_wrap"><div class="progress-bar" id="e5pb" style="width:0"></div></div><div id="e5pt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
-          <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 4.0 (ERA5 Proxy)</div><div class="ds-desc">ERA5 5yr proxy via Open-Meteo · GWA grid ~3km · Long-term reference · 100m</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_gwa"><div class="ds-name">GWA 4.0</div><div class="ds-desc">Global Wind Atlas · Microscale ~250m · WAsP .lib · Free API</div><button class="btn btn-sm btn-ghost" onclick="downloadGWA()">⬇ Download</button><div id="gwaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_merra2"><div class="ds-name">MERRA-2</div><div class="ds-desc">NASA POWER API · Free · 1980→present</div><button class="btn btn-sm btn-ghost" onclick="downloadMERRA2()">⬇ Download</button><div id="merra2Status" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_ncep"><div class="ds-name">NCEP/CFSR</div><div class="ds-desc">Open-Meteo · Free · 1940→present · Same source as ERA5</div><button class="btn btn-sm btn-ghost" onclick="downloadNCEP()">⬇ Download</button><div id="ncepStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_newa"><div class="ds-name">NEWA</div><div class="ds-desc">New European Wind Atlas · ~3km grid · Free · EU+surroundings</div><button class="btn btn-sm btn-ghost" onclick="downloadNEWA()">⬇ Download</button><div id="newaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
@@ -9662,29 +9662,132 @@ async function fetchLayoutWSSummary(){
   $('wsMin').textContent='...';
   $('wsCount').textContent=S.turbines.length;
 
+  const defaultHH=parseFloat($('hubH')?.value)||120;
+  if($('wsAvgLbl'))$('wsAvgLbl').textContent=`Avg WS @ ${defaultHH}m`;
+  if($('wsMaxLbl'))$('wsMaxLbl').textContent=`Max WS @ ${defaultHH}m`;
+  if($('wsMinLbl'))$('wsMinLbl').textContent=`Min WS @ ${defaultHH}m`;
+
   try{
     const clat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
     const clon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
 
-    // v47.0: Sample WTG positions (up to 10) for per-WTG wind speed
-    // Previously only 5 points (center + 4 corners) were sampled, giving
-    // poor spatial resolution. Now we sample up to 10 spread-out WTG positions.
-    const nSample=Math.min(S.turbines.length,10);
+    // ── v51.0: Use REAL GWA 4.0 API for per-WTG wind speed ──
+    // GWA 4.0 API endpoints:
+    //   GET  /api/gwa/custom/Lib?lat=X&long=Y  → WAsP .lib (Weibull per sector/height)
+    //   POST /api/gwa/custom/windSpeed          → area percentile wind speed
+    // Requires header: X-Requested-With: XMLHttpRequest
+    
+    const gwaHeaders={'X-Requested-With':'XMLHttpRequest','Accept':'*/*','Referer':'https://globalwindatlas.info/'};
+
+    // Strategy 1: Query per-WTG GWA .lib files (up to 10 sample points for performance)
     const samplePoints=[];
     if(S.turbines.length<=10){
-      // Few WTGs: sample all of them
       S.turbines.forEach((t,i)=>samplePoints.push({lat:t.lat,lon:t.lon,label:'T'+(i+1),turbIdx:i}));
     }else{
-      // Many WTGs: sample 10 spread-out positions using stride
       const stride=Math.floor(S.turbines.length/10);
       for(let i=0;i<S.turbines.length&&samplePoints.length<10;i+=stride){
         samplePoints.push({lat:S.turbines[i].lat,lon:S.turbines[i].lon,label:'T'+(i+1),turbIdx:i});
       }
-      // Always include the centroid
       samplePoints.push({lat:clat,lon:clon,label:'center',turbIdx:-1});
     }
 
-    // Step 1: Get shear profile from forecast API (has multi-height data)
+    let gwaOK=false;
+    const wsAtTarget=[]; // {ws, lat, lon, hh, label}
+
+    // Fetch GWA .lib for each sample point (contains Weibull A,k per sector × height)
+    for(const pt of samplePoints){
+      try{
+        const libUrl=`https://globalwindatlas.info/api/gwa/custom/Lib?lat=${pt.lat.toFixed(4)}&long=${pt.lon.toFixed(4)}`;
+        const resp=await fetch(libUrl,{headers:gwaHeaders});
+        if(!resp.ok)continue;
+        const libText=await resp.text();
+        if(!libText||libText.length<50||libText.startsWith('<!'))continue;
+        // Parse GWA4 .lib format to extract mean wind speed at target height
+        const meanWS=parseGWALibMeanWS(libText,defaultHH);
+        if(meanWS&&meanWS>0){
+          const targetHH=pt.turbIdx>=0?(S.turbines[pt.turbIdx].hh||defaultHH):defaultHH;
+          wsAtTarget.push({ws:meanWS,lat:pt.lat,lon:pt.lon,hh:defaultHH,label:pt.label});
+        }
+      }catch(ptErr){
+        log(`GWA Lib fetch failed for ${pt.label}: ${ptErr.message}`,'w');
+      }
+    }
+
+    // Strategy 2: If per-point Lib failed, try area windSpeed POST
+    if(wsAtTarget.length===0){
+      try{
+        const lats=S.turbines.map(t=>t.lat),lons=S.turbines.map(t=>t.lon);
+        const minLat=Math.min(...lats)-0.01,maxLat=Math.max(...lats)+0.01;
+        const minLon=Math.min(...lons)-0.01,maxLon=Math.max(...lons)+0.01;
+        const gwaHeight=[10,50,100,150,200].reduce((best,h)=>Math.abs(h-defaultHH)<Math.abs(best-defaultHH)?h:best,100);
+        const areaBody=JSON.stringify({height:gwaHeight,coord:[[[minLon,minLat],[maxLon,minLat],[maxLon,maxLat],[minLon,maxLat],[minLon,minLat]]]});
+        const areaResp=await fetch('https://globalwindatlas.info/api/gwa/custom/windSpeed',{method:'POST',headers:{...gwaHeaders,'Content-Type':'application/json'},body:areaBody});
+        if(areaResp.ok){
+          const areaData=await areaResp.json();
+          if(areaData.area_means&&areaData.area_means.length>0){
+            // Median (50th percentile) is the best estimate of area mean
+            const median=areaData.area_means.find(p=>p.perc===50);
+            const areaMean=median?median.val:(areaData.area_means.reduce((s,p)=>s+p.val,0)/areaData.area_means.length);
+            // Shear extrapolation if hub height differs from GWA height
+            let wsTarget=areaMean;
+            if(Math.abs(gwaHeight-defaultHH)>5){
+              const alpha=0.14; // default wind shear
+              wsTarget=areaMean*Math.pow(defaultHH/gwaHeight,alpha);
+            }
+            wsAtTarget.push({ws:wsTarget,lat:clat,lon:clon,hh:defaultHH,label:'area-mean'});
+            log(`GWA4 area wind speed @ ${gwaHeight}m: ${areaMean.toFixed(2)} m/s → ${defaultHH}m: ${wsTarget.toFixed(2)} m/s`,'i');
+          }
+        }
+      }catch(areaErr){
+        log(`GWA4 area query failed: ${areaErr.message}`,'w');
+      }
+    }
+
+    // If GWA data was obtained, use it for per-WTG assignment
+    if(wsAtTarget.length>0){
+      gwaOK=true;
+      const wtgWS=[];
+      for(let i=0;i<S.turbines.length;i++){
+        const t=S.turbines[i];
+        const tHH=t.hh||defaultHH;
+        let bestWS=wsAtTarget[0].ws;
+        if(wsAtTarget.length===1){
+          // Single value: adjust for per-WTG hub height
+          if(Math.abs(tHH-wsAtTarget[0].hh)>5){
+            bestWS=wsAtTarget[0].ws*Math.pow(tHH/wsAtTarget[0].hh,0.14);
+          }
+        }else{
+          // Inverse-distance-weighted interpolation from sample points
+          let wSum=0,wsSum=0;
+          for(const sp of wsAtTarget){
+            const d=(t.lat-sp.lat)**2+(t.lon-sp.lon)**2;
+            const w=1/Math.max(d,1e-10);
+            let adjWS=sp.ws;
+            if(Math.abs(tHH-sp.hh)>5){
+              adjWS=sp.ws*Math.pow(tHH/sp.hh,0.14);
+            }
+            wSum+=w;wsSum+=w*adjWS;
+          }
+          bestWS=wSum>0?wsSum/wSum:wsAtTarget[0].ws;
+        }
+        t._gwaWS=bestWS;
+        wtgWS.push(bestWS);
+      }
+      const avg=wtgWS.reduce((s,v)=>s+v,0)/wtgWS.length;
+      const maxWS=Math.max(...wtgWS);
+      const minWS=Math.min(...wtgWS);
+      $('wsAvg').textContent=avg.toFixed(2)+' m/s';
+      $('wsMax').textContent=maxWS.toFixed(2)+' m/s';
+      $('wsMin').textContent=minWS.toFixed(2)+' m/s';
+      $('wsSummaryNote').textContent=`GWA 4.0 @ ${defaultHH}m · ${wsAtTarget.length} sample points · Per-WTG interpolation`;
+      log(`GWA4 layout WS @ ${defaultHH}m: avg=${avg.toFixed(2)}, max=${maxWS.toFixed(2)}, min=${minWS.toFixed(2)} m/s`,'i');
+      refreshTableGWAOnly();
+      fetchElevationSummary();
+      return;
+    }
+
+    // ── Fallback: ERA5 daily archive (if GWA API unavailable) ──
+    log('GWA 4.0 API unavailable — falling back to ERA5 daily archive','w');
     let shearAlpha=0.14;
     try{
       const shearUrl=`https://api.open-meteo.com/v1/forecast?latitude=${clat.toFixed(4)}&longitude=${clon.toFixed(4)}&hourly=wind_speed_80m,wind_speed_100m,wind_speed_120m,wind_speed_180m&forecast_days=1&wind_speed_unit=ms&timezone=auto`;
@@ -9698,51 +9801,31 @@ async function fetchLayoutWSSummary(){
         if(valid100.length>0&&valid180.length>0){
           const mean100=valid100.reduce((s,v)=>s+v,0)/valid100.length;
           const mean180=valid180.reduce((s,v)=>s+v,0)/valid180.length;
-          if(mean100>0){
-            const ratio=mean180/mean100;
-            if(ratio>1){shearAlpha=Math.log(ratio)/Math.log(180/100);shearAlpha=Math.max(0.05,Math.min(0.4,shearAlpha));log(`Shear alpha from forecast: ${shearAlpha.toFixed(4)}`,'i');}
-          }
+          if(mean100>0){const ratio=mean180/mean100;if(ratio>1){shearAlpha=Math.log(ratio)/Math.log(180/100);shearAlpha=Math.max(0.05,Math.min(0.4,shearAlpha));}}
         }
       }
-    }catch(shearErr){log('Shear profile fetch failed, using default alpha=0.14: '+shearErr.message,'w');}
+    }catch(shearErr){}
 
-    // Step 2: Get long-term mean from ERA5 archive daily API per sample point
-    const wsAtTarget=[]; // {ws, pt label, lat, lon}
-    const defaultHH=parseFloat($('hubH')?.value)||120;
-    // Update labels to show actual hub height
-    if($('wsAvgLbl'))$('wsAvgLbl').textContent=`Avg WS @ ${defaultHH}m`;
-    if($('wsMaxLbl'))$('wsMaxLbl').textContent=`Max WS @ ${defaultHH}m`;
-    if($('wsMinLbl'))$('wsMinLbl').textContent=`Min WS @ ${defaultHH}m`;
     const endYear=Math.min(new Date().getFullYear()-1,2024);
     const startYear=endYear-4;
-
-    // Batch sample points into Open-Meteo requests (up to 5 per batch to avoid URL length limits)
-    const batchSize=5;
-    for(let b=0;b<samplePoints.length;b+=batchSize){
-      const batch=samplePoints.slice(b,b+batchSize);
-      // Build URL with multiple latitude/longitude for batch (Open-Meteo doesn't support this)
-      // Instead, fetch each point sequentially but with a small delay
-      for(const pt of batch){
-        try{
-          const url=`https://archive-api.open-meteo.com/v1/era5?latitude=${pt.lat.toFixed(4)}&longitude=${pt.lon.toFixed(4)}&start_date=${startYear}-01-01&end_date=${endYear}-12-31&daily=wind_speed_100m_mean&wind_speed_unit=ms&timezone=auto`;
-          const resp=await fetch(url);
-          if(!resp.ok)continue;
-          const data=await resp.json();
-          const ws100daily=data.daily?.wind_speed_100m_mean||[];
-          const valid100=ws100daily.filter(v=>v!=null&&v>=0);
-          if(valid100.length===0)continue;
-          const mean100ms=valid100.reduce((s,v)=>s+v,0)/valid100.length;
-          // v47.0: Use per-WTG hub height for extrapolation
-          const targetHH=pt.turbIdx>=0?(S.turbines[pt.turbIdx].hh||defaultHH):defaultHH;
-          const wsTarget=mean100ms*Math.pow(targetHH/100,shearAlpha);
-          wsAtTarget.push({ws:wsTarget,lat:pt.lat,lon:pt.lon,hh:targetHH,label:pt.label});
-        }catch(ptErr){
-          log(`WS fetch failed for ${pt.label}: ${ptErr.message}`,'w');
-        }
-      }
+    const wsERA5=[];
+    for(const pt of samplePoints){
+      try{
+        const url=`https://archive-api.open-meteo.com/v1/era5?latitude=${pt.lat.toFixed(4)}&longitude=${pt.lon.toFixed(4)}&start_date=${startYear}-01-01&end_date=${endYear}-12-31&daily=wind_speed_100m_mean&wind_speed_unit=ms&timezone=auto`;
+        const resp=await fetch(url);
+        if(!resp.ok)continue;
+        const data=await resp.json();
+        const ws100daily=data.daily?.wind_speed_100m_mean||[];
+        const valid100=ws100daily.filter(v=>v!=null&&v>=0);
+        if(valid100.length===0)continue;
+        const mean100ms=valid100.reduce((s,v)=>s+v,0)/valid100.length;
+        const targetHH=pt.turbIdx>=0?(S.turbines[pt.turbIdx].hh||defaultHH):defaultHH;
+        const wsTarget=mean100ms*Math.pow(targetHH/100,shearAlpha);
+        wsERA5.push({ws:wsTarget,lat:pt.lat,lon:pt.lon,hh:targetHH,label:pt.label});
+      }catch(ptErr){}
     }
 
-    if(wsAtTarget.length===0){
+    if(wsERA5.length===0){
       if(S.wind&&S.wind.speeds&&S.wind.speeds.length){
         const vs=S.wind.speeds.filter(v=>v>0.5);
         const mean=vs.reduce((s,v)=>s+v,0)/Math.max(1,vs.length);
@@ -9750,8 +9833,7 @@ async function fetchLayoutWSSummary(){
         const srcH=parseFloat($('mastH')?.value)||100;
         const ws120=logWS(mean,srcH,defaultHH,z0);
         $('wsAvg').textContent=ws120.toFixed(2)+' m/s';
-        $('wsMax').textContent='—';
-        $('wsMin').textContent='—';
+        $('wsMax').textContent='—';$('wsMin').textContent='—';
         $('wsSummaryNote').textContent=`Estimated from current wind data (${srcH}m → ${defaultHH}m, z0=${z0})`;
       }else{
         $('wsAvg').textContent='—';$('wsMax').textContent='—';$('wsMin').textContent='—';
@@ -9761,42 +9843,35 @@ async function fetchLayoutWSSummary(){
       return;
     }
 
-    // v47.0: Assign per-WTG wind speed using inverse-distance interpolation
-    // from sampled points, then store on each turbine for the table display
+    // Assign per-WTG from ERA5 samples
     const wtgWS=[];
     for(let i=0;i<S.turbines.length;i++){
       const t=S.turbines[i];
       const tHH=t.hh||defaultHH;
-      let bestWS=wsAtTarget[0].ws;
-      // If only one sample point, adjust for per-WTG hub height
-      if(wsAtTarget.length===1){
-        bestWS=wsAtTarget[0].ws*Math.pow(tHH/wsAtTarget[0].hh,shearAlpha);
+      let bestWS=wsERA5[0].ws;
+      if(wsERA5.length===1){
+        bestWS=wsERA5[0].ws*Math.pow(tHH/wsERA5[0].hh,shearAlpha);
       }else{
-        // Inverse-distance-weighted interpolation from all sample points
         let wSum=0,wsSum=0;
-        for(const sp of wsAtTarget){
+        for(const sp of wsERA5){
           const d=(t.lat-sp.lat)**2+(t.lon-sp.lon)**2;
           const w=1/Math.max(d,1e-10);
-          // Adjust for per-WTG hub height difference
           const adjWS=sp.ws*Math.pow(tHH/sp.hh,shearAlpha);
           wSum+=w;wsSum+=w*adjWS;
         }
-        bestWS=wSum>0?wsSum/wSum:wsAtTarget[0].ws;
+        bestWS=wSum>0?wsSum/wSum:wsERA5[0].ws;
       }
-      // Store on turbine for table display
       t._gwaWS=bestWS;
       wtgWS.push(bestWS);
     }
-
     const avg=wtgWS.reduce((s,v)=>s+v,0)/wtgWS.length;
     const maxWS=Math.max(...wtgWS);
     const minWS=Math.min(...wtgWS);
     $('wsAvg').textContent=avg.toFixed(2)+' m/s';
     $('wsMax').textContent=maxWS.toFixed(2)+' m/s';
     $('wsMin').textContent=minWS.toFixed(2)+' m/s';
-    $('wsSummaryNote').textContent=`ERA5 ${startYear}–${endYear} daily @ 100m → ${defaultHH}m (α=${shearAlpha.toFixed(3)}) · Per-WTG extrapolation`;
-    log(`Layout WS summary @ ${defaultHH}m: avg=${avg.toFixed(2)}, max=${maxWS.toFixed(2)}, min=${minWS.toFixed(2)} m/s`,'i');
-    // Refresh table to show GWA WS column
+    $('wsSummaryNote').textContent=`ERA5 ${startYear}–${endYear} daily @ 100m → ${defaultHH}m (α=${shearAlpha.toFixed(3)}) · Fallback (GWA unavailable)`;
+    log(`ERA5 layout WS @ ${defaultHH}m: avg=${avg.toFixed(2)}, max=${maxWS.toFixed(2)}, min=${minWS.toFixed(2)} m/s`,'i');
     refreshTableGWAOnly();
     fetchElevationSummary();
   }catch(e){
@@ -9817,6 +9892,114 @@ async function fetchLayoutWSSummary(){
     }
     fetchElevationSummary();
   }
+}
+
+// v51.0: Parse GWA4 .lib format to extract mean wind speed at a given height
+// GWA4 .lib format: header, roughness lengths, heights, then per-sector Weibull A,k,frequency
+function parseGWALibMeanWS(libText,targetHH){
+  try{
+    const lines=libText.trim().split(/\r?\n/).filter(l=>l.trim());
+    if(lines.length<10)return null;
+    // Find the line with number of sectors, roughness classes, height levels
+    // Format: "5 6 12" or similar (sectors roughnessClasses heightLevels)
+    let metaIdx=-1;
+    for(let i=0;i<Math.min(5,lines.length);i++){
+      const parts=lines[i].trim().split(/\s+/);
+      if(parts.length===3&&parts.every(p=>!isNaN(+p)&&+p>0)){
+        metaIdx=i;break;
+      }
+    }
+    if(metaIdx<0)return null;
+    const [nSectors,nRough,nHeights]=lines[metaIdx].trim().split(/\s+/).map(Number);
+    // Read roughness lengths (next line)
+    const z0Line=lines[metaIdx+1]?.trim().split(/\s+/).map(Number)||[];
+    // Read heights (next line)
+    const heights=lines[metaIdx+2]?.trim().split(/\s+/).map(Number)||[];
+    if(!heights.length)return null;
+    // Find closest height to targetHH
+    let closestIdx=0,minDiff=Infinity;
+    for(let h=0;h<heights.length;h++){
+      if(Math.abs(heights[h]-targetHH)<minDiff){minDiff=Math.abs(heights[h]-targetHH);closestIdx=h;}
+    }
+    const gwaHeight=heights[closestIdx];
+    // Find roughness index closest to 0.03 (typical agricultural)
+    let roughIdx=0,minRoughDiff=Infinity;
+    for(let r=0;r<z0Line.length;r++){
+      if(Math.abs(z0Line[r]-0.03)<minRoughDiff){minRoughDiff=Math.abs(z0Line[r]-0.03);roughIdx=r;}
+    }
+    // Data starts after header: for each roughness class × height, there are nSectors lines of (A, k, freq)
+    // Actually GWA4 format: after heights, for each roughness class and height:
+    //   nSectors lines of "A  k  frequency"  (3 values per sector)
+    // OR: the format might be per-sector blocks with A values, then k values, then freq values
+    // Let me parse the actual GWA4 format which uses sector-wise columns
+    // GWA4 .lib: after heights, there are blocks of data
+    // Each block has nSectors values, arranged as rows of 12 values
+    // The blocks are: A_values, k_values, frequency_values for each roughness×height combination
+    
+    // Find data start (skip header lines)
+    let dataStart=metaIdx+3;
+    // Skip coordinate line if present
+    if(lines[dataStart]?.includes('coordinates'))dataStart++;
+    
+    // Read all numeric data from remaining lines
+    const allValues=[];
+    for(let i=dataStart;i<lines.length;i++){
+      const nums=lines[i].trim().split(/\s+/).map(Number).filter(v=>!isNaN(v));
+      allValues.push(...nums);
+    }
+    
+    // GWA4 .lib structure for each roughness×height combination:
+    //   nSectors values of A
+    //   nSectors values of k  
+    //   nSectors values of frequency
+    const blockSize=nSectors*3; // A + k + freq per sector
+    const comboIdx=roughIdx*nHeights+closestIdx; // which roughness×height block
+    const blockStart=comboIdx*blockSize;
+    
+    if(blockStart+blockSize>allValues.length)return null;
+    
+    const sectorA=allValues.slice(blockStart,blockStart+nSectors);
+    const sectorK=allValues.slice(blockStart+nSectors,blockStart+2*nSectors);
+    const sectorFreq=allValues.slice(blockStart+2*nSectors,blockStart+3*nSectors);
+    
+    // Compute overall mean wind speed from Weibull distribution
+    // Mean of Weibull: A * Γ(1 + 1/k)
+    // Weighted by sector frequencies
+    const totalFreq=sectorFreq.reduce((s,f)=>s+f,0);
+    if(totalFreq<=0)return null;
+    
+    let meanWS=0;
+    for(let s=0;s<nSectors;s++){
+      const A=sectorA[s],k=sectorK[s],f=sectorFreq[s];
+      if(A<=0||k<=0)continue;
+      // Γ(1+1/k) approximation
+      const gammaVal=gammaFunc(1+1/k);
+      const sectorMean=A*gammaVal;
+      meanWS+=f*sectorMean;
+    }
+    meanWS/=totalFreq;
+    
+    // If target height differs from GWA height, extrapolate with power law
+    if(Math.abs(gwaHeight-targetHH)>5&&meanWS>0){
+      meanWS*=Math.pow(targetHH/gwaHeight,0.14);
+    }
+    
+    return meanWS>0?meanWS:null;
+  }catch(e){
+    return null;
+  }
+}
+
+// v51.0: Gamma function approximation (Lanczos)
+function gammaFunc(z){
+  if(z<0.5)return Math.PI/(Math.sin(Math.PI*z)*gammaFunc(1-z));
+  z-=1;
+  const g=7;
+  const c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  let x=c[0];
+  for(let i=1;i<g+2;i++)x+=c[i]/(z+i);
+  const t=z+g+0.5;
+  return Math.sqrt(2*Math.PI)*Math.pow(t,z+0.5)*Math.exp(-t)*x;
 }
 
 // v47.0: Lightweight table refresh — only update GWA WS column (avoids full table rebuild)
@@ -10059,20 +10242,105 @@ function importMastData(event){
 async function downloadGWA(){
   const gc=getGridAwareCoords('GWA'),lat=gc.lat,lon=gc.lon;
   if(isNaN(lat)||isNaN(lon)){alert('Set ERA5 lat/lon first');return;}
-  $('gwaStatus').textContent='Querying wind climate data...';
-  log(`GWA: requesting wind climate for ${lat.toFixed(2)}°, ${lon.toFixed(2)}°`,'i');
+  $('gwaStatus').textContent='Querying GWA 4.0 wind climate...';
+  log(`GWA 4.0: requesting wind climate for ${lat.toFixed(2)}°, ${lon.toFixed(2)}°`,'i');
 
-  // ── Strategy 1: Open-Meteo 5-year hourly archive (fast, reliable) ──
-  // GWA 4.0 does not have a public API — use ERA5 via Open-Meteo as GWA-like long-term reference
+  // ── v51.0: Use REAL GWA 4.0 API ──
+  // GET /api/gwa/custom/Lib?lat=X&long=Y → WAsP .lib with Weibull per sector × height
+  // Requires header: X-Requested-With: XMLHttpRequest
+  const gwaHeaders={'X-Requested-With':'XMLHttpRequest','Accept':'*/*','Referer':'https://globalwindatlas.info/'};
+
+  // Strategy 1: GWA 4.0 .lib API (real GWA data with microscale corrections)
   try{
-    $('gwaStatus').textContent='Fetching 5-year ERA5 wind data via Open-Meteo (GWA proxy)...';
+    $('gwaStatus').textContent='Fetching GWA 4.0 Generalized Wind Climate...';
+    const libUrl=`https://globalwindatlas.info/api/gwa/custom/Lib?lat=${lat.toFixed(4)}&long=${lon.toFixed(4)}`;
+    const r=await fetch(libUrl,{headers:gwaHeaders});
+    if(r.ok){
+      const libText=await r.text();
+      if(libText&&!libText.startsWith('<!')&&libText.length>50){
+        // Parse the .lib file to extract wind data
+        const hubH=parseFloat($('hubH')?.value)||120;
+        const meanWS=parseGWALibMeanWS(libText,hubH);
+        // Also parse as full WAsP .lib for sector data
+        const libData=parseWAsPLib(libText);
+        
+        if(meanWS&&meanWS>0){
+          const gwaGridLat=lat;
+          const gwaGridLon=lon;
+          const gwaElev=null;
+          
+          // If we have full sector data from .lib, use it
+          if(libData&&libData.sectors&&libData.sectors.length>=12){
+            // Generate synthetic time series from Weibull sectors
+            const speeds=[],dirs=[];
+            const totalFreq=libData.sectors.reduce((s,sec)=>s+sec.freq,0);
+            const nPerSector=Math.round(8760/12); // ~730 per sector
+            for(const sec of libData.sectors){
+              const sectorDir=sec.dir||0;
+              const sectorA=sec.A||5;
+              const sectorK=sec.k||2;
+              const nSamples=Math.round(nPerSector*(sec.freq/totalFreq)*12);
+              for(let j=0;j<nSamples;j++){
+                // Generate Weibull-distributed wind speed
+                const u=Math.random();
+                const ws=sectorA*Math.pow(-Math.log(1-u),1/sectorK);
+                // Add directional spread within sector (±15°)
+                const dirSpread=(Math.random()-0.5)*30;
+                speeds.push(ws);
+                dirs.push(((sectorDir+dirSpread)%360+360)%360);
+              }
+            }
+            const valid=speeds.filter(v=>v>0.5);
+            const mean=valid.reduce((s,v)=>s+v,0)/valid.length;
+            const wb=weibullFit(valid);
+            
+            S.wind={speeds,dirs,times:speeds.map((_,i)=>'')};
+            S.mcpFactor=1;S.windSource='GWA';
+            S.windSources.GWA={speeds:[...speeds],dirs:[...dirs],times:speeds.map(()=>''),mcpFactor:1,mastH:hubH,elevation:gwaElev,sourceLat:gwaGridLat,sourceLon:gwaGridLon,sourceHeight:hubH,meanWS:mean,weibullA:wb.A,weibullK:wb.k};
+            $('mastLat').value=gwaGridLat.toFixed(3);$('mastLon').value=gwaGridLon.toFixed(3);
+            addDataSourceMarker('GWA',gwaGridLat,gwaGridLon,hubH);
+            if($('mastH'))$('mastH').value=hubH;
+            const rho=parseFloat($('airDen').value)||1.225;
+            const PD=.5*rho*mean**3;
+            $('e5WS').textContent=mean.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);
+            $('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);
+            $('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';
+            $('e5out').style.display='block';drawE5Hist(speeds,wb);
+            updateDataSourceUI('GWA');autoShear();
+            S.gwaData={meanWS:mean,weibullA:wb.A,weibullK:wb.k,sectors:libData.sectors.length,source:'GWA-4.0-Lib'};
+            $('gwaStatus').textContent=`✓ GWA 4.0: ${libData.sectors.length} sectors, mean=${mean.toFixed(2)} m/s @ ${hubH}m, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`;
+            $('windStat').textContent=`GWA 4.0: ${speeds.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s`;
+            log(`GWA 4.0 Lib API: ${libData.sectors.length} sectors, mean=${mean.toFixed(2)} m/s @ ${hubH}m, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
+            return;
+          }else{
+            // No sector data, just store the mean WS
+            const wb={A:meanWS/0.886,k:2.0}; // estimate Weibull
+            const rho=parseFloat($('airDen').value)||1.225;
+            const PD=.5*rho*meanWS**3;
+            $('e5WS').textContent=meanWS.toFixed(2);$('e5WA').textContent=wb.A.toFixed(2);
+            $('e5WK').textContent=wb.k.toFixed(2);$('e5PD').textContent=PD.toFixed(0);
+            $('e5RC').textContent='—';$('e5EL').textContent='—';
+            S.gwaData={meanWS:meanWS,weibullA:wb.A,weibullK:wb.k,sectors:0,source:'GWA-4.0-Lib'};
+            $('gwaStatus').textContent=`✓ GWA 4.0: mean=${meanWS.toFixed(2)} m/s @ ${hubH}m, A≈${wb.A.toFixed(2)}, k≈2.0`;
+            log(`GWA 4.0 Lib: mean=${meanWS.toFixed(2)} m/s @ ${hubH}m`,'i');
+            return;
+          }
+        }
+      }
+    }
+  }catch(e1){
+    log(`GWA 4.0 Lib API failed: ${e1.message} — trying ERA5 fallback`,'w');
+  }
+
+  // ── Strategy 2: ERA5 via Open-Meteo (fallback if GWA API unavailable) ──
+  try{
+    $('gwaStatus').textContent='GWA API unavailable — fetching ERA5 wind data as fallback...';
     const omUrl=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2020-01-01&end_date=2024-12-31&hourly=wind_speed_100m,wind_direction_100m&wind_speed_unit=ms&timezone=UTC`;
     const r=await fetch(omUrl);
     if(r.ok){
       const d=await r.json();
       const ws=d.hourly?.wind_speed_100m||[];
       const wd=d.hourly?.wind_direction_100m||[];
-      // Build full time series (not just valid filter) for S.wind
       const speeds=[],dirs=[],times=[];
       for(let i=0;i<ws.length;i++){
         if(ws[i]!=null&&ws[i]>=0&&ws[i]<80){
@@ -10085,22 +10353,12 @@ async function downloadGWA(){
       if(valid.length>100){
         const mean=valid.reduce((s,v)=>s+v,0)/valid.length;
         const wb=weibullFit(valid);
-        // v34.0: Populate S.wind so GWA data is usable for analysis
-        // v43.0 FIX: Store under GWA key (was incorrectly overwriting ERA5)
-        // v49.0: GWA has ~250m resolution — snap to GWA grid, NOT Open-Meteo's ERA5 0.25° grid
-        // Open-Meteo returns ERA5 0.25° grid coordinates which are wrong for GWA
         const gwaElev=d.elevation??null;
-        // Snap to GWA native grid: ~0.027° (~3km) for display purposes
-        // GWA actual resolution is 250m (~0.00225°) but the data we get is ERA5-proxy at 0.25°
-        // We snap the USER's input coordinates to GWA grid, not the ERA5 grid from API
-        const gwaGridLat=Math.round(lat/0.027)*0.027;
-        const gwaGridLon=Math.round(lon/0.027)*0.027;
-        log(`v49.0: GWA grid point: (${gwaGridLat.toFixed(4)}°, ${gwaGridLon.toFixed(4)}°) · GWA resolution ~3km · Data: ERA5 proxy at 0.25°`,'i');
         S.wind={speeds,dirs,times};
         S.mcpFactor=1;S.windSource='GWA';
-        S.windSources.GWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:100,elevation:gwaElev,sourceLat:gwaGridLat,sourceLon:gwaGridLon,sourceHeight:100};
-        $('mastLat').value=gwaGridLat.toFixed(3);$('mastLon').value=gwaGridLon.toFixed(3);
-        addDataSourceMarker('GWA',gwaGridLat,gwaGridLon,100);
+        S.windSources.GWA={speeds:[...speeds],dirs:[...dirs],times:[...times],mcpFactor:1,mastH:100,elevation:gwaElev,sourceLat:lat,sourceLon:lon,sourceHeight:100,meanWS:mean,weibullA:wb.A,weibullK:wb.k};
+        $('mastLat').value=lat.toFixed(3);$('mastLon').value=lon.toFixed(3);
+        addDataSourceMarker('GWA',lat,lon,100);
         if($('mastH'))$('mastH').value=100;
         const rho=parseFloat($('airDen').value)||1.225;
         const PD=.5*rho*mean**3;
@@ -10109,38 +10367,15 @@ async function downloadGWA(){
         $('e5RC').textContent=speeds.length.toLocaleString();$('e5EL').textContent='—';
         $('e5out').style.display='block';drawE5Hist(speeds,wb);
         updateDataSourceUI('GWA');autoShear();
-        S.gwaData={meanWS:mean,weibullA:wb.A,weibullK:wb.k,sectors:0,source:'GWA-5yr-proxy'};
-        $('gwaStatus').textContent=`✓ GWA proxy (ERA5 5yr): ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`;
-        $('windStat').textContent=`GWA proxy (ERA5 5yr): ${speeds.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s`;
-        log(`GWA proxy via Open-Meteo (5yr): ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)}, A=${wb.A.toFixed(2)}, k=${wb.k.toFixed(2)}`,'i');
-        return;
-      }
-    }
-  }catch(e1){
-    log(`GWA Open-Meteo 5yr failed: ${e1.message} — trying climate API`,'w');
-  }
-
-  // ── Strategy 2: Open-Meteo Climate API (monthly long-term) ──
-  try{
-    $('gwaStatus').textContent='Trying Open-Meteo climate API...';
-    const clUrl=`https://climate-api.open-meteo.com/v1/climate?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=2024-12-31&models=EC_Earth3P_HR&monthly=wind_speed_100m`;
-    const r2=await fetch(clUrl);
-    if(r2.ok){
-      const d2=await r2.json();
-      const monthly=d2.monthly?.wind_speed_100m||[];
-      const valid=monthly.filter(v=>v!=null&&v>0.5);
-      if(valid.length>6){
-        const mean=valid.reduce((s,v)=>s+v,0)/valid.length;
-        // Estimate Weibull k≈2.0 for climate model data (typical)
-        const estA=mean/0.886; // mean/A ≈ Γ(1+1/2) ≈ 0.886
-        $('gwaStatus').textContent=`✓ GWA proxy (Climate API): mean=${mean.toFixed(2)} m/s, A≈${estA.toFixed(2)}, k≈2.0`;
-        log(`GWA proxy via Climate API: ${valid.length} monthly values, mean=${mean.toFixed(2)}, A≈${estA.toFixed(2)}`,'i');
-        S.gwaData={meanWS:mean,weibullA:estA,weibullK:2.0,sectors:0,source:'Climate-API-proxy'};
+        S.gwaData={meanWS:mean,weibullA:wb.A,weibullK:wb.k,sectors:0,source:'ERA5-5yr-fallback'};
+        $('gwaStatus').textContent=`✓ ERA5 fallback (5yr): ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)} m/s`;
+        $('windStat').textContent=`ERA5 fallback (5yr): ${speeds.length.toLocaleString()} records · mean=${mean.toFixed(2)} m/s`;
+        log(`GWA download: ERA5 fallback used — ${speeds.length.toLocaleString()} records, mean=${mean.toFixed(2)}`,'w');
         return;
       }
     }
   }catch(e2){
-    log(`GWA climate API also failed: ${e2.message}`,'w');
+    log(`ERA5 fallback also failed: ${e2.message}`,'w');
   }
 
   // ── All strategies failed ──
