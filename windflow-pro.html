@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 50.0</title>
+<title>WindFlow Pro 51.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 50.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 51.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -4943,7 +4943,12 @@ function processLayoutText(text,fileName){
   }else{
     // CSV / TXT format — supports lat/lon, UTM (Easting/Northing), and BAE-style WTG layouts
     const lines=text.split('\n').filter(l=>l.trim());
-    const headers=lines[0].toLowerCase().split(/[,\t;\s]+/).map(s=>s.trim());
+    // v51.0: Use tab-first splitting for headers to preserve multi-word column names like "Easting [m]"
+    // If the header has tabs, split by tab first; otherwise fall back to general delimiter split
+    const hasTabs=lines[0].includes('\t');
+    const headers=hasTabs
+      ?lines[0].toLowerCase().split('\t').map(s=>s.trim().replace(/\s+\[m\]/g,'_[m]')) // "Easting [m]" → "easting_[m]"
+      :lines[0].toLowerCase().split(/[,;\s]+/).map(s=>s.trim());
     const xIdx=headers.indexOf('x'),yIdx=headers.indexOf('y');
     const eastingIdx=headers.indexOf('easting')>=0?headers.indexOf('easting'):headers.indexOf('easting_[m]')>=0?headers.indexOf('easting_[m]'):-1;
     const northingIdx=headers.indexOf('northing')>=0?headers.indexOf('northing'):headers.indexOf('northing_[m]')>=0?headers.indexOf('northing_[m]'):-1;
@@ -4951,16 +4956,12 @@ function processLayoutText(text,fileName){
     const hhIdx=headers.indexOf('hh')>=0?headers.indexOf('hh'):headers.indexOf('hub_height')>=0?headers.indexOf('hub_height'):-1;
     const labelIdx=headers.indexOf('label')>=0?headers.indexOf('label'):headers.indexOf('wtg')>=0?headers.indexOf('wtg'):headers.indexOf('name')>=0?headers.indexOf('name'):-1;
     
-    // v50.0: Detect UTM coordinates — Easting/Northing > 10000 indicates UTM
-    // Also detect BAE-style format: "WTG-label  Easting  Northing" (tab/space separated)
-    if((eastingIdx>=0&&northingIdx>=0)||(xIdx>=0&&yIdx>=0)){
-      const testCol=eastingIdx>=0?eastingIdx:xIdx;
-      if(lines.length>1){const testVal=parseFloat(lines[1].split(/[,\t;\s]+/)[testCol]);if(testVal>10000)isUTM=true;}
-    }
-    // v50.0: Auto-detect BAE-style format where col1=WTG label (non-numeric), col2=Easting, col3=Northing
-    // Example: "BAE-001 360388  4488429"
+    // v51.0: Auto-detect BAE-style format FIRST — col0=WTG label (non-numeric), col1=Easting, col2=Northing
+    // This must run before isUTM check because tab-separated headers with multi-word names
+    // (e.g. "WTG label\tEasting [m]\tNorthing [m]") cause wrong column indices when
+    // split by general regex, making the UTM test read wrong columns
     let isBAE=false;
-    if(!isUTM&&lines.length>1){
+    if(lines.length>1){
       const firstDataLine=lines[1].trim().split(/[,\t;\s]+/).filter(s=>s);
       if(firstDataLine.length>=3){
         const col0=firstDataLine[0];
@@ -4973,7 +4974,12 @@ function processLayoutText(text,fileName){
         }
       }
     }
-    // Also check header row for "Easting [m]" / "Northing [m]" headers
+    // v50.0: Detect UTM coordinates — Easting/Northing > 10000 indicates UTM
+    if(!isBAE&&(eastingIdx>=0&&northingIdx>=0)||(xIdx>=0&&yIdx>=0)){
+      const testCol=eastingIdx>=0?eastingIdx:xIdx;
+      if(lines.length>1){const testVal=parseFloat(lines[1].split(/[,\t;\s]+/).filter(s=>s)[testCol]);if(testVal>10000)isUTM=true;}
+    }
+    // Also check header row for "Easting" / "Northing" headers
     if(!isUTM&&lines.length>1){
       const headerLine=lines[0].toLowerCase();
       if(headerLine.includes('easting')||headerLine.includes('northing')){isUTM=true;}
