@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 53.0</title>
+<title>WindFlow Pro 54.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 53.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 54.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -201,7 +201,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div style="display:flex;gap:.4rem;margin-top:.5rem"><button class="btn btn-sm btn-primary" onclick="saveMast()">💾 Save</button><button class="btn btn-sm btn-danger" onclick="removeMast()">🗑 Remove</button></div>
       </div>
       <div class="card"><div class="card-title gold">Upload Wind Data</div>
-        <div class="upload-zone" id="windUploadZone"><input id="impWind" type="file" accept=".csv,.tab,.txt" onchange="importWind(event)"><span class="upload-icon">💨</span><span class="upload-text">Upload wind time-series CSV / WindPRO</span><span class="upload-hint">CSV: timestamp, ws, wd · WindPRO Meteo Export (.txt) auto-detected</span></div>
+        <div class="upload-zone" id="windUploadZone"><input id="impWind" type="file" accept=".csv,.tab,.txt" onchange="importWind(event)"><span class="upload-icon">💨</span><span class="upload-text">Upload wind time-series CSV / WindPRO / Windographer</span><span class="upload-hint">CSV: timestamp, ws, wd · WindPRO & Windographer (.txt) auto-detected</span></div>
         <div id="windStat" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">No wind data — use ERA5 download or Import</div>
       </div>
     </div>
@@ -5247,8 +5247,9 @@ function autoCenterMap(){
   autoFocusMap(); // v26.0: Use the proper auto-focus with 20km extent
   log(`Map focused on layout: ${S.turbines.length} turbines`,'i');
 }
-// v53.0: Import wind data — supports simple CSV and WindPRO Meteo Data Export format
+// v54.0: Import wind data — supports simple CSV, WindPRO Meteo Data Export, and Windographer export formats
 // WindPRO format: header with coordinates, multi-height tab-separated data with status flags
+// Windographer format: header with site metadata, tab-separated columns with per-height WS/WD/Temp/Press/Hum
 function importWind(ev){
   const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();
@@ -5257,6 +5258,11 @@ function importWind(ev){
     // Auto-detect WindPRO Meteo Data Export format
     if(raw.includes('WindPRO Meteo Data Export')||raw.includes('WindPRO Meteodata Export')){
       importWindPRO(raw,f.name);
+      return;
+    }
+    // Auto-detect Windographer export format
+    if(raw.includes('by Windographer')||(/^Site name:/m.test(raw)&&/^Latitude:/m.test(raw)&&/^Longitude:/m.test(raw))){
+      importWindographer(raw,f.name);
       return;
     }
     // Standard CSV/TAB import
@@ -5493,6 +5499,289 @@ function importWindPRO(raw,fileName){
   if(typeof validateCheckpoint==='function')validateCheckpoint();
 }
 
+// v54.0: Parse Windographer Export format
+// Format: header with site metadata (name, lat, lon, elevation, timezone)
+// Then tab-separated columns: Timestamp + per-height WS/WD/Temp/Press/Hum columns
+// Column naming: WS_{height}m_{sensor}_Mean [m/s], WS_{height}m_{sensor}_SD [m/s],
+//                WD_{height}m_Mean [°], WD_{height}m_SD [°],
+//                Temp_{height}m_Mean [°C], Press_{height}m_Mean [hPa], HUM_{height}m_Mean [%]
+// Empty cells = missing data (skip). Sensor priority: cmb > A > (none) > B
+function importWindographer(raw,fileName){
+  const lines=raw.split(/\r?\n/);
+  let siteName='',lat=null,lon=null,elevation=null,timeZone='';
+  let headerEnd=0;
+
+  // ── 1. Parse header section ──
+  for(let i=0;i<Math.min(30,lines.length);i++){
+    const line=lines[i].trim();
+    if(/^Site name:/i.test(line)){
+      siteName=line.replace(/^Site name:\s*/i,'').trim();
+    }
+    if(/^Latitude:/i.test(line)){
+      // "Latitude: N 40.408981" or "Latitude: 40.408981"
+      const m=line.match(/Latitude:\s*([NS])\s*([\d.]+)/i);
+      if(m){lat=parseFloat(m[2]);if(m[1].toUpperCase()==='S')lat=-lat;}
+      else{const m2=line.match(/Latitude:\s*([-\d.]+)/);if(m2)lat=parseFloat(m2[1]);}
+    }
+    if(/^Longitude:/i.test(line)){
+      // "Longitude: W 0.430941" or "Longitude: -0.430941"
+      const m=line.match(/Longitude:\s*([EW])\s*([\d.]+)/i);
+      if(m){lon=parseFloat(m[2]);if(m[1].toUpperCase()==='W')lon=-lon;}
+      else{const m2=line.match(/Longitude:\s*([-\d.]+)/);if(m2)lon=parseFloat(m2[1]);}
+    }
+    if(/^Elevation:/i.test(line)){
+      // "Elevation: 1,577 m"
+      const m=line.match(/Elevation:\s*([\d,.]+)/);
+      if(m)elevation=parseFloat(m[1].replace(/,/g,''));
+    }
+    if(/^Time zone:/i.test(line)){
+      timeZone=line.replace(/^Time zone:\s*/i,'').trim();
+    }
+    // Find the column header line (starts with "Timestamp")
+    if(/^Timestamp\b/i.test(line)){
+      headerEnd=i;
+      break;
+    }
+  }
+
+  if(headerEnd===0){
+    alert('Windographer format not recognized — no Timestamp header found');
+    return;
+  }
+
+  log(`Windographer: Site "${siteName}" at ${lat!==null?lat.toFixed(4):'?'}°, ${lon!==null?lon.toFixed(4):'?'}°, elev=${elevation||'?'}m`,'i');
+
+  // ── 2. Parse column headers ──
+  const headerLine=lines[headerEnd].trim();
+  const headers=headerLine.split('\t');
+
+  // Identify WS, WD, Temp, Press, Humidity columns per height
+  // WS columns: WS_{height}m_{sensor}_Mean [m/s] or WS_{height}m_Mean [m/s]
+  // WD columns: WD_{height}m_Mean [°]
+  // Temp columns: Temp_{height}m_Mean [°C]
+  // Press columns: Press_{height}m_Mean [hPa]
+  // Hum columns: HUM_{height}m_Mean [%]
+
+  const wsCols={};   // height → [{colIdx, sensor}]
+  const wdCols={};   // height → [{colIdx, sensor}]
+  const tempCols={}; // height → colIdx
+  const pressCol={idx:null,height:null};
+  const humCols={};  // height → colIdx
+
+  for(let c=1;c<headers.length;c++){
+    const h=headers[c].trim();
+    // Wind speed: WS_98m_A_Mean [m/s], WS_98m_cmb_Mean [m/s], WS_65m_Mean [m/s]
+    const wsMatch=h.match(/^WS_(\d+)m(?:_([A-Za-z]+))?_Mean\b/i);
+    if(wsMatch){
+      const height=parseInt(wsMatch[1]);
+      const sensor=wsMatch[2]||'default';
+      if(!wsCols[height])wsCols[height]=[];
+      wsCols[height].push({colIdx:c,sensor:sensor.toLowerCase()});
+      continue;
+    }
+    // Wind direction: WD_96m_Mean [°]
+    const wdMatch=h.match(/^WD_(\d+)m(?:_([A-Za-z]+))?_Mean\b/i);
+    if(wdMatch){
+      const height=parseInt(wdMatch[1]);
+      const sensor=wdMatch[2]||'default';
+      if(!wdCols[height])wdCols[height]=[];
+      wdCols[height].push({colIdx:c,sensor:sensor.toLowerCase()});
+      continue;
+    }
+    // Temperature: Temp_95m_Mean [°C]
+    const tempMatch=h.match(/^Temp_(\d+)m_Mean\b/i);
+    if(tempMatch){
+      tempCols[parseInt(tempMatch[1])]=c;
+      continue;
+    }
+    // Pressure: Press_8m_Mean [hPa]
+    const pressMatch=h.match(/^Press_(\d+)m_Mean\b/i);
+    if(pressMatch){
+      pressCol.idx=c;pressCol.height=parseInt(pressMatch[1]);
+      continue;
+    }
+    // Humidity: HUM_95m_Mean [%]
+    const humMatch=h.match(/^HUM_(\d+)m_Mean\b/i);
+    if(humMatch){
+      humCols[parseInt(humMatch[1])]=c;
+      continue;
+    }
+  }
+
+  // Collect all measurement heights
+  const wsHeights=Object.keys(wsCols).map(Number).sort((a,b)=>b-a);
+  const wdHeights=Object.keys(wdCols).map(Number).sort((a,b)=>b-a);
+
+  if(!wsHeights.length){
+    alert('Windographer: No wind speed columns found in header');
+    return;
+  }
+
+  log(`Windographer: WS heights: [${wsHeights.join(', ')}]m, WD heights: [${wdHeights.join(', ')}]m`,'i');
+
+  // ── 3. Select best WS and WD columns per height ──
+  // Sensor priority: cmb > default > a > b (combined is best quality)
+  function pickBestSensor(cols){
+    if(!cols||!cols.length)return null;
+    const prio={cmb:0,default:1,a:2,b:3};
+    cols.sort((a,b)=>(prio[a.sensor]??9)-(prio[b.sensor]??9));
+    return cols[0].colIdx;
+  }
+
+  const wsBest={}; // height → colIdx
+  wsHeights.forEach(h=>{wsBest[h]=pickBestSensor(wsCols[h]);});
+
+  const wdBest={}; // height → colIdx
+  wdHeights.forEach(h=>{wdBest[h]=pickBestSensor(wdCols[h]);});
+
+  // ── 4. Select height closest to configured mast height ──
+  const targetH=parseFloat($('mastH').value)||100;
+  let bestWSHeight=wsHeights[0],bestDiff=Infinity;
+  wsHeights.forEach(h=>{const d=Math.abs(h-targetH);if(d<bestDiff){bestDiff=d;bestWSHeight=h;}});
+  // Find WD height closest to the selected WS height
+  let bestWDHeight=wdHeights.length?wdHeights[0]:null;
+  if(wdHeights.length){
+    let wdDiff=Infinity;
+    wdHeights.forEach(h=>{const d=Math.abs(h-bestWSHeight);if(d<wdDiff){wdDiff=d;bestWDHeight=h;}});
+  }
+
+  log(`Windographer: Selected WS @ ${bestWSHeight}m${bestWDHeight?`, WD @ ${bestWDHeight}m`:''} (target: ${targetH}m)`,'i');
+
+  // ── 5. Parse time-series data ──
+  const dataStart=headerEnd+1;
+  const sp=[],dr=[],ts=[];
+  const allHeightData={}; // height → {speeds:[], dirs:[]}
+  wsHeights.forEach(h=>{allHeightData[h]={speeds:[],dirs:[]};});
+
+  let totalRecords=0,validRecords=0,emptyRecords=0;
+
+  for(let i=dataStart;i<lines.length;i++){
+    const line=lines[i].trim();
+    if(!line)continue;
+    totalRecords++;
+    const cols=line.split('\t');
+    const timestamp=cols[0]||'';
+
+    // Check if entire row is empty (except timestamp)
+    let hasData=false;
+    for(let c=1;c<cols.length;c++){if(cols[c].trim()){hasData=true;break;}}
+    if(!hasData){emptyRecords++;continue;}
+
+    // Parse primary height data
+    const wsVal=wsBest[bestWSHeight]!==null?parseFloat(cols[wsBest[bestWSHeight]]):NaN;
+    const wdVal=bestWDHeight&&wdBest[bestWDHeight]!==null?parseFloat(cols[wdBest[bestWDHeight]]):NaN;
+
+    if(!isNaN(wsVal)&&wsVal>=0&&wsVal<80){
+      sp.push(wsVal);
+      dr.push(isNaN(wdVal)?0:((wdVal%360+360)%360));
+      ts.push(timestamp);
+      validRecords++;
+    }
+
+    // Parse data for all heights (for multi-height source storage)
+    wsHeights.forEach(h=>{
+      const wsV=wsBest[h]!==null?parseFloat(cols[wsBest[h]]):NaN;
+      const wdH=wdHeights.length?wdHeights.reduce((best,wh)=>{
+        if(!wdBest[wh])return best;
+        return Math.abs(wh-h)<Math.abs(best-h)?wh:best;
+      },wdHeights[0]):null;
+      const wdV=wdH&&wdBest[wdH]!==null?parseFloat(cols[wdBest[wdH]]):NaN;
+      if(!isNaN(wsV)&&wsV>=0&&wsV<80){
+        allHeightData[h].speeds.push(wsV);
+        allHeightData[h].dirs.push(isNaN(wdV)?0:((wdV%360+360)%360));
+      }
+    });
+  }
+
+  if(!sp.length){
+    alert('Windographer: No valid wind data records found');
+    return;
+  }
+
+  const vs=sp.filter(v=>v>0.5);
+  const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;
+
+  // ── 6. Store wind data ──
+  S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;
+
+  S.windSources.Windographer={
+    speeds:[...sp],dirs:[...dr],times:[...ts],
+    mcpFactor:1,
+    mastH:bestWSHeight,
+    elevation:elevation,
+    sourceLat:lat||0,
+    sourceLon:lon||0,
+    sourceHeight:bestWSHeight,
+    meanWS:mean,
+    startDate:ts[0]||'',
+    endDate:ts[ts.length-1]||''
+  };
+
+  // Store all heights as separate sources
+  wsHeights.forEach(h=>{
+    if(h===bestWSHeight)return; // Already stored as primary Windographer
+    const hData=allHeightData[h];
+    if(hData.speeds.length>10){
+      const hVs=hData.speeds.filter(v=>v>0.5);
+      const hMean=hVs.length?hVs.reduce((s,v)=>s+v,0)/hVs.length:0;
+      S.windSources[`Windographer_${h}m`]={
+        speeds:[...hData.speeds],dirs:[...hData.dirs],times:hData.speeds.map(()=>''),
+        mcpFactor:1,mastH:h,elevation:elevation,
+        sourceLat:lat||0,sourceLon:lon||0,sourceHeight:h,
+        meanWS:hMean,
+        startDate:'',endDate:''
+      };
+    }
+  });
+
+  // Store temperature, pressure, humidity for air density if available
+  if(pressCol.idx!==null){
+    const pressVals=[];
+    for(let i=dataStart;i<lines.length;i++){
+      const line=lines[i].trim();if(!line)continue;
+      const cols=line.split('\t');
+      const pv=parseFloat(cols[pressCol.idx]);
+      if(!isNaN(pv)&&pv>0)pressVals.push(pv);
+    }
+    if(pressVals.length>10){
+      const avgPress=pressVals.reduce((s,v)=>s+v,0)/pressVals.length;
+      S.windSources.Windographer.pressure=avgPress;
+      log(`Windographer: Avg pressure ${avgPress.toFixed(1)} hPa @ ${pressCol.height}m (${pressVals.length} records)`,'i');
+    }
+  }
+
+  // ── 7. Update mast entry ──
+  if(lat!==null&&lon!==null){
+    $('mastLat').value=lat.toFixed(6);
+    $('mastLon').value=lon.toFixed(6);
+    $('mastH').value=bestWSHeight;
+
+    const existingMast=S.masts.find(m=>m.primary);
+    if(existingMast){
+      existingMast.lat=lat;existingMast.lon=lon;existingMast.height=bestWSHeight;
+      existingMast.name=siteName||existingMast.name;
+      if(elevation)existingMast.elevation=elevation;
+      existingMast.startDate=ts[0]||existingMast.startDate;
+      existingMast.endDate=ts[ts.length-1]||existingMast.endDate;
+      renderMastList();
+    }else{
+      S.masts=[{id:1,name:siteName||'Windographer Mast',lat,lon,height:bestWSHeight,z0:parseFloat($('z0val').value)||0.03,primary:true,startDate:ts[0]||'',endDate:ts[ts.length-1]||'',elevation:elevation}];
+      renderMastList();
+    }
+    S._mastUserSet=true;
+  }
+
+  // ── 8. Draw mast marker on map ──
+  drawMastMarkers();
+  if(lat!==null&&lon!==null)addDataSourceMarker('Windographer',lat,lon,bestWSHeight);
+
+  // ── 9. Update UI ──
+  $('windStat').textContent=`Windographer: ${sp.length.toLocaleString()} records @ ${bestWSHeight}m, mean=${mean.toFixed(2)} m/s (${wsHeights.length} heights, ${emptyRecords} gaps skipped)`;
+  updateWindUI(sp,dr);updateDataSourceUI('Windographer');
+  log(`Windographer imported: ${sp.length.toLocaleString()} records @ ${bestWSHeight}m, mean=${mean.toFixed(2)} m/s, ${wsHeights.length} WS heights [${wsHeights.map(h=>h+'m').join(', ')}], ${wdHeights.length} WD heights [${wdHeights.map(h=>h+'m').join(', ')}]${lat?`, lat=${lat.toFixed(4)}, lon=${lon.toFixed(4)}`:''}${elevation?`, elev=${elevation}m`:''}${emptyRecords?`, ${emptyRecords} empty rows skipped`:''}`,'i');
+  if(typeof validateCheckpoint==='function')validateCheckpoint();
+}
+
 // v53.0: Draw wind mast markers on the map
 function drawMastMarkers(){
   if(!leafMap)return;
@@ -5507,7 +5796,7 @@ function drawMastMarkers(){
     const label=L.marker([m.lat,m.lon],{
       icon:L.divIcon({className:'',html:`<div style="background:rgba(255,107,107,.85);color:#fff;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;white-space:nowrap;transform:translate(-50%,-180%);text-shadow:0 1px 2px rgba(0,0,0,.4)">${m.name||'Mast '+(i+1)} ${m.height}m</div>`,iconSize:[0,0]})
     }).addTo(leafMap);
-    marker.bindTooltip(`${m.name||'Mast '+(i+1)}<br>Lat: ${m.lat.toFixed(4)}<br>Lon: ${m.lon.toFixed(4)}<br>Height: ${m.height}m${m.primary?' [PRIMARY]':''}`);
+    marker.bindTooltip(`${m.name||'Mast '+(i+1)}<br>Lat: ${m.lat.toFixed(4)}<br>Lon: ${m.lon.toFixed(4)}<br>Height: ${m.height}m${m.elevation?'<br>Elev: '+m.elevation+'m':''}${m.startDate?'<br>Period: '+m.startDate.slice(0,10)+' → '+(m.endDate?m.endDate.slice(0,10):''):''}${m.primary?'<br>★ PRIMARY':''}`);
     S.mastMarkers.push(glow,marker,label);
   });
 }
@@ -5532,7 +5821,7 @@ try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 52.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
+log('WindFlow Pro 54.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
 // v51.0: Load saved NREL API key from localStorage
 try{const savedKey=localStorage.getItem('nrelApiKey');if(savedKey&&$('nrelApiKey'))$('nrelApiKey').value=savedKey;}catch(e){}
 // v51.0: Auto-save NREL API key on input change
@@ -10666,7 +10955,7 @@ function renderMastList(){
   el.innerHTML='';
   S.masts.forEach((m,i)=>{
     const div=document.createElement('div');div.className='mast-card'+(m.primary?' primary':'');
-    div.innerHTML=`<div class="mast-header"><span class="mast-name">${m.name}${m.primary?' ★':''}</span><button class="btn btn-sm btn-ghost" onclick="editMast(${i})" style="padding:.15rem .4rem;font-size:.5rem">Edit</button></div><div style="font-size:.6rem;color:var(--text3)">Lat: ${m.lat.toFixed(4)} · Lon: ${m.lon.toFixed(4)} · H: ${m.height}m</div>`;
+    div.innerHTML=`<div class="mast-header"><span class="mast-name">${m.name}${m.primary?' ★':''}</span><button class="btn btn-sm btn-ghost" onclick="editMast(${i})" style="padding:.15rem .4rem;font-size:.5rem">Edit</button></div><div style="font-size:.6rem;color:var(--text3)">Lat: ${m.lat.toFixed(4)} · Lon: ${m.lon.toFixed(4)} · H: ${m.height}m${m.elevation?' · Elev: '+m.elevation+'m':''}${m.startDate?' · '+m.startDate.slice(0,10)+'→'+(m.endDate?m.endDate.slice(0,10):''):''}</div>`;
     div.style.cursor='pointer';div.onclick=function(e){if(e.target.tagName!=='BUTTON')editMast(i);};
     el.appendChild(div);
   });
@@ -11371,7 +11660,7 @@ function updateReportingDashboard(){
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
   // v42.1: Also save S.results so user doesn't have to re-run analysis after loading
-  const data={version:'53.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0',nrelApiKey:$('nrelApiKey')?.value||''}};
+  const data={version:'54.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0',nrelApiKey:$('nrelApiKey')?.value||''}};
   const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v42.1, results included)','i');
 }
 
