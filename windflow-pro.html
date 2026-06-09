@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 52.0</title>
+<title>WindFlow Pro 53.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 52.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 53.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -466,7 +466,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <!-- WIND MAP / RESOURCE GRID -->
       <div class="card"><div class="card-title gold">Wind Map / Resource Grid</div>
         <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem">Generate a spatial wind resource map on the Leaflet map. Colored rectangles show wind speed or AEP variation across the site area.</div>
-        <div class="g3" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Grid Resolution</label><select class="fs" id="windMapRes"><option value="500">500m</option><option value="1000" selected>1km</option><option value="2000">2km</option></select></div><div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="windMapRadius" type="number" value="5" min="1" max="50" step="1"></div><div class="fg"><label class="fl">View Type</label><select class="fs" id="windMapType"><option value="ws" selected>Wind Speed</option><option value="aep">AEP</option><option value="weibullA">Weibull A</option></select></div></div>
+        <div class="g3" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Grid Resolution</label><select class="fs" id="windMapRes"><option value="20">20m</option><option value="50">50m</option><option value="100">100m</option><option value="200">200m</option><option value="500">500m</option><option value="1000" selected>1km</option><option value="2000">2km</option></select></div><div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="windMapRadius" type="number" value="5" min="1" max="50" step="1"></div><div class="fg"><label class="fl">View Type</label><select class="fs" id="windMapType"><option value="ws" selected>Wind Speed</option><option value="aep">AEP</option><option value="weibullA">Weibull A</option></select></div></div>
         <div class="g2" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Sector Filter</label><select class="fs" id="windMapSector"><option value="all" selected>All Sectors</option><option value="per">Per-sector</option></select></div><div class="fg"></div></div>
         <button class="btn btn-gold" style="width:100%" onclick="generateWindMap()">🗺 Generate Wind Map</button>
         <div id="windMapStatus" style="font-size:.58rem;color:var(--text3);margin-top:.2rem">Run WAsP Analysis first</div>
@@ -2647,6 +2647,31 @@ function utmToLatLon(easting,northing,zone,north){
   const lon0=((zone-1)*6-180+3)*Math.PI/180; // central meridian in RADIANS (v51.0 fix: was degrees)
   const lon=lon0+(D-(1+2*T1+C1)*D*D*D/6+(5-2*C1+28*T1-3*C1*C1+8*ePrime2+24*T1*T1)*D*D*D*D*D/120)/Math.cos(phi1);
   return{lat:lat*180/Math.PI,lon:lon*180/Math.PI};
+}
+
+// ── Lat/Lon → UTM conversion (v53.0) ──
+// Required for WRG and .map exports that Openwind expects in UTM meters
+// Reference: Snyder (1987) Map Projections - A Working Manual, USGS PP-1395
+function latLonToUTM(lat,lon,zone){
+  // lat, lon: in degrees
+  // zone: UTM zone number (1-60); if omitted, auto-calculated
+  if(!zone) zone=Math.floor((lon+180)/6)+1;
+  const a=6378137.0; // WGS84 semi-major axis
+  const f=1/298.257223563;
+  const e2=2*f-f*f;
+  const ePrime2=e2/(1-e2);
+  const k0=0.9996;
+  const lon0=((zone-1)*6-180+3)*Math.PI/180; // central meridian in radians
+  const latR=lat*Math.PI/180;
+  const lonR=lon*Math.PI/180;
+  const N=a/Math.sqrt(1-e2*Math.sin(latR)*Math.sin(latR));
+  const T=Math.tan(latR)*Math.tan(latR);
+  const C=ePrime2*Math.cos(latR)*Math.cos(latR);
+  const A=lonR-lon0;
+  const M=a*((1-e2/4-3*e2*e2/64-5*e2*e2*e2/256)*latR-(3*e2/8+3*e2*e2/32+45*e2*e2*e2/1024)*Math.sin(2*latR)+(15*e2*e2/256+45*e2*e2*e2/1024)*Math.sin(4*latR)-(35*e2*e2*e2/3072)*Math.sin(6*latR));
+  const x=k0*N*(A+(1-T+C)*A*A*A/6+(5-18*T+T*T+72*C-58*ePrime2)*A*A*A*A*A/120)+500000;
+  const y=k0*(M+N*Math.tan(latR)*(A*A/2+(5-T+9*C+4*C*C)*A*A*A*A/24+(61-58*T+T*T+600*C-330*ePrime2)*A*A*A*A*A*A/720));
+  return{easting:x,northing:y,zone};
 }
 
 // ── Auto-detect UTM zone from Lat/Lon (v50.0) ──
@@ -11083,7 +11108,7 @@ function updateReportingDashboard(){
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
   // v42.1: Also save S.results so user doesn't have to re-run analysis after loading
-  const data={version:'44.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0',nrelApiKey:$('nrelApiKey')?.value||''}};
+  const data={version:'53.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0',nrelApiKey:$('nrelApiKey')?.value||''}};
   const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v42.1, results included)','i');
 }
 
@@ -11536,16 +11561,52 @@ function exportRoughnessRoseCSV(){
   log('Roughness rose CSV exported','i');
 }
 
-// Export roughness in WAsP .map format
-// WAsP .map format: Header + number of roughness change lines per sector
-// Each line: distance(m), roughness_left, roughness_right
+// Export roughness in WAsP .map format (v53.0 — Openwind compatible vector format)
+// If OSM roughness zones are available, outputs as WAsP vector map with roughness change linestrings.
+// Otherwise, falls back to polar roughness rose format for WAsP.
 function exportRoughnessMap(){
   const nSectors=parseInt($('sects').value)||12;
   const z0site=parseFloat($('z0val').value)||0.03;
   const z0mast=parseFloat($('rrZ0mast')?.value)||z0site;
   const lat=parseFloat($('e5La')?.value||'55.5');
   const lon=parseFloat($('e5Lo')?.value||'7.9');
-  let map=`! WAsP Roughness Map - exported from WindFlow Pro 26.0\n`;
+
+  // If we have OSM roughness zones, output as vector map format (Openwind compatible)
+  if(S.roughnessZones&&S.roughnessZones.length>0){
+    const centerLat=parseFloat(lat)||55.5;
+    const centerLon=parseFloat(lon)||7.9;
+    const utmZone=utmZoneFromLatLon(centerLat,centerLon);
+    const isNorth=centerLat>=0;
+
+    let map=`+proj=utm +zone=${utmZone} +datum=WGS84 +units=m +no_defs\n`;
+    map+=`  0.0 0.0 0.0 0.0\n`;
+    map+=`  1.0 0.0 1.0 0.0\n`;
+    map+=`  1.0 0.0\n`;
+
+    S.roughnessZones.forEach(zone=>{
+      if(!zone.pts||zone.pts.length<3)return;
+      const utmPts=zone.pts.map(p=>latLonToUTM(p.lat,p.lon,utmZone));
+      const z0inside=zone.z0||z0site;
+      const z0outside=z0site;
+      map+=`  ${z0inside.toFixed(3)} ${z0outside.toFixed(3)} ${utmPts.length.toString().padStart(11)}\n`;
+      let coordLine='';
+      let ptsOnLine=0;
+      utmPts.forEach(p=>{
+        if(coordLine)coordLine+=' ';
+        coordLine+=`${p.easting.toFixed(2)} ${p.northing.toFixed(2)}`;
+        ptsOnLine++;
+        if(coordLine.length>200||ptsOnLine>=5){map+=coordLine+'\n';coordLine='';ptsOnLine=0;}
+      });
+      if(coordLine)map+=coordLine+'\n';
+    });
+
+    dlFile(map,'roughness.map','text/plain');
+    log(`WAsP vector .map exported (roughness only): ${S.roughnessZones.length} zones, UTM Zone ${utmZone}${isNorth?'N':'S'}`,'i');
+    return;
+  }
+
+  // Fallback: polar roughness rose format (WAsP native, not Openwind)
+  let map=`! WAsP Roughness Map - exported from WindFlow Pro 53.0\n`;
   map+=`! Site: ${$('projName')?.value||'Project'} at ${lat.toFixed(4)}N ${lon.toFixed(4)}E\n`;
   map+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
   map+=`${nSectors} 0\n`; // nSectors, 0 = polar format
@@ -11577,61 +11638,212 @@ function exportRoughnessMap(){
     }
   }
   dlFile(map,'roughness.map','text/plain');
-  log(`WAsP .map exported: ${nSectors} sectors`,'i');
+  log(`WAsP polar .map exported: ${nSectors} sectors (no OSM roughness zones — use vector format for Openwind)`,'i');
 }
 
-// Export combined terrain + roughness WAsP .map file
+// Export combined terrain + roughness WAsP vector map file (v53.0)
+// Openwind / WAsP compatible vector map format with:
+//   - PROJ4 coordinate system header
+//   - Elevation contour linestrings (from marching squares)
+//   - Roughness change linestrings (from OSM roughness zones)
+// This format can be loaded directly in Openwind as terrain data.
 function exportCombinedMap(){
   const T=S.terrain;
   if(!T||!T.grid||!T.grid.length){alert('Download terrain data first (Step 5)');return;}
-  const nSectors=parseInt($('sects').value)||12;
+
+  // Determine UTM zone from site center
+  const centerLat=(T.lat0+T.lat1)/2;
+  const centerLon=(T.lon0+T.lon1)/2;
+  const utmZone=utmZoneFromLatLon(centerLat,centerLon);
+  const isNorth=centerLat>=0;
+
   const z0site=parseFloat($('z0val').value)||0.03;
-  const z0mast=parseFloat($('rrZ0mast')?.value)||z0site;
-  const lat=parseFloat($('e5La')?.value||'55.5');
-  const lon=parseFloat($('e5Lo')?.value||'7.9');
-  let map=`! WAsP Combined Terrain + Roughness Map - WindFlow Pro 26.0\n`;
-  map+=`! Site: ${$('projName')?.value||'Project'} at ${lat.toFixed(4)}N ${lon.toFixed(4)}E\n`;
-  map+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
-  map+=`! Elevation: ${T.minE?.toFixed(0)||0}–${T.maxE?.toFixed(0)||0}m ASL\n`;
-  map+=`! Grid: ${T.nx}×${T.ny}, z0=${z0site}m\n\n`;
-  // Elevation data section
-  map+=`! --- ELEVATION GRID (DSAA) ---\n`;
-  map+=`DSAA\n`;
-  map+=`${T.nx} ${T.ny}\n`;
-  map+=`${T.lon0.toFixed(6)} ${T.lon1.toFixed(6)}\n`;
-  map+=`${T.lat0.toFixed(6)} ${T.lat1.toFixed(6)}\n`;
-  map+=`${T.minE.toFixed(1)} ${T.maxE.toFixed(1)}\n`;
-  for(let i=T.ny-1;i>=0;i--){
-    map+=T.grid[i].map(v=>v.toFixed(1)).join(' ')+'\n';
+  const projName=($('projName')?.value||'terrain_roughness').replace(/[^a-zA-Z0-9_]/g,'_');
+
+  let map='';
+  // Line 1: PROJ4 string
+  map+=`+proj=utm +zone=${utmZone} +datum=WGS84 +units=m +no_defs\n`;
+  // Lines 2-4: Coordinate transformation (identity)
+  map+=`  0.0 0.0 0.0 0.0\n`;
+  map+=`  1.0 0.0 1.0 0.0\n`;
+  map+=`  1.0 0.0\n`;
+
+  // ── ELEVATION CONTOURS ──
+  // Chain adjacent contour segments into continuous linestrings
+  // contoursData[i] corresponds to terrain.levels[i]
+  if(S.contoursData&&S.contoursData.length){
+    const levels=S.terrain?.levels||[];
+    S.contoursData.forEach(({segs},levelIdx)=>{
+      if(!segs||segs.length===0)return;
+      const elevVal=levels[levelIdx]||0; // elevation value for this contour level
+
+      // Chain segments: build adjacency from shared endpoints
+      const chains=chainSegments(segs);
+
+      chains.forEach(chain=>{
+        if(chain.length<2)return;
+
+        // Convert chain points to UTM
+        const utmPts=chain.map(p=>latLonToUTM(p.lat,p.lon,utmZone));
+
+        // Header: elevation n_points
+        map+=`  ${elevVal.toFixed(3)} ${utmPts.length.toString().padStart(11)}\n`;
+
+        // Coordinate lines: x1 y1 x2 y2 ... (multiple points per line)
+        let coordLine='';
+        let ptsOnLine=0;
+        utmPts.forEach(p=>{
+          if(coordLine)coordLine+=' ';
+          coordLine+=`${p.easting.toFixed(2)} ${p.northing.toFixed(2)}`;
+          ptsOnLine++;
+          // Limit line length for readability
+          if(coordLine.length>200||ptsOnLine>=5){
+            map+=coordLine+'\n';
+            coordLine='';
+            ptsOnLine=0;
+          }
+        });
+        if(coordLine)map+=coordLine+'\n';
+      });
+    });
   }
-  // Roughness change lines section
-  map+=`\n! --- ROUGHNESS CHANGE LINES ---\n`;
-  map+=`${nSectors} 0\n`;
-  const rose=S.roughnessRose||S.autoRoughnessRose;
-  for(let s=0;s<nSectors;s++){
-    if(rose&&rose[s]){
-      const r=rose[s];
-      if(r.x&&r.z0&&Array.isArray(r.x)&&r.x.length>0){
-        const nLines=Math.max(1,r.x.length);
-        map+=`${nLines}\n`;
-        for(let li=0;li<nLines;li++){
-          const xDist=r.x[li]||1000;
-          const z0in=li>0?(r.z0[li-1]||z0mast):(z0mast);
-          const z0out=r.z0[li]||z0site;
-          map+=`${xDist.toFixed(0)} ${z0in.toFixed(4)} ${z0out.toFixed(4)}\n`;
+
+  // ── ROUGHNESS CHANGE LINES ──
+  // Output roughness zone boundaries as roughness change linestrings
+  if(S.roughnessZones&&S.roughnessZones.length){
+    S.roughnessZones.forEach(zone=>{
+      if(!zone.pts||zone.pts.length<3)return;
+
+      // Convert polygon to UTM
+      const utmPts=zone.pts.map(p=>latLonToUTM(p.lat,p.lon,utmZone));
+
+      // Header: z0_left z0_right n_points
+      // Convention: polygon interior (left when traversing CCW) = zone's z0
+      // Exterior (right) = site default z0
+      const z0inside=zone.z0||z0site;
+      const z0outside=z0site; // background roughness
+      map+=`  ${z0inside.toFixed(3)} ${z0outside.toFixed(3)} ${utmPts.length.toString().padStart(11)}\n`;
+
+      // Coordinate lines
+      let coordLine='';
+      let ptsOnLine=0;
+      utmPts.forEach(p=>{
+        if(coordLine)coordLine+=' ';
+        coordLine+=`${p.easting.toFixed(2)} ${p.northing.toFixed(2)}`;
+        ptsOnLine++;
+        if(coordLine.length>200||ptsOnLine>=5){
+          map+=coordLine+'\n';
+          coordLine='';
+          ptsOnLine=0;
         }
-      }else{
-        map+=`2\n`;
-        map+=`${(r.x_1||1000).toFixed(0)} ${(r.z0_1||z0mast).toFixed(4)} ${z0site.toFixed(4)}\n`;
-        map+=`${(r.x_2||5000).toFixed(0)} ${z0site.toFixed(4)} ${(r.z0_3||0.0002).toFixed(4)}\n`;
-      }
-    }else{
-      map+=`1\n`;
-      map+=`1000 ${z0mast.toFixed(4)} ${z0site.toFixed(4)}\n`;
-    }
+      });
+      if(coordLine)map+=coordLine+'\n';
+    });
   }
-  dlFile(map,'terrain_roughness.map','text/plain');
-  log(`Combined terrain+roughness .map exported: ${T.nx}×${T.ny} grid, ${nSectors} sectors`,'i');
+
+  // If no contour or roughness data, add a simple boundary as a roughness line
+  if((!S.contoursData||!S.contoursData.length)&&(!S.roughnessZones||!S.roughnessZones.length)){
+    // Create a simple rectangular boundary around the site
+    const corners=[
+      {lat:T.lat0,lon:T.lon0},{lat:T.lat1,lon:T.lon0},
+      {lat:T.lat1,lon:T.lon1},{lat:T.lat0,lon:T.lon1},{lat:T.lat0,lon:T.lon0}
+    ];
+    const utmCorners=corners.map(p=>latLonToUTM(p.lat,p.lon,utmZone));
+    map+=`  ${z0site.toFixed(3)} ${0.001.toFixed(3)} ${utmCorners.length.toString().padStart(11)}\n`;
+    utmCorners.forEach(p=>{map+=`${p.easting.toFixed(2)} ${p.northing.toFixed(2)} `;});
+    map+='\n';
+  }
+
+  dlFile(map,projName+'.map','text/plain');
+  log(`WAsP vector .map exported: UTM Zone ${utmZone}${isNorth?'N':'S'}, ${S.contoursData?.length||0} contour levels, ${S.roughnessZones?.length||0} roughness zones`,'i');
+}
+
+// Helper: Chain contour segments into continuous linestrings
+// Segments are pairs of points [{lat,lon},{lat,lon}] from marching squares
+function chainSegments(segs){
+  if(!segs||segs.length===0)return[];
+  // Build endpoint → segment index map
+  const eps=1e-9;
+  function ptKey(p){return`${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;}
+  const startMap=new Map(); // key → [{segIdx, isStart}]
+  const used=new Set();
+  const chains=[];
+
+  segs.forEach((seg,i)=>{
+    const k0=ptKey(seg[0]),k1=ptKey(seg[1]);
+    if(!startMap.has(k0))startMap.set(k0,[]);
+    startMap.get(k0).push({idx:i,isStart:true});
+    if(!startMap.has(k1))startMap.set(k1,[]);
+    startMap.get(k1).push({idx:i,isStart:false});
+  });
+
+  for(let i=0;i<segs.length;i++){
+    if(used.has(i))continue;
+    used.add(i);
+    let chain=[segs[i][0],segs[i][1]];
+
+    // Extend forward
+    let extended=true;
+    while(extended){
+      extended=false;
+      const lastPt=chain[chain.length-1];
+      const key=ptKey(lastPt);
+      const candidates=startMap.get(key)||[];
+      for(const c of candidates){
+        if(used.has(c.idx))continue;
+        used.add(c.idx);
+        const seg=segs[c.idx];
+        if(c.isStart){
+          chain.push(seg[1]);
+        }else{
+          chain.push(seg[0]);
+        }
+        extended=true;
+        break;
+      }
+    }
+
+    // Extend backward
+    extended=true;
+    while(extended){
+      extended=false;
+      const firstPt=chain[0];
+      const key=ptKey(firstPt);
+      const candidates=startMap.get(key)||[];
+      for(const c of candidates){
+        if(used.has(c.idx))continue;
+        used.add(c.idx);
+        const seg=segs[c.idx];
+        if(c.isStart){
+          chain.unshift(seg[0]);
+        }else{
+          chain.unshift(seg[1]);
+        }
+        extended=true;
+        break;
+      }
+    }
+
+    chains.push(chain);
+  }
+  return chains;
+}
+
+// Helper: Get elevation at a given lat/lon from terrain grid (bilinear interpolation)
+function getElevAtLatLon(lat,lon){
+  const T=S.terrain;
+  if(!T||!T.grid||!T.grid.length)return 0;
+  const{lat0,lat1,lon0,lon1,ny,nx,grid}=T;
+  const fx=(lon-lon0)/(lon1-lon0)*(nx-1);
+  const fy=(lat-lat0)/(lat1-lat0)*(ny-1);
+  const ix=Math.max(0,Math.min(nx-2,Math.floor(fx)));
+  const iy=Math.max(0,Math.min(ny-2,Math.floor(fy)));
+  const tx=fx-ix,ty=fy-iy;
+  const z00=grid[iy]?.[ix]||0;
+  const z10=grid[iy]?.[ix+1]||0;
+  const z01=grid[iy+1]?.[ix]||0;
+  const z11=grid[iy+1]?.[ix+1]||0;
+  return z00*(1-tx)*(1-ty)+z10*tx*(1-ty)+z01*(1-tx)*ty+z11*tx*ty;
 }
 
 // Export roughness grid as CSV (raster grid of z0 values)
@@ -11771,46 +11983,166 @@ function exportWindLib(){
   log(`WAsP .lib exported: ${nSectors} sectors, heights: ${heights.join(', ')}m`,'i');
 }
 
-// Export WRG (Wind Resource Grid) format
+// Export WRG (Wind Resource Grid) format — Openwind / WAsP compatible (v53.0)
+// Format: Regular grid with UTM coordinates, integer-scaled sector parameters
+// Header: Nx Ny Xmin Ymin cellSize
+// Data lines: height elevation A k powerDensity nSectors [freq×1000 A×10 k×100] per sector
 function exportWRG(){
   if(!S.results){alert('Run analysis first');return;}
   if(!S.turbines.length){alert('Add turbines first');return;}
   const nSectors=parseInt($('sects').value)||12;
   const R=S.results;
-  let wrg=`! Wind Resource Grid - WindFlow Pro 26.0\n`;
+  const hubH=parseFloat($('hubH').value)||120;
+  const z0=parseFloat($('z0val').value)||0.03;
+
+  // Determine UTM zone from site center
+  const centerLat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
+  const centerLon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
+  const utmZone=utmZoneFromLatLon(centerLat,centerLon);
+  const isNorth=centerLat>=0;
+
+  // Build grid from turbine positions
+  // Use wind map resolution if available, otherwise derive from turbine spacing
+  const resM=parseInt($('windMapRes')?.value)||500;
+  const radius=parseFloat($('windMapRadius')?.value||5); // km
+
+  // Calculate grid bounds from turbine positions with padding
+  let minLat=Infinity,maxLat=-Infinity,minLon=Infinity,maxLon=-Infinity;
+  S.turbines.forEach(t=>{
+    if(t.lat<minLat)minLat=t.lat;
+    if(t.lat>maxLat)maxLat=t.lat;
+    if(t.lon<minLon)minLon=t.lon;
+    if(t.lon>maxLon)maxLon=t.lon;
+  });
+  // Add padding (at least 1km or radius)
+  const padDeg=Math.max(radius/111, 1/111);
+  minLat-=padDeg; maxLat+=padDeg;
+  minLon-=padDeg/Math.cos(centerLat*Math.PI/180);
+  maxLon+=padDeg/Math.cos(centerLat*Math.PI/180);
+
+  // Convert bounds to UTM
+  const utmMin=latLonToUTM(minLat,minLon,utmZone);
+  const utmMax=latLonToUTM(maxLat,maxLon,utmZone);
+
+  // Snap grid to resolution
+  const xMin=Math.floor(utmMin.easting/resM)*resM;
+  const yMin=Math.floor(utmMin.northing/resM)*resM;
+  const xMax=Math.ceil(utmMax.easting/resM)*resM;
+  const yMax=Math.ceil(utmMax.northing/resM)*resM;
+  let nx=Math.round((xMax-xMin)/resM)+1;
+  let ny=Math.round((yMax-yMin)/resM)+1;
+  // Safety limit: cap WRG at 500×500 to prevent huge files
+  const maxWRG=500;
+  if(nx>maxWRG||ny>maxWRG){
+    const scale=Math.max(nx/maxWRG,ny/maxWRG);
+    const newRes=Math.ceil(resM*scale);
+    log(`WRG: ${resM}m would create ${nx}×${ny} grid — auto-increased to ${newRes}m`,'w');
+    nx=Math.round((xMax-xMin)/newRes)+1;
+    ny=Math.round((yMax-yMin)/newRes)+1;
+  }
+
+  log(`WRG grid: ${nx}×${ny} points, ${resM}m resolution, UTM Zone ${utmZone}${isNorth?'N':'S'}`,'i');
+
+  // Compute sector stats
+  const sectorStats=computeSectorWindStats(nSectors);
+
+  // Air density for power density calculation
+  const rho=parseFloat($('airDen')?.value)||1.225;
+
+  // Build the WRG file
+  let wrg=`! Wind Resource Grid - WindFlow Pro 53.0\n`;
   wrg+=`! Project: ${$('projName')?.value||'Project'}\n`;
   wrg+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
   wrg+=`! Turbine: ${$('tcls').options[$('tcls').selectedIndex]?.text||'Custom'}\n`;
-  const nPoints=S.turbines.length;
-  wrg+=`${nPoints} ${nSectors}\n`;
-  // Compute sector stats once (shared wind data)
-  const sectorStats=computeSectorWindStats(nSectors);
-  R.perTurbine.forEach((t,i)=>{
-    const tb=S.turbines[i]||{};
-    const hh=tb.hh||parseFloat($('hubH').value)||120;
-    const lat=tb.lat||0;
-    const lon=tb.lon||0;
-    const elev=tb.elev||0;
-    // Per-turbine Weibull: use speedup-adjusted A if available
-    const baseA=R.hubWb?R.hubWb.A:5;
-    const baseK=R.hubWb?R.hubWb.k:2;
-    // Adjust A by per-turbine speedup ratio (free-stream WS ratio)
-    const turbA=baseA*(parseFloat(t.ws)||baseA)/Math.max(R.hubMean||baseA,0.1);
-    let line=`${i+1} ${lat.toFixed(6)} ${lon.toFixed(6)} ${elev.toFixed(0)} ${hh.toFixed(0)} ${turbA.toFixed(2)} ${baseK.toFixed(2)}`;
-    if(sectorStats){
-      sectorStats.forEach(s=>{
-        const sA=s.A*(parseFloat(t.ws)||baseA)/Math.max(R.hubMean||baseA,0.1);
-        line+=` ${(s.freq*100).toFixed(2)} ${sA.toFixed(2)} ${s.k.toFixed(2)}`;
-      });
-    }else{
-      for(let s=0;s<nSectors;s++){
-        line+=` ${(100/nSectors).toFixed(2)} ${turbA.toFixed(2)} ${baseK.toFixed(2)}`;
+  wrg+=`! UTM Zone: ${utmZone}${isNorth?'N':'S'} (WGS84)\n`;
+  wrg+=`! Grid: ${nx}×${ny} cells at ${resM}m resolution\n`;
+  wrg+=`! Coordinates: UTM meters\n`;
+  wrg+=`! Sector data: freq(‰), A(dm/s), k(×100)\n`;
+
+  // Header line: Nx Ny Xmin Ymin cellSize
+  wrg+=`${nx} ${ny} ${xMin.toFixed(1)} ${yMin.toFixed(1)} ${resM}\n`;
+
+  // Data lines: column-major order (X varies fastest)
+  // For each Y row (south to north), for each X column (west to east):
+  for(let iy=0;iy<ny;iy++){
+    for(let ix=0;ix<nx;ix++){
+      const utmE=xMin+ix*resM;
+      const utmN=yMin+iy*resM;
+
+      // Convert UTM back to lat/lon for interpolation
+      const ll=utmToLatLon(utmE,utmN,utmZone,isNorth);
+
+      // Interpolate wind speed from per-turbine results (inverse distance)
+      let ws=R.hubMean||8;
+      let turbA=R.hubWb?R.hubWb.A:5;
+      let turbK=R.hubWb?R.hubWb.k:2;
+      let elev=0;
+
+      if(S.turbines.length&&R.perTurbine&&R.perTurbine.length){
+        let wSum=0,wsW=0,aW=0,kW=0,eW=0;
+        R.perTurbine.forEach((t,ti)=>{
+          const tLat=S.turbines[ti]?.lat||0;
+          const tLon=S.turbines[ti]?.lon||0;
+          const tElev=S.turbines[ti]?.elev||0;
+          const d=Math.sqrt((ll.lat-tLat)**2+(ll.lon-tLon)**2)*111;
+          const w=d<0.001?1e8:1/(d*d);
+          const tA=R.hubWb?R.hubWb.A*(parseFloat(t.ws)||R.hubMean)/Math.max(R.hubMean||8,0.1):parseFloat(t.ws)/0.886;
+          const tK=R.hubWb?R.hubWb.k:2;
+          wsW+=parseFloat(t.ws)*w;
+          aW+=tA*w;
+          kW+=tK*w;
+          eW+=tElev*w;
+          wSum+=w;
+        });
+        ws=wsW/wSum;
+        turbA=aW/wSum;
+        turbK=kW/wSum;
+        elev=eW/wSum;
       }
+
+      // Apply BZ speedup if available
+      if(BZ.enabled&&BZ.speedups&&BZ.speedups.length){
+        let minD=Infinity,nearestSU=1;
+        S.turbines.forEach((t,idx)=>{
+          const d=Math.sqrt((ll.lat-t.lat)**2+(ll.lon-t.lon)**2);
+          if(d<minD){minD=d;nearestSU=R.perTurbine[idx]?.effSU||1;}
+        });
+        turbA*=nearestSU;
+        ws*=nearestSU;
+      }
+
+      // Power density: P = 0.5 * rho * (mean^3) * Gamma(1+3/k) / (Gamma(1+1/k))^3
+      // Approximation for k≈2: P ≈ 0.5*rho*A^3*Gamma(1+3/k)/(Gamma(1+1/k))^3
+      const gammaRatio=(turbK>0.5&&turbK<5)?Math.exp(3*Math.log(turbA)+0.5772*(3/turbK-1/turbK)):ws*ws*ws;
+      const powerDensity=0.5*rho*gammaRatio;
+
+      // Build data line: height elevation A k powerDensity nSectors [freq A k]...
+      let line=`${Math.round(hubH)} ${elev.toFixed(1)} ${turbA.toFixed(2)} ${turbK.toFixed(2)} ${powerDensity.toFixed(1)} ${nSectors}`;
+
+      if(sectorStats){
+        sectorStats.forEach(s=>{
+          // Scale sector A by the speedup ratio for this grid point
+          const sA=s.A*(ws/Math.max(R.hubMean||8,0.1));
+          // WRG integer encoding: freq × 1000 (‰), A × 10 (dm/s), k × 100
+          const fInt=Math.round(s.freq*1000);
+          const aInt=Math.round(sA*10);
+          const kInt=Math.round(s.k*100);
+          line+=` ${fInt} ${aInt} ${kInt}`;
+        });
+      }else{
+        for(let s=0;s<nSectors;s++){
+          const fInt=Math.round(1000/nSectors);
+          const aInt=Math.round(turbA*10);
+          const kInt=Math.round(turbK*100);
+          line+=` ${fInt} ${aInt} ${kInt}`;
+        }
+      }
+      wrg+=line+'\n';
     }
-    wrg+=line+'\n';
-  });
-  dlFile(wrg,'wind_resource_grid.wrg','text/plain');
-  log(`WRG exported: ${nPoints} points, ${nSectors} sectors`,'i');
+  }
+  const projName=($('projName')?.value||'wind_resource_grid').replace(/[^a-zA-Z0-9_]/g,'_');
+  dlFile(wrg,projName+'.wrg','text/plain');
+  log(`WRG exported: ${nx}×${ny}=${nx*ny} grid points, ${nSectors} sectors, ${resM}m resolution, UTM Zone ${utmZone}${isNorth?'N':'S'}`,'i');
 }
 
 // Export wind climate summary as comprehensive CSV
@@ -13990,7 +14322,14 @@ function generateWindMap() {
 
   // Grid of points
   const resKm = resolution / 1000;
-  const steps = Math.ceil(radius * 2 / resKm);
+  let steps = Math.ceil(radius * 2 / resKm);
+  // v53.0: Safety limit — cap at 500×500 grid (250k points) to prevent browser freeze
+  const maxSteps = 500;
+  if (steps > maxSteps) {
+    const newResM = Math.ceil(radius * 2 / maxSteps * 1000);
+    log(`Wind map: ${resolution}m would create ${(steps+1)**2} pts — auto-increased to ${newResM}m`, 'w');
+    steps = maxSteps;
+  }
   const startLat = centerLat - radius / 111;
   const startLon = centerLon - radius / (111 * Math.cos(centerLat * Math.PI / 180));
   const dLat = (radius * 2 / 111) / steps;
