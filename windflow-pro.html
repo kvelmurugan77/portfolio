@@ -5049,8 +5049,9 @@ function processLayoutText(text,fileName){
         lat=parseFloat(p[latI]);lon=parseFloat(p[lonI]);
         if(labelIdx>=0)wtgName=p[labelIdx]||wtgName;
       }
-      const turbineHH=hhIdx>=0?parseFloat(p[hhIdx]):+(p[2]||defaultHH);
-      const resolvedHH=isNaN(turbineHH)||turbineHH<50?defaultHH:turbineHH;
+      // v52.0: For BAE/UTM formats, p[2] is Northing not hub height — use defaultHH when no HH column
+      const turbineHH=hhIdx>=0?parseFloat(p[hhIdx]):((isBAE||isUTM)?defaultHH:+(p[2]||defaultHH));
+      const resolvedHH=isNaN(turbineHH)||turbineHH<50||turbineHH>300?defaultHH:turbineHH;
       if(!isNaN(lat)&&!isNaN(lon))ts.push({lat,lon,hh:resolvedHH,_customHH:hhIdx>=0&&resolvedHH!==defaultHH,name:wtgName});
     }
     if(isUTM&&utmZone)log(`UTM Zone ${utmZone}N auto-detected and converted to lat/lon`,'i');
@@ -9894,14 +9895,20 @@ async function fetchLayoutWSSummary(){
   }
 }
 
-// v51.0: Parse GWA4 .lib format to extract mean wind speed at a given height
-// GWA4 .lib format: header, roughness lengths, heights, then per-sector Weibull A,k,frequency
+// v52.0: Parse GWA4 .lib format to extract mean wind speed at a given height
+// GWA4 .lib format verified from actual API output:
+//   Line 1: "GWA4 Generalized Wind Climate<coordinates>lon,lat,elev</coordinates>"
+//   Line 2: "nRough nHeights nSectors" (e.g. "5 6 12") — NOTE: NOT standard WAsP order!
+//   Line 3: roughness lengths (nRough values)
+//   Line 4: heights in meters (nHeights values)
+//   Then per roughness class:
+//     freq_row (nSectors frequency values in %)
+//     For each height: A_row (nSectors Weibull A values) then k_row (nSectors Weibull k values)
 function parseGWALibMeanWS(libText,targetHH){
   try{
     const lines=libText.trim().split(/\r?\n/).filter(l=>l.trim());
     if(lines.length<10)return null;
-    // Find the line with number of sectors, roughness classes, height levels
-    // Format: "5 6 12" or similar (sectors roughnessClasses heightLevels)
+    // Find the metadata line with 3 positive integers
     let metaIdx=-1;
     for(let i=0;i<Math.min(5,lines.length);i++){
       const parts=lines[i].trim().split(/\s+/);
@@ -9910,80 +9917,103 @@ function parseGWALibMeanWS(libText,targetHH){
       }
     }
     if(metaIdx<0)return null;
-    const [nSectors,nRough,nHeights]=lines[metaIdx].trim().split(/\s+/).map(Number);
-    // Read roughness lengths (next line)
+    let [nSectors,nRough,nHeights]=lines[metaIdx].trim().split(/\s+/).map(Number);
+    // Read roughness lengths (next line after metadata)
     const z0Line=lines[metaIdx+1]?.trim().split(/\s+/).map(Number)||[];
-    // Read heights (next line)
+    // Read heights (line after roughness)
     const heights=lines[metaIdx+2]?.trim().split(/\s+/).map(Number)||[];
     if(!heights.length)return null;
+
+    // v52.0: Auto-detect correct nSectors/nRough/nHeights from actual line lengths
+    // GWA4 format puts metadata as "nRough nHeights nSectors" (e.g. "5 6 12")
+    // Standard WAsP format uses "nSectors nRough nHeights"
+    // We detect by matching: z0Line.length = nRough, heights.length = nHeights
+    // The remaining value in the metadata triple is nSectors
+    const realNRough=z0Line.length;
+    const realNHeights=heights.length;
+    if(realNRough>0&&realNHeights>0){
+      const vals=lines[metaIdx].trim().split(/\s+/).map(Number);
+      // Find the value that is NOT z0Line.length and NOT heights.length → that's nSectors
+      const realNSectors=vals.find(v=>v!==realNRough&&v!==realNHeights);
+      if(realNSectors!==undefined){
+        nSectors=realNSectors;
+        nRough=realNRough;
+        nHeights=realNHeights;
+      }
+    }
+
     // Find closest height to targetHH
     let closestIdx=0,minDiff=Infinity;
     for(let h=0;h<heights.length;h++){
       if(Math.abs(heights[h]-targetHH)<minDiff){minDiff=Math.abs(heights[h]-targetHH);closestIdx=h;}
     }
     const gwaHeight=heights[closestIdx];
-    // Find roughness index closest to 0.03 (typical agricultural)
+    // Find roughness index closest to 0.03 (typical agricultural terrain)
     let roughIdx=0,minRoughDiff=Infinity;
     for(let r=0;r<z0Line.length;r++){
       if(Math.abs(z0Line[r]-0.03)<minRoughDiff){minRoughDiff=Math.abs(z0Line[r]-0.03);roughIdx=r;}
     }
-    // Data starts after header: for each roughness class × height, there are nSectors lines of (A, k, freq)
-    // Actually GWA4 format: after heights, for each roughness class and height:
-    //   nSectors lines of "A  k  frequency"  (3 values per sector)
-    // OR: the format might be per-sector blocks with A values, then k values, then freq values
-    // Let me parse the actual GWA4 format which uses sector-wise columns
-    // GWA4 .lib: after heights, there are blocks of data
-    // Each block has nSectors values, arranged as rows of 12 values
-    // The blocks are: A_values, k_values, frequency_values for each roughness×height combination
-    
+
+    // v52.0: Parse GWA4 data layout correctly
+    // GWA4 structure per roughness class:
+    //   Row 0: frequency values (nSectors values, in %)
+    //   Row 1: A values at height[0] (nSectors values)
+    //   Row 2: k values at height[0] (nSectors values)
+    //   Row 3: A values at height[1]
+    //   Row 4: k values at height[1]
+    //   ... (2 rows per height)
+    // Total rows per roughness = 1 + 2*nHeights
+    const rowsPerRoughness=1+2*nHeights;
+    const valuesPerRow=nSectors;
+
     // Find data start (skip header lines)
     let dataStart=metaIdx+3;
-    // Skip coordinate line if present
+    // Skip coordinate line if present (GWA4 puts coordinates on line 1, not a separate line)
     if(lines[dataStart]?.includes('coordinates'))dataStart++;
-    
-    // Read all numeric data from remaining lines
-    const allValues=[];
+
+    // Read all numeric data from remaining lines into row-based arrays
+    const dataRows=[];
     for(let i=dataStart;i<lines.length;i++){
       const nums=lines[i].trim().split(/\s+/).map(Number).filter(v=>!isNaN(v));
-      allValues.push(...nums);
+      if(nums.length>0)dataRows.push(nums);
     }
-    
-    // GWA4 .lib structure for each roughness×height combination:
-    //   nSectors values of A
-    //   nSectors values of k  
-    //   nSectors values of frequency
-    const blockSize=nSectors*3; // A + k + freq per sector
-    const comboIdx=roughIdx*nHeights+closestIdx; // which roughness×height block
-    const blockStart=comboIdx*blockSize;
-    
-    if(blockStart+blockSize>allValues.length)return null;
-    
-    const sectorA=allValues.slice(blockStart,blockStart+nSectors);
-    const sectorK=allValues.slice(blockStart+nSectors,blockStart+2*nSectors);
-    const sectorFreq=allValues.slice(blockStart+2*nSectors,blockStart+3*nSectors);
-    
+
+    // Calculate row index for the desired roughness×height combination
+    const roughStartRow=roughIdx*rowsPerRoughness;
+    const freqRowIdx=roughStartRow;                     // freq row is first in each roughness block
+    const aRowIdx=roughStartRow+1+closestIdx*2;         // skip freq row + 2 rows per previous height
+    const kRowIdx=roughStartRow+2+closestIdx*2;         // k row follows A row
+
+    if(freqRowIdx>=dataRows.length||aRowIdx>=dataRows.length||kRowIdx>=dataRows.length)return null;
+
+    const sectorFreq=dataRows[freqRowIdx];
+    const sectorA=dataRows[aRowIdx];
+    const sectorK=dataRows[kRowIdx];
+
+    if(!sectorFreq||!sectorA||!sectorK)return null;
+    if(sectorFreq.length<nSectors||sectorA.length<nSectors||sectorK.length<nSectors)return null;
+
     // Compute overall mean wind speed from Weibull distribution
     // Mean of Weibull: A * Γ(1 + 1/k)
     // Weighted by sector frequencies
-    const totalFreq=sectorFreq.reduce((s,f)=>s+f,0);
+    const totalFreq=sectorFreq.slice(0,nSectors).reduce((s,f)=>s+f,0);
     if(totalFreq<=0)return null;
-    
+
     let meanWS=0;
     for(let s=0;s<nSectors;s++){
       const A=sectorA[s],k=sectorK[s],f=sectorFreq[s];
       if(A<=0||k<=0)continue;
-      // Γ(1+1/k) approximation
       const gammaVal=gammaFunc(1+1/k);
       const sectorMean=A*gammaVal;
       meanWS+=f*sectorMean;
     }
     meanWS/=totalFreq;
-    
+
     // If target height differs from GWA height, extrapolate with power law
     if(Math.abs(gwaHeight-targetHH)>5&&meanWS>0){
       meanWS*=Math.pow(targetHH/gwaHeight,0.14);
     }
-    
+
     return meanWS>0?meanWS:null;
   }catch(e){
     return null;
@@ -10383,13 +10413,94 @@ async function downloadGWA(){
   log('GWA data sources unavailable. Use ERA5 tab for wind data download (recommended). GWA data can be manually downloaded from https://globalwindatlas.info and imported as .lib file.','w');
 }
 
-// v14.0: Parse WAsP .lib file format (GWA 4.0 output)
-// Format: header lines, then sector-wise Weibull A, k, frequency
+// v52.0: Parse WAsP .lib file format (GWA 4.0 output)
+// GWA4 format: "nRough nHeights nSectors" then z0 line, heights line
+// Then per roughness class: freq row, then per-height A row + k row
+// Standard WAsP format: nSectors on first column, then heights
 function parseWAsPLib(text){
   try{
     const lines=text.split(/\r?\n/).filter(l=>l.trim());
     if(lines.length<10)return null;
-    // WAsP .lib format:
+
+    // v52.0: Try GWA4 format first (metadata line with 3 positive integers)
+    let metaIdx=-1;
+    for(let i=0;i<Math.min(5,lines.length);i++){
+      const parts=lines[i].trim().split(/\s+/);
+      if(parts.length===3&&parts.every(p=>!isNaN(+p)&&+p>0)){
+        metaIdx=i;break;
+      }
+    }
+    if(metaIdx>=0){
+      const z0Line=lines[metaIdx+1]?.trim().split(/\s+/).map(Number)||[];
+      const hLine=lines[metaIdx+2]?.trim().split(/\s+/).map(Number)||[];
+      const realNRough=z0Line.length;
+      const realNHeights=hLine.length;
+      if(realNRough>0&&realNHeights>0){
+        const vals=lines[metaIdx].trim().split(/\s+/).map(Number);
+        const realNSectors=vals.find(v=>v!==realNRough&&v!==realNHeights);
+        if(realNSectors&&realNSectors>=8){
+          // Parse GWA4 format with correct layout
+          const nSectors=realNSectors;
+          const nHeights=realNHeights;
+          const heights=hLine;
+          const rowsPerRoughness=1+2*nHeights;
+          let dataStart=metaIdx+3;
+          if(lines[dataStart]?.includes('coordinates'))dataStart++;
+          const dataRows=[];
+          for(let i=dataStart;i<lines.length;i++){
+            const nums=lines[i].trim().split(/\s+/).map(Number).filter(v=>!isNaN(v));
+            if(nums.length>0)dataRows.push(nums);
+          }
+          // Use roughness closest to 0.03 (agricultural)
+          let roughIdx=0,minRD=Infinity;
+          for(let r=0;r<z0Line.length;r++){if(Math.abs(z0Line[r]-0.03)<minRD){minRD=Math.abs(z0Line[r]-0.03);roughIdx=r;}}
+          // Use height closest to hub height (try 100m default)
+          const targetHH=parseFloat($('hubH')?.value)||120;
+          let hIdx=0,minHD=Infinity;
+          for(let h=0;h<heights.length;h++){if(Math.abs(heights[h]-targetHH)<minHD){minHD=Math.abs(heights[h]-targetHH);hIdx=h;}}
+
+          const roughStartRow=roughIdx*rowsPerRoughness;
+          const freqRowIdx=roughStartRow;
+          const aRowIdx=roughStartRow+1+hIdx*2;
+          const kRowIdx=roughStartRow+2+hIdx*2;
+
+          if(freqRowIdx<dataRows.length&&aRowIdx<dataRows.length&&kRowIdx<dataRows.length){
+            const sectorFreq=dataRows[freqRowIdx];
+            const sectorA=dataRows[aRowIdx];
+            const sectorK=dataRows[kRowIdx];
+            if(sectorFreq&&sectorA&&sectorK&&sectorFreq.length>=nSectors&&sectorA.length>=nSectors&&sectorK.length>=nSectors){
+              const sectorData=[];
+              const sectorWidth=360/nSectors;
+              const totalFreq=sectorFreq.slice(0,nSectors).reduce((s,f)=>s+f,0)||1;
+              for(let s=0;s<nSectors;s++){
+                sectorData.push({
+                  dir:Math.round(s*sectorWidth+sectorWidth/2)%360,
+                  freq:sectorFreq[s]||0,
+                  A:sectorA[s]||0,
+                  k:sectorK[s]||2
+                });
+              }
+              // Compute mean WS
+              let meanWS=0;
+              sectorData.forEach(d=>{
+                const f=(d.freq||0)/totalFreq;
+                const gammaVal=gamma(1+1/d.k);
+                meanWS+=f*d.A*gammaVal;
+              });
+              const weibullA=sectorData.reduce((s,d)=>s+d.A*(d.freq||0),0)/totalFreq;
+              const weibullK=sectorData.reduce((s,d)=>s+d.k*(d.freq||0),0)/totalFreq||2;
+              // Shear extrapolation if needed
+              if(Math.abs(heights[hIdx]-targetHH)>5&&meanWS>0){
+                meanWS*=Math.pow(targetHH/heights[hIdx],0.14);
+              }
+              return{sectors:nSectors,sectorData,meanWS,weibullA,weibullK,source:'GWA4-lib'};
+            }
+          }
+        }
+      }
+    }
+
+    // Fallback: try standard WAsP .lib format
     // Line 1-2: description
     // Line 3: latitude, longitude (or 0 0)
     // Line 4: number of sectors, height 1, height 2, ...
@@ -10423,16 +10534,13 @@ function parseWAsPLib(text){
     }
     if(sectorData.length<nSectors*0.5)return null;
     // Compute overall mean WS from Weibull sectors
-    const gamma_n=Math.exp(Math.log(1+1/2)*0.8862); // approximate gamma(1+1/2)
     const totalFreq=sectorData.reduce((s,d)=>s+(d.freq||0),0)||1;
     let meanWS=0,weibullA=0,weibullK=2;
     sectorData.forEach(d=>{
       const f=(d.freq||0)/totalFreq;
-      // Mean of Weibull: A × Γ(1+1/k)
       const gammaVal=gamma(1+1/d.k);
       meanWS+=f*d.A*gammaVal;
     });
-    // Fit overall Weibull to the mean
     const allA=sectorData.map(d=>d.A);
     weibullA=allA.reduce((s,a)=>s+a,0)/allA.length;
     weibullK=sectorData.reduce((s,d)=>s+d.k*(d.freq||0),0)/totalFreq||2;
