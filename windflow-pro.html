@@ -2598,7 +2598,7 @@ function utmToLatLon(easting,northing,zone,north){
   const R1sq=Math.sqrt(R1);
   const D=E/(N1*k0);
   const lat=phi1-(N1*Math.tan(phi1)/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ePrime2)*D*D*D*D/24+(61+90*T1+298*C1+45*T1*T1-252*ePrime2-3*C1*C1)*D*D*D*D*D*D/720);
-  const lon0=(zone-1)*6-180+3; // central meridian
+  const lon0=((zone-1)*6-180+3)*Math.PI/180; // central meridian in RADIANS (v51.0 fix: was degrees)
   const lon=lon0+(D-(1+2*T1+C1)*D*D*D/6+(5-2*C1+28*T1-3*C1*C1+8*ePrime2+24*T1*T1)*D*D*D*D*D/120)/Math.cos(phi1);
   return{lat:lat*180/Math.PI,lon:lon*180/Math.PI};
 }
@@ -2610,33 +2610,75 @@ function utmZoneFromLatLon(lat,lon){
   return zone; // 1-60
 }
 
-// ── Auto-detect UTM zone from Easting/Northing by trying all zones (v50.0) ──
+// ── Auto-detect UTM zone from Easting/Northing by trying all zones (v51.0) ──
 // Tries zones 1-60 and picks the one that produces coordinates nearest to the map center
+// If no map center is set, prompts the user to enter the UTM zone
 function autoDetectUTMZone(easting,northing){
   const mapLat=parseFloat($('gLat')?.value||$('mastLat')?.value||0);
   const mapLon=parseFloat($('gLon')?.value||$('mastLon')?.value||0);
-  let bestZone=0,bestDist=Infinity;
-  for(let z=1;z<=60;z++){
-    try{
-      const r=utmToLatLon(easting,northing,z,true);
-      const d=Math.sqrt(Math.pow(r.lat-mapLat,2)+Math.pow(r.lon-mapLon,2));
-      if(d<bestDist){bestDist=d;bestZone=z;}
-    }catch(e){}
-  }
-  // If no map center, try northern hemisphere zones and pick the one that gives reasonable lat
-  if(bestDist>50){ // more than 50 degrees off
-    bestZone=0;bestDist=Infinity;
+  const hasMapCenter=(mapLat!==0||mapLon!==0);
+  
+  // If we have a map center, find the zone whose conversion is closest
+  if(hasMapCenter){
+    let bestZone=0,bestDist=Infinity;
     for(let z=1;z<=60;z++){
       try{
         const r=utmToLatLon(easting,northing,z,true);
-        if(r.lat>=-90&&r.lat<=90&&r.lon>=-180&&r.lon<=180){
-          const d=Math.abs(r.lat)+Math.abs(r.lon); // simple metric
-          if(d<bestDist){bestDist=d;bestZone=z;}
-        }
+        if(r.lon<-180||r.lon>180)continue; // skip invalid zones
+        const d=Math.sqrt(Math.pow(r.lat-mapLat,2)+Math.pow(r.lon-mapLon,2));
+        if(d<bestDist){bestDist=d;bestZone=z;}
       }catch(e){}
     }
+    if(bestDist<10)return bestZone; // within 10° of map center — confident
   }
-  return bestZone;
+  
+  // No map center or too far — estimate latitude from northing and prompt user
+  // Approximate latitude from northing (northing = distance from equator in meters)
+  const approxLat=northing/111320; // 1° ≈ 111.32 km
+  const isNorth=northing>0;
+  
+  // Find all zones that produce valid coordinates at this latitude
+  // and classify by likely region for easier user selection
+  const allZones=[];
+  for(let z=1;z<=60;z++){
+    try{
+      const r=utmToLatLon(easting,northing,z,isNorth);
+      if(r.lon>=-180&&r.lon<=180&&Math.abs(r.lat-(isNorth?approxLat:-approxLat))<2){
+        // Classify region
+        let region='Other';
+        if(r.lat>15&&r.lat<72&&r.lon>-170&&r.lon<-50)region='Americas';
+        else if(r.lat>35&&r.lat<72&&r.lon>-12&&r.lon<45)region='Europe';
+        else if(r.lat>-40&&r.lat<40&&r.lon>-20&&r.lon<55)region='Africa';
+        else if(r.lat>5&&r.lat<75&&r.lon>55&&r.lon<145)region='Asia';
+        else if(r.lat>-50&&r.lat<-10&&r.lon>110&&r.lon<160)region='Oceania';
+        allZones.push({zone:z,lat:r.lat,lon:r.lon,region});
+      }
+    }catch(e){}
+  }
+  
+  // Sort: put likely regions first (Americas, Europe, Asia — common wind regions)
+  const regionOrder={Americas:1,Europe:2,Africa:3,Asia:4,Oceania:5,Other:6};
+  allZones.sort((a,b)=>(regionOrder[a.region]||9)-(regionOrder[b.region]||9)||a.zone-b.zone);
+  
+  // Build compact zone list (max 15 most relevant)
+  const shown=allZones.slice(0,15);
+  let zoneList=shown.map(v=>{
+    const lonStr=v.lon<0?`${(-v.lon).toFixed(1)}°W`:`${v.lon.toFixed(1)}°E`;
+    return `Zone ${v.zone}: ${Math.abs(v.lat).toFixed(1)}°${isNorth?'N':'S'}, ${lonStr} [${v.region}]`;
+  }).join('\n');
+  if(allZones.length>15)zoneList+=`\n... and ${allZones.length-15} more zones`;
+  
+  let promptMsg=`UTM Zone required for this layout.\n\nEstimated latitude: ~${Math.abs(approxLat).toFixed(1)}°${isNorth?'N':'S'}\n\nPossible zones:\n${zoneList}\n\nEnter UTM Zone number (1-60):`;
+  const userInput=prompt(promptMsg,'');
+  if(userInput!==null){
+    const z=parseInt(userInput);
+    if(z>=1&&z<=60)return z;
+  }
+  
+  // Fallback: if user cancels, try the first valid zone from the Americas or Europe
+  const preferred=allZones.find(v=>v.region==='Americas')||allZones.find(v=>v.region==='Europe')||allZones[0];
+  if(preferred)return preferred.zone;
+  return 0;
 }
 
 function pointInPolygon(lat,lon,poly){
