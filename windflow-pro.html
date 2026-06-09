@@ -217,7 +217,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <div class="ds-card" id="ds_merra2"><div class="ds-name">MERRA-2</div><div class="ds-desc">NASA POWER API · Free · 1980→present</div><button class="btn btn-sm btn-ghost" onclick="downloadMERRA2()">⬇ Download</button><div id="merra2Status" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_ncep"><div class="ds-name">NCEP/CFSR</div><div class="ds-desc">Open-Meteo · Free · 1940→present · Same source as ERA5</div><button class="btn btn-sm btn-ghost" onclick="downloadNCEP()">⬇ Download</button><div id="ncepStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
           <div class="ds-card" id="ds_newa"><div class="ds-name">NEWA</div><div class="ds-desc">New European Wind Atlas · ~3km grid · Free · EU+surroundings</div><button class="btn btn-sm btn-ghost" onclick="downloadNEWA()">⬇ Download</button><div id="newaStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
-          <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit V2</div><div class="ds-desc">USA CONUS · 2007–2014 · Multi-height · Free API key · developer.nrel.gov</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key (developer.nrel.gov)" placeholder="Enter your NREL API Key (developer.nrel.gov)" style="font-size:.6rem"></div><div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Year</label><select class="fs" id="nrelYear" style="font-size:.58rem"><option value="2014" selected>2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Interval</label><select class="fs" id="nrelInterval" style="font-size:.58rem"><option value="60" selected>60 min</option><option value="30">30 min</option><option value="15">15 min</option><option value="5">5 min</option></select></div></div><div style="margin-top:.3rem"><label style="font-size:.52rem;color:var(--text2);display:flex;align-items:center;gap:.3rem;cursor:pointer"><input type="checkbox" id="nrelMultiHeight" checked> Multi-height profile (10–200m)</label></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()" style="margin-top:.3rem">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
+          <div class="ds-card" id="ds_nrel"><div class="ds-name">NREL Wind Toolkit V2</div><div class="ds-desc">USA CONUS · 2007–2014 · Multi-height · Free API key · developer.nlr.gov</div><div class="fg" style="margin-top:.3rem"><input class="fi" id="nrelApiKey" placeholder="NREL API Key (developer.nlr.gov)" style="font-size:.6rem"></div><div class="g2" style="gap:.3rem;margin-top:.3rem"><div class="fg"><label class="fl" style="font-size:.52rem">Year</label><select class="fs" id="nrelYear" style="font-size:.58rem"><option value="2014" selected>2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option></select></div><div class="fg"><label class="fl" style="font-size:.52rem">Interval</label><select class="fs" id="nrelInterval" style="font-size:.58rem"><option value="60" selected>60 min</option><option value="30">30 min</option><option value="15">15 min</option><option value="5">5 min</option></select></div></div><div style="margin-top:.3rem"><label style="font-size:.52rem;color:var(--text2);display:flex;align-items:center;gap:.3rem;cursor:pointer"><input type="checkbox" id="nrelMultiHeight" checked> Multi-height profile (10–200m)</label></div><button class="btn btn-sm btn-ghost" onclick="downloadNREL()" style="margin-top:.3rem">⬇ Download</button><div id="nrelStatus" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div></div>
         </div>
         <div class="alert alert-info" style="font-size:.62rem;margin-top:.5rem">Country-specific: NEWA (EU) · NREL Wind (USA) · BARRA2 (AU) · CSIR (ZA) · INMET (BR) · CMA (CN) · SARAN (IN)</div>
       </div>
@@ -553,7 +553,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://maps.elie.ucl.ac.be/CCI/viewer/','_blank')">🗺 ESA CCI Land Cover (External)</button>
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://map.neweuropeanwindatlas.eu/','_blank')">💨 NEWA Wind Atlas (External)</button>
           <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://www.nrel.gov/grid/wind-toolkit.html','_blank')">💨 NREL Wind Toolkit (External)</button>
-          <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://developer.nrel.gov/signup/','_blank')">🔑 Get NREL API Key (Free)</button>
+          <button class="btn btn-ghost" style="width:100%" onclick="window.open('https://developer.nlr.gov/signup/','_blank')">🔑 Get NREL API Key (Free)</button>
         </div>
       </div>
       <div class="card"><div class="card-title sky">Save / Load Project</div>
@@ -5113,7 +5113,11 @@ try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 50.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
+log('WindFlow Pro 51.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
+// v51.0: Load saved NREL API key from localStorage
+try{const savedKey=localStorage.getItem('nrelApiKey');if(savedKey&&$('nrelApiKey'))$('nrelApiKey').value=savedKey;}catch(e){}
+// v51.0: Auto-save NREL API key on input change
+if($('nrelApiKey'))$('nrelApiKey').addEventListener('change',function(){try{if(this.value)localStorage.setItem('nrelApiKey',this.value);}catch(e){}});
 // Initialize terrain and roughness canvases with placeholder
 setTimeout(()=>{drawTerrainCanvas();drawRoughnessCanvas();},500);
 // v33.3: Safety net — if leafMap failed to init, retry after DOM is fully settled
@@ -10606,7 +10610,7 @@ function updateReportingDashboard(){
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
   // v42.1: Also save S.results so user doesn't have to re-run analysis after loading
-  const data={version:'44.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0'}};
+  const data={version:'44.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0',nrelApiKey:$('nrelApiKey')?.value||''}};
   const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v42.1, results included)','i');
 }
 
@@ -11980,8 +11984,8 @@ function updateDataSourcePosInfo(){
 }
 
 // ── NREL Wind Toolkit V2 Download (USA CONUS, Multi-height) ──
-// API docs: https://developer.nrel.gov/docs/wind/wind-toolkit/wtk-download/
-// API domain: developer.nrel.gov
+// API docs: https://developer.nlr.gov/docs/wind/wind-toolkit/wtk-download/
+// API domain: developer.nlr.gov (v51.0: migrated from developer.nrel.gov which was retired May 29, 2026)
 // Heights: 10, 40, 60, 80, 100, 120, 140, 160, 200m
 // Years: 2007-2014, Intervals: 5, 15, 30, 60 min
 // NOTE: .csv endpoint redirects to S3 which lacks CORS → use JSON endpoint
@@ -11990,7 +11994,9 @@ async function downloadNREL(){
   const lat=parseFloat($('e5La').value);
   const lon=parseFloat($('e5Lo').value);
   const apiKey=$('nrelApiKey')?.value||'';
-  if(!apiKey){alert('Enter your NREL API key (free at developer.nrel.gov/signup — sign up takes 1 min)');return;}
+  // v51.0: Save API key to localStorage for persistence
+  if(apiKey)try{localStorage.setItem('nrelApiKey',apiKey);}catch(e){}
+  if(!apiKey){alert('Enter your NREL API key (free at developer.nlr.gov/signup — sign up takes 1 min)');return;}
   if(isNaN(lat)||isNaN(lon)){alert('Enter latitude/longitude first');return;}
   // Validate USA CONUS bounds (approximately)
   if(lat<24||lat>50||lon<-125||lon>-65){
@@ -12033,12 +12039,12 @@ async function downloadNREL(){
     });
     if(attributes)params.set('attributes',attributes);
     // ── Strategy: Try .csv first (may work in some browsers), fall back to JSON + S3 download ──
-    // The .csv endpoint on developer.nrel.gov redirects to S3 (no CORS).
+    // The .csv endpoint on developer.nlr.gov redirects to S3 (no CORS).
     // We try fetch with redirect:'follow' first, which may work if browser
     // doesn't enforce CORS on the redirect target. If that fails, we use
     // the JSON endpoint to get the S3 download URL and open it for the user.
     let csvText=null;
-    const apiBase='https://developer.nrel.gov/api/wind-toolkit/v2/wind/wtk-download';
+    const apiBase='https://developer.nlr.gov/api/wind-toolkit/v2/wind/wtk-download';
     // Attempt 1: Direct CSV fetch (may work if CORS redirect is allowed)
     $('nrelStatus').textContent='Downloading CSV (attempt 1)...';
     try{
