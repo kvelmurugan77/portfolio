@@ -437,8 +437,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
       <!-- WAsP FLOW ANALYSIS — ONE-BUTTON CARD -->
       <div class="card" style="border-color:var(--mint);border-width:2px"><div class="card-title green">WAsP Analysis</div>
         <div style="font-size:.52rem;color:var(--text3);margin-bottom:.3rem"><b>One-button workflow:</b> VE → MCP → Terrain → OW Flow → Wake → AEP — everything runs automatically, just like WAsP.</div>
-        <div class="g2" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Data Source</label><select class="fs" id="analysisSource" onchange="onAnalysisSourceChange()"><option value="">Current Primary</option></select></div><div class="fg"><label class="fl">&nbsp;</label><label style="font-size:.6rem;cursor:pointer;display:flex;align-items:center;gap:.3rem;padding-top:.25rem"><input type="checkbox" id="useREWS" style="accent-color:var(--mint)"><span>Use REWS for power calc</span></label></div></div>
-        <div class="g2" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">&nbsp;</label><label style="font-size:.6rem;cursor:pointer;display:flex;align-items:center;gap:.3rem;padding-top:.25rem"><input type="checkbox" id="useGeostrophic" style="accent-color:var(--gold)"><span>Include geostrophic correction</span></label></div><div class="fg"></div></div>
+        <div class="g2" style="gap:.4rem;margin-bottom:.4rem"><div class="fg"><label class="fl">Data Source(s)</label><div id="analysisSourceList" style="max-height:150px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:.3rem .4rem;font-size:.6rem"><div style="color:var(--text3)">Load wind data first</div></div></div><div class="fg"><label class="fl">&nbsp;</label><label style="font-size:.6rem;cursor:pointer;display:flex;align-items:center;gap:.3rem;padding-top:.25rem"><input type="checkbox" id="useREWS" style="accent-color:var(--mint)"><span>Use REWS for power calc</span></label><label style="font-size:.6rem;cursor:pointer;display:flex;align-items:center;gap:.3rem;padding-top:.25rem"><input type="checkbox" id="useGeostrophic" style="accent-color:var(--gold)"><span>Include geostrophic correction</span></label></div></div>
         <!-- Advanced options collapsible -->
         <details style="margin-bottom:.5rem"><summary style="font-size:.58rem;font-weight:600;color:var(--sky);cursor:pointer;letter-spacing:.08em;text-transform:uppercase;padding:.3rem 0">▶ Advanced Options</summary>
           <div style="padding-top:.4rem">
@@ -792,14 +791,32 @@ function enrichWindSource(name){
   updateWindDataRegistry();
 }
 
-// v36.0: Update the Wind Data Registry table UI
+// v54.0: Update the Wind Data Registry table UI — grouped by mast site
 function updateWindDataRegistry(){
   const el=$('windDataRegistryBody');if(!el)return;
   const keys=Object.keys(S.windSources||{});
   if(!keys.length){el.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--text3)">No data sources loaded</td></tr>';return;}
   // v49.0: Grid resolution labels per data source — show each source's ACTUAL grid
   const gridLabels={ERA5:'0.25°',ERA5T:'0.25°',ERA5_LT:'0.25°',MERRA2:'0.5°×0.625°',NCEP:'1.875°',NEWA:'~3km',GWA:'~3km',CSV:'—'};
-  el.innerHTML=keys.map(k=>{
+
+  // v54.0: Group sources by mast/site name
+  const groups={};
+  const standalone=[];
+  keys.forEach(k=>{
+    const baseMatch=k.match(/^(.+?)_(\d+)m$/);
+    if(baseMatch){
+      const base=baseMatch[1];
+      if(!groups[base])groups[base]=[];
+      groups[base].push(k);
+    }else{
+      standalone.push(k);
+    }
+  });
+
+  let html='';
+
+  // Render standalone sources
+  standalone.forEach(k=>{
     const ws=S.windSources[k];
     const vs=ws.speeds||[];
     const mean=ws.meanWS||(vs.filter(v=>v>0.5).reduce((s,v,_,a)=>s+v/a.length,0)||0);
@@ -810,8 +827,39 @@ function updateWindDataRegistry(){
     const hh=ws.sourceHeight||ws.mastH||'—';
     const sd=ws.startDate||'—';const ed=ws.endDate||'—';
     const active=S.windSource===k;
-    return `<tr style="${active?'background:var(--mint3)':''}"><td style="color:${active?'var(--mint)':'var(--text)'};font-weight:${active?600:400}">${k}${active?' ★':''}</td><td>${lat}</td><td>${lon}</td><td style="color:var(--sky);font-size:.58rem">${grid}</td><td>${hh}</td><td>${vs.length.toLocaleString()}</td><td>${typeof mean==='number'?mean.toFixed(2):mean}</td><td>${typeof wbA==='number'?wbA.toFixed(2):wbA}</td><td>${typeof wbK==='number'?wbK.toFixed(2):wbK}</td><td>${sd}→${ed}</td></tr>`;
-  }).join('');
+    html+=`<tr style="${active?'background:var(--mint3)':''}"><td style="color:${active?'var(--mint)':'var(--text)'};font-weight:${active?600:400}">${k}${active?' ★':''}</td><td>${lat}</td><td>${lon}</td><td style="color:var(--sky);font-size:.58rem">${grid}</td><td>${hh}</td><td>${vs.length.toLocaleString()}</td><td>${typeof mean==='number'?mean.toFixed(2):mean}</td><td>${typeof wbA==='number'?wbA.toFixed(2):wbA}</td><td>${typeof wbK==='number'?wbK.toFixed(2):wbK}</td><td>${sd}→${ed}</td></tr>`;
+  });
+
+  // Render grouped sources (multi-height masts)
+  Object.keys(groups).sort().forEach(base=>{
+    const mainSrc=S.windSources[base];
+    const mainActive=S.windSource===base;
+    // Get common lat/lon from main source
+    const mLat=mainSrc&&mainSrc.sourceLat!=null?mainSrc.sourceLat.toFixed(4):(S.windSources[groups[base][0]]?.sourceLat?.toFixed(4)||'—');
+    const mLon=mainSrc&&mainSrc.sourceLon!=null?mainSrc.sourceLon.toFixed(4):(S.windSources[groups[base][0]]?.sourceLon?.toFixed(4)||'—');
+    const mGrid=gridLabels[base]||'—';
+    // Main source row (if exists)
+    if(mainSrc){
+      const vs=mainSrc.speeds||[];
+      const mean=mainSrc.meanWS||(vs.filter(v=>v>0.5).reduce((s,v,_,a)=>s+v/a.length,0)||0);
+      const wbA=mainSrc.weibullA||'—';const wbK=mainSrc.weibullK||'—';
+      const hh=mainSrc.sourceHeight||mainSrc.mastH||'—';
+      const sd=mainSrc.startDate||'—';const ed=mainSrc.endDate||'—';
+      html+=`<tr style="border-top:2px solid var(--border);${mainActive?'background:var(--mint3)':''}"><td style="color:var(--gold);font-weight:600">⚙ ${base}${mainActive?' ★':''}</td><td>${mLat}</td><td>${mLon}</td><td style="color:var(--sky);font-size:.58rem">${mGrid}</td><td>${hh}</td><td>${vs.length.toLocaleString()}</td><td>${typeof mean==='number'?mean.toFixed(2):mean}</td><td>${typeof wbA==='number'?wbA.toFixed(2):wbA}</td><td>${typeof wbK==='number'?wbK.toFixed(2):wbK}</td><td>${sd}→${ed}</td></tr>`;
+    }
+    // Sub-height rows
+    groups[base].forEach(k=>{
+      const ws=S.windSources[k];
+      const vs=ws.speeds||[];
+      const mean=ws.meanWS||(vs.filter(v=>v>0.5).reduce((s,v,_,a)=>s+v/a.length,0)||0);
+      const wbA=ws.weibullA||'—';const wbK=ws.weibullK||'—';
+      const hh=ws.sourceHeight||ws.mastH||'—';
+      const active=S.windSource===k;
+      html+=`<tr style="${active?'background:var(--mint3)':''};opacity:.8"><td style="padding-left:1.2rem;color:${active?'var(--mint)':'var(--text3)'};font-size:.6rem">└ ${k}</td><td style="font-size:.58rem">${mLat}</td><td style="font-size:.58rem">${mLon}</td><td style="color:var(--sky);font-size:.55rem">${mGrid}</td><td>${hh}</td><td>${vs.length.toLocaleString()}</td><td>${typeof mean==='number'?mean.toFixed(2):mean}</td><td>${typeof wbA==='number'?wbA.toFixed(2):wbA}</td><td>${typeof wbK==='number'?wbK.toFixed(2):wbK}</td><td style="font-size:.55rem">—</td></tr>`;
+    });
+  });
+
+  el.innerHTML=html;
 }
 
 // 2. Smooth Weibull k values across sectors (v16.0 — WAsP-aligned)
@@ -5482,9 +5530,10 @@ function importWindPRO(raw,fileName){
     if(existingMast){
       existingMast.lat=lat;existingMast.lon=lon;existingMast.height=selectedHeight;
       existingMast.name=mastName||existingMast.name;
+      existingMast.heights=heights;
       renderMastList();
     }else{
-      S.masts=[{id:1,name:mastName||'WindPRO Mast',lat,lon,height:selectedHeight,z0:parseFloat($('z0val').value)||0.0002,primary:true,startDate:ts[0]||'',endDate:ts[ts.length-1]||''}];
+      S.masts=[{id:1,name:mastName||'WindPRO Mast',lat,lon,height:selectedHeight,z0:parseFloat($('z0val').value)||0.0002,primary:true,startDate:ts[0]||'',endDate:ts[ts.length-1]||'',heights:heights}];
       renderMastList();
     }
     S._mastUserSet=true;
@@ -5761,11 +5810,12 @@ function importWindographer(raw,fileName){
       existingMast.lat=lat;existingMast.lon=lon;existingMast.height=bestWSHeight;
       existingMast.name=siteName||existingMast.name;
       if(elevation)existingMast.elevation=elevation;
+      existingMast.heights=wsHeights;
       existingMast.startDate=ts[0]||existingMast.startDate;
       existingMast.endDate=ts[ts.length-1]||existingMast.endDate;
       renderMastList();
     }else{
-      S.masts=[{id:1,name:siteName||'Windographer Mast',lat,lon,height:bestWSHeight,z0:parseFloat($('z0val').value)||0.03,primary:true,startDate:ts[0]||'',endDate:ts[ts.length-1]||'',elevation:elevation}];
+      S.masts=[{id:1,name:siteName||'Windographer Mast',lat,lon,height:bestWSHeight,z0:parseFloat($('z0val').value)||0.03,primary:true,startDate:ts[0]||'',endDate:ts[ts.length-1]||'',elevation:elevation,heights:wsHeights}];
       renderMastList();
     }
     S._mastUserSet=true;
@@ -5782,21 +5832,50 @@ function importWindographer(raw,fileName){
   if(typeof validateCheckpoint==='function')validateCheckpoint();
 }
 
-// v53.0: Draw wind mast markers on the map
+// v54.0: Draw wind mast markers on the map
 function drawMastMarkers(){
   if(!leafMap)return;
   // Remove existing mast markers
   if(S.mastMarkers)S.mastMarkers.forEach(m=>m.remove());
   S.mastMarkers=[];
 
+  // v54.0: Count measurement heights per mast from windSources
+  const mastHeights={};
+  S.masts.forEach(m=>{
+    const baseName=m.name.replace(/\s+/g,'');
+    mastHeights[m.name]={heights:[m.height],allHeights:[m.height]};
+  });
+  // Find multi-height sources matching mast names
+  Object.keys(S.windSources||{}).forEach(k=>{
+    const baseMatch=k.match(/^(.+?)_(\d+)m$/);
+    if(baseMatch){
+      const base=baseMatch[1];
+      // Try to match to a mast
+      S.masts.forEach(m=>{
+        const mName=m.name.replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+        const bName=base.replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+        if(mName===bName||mName.startsWith(bName)){
+          if(!mastHeights[m.name])mastHeights[m.name]={heights:[m.height],allHeights:[]};
+          const h=parseInt(baseMatch[2]);
+          if(!mastHeights[m.name].allHeights.includes(h)){
+            mastHeights[m.name].allHeights.push(h);
+          }
+        }
+      });
+    }
+  });
+
   S.masts.forEach((m,i)=>{
+    const mh=mastHeights[m.name]||{allHeights:[m.height]};
+    const nHeights=mh.allHeights.length;
+    const heightStr=nHeights>1?mh.allHeights.sort((a,b)=>b-a).join('/')+'m':m.height+'m';
     // Mast icon: red diamond with wind vane symbol
     const glow=L.circleMarker([m.lat,m.lon],{radius:12,color:'#ff6b6b',fillColor:'#ff6b6b',fillOpacity:.15,weight:0}).addTo(leafMap);
     const marker=L.circleMarker([m.lat,m.lon],{radius:7,color:'#fff',fillColor:'#ff6b6b',fillOpacity:.9,weight:2}).addTo(leafMap);
     const label=L.marker([m.lat,m.lon],{
-      icon:L.divIcon({className:'',html:`<div style="background:rgba(255,107,107,.85);color:#fff;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;white-space:nowrap;transform:translate(-50%,-180%);text-shadow:0 1px 2px rgba(0,0,0,.4)">${m.name||'Mast '+(i+1)} ${m.height}m</div>`,iconSize:[0,0]})
+      icon:L.divIcon({className:'',html:`<div style="background:rgba(255,107,107,.85);color:#fff;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;white-space:nowrap;transform:translate(-50%,-180%);text-shadow:0 1px 2px rgba(0,0,0,.4)">${m.name||'Mast '+(i+1)} ${heightStr}${nHeights>1?' ('+nHeights+' heights)':''}</div>`,iconSize:[0,0]})
     }).addTo(leafMap);
-    marker.bindTooltip(`${m.name||'Mast '+(i+1)}<br>Lat: ${m.lat.toFixed(4)}<br>Lon: ${m.lon.toFixed(4)}<br>Height: ${m.height}m${m.elevation?'<br>Elev: '+m.elevation+'m':''}${m.startDate?'<br>Period: '+m.startDate.slice(0,10)+' → '+(m.endDate?m.endDate.slice(0,10):''):''}${m.primary?'<br>★ PRIMARY':''}`);
+    marker.bindTooltip(`${m.name||'Mast '+(i+1)}<br>Lat: ${m.lat.toFixed(4)}<br>Lon: ${m.lon.toFixed(4)}<br>Height: ${heightStr}${nHeights>1?'<br>Measurement levels: '+mh.allHeights.sort((a,b)=>b-a).join(', '):''}${m.elevation?'<br>Elev: '+m.elevation+'m':''}${m.startDate?'<br>Period: '+m.startDate.slice(0,10)+' → '+(m.endDate?m.endDate.slice(0,10):''):''}${m.primary?'<br>★ PRIMARY':''}`);
     S.mastMarkers.push(glow,marker,label);
   });
 }
@@ -10910,9 +10989,9 @@ function drawPowerCurve(){
 // ── MULTI-MAST SUPPORT ──
 if(!S.masts)S.masts=[];
 function addMast(){
-  const m={id:S.masts.length+1,name:'Mast '+(S.masts.length+1),lat:parseFloat($('mastLat')?.value||55.5),lon:parseFloat($('mastLon')?.value||7.9),height:parseFloat($('mastH')?.value||100),z0:parseFloat($('z0val')?.value||0.0002),primary:S.masts.length===0,startDate:'',endDate:''};
+  const m={id:S.masts.length+1,name:'Mast '+(S.masts.length+1),lat:parseFloat($('mastLat')?.value||55.5),lon:parseFloat($('mastLon')?.value||7.9),height:parseFloat($('mastH')?.value||100),z0:parseFloat($('z0val')?.value||0.0002),primary:S.masts.length===0,startDate:'',endDate:'',heights:[parseFloat($('mastH')?.value||100)]};
   S.masts.push(m);
-  renderMastList();
+  renderMastList();drawMastMarkers();
   editMast(S.masts.length-1);
 }
 function editMast(idx){
@@ -10933,7 +11012,7 @@ function saveMast(){
   if(m.primary)S.masts.forEach((mm,i)=>{if(i!==idx)mm.primary=false;});
   // Sync to the legacy single-mast fields
   if(m.primary){$('mastH').value=m.height;$('mastLat').value=m.lat;$('mastLon').value=m.lon;}
-  renderMastList();
+  renderMastList();drawMastMarkers();
   log(`Mast saved: ${m.name} (${m.lat}, ${m.lon}, ${m.height}m)${m.primary?' [PRIMARY]':''}`,'i');
 }
 function removeMast(){
@@ -10941,7 +11020,7 @@ function removeMast(){
   if(isNaN(idx))return;
   S.masts.splice(idx,1);
   $('mastEditCard').style.display='none';
-  renderMastList();
+  renderMastList();drawMastMarkers();
 }
 function syncMastToUI(){
   if(S.masts.length===0){
@@ -10955,7 +11034,7 @@ function renderMastList(){
   el.innerHTML='';
   S.masts.forEach((m,i)=>{
     const div=document.createElement('div');div.className='mast-card'+(m.primary?' primary':'');
-    div.innerHTML=`<div class="mast-header"><span class="mast-name">${m.name}${m.primary?' ★':''}</span><button class="btn btn-sm btn-ghost" onclick="editMast(${i})" style="padding:.15rem .4rem;font-size:.5rem">Edit</button></div><div style="font-size:.6rem;color:var(--text3)">Lat: ${m.lat.toFixed(4)} · Lon: ${m.lon.toFixed(4)} · H: ${m.height}m${m.elevation?' · Elev: '+m.elevation+'m':''}${m.startDate?' · '+m.startDate.slice(0,10)+'→'+(m.endDate?m.endDate.slice(0,10):''):''}</div>`;
+    div.innerHTML=`<div class="mast-header"><span class="mast-name">${m.name}${m.primary?' ★':''}</span><button class="btn btn-sm btn-ghost" onclick="editMast(${i})" style="padding:.15rem .4rem;font-size:.5rem">Edit</button></div><div style="font-size:.6rem;color:var(--text3)">Lat: ${m.lat.toFixed(4)} · Lon: ${m.lon.toFixed(4)} · H: ${m.heights&&m.heights.length>1?m.heights.sort((a,b)=>b-a).join('/')+'m':m.height+'m'}${m.elevation?' · Elev: '+m.elevation+'m':''}${m.startDate?' · '+m.startDate.slice(0,10)+'→'+(m.endDate?m.endDate.slice(0,10):''):''}</div>`;
     div.style.cursor='pointer';div.onclick=function(e){if(e.target.tagName!=='BUTTON')editMast(i);};
     el.appendChild(div);
   });
@@ -10970,7 +11049,7 @@ function importMastData(event){
         const lat=+p[0],lon=+p[1],h=p[2]?+p[2]:100,name=p[3]||'Mast '+(S.masts.length+1);
         if(!isNaN(lat)&&!isNaN(lon))S.masts.push({id:S.masts.length+1,name,lat,lon,height:h,z0:0.03,primary:S.masts.length===0,startDate:'',endDate:''});
       }
-      renderMastList();log(`Imported ${S.masts.length} masts from ${f.name}`,'i');
+      renderMastList();drawMastMarkers();log(`Imported ${S.masts.length} masts from ${f.name}`,'i');
     }catch(err){log('Mast import failed: '+err.message,'e');}
   };r.readAsText(f);event.target.value='';
 }
@@ -14134,18 +14213,57 @@ function refreshAllSourceDropdowns(){
   const rewsS=$('rewsSource');
   if(rewsS){const cur=rewsS.value;rewsS.innerHTML=buildSourceOptions(true);rewsS.value=cur||'wind';}
 
-  // 6. Analysis source dropdown (Step 7)
-  const aSel=$('analysisSource');
-  if(aSel){
-    const curA=aSel.value;
-    let aOpts='<option value="">Current Primary</option>';
-    available.forEach(k=>{
-      const ws=S.windSources[k];
-      const h=ws.sourceHeight||ws.mastH||'?';
-      aOpts+=`<option value="${k}">${k} (${h}m)</option>`;
-    });
-    aSel.innerHTML=aOpts;
-    if(curA)aSel.value=curA;
+  // 6. Analysis source checklist (Step 5) — multi-select checkboxes
+  const aList=$('analysisSourceList');
+  if(aList){
+    if(!available.length){
+      aList.innerHTML='<div style="color:var(--text3)">Load wind data first</div>';
+    }else{
+      // Group sources by mast/site (sources sharing same lat/lon prefix)
+      const groups={};
+      const standalone=[];
+      available.forEach(k=>{
+        const ws=S.windSources[k];
+        // Check if this is a multi-height source (has _XXm suffix from same base)
+        const baseMatch=k.match(/^(.+?)_(\d+)m$/);
+        if(baseMatch){
+          const base=baseMatch[1];
+          if(!groups[base])groups[base]=[];
+          groups[base].push(k);
+        }else{
+          standalone.push(k);
+        }
+      });
+      let html='<label style="display:flex;align-items:center;gap:.3rem;padding:.15rem 0;cursor:pointer;color:var(--mint);font-weight:600"><input type="checkbox" class="analysisSrcAll" onchange="toggleAllAnalysisSources(this.checked)" style="accent-color:var(--mint)">Select All</label>';
+      // Render standalone sources
+      standalone.forEach(k=>{
+        const ws=S.windSources[k];
+        const h=ws.sourceHeight||ws.mastH||'?';
+        const active=S.windSource===k;
+        html+=`<label style="display:flex;align-items:center;gap:.3rem;padding:.12rem 0;cursor:pointer;${active?'color:var(--mint);font-weight:600':''}"><input type="checkbox" class="analysisSrc" value="${k}" ${active?'checked':''} style="accent-color:var(--mint)">${k} (${h}m)</label>`;
+      });
+      // Render grouped sources (multi-height masts)
+      Object.keys(groups).sort().forEach(base=>{
+        const mainSrc=S.windSources[base];
+        const mainH=mainSrc?(mainSrc.sourceHeight||mainSrc.mastH||'?'):'';
+        const isMainActive=S.windSource===base;
+        html+=`<div style="margin-top:.3rem;padding-top:.2rem;border-top:1px solid var(--border)">`;
+        html+=`<div style="color:var(--gold);font-weight:600;font-size:.55rem;padding:.1rem 0">⚙ ${base}${mainSrc?' ('+mainH+'m)':''}</div>`;
+        // Main source checkbox
+        if(mainSrc){
+          html+=`<label style="display:flex;align-items:center;gap:.3rem;padding:.1rem .5rem;cursor:pointer;${isMainActive?'color:var(--mint);font-weight:600':''}"><input type="checkbox" class="analysisSrc" value="${base}" ${isMainActive?'checked':''} style="accent-color:var(--mint)">${base} (${mainH}m) ★</label>`;
+        }
+        // Sub-height checkboxes
+        groups[base].forEach(k=>{
+          const ws=S.windSources[k];
+          const h=ws.sourceHeight||ws.mastH||'?';
+          const active=S.windSource===k;
+          html+=`<label style="display:flex;align-items:center;gap:.3rem;padding:.08rem .5rem;cursor:pointer;font-size:.55rem;${active?'color:var(--mint);font-weight:600':''}"><input type="checkbox" class="analysisSrc" value="${k}" ${active?'checked':''} style="accent-color:var(--mint)">${k} (${h}m)</label>`;
+        });
+        html+=`</div>`;
+      });
+      aList.innerHTML=html;
+    }
   }
 
   // 7. Primary Data Source dropdown (Step 3) — already handled in updateDataSourceUI
@@ -14166,14 +14284,30 @@ function refreshAllSourceDropdowns(){
 // v37.0: Keep updateMCPSourceDropdowns as alias for backwards compat
 function updateMCPSourceDropdowns(){refreshAllSourceDropdowns();}
 
-// v37.0: Handle analysis source change in Step 7
+// v54.0: Toggle all analysis source checkboxes
+function toggleAllAnalysisSources(checked){
+  document.querySelectorAll('.analysisSrc').forEach(cb=>{cb.checked=checked;});
+}
+
+// v54.0: Get selected analysis sources from checkboxes
+function getSelectedAnalysisSources(){
+  const cbs=document.querySelectorAll('.analysisSrc:checked');
+  if(!cbs.length){
+    // Fall back to current primary
+    return S.windSource?[S.windSource]:[];
+  }
+  return Array.from(cbs).map(cb=>cb.value);
+}
+
+// v54.0: Handle analysis source selection — uses checkboxes, supports multiple
 function onAnalysisSourceChange(){
-  const src=$('analysisSource')?.value;
-  if(!src){
-    // Use current primary data
+  const sources=getSelectedAnalysisSources();
+  if(!sources.length){
     log('Analysis: Using current primary wind data','i');
     return;
   }
+  // Switch to the first selected source as primary
+  const src=sources[0];
   if(S.windSources[src]){
     const ws=S.windSources[src];
     S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[]};
@@ -14183,7 +14317,6 @@ function onAnalysisSourceChange(){
     const lat=ws.sourceLat!=null?ws.sourceLat.toFixed(4):'?';
     const lon=ws.sourceLon!=null?ws.sourceLon.toFixed(4):'?';
     log(`Analysis source: ${src} @ ${lat}°, ${lon}° · ${h}m · ${(ws.speeds?.length||0).toLocaleString()} records`,'i');
-    // Update mast height to match source
     if(ws.mastH&&$('mastH'))$('mastH').value=ws.mastH;
     if(ws.sourceLat!=null&&ws.sourceLon!=null){
       $('mastLat').value=ws.sourceLat.toFixed(3);$('mastLon').value=ws.sourceLon.toFixed(3);
@@ -14483,26 +14616,30 @@ async function runWAsPAnalysis(){
   // Sync hidden fields
   if ($('reHubH')) $('reHubH').value = parseFloat($('hubH')?.value || 120);
   if ($('reRotD')) $('reRotD').value = parseFloat($('rotD')?.value || 150);
+  // v54.0: Get selected sources from checkboxes
+  const selectedSources=getSelectedAnalysisSources();
+  const primarySource=selectedSources[0]||S.windSource||'';
   if ($('rewsSource')) {
-    const src = $('analysisSource')?.value || 'wind';
-    $('rewsSource').value = src === '' ? 'wind' : src;
+    $('rewsSource').value = primarySource || 'wind';
   }
   if ($('geoSource')) {
-    const src = $('analysisSource')?.value || 'wind';
-    $('geoSource').value = src === '' ? 'wind' : src;
+    $('geoSource').value = primarySource || 'wind';
   }
 
   const useREWS = $('useREWS')?.checked || false;
   const useGeo = $('useGeostrophic')?.checked || false;
 
-  log('── WAsP Analysis (v41.0) ──', 'i');
+  // v54.0: Multi-source analysis support
+  const isMultiSource=selectedSources.length>1;
+  if(isMultiSource){
+    log(`── WAsP Analysis (v54.0) — Multi-Source [${selectedSources.join(', ')}] ──`, 'i');
+  }else{
+    log('── WAsP Analysis (v41.0) ──', 'i');
+  }
   log('  Options: REWS='+useREWS+', Geostrophic='+useGeo, 'i');
 
-  // v41.0 CRITICAL FIX: Sync data source with analysis
-  // When user selects a data source in the dropdown, S.wind must be updated
-  // AND mastH must match the data source height. Otherwise vertical extrapolation
-  // produces wrong results (e.g. data at 138m but mastH=100m → double extrapolation)
-  const srcName = $('analysisSource')?.value || '';
+  // v54.0: Sync data source with analysis — use primary from checkboxes
+  const srcName = primarySource || '';
   if(srcName && S.windSources[srcName]){
     const ws=S.windSources[srcName];
     S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[]};
@@ -14612,8 +14749,41 @@ async function runWAsPAnalysis(){
   await new Promise(r => setTimeout(r, 100));
 
   try {
+    // v54.0: Multi-source analysis — run AEP for each selected source
+    const sourcesToRun=isMultiSource?selectedSources:[srcName||S.windSource||'primary'];
+    const multiResults=[];
+
+    for(let si=0;si<sourcesToRun.length;si++){
+      const thisSrc=sourcesToRun[si];
+
+      // For multi-source, switch to each source before running
+      if(isMultiSource && S.windSources[thisSrc]){
+        const ws=S.windSources[thisSrc];
+        S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[]};
+        S.mcpFactor=ws.mcpFactor||1;
+        S.windSource=thisSrc;
+        if(ws.sourceHeight&&$('mastH'))$('mastH').value=ws.sourceHeight;
+        else if(ws.mastH&&$('mastH'))$('mastH').value=ws.mastH;
+        if(ws.sourceLat!=null&&ws.sourceLon!=null){
+          $('mastLat').value=ws.sourceLat.toFixed(3);$('mastLon').value=ws.sourceLon.toFixed(3);
+        }
+        log(`  [${si+1}/${sourcesToRun.length}] Running with ${thisSrc} @ ${((ws.sourceHeight||ws.mastH)||'?')}m`,'i');
+        pbEl.style.width = (70 + 25*(si/sourcesToRun.length)) + '%';
+        statusEl.textContent = `Running ${thisSrc} (${si+1}/${sourcesToRun.length})...`;
+
+        // Re-apply VE for this source
+        const curSrcH=ws.sourceHeight||ws.mastH||parseFloat($('mastH')?.value||100);
+        if(Math.abs(curSrcH-targetHH)>1){
+          try{runVertExtrap();}catch(e){}
+        }
+      }
+
     let R = calcAEP();
     if (!R) {
+      if(isMultiSource){
+        log(`  [${thisSrc}] AEP calculation failed — skipping`,'w');
+        continue;
+      }
       statusEl.textContent = 'Error in AEP calculation';
       statusEl.style.color = 'var(--red)';
       runBtn.disabled = false;
@@ -14626,6 +14796,13 @@ async function runWAsPAnalysis(){
     if (!S.waspCalibration || S.waspCalibration.source === 'default') autoApplyDefaultCalibration();
     if ($('calApplyCB')?.checked && S.waspCalibration) R = applyWaspCalibration(R);
 
+    // v54.0: Store per-source results
+    if(isMultiSource){
+      multiResults.push({source:thisSrc,netAEP:R.netAEP_final||R.netAEP,grossAEP:R.grossAEP,wakeLoss:R.wakeLoss,CF:R.CF,meanWS:R.hubMean});
+      log(`  [${thisSrc}] Net=${(R.netAEP_final||R.netAEP).toFixed(2)} GWh, Wake=${R.wakeLoss.toFixed(1)}%, CF=${R.CF.toFixed(1)}%`,'i');
+    }
+
+    // Use the last (or only) result as the main result
     S.results = R;
     updateResultsUI(R);
     updateWindUI(S.wind.speeds, S.wind.dirs);
@@ -14638,15 +14815,27 @@ async function runWAsPAnalysis(){
       const minFree = Math.min(...freeWSvals).toFixed(2), maxFree = Math.max(...freeWSvals).toFixed(2);
       log('  Free-stream WS range: ' + minFree + '\u2013' + maxFree + ' m/s', 'i');
     }
+    } // end multi-source loop
 
     pbEl.style.width = '100%';
     statusEl.textContent = '\u2713 Complete';
     statusEl.style.color = 'var(--mint)';
 
+    // v54.0: Log multi-source summary
+    if(isMultiSource && multiResults.length>1){
+      log('── Multi-Source Summary ──','i');
+      multiResults.forEach(r=>{
+        log(`  ${r.source}: Net=${r.netAEP.toFixed(2)} GWh, Wake=${r.wakeLoss.toFixed(1)}%, CF=${r.CF.toFixed(1)}%`,'i');
+      });
+      const avgNet=multiResults.reduce((s,r)=>s+r.netAEP,0)/multiResults.length;
+      log(`  Average Net AEP: ${avgNet.toFixed(2)} GWh (${multiResults.length} sources)`,'i');
+    }
+
+    const R=S.results;
     const netFinal = R.netAEP_final || R.netAEP;
-    setStatus('\u2713 Net AEP: ' + netFinal.toFixed(2) + ' GWh | Wake: ' + R.wakeLoss.toFixed(1) + '% | CF: ' + R.CF.toFixed(1) + '%' + (R.bzEnabled ? ' [BZ]' : '') + (R.calibrated ? ' [WAsP Cal]' : ''));
+    setStatus('\u2713 Net AEP: ' + netFinal.toFixed(2) + ' GWh | Wake: ' + R.wakeLoss.toFixed(1) + '% | CF: ' + R.CF.toFixed(1) + '%' + (R.bzEnabled ? ' [BZ]' : '') + (R.calibrated ? ' [WAsP Cal]' : '') + (isMultiSource ? ` [${selectedSources.length} sources]` : ''));
     $('sbAEP').textContent = netFinal.toFixed(2) + ' GWh';
-    log('\u2713 WAsP Analysis complete: Gross=' + R.grossAEP.toFixed(2) + ' GWh \u00b7 Wake=' + R.wakeLoss.toFixed(1) + '% \u00b7 Net=' + R.netAEP.toFixed(2) + ' GWh \u00b7 CF=' + R.CF.toFixed(1) + '%' + (R.bzEnabled ? ' \u00b7 BZ' : '') + (R.calibrated ? ' \u00b7 WAsP-cal' : '') + (useREWS ? ' \u00b7 REWS' : '') + (useGeo ? ' \u00b7 Geo' : ''), 'i');
+    log('\u2713 WAsP Analysis complete: Gross=' + R.grossAEP.toFixed(2) + ' GWh \u00b7 Wake=' + R.wakeLoss.toFixed(1) + '% \u00b7 Net=' + R.netAEP.toFixed(2) + ' GWh \u00b7 CF=' + R.CF.toFixed(1) + '%' + (R.bzEnabled ? ' \u00b7 BZ' : '') + (R.calibrated ? ' \u00b7 WAsP-cal' : '') + (useREWS ? ' \u00b7 REWS' : '') + (useGeo ? ' \u00b7 Geo' : '') + (isMultiSource ? ` \u00b7 ${selectedSources.length} sources` : ''), 'i');
 
   } catch (e) {
     log('Engine error: ' + e.message, 'e');
@@ -14665,15 +14854,19 @@ function runWAsPFlow() {
   const statusEl = $('waspFlowStatus');
   runBtn.disabled = true;
 
+  // v54.0: Get selected sources from checkboxes
+  const selectedSources2=getSelectedAnalysisSources();
+  const primarySource=selectedSources2[0]||S.windSource||'';
+
   // Sync hidden REWS/Geo fields from main settings
   if ($('reHubH')) $('reHubH').value = parseFloat($('hubH')?.value || 120);
   if ($('reRotD')) $('reRotD').value = parseFloat($('rotD')?.value || 150);
   if ($('rewsSource')) {
-    const src = $('analysisSource')?.value || 'wind';
+    const src = primarySource || 'wind';
     $('rewsSource').value = src === '' ? 'wind' : src;
   }
   if ($('geoSource')) {
-    const src = $('analysisSource')?.value || 'wind';
+    const src = primarySource || 'wind';
     $('geoSource').value = src === '' ? 'wind' : src;
   }
 
@@ -14683,8 +14876,8 @@ function runWAsPFlow() {
   log('── WAsP Flow (v41.0) ──', 'i');
   log(`  Options: REWS=${useREWS}, Geostrophic=${useGeo}`, 'i');
 
-  // v41.0: Sync data source with analysis (same as runWAsPAnalysis)
-  const srcName2 = $('analysisSource')?.value || '';
+  // v54.0: Sync data source with analysis (same as runWAsPAnalysis)
+  const srcName2 = primarySource || '';
   if(srcName2 && S.windSources[srcName2]){
     const ws=S.windSources[srcName2];
     S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[]};
