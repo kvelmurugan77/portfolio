@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 54.0</title>
+<title>WindFlow Pro 55.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 54.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 55.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -482,7 +482,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div id="mcResults" style="font-size:.6rem;color:var(--text3);margin-top:.3rem;display:none"></div>
       </div>
       <div class="card"><div class="card-title">Per-Turbine AEP</div>
-        <div class="tbl-wrap" style="max-height:150px"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Eff.SU</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="aepBody"><tr><td colspan="12" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div>
+        <div class="tbl-wrap" style="max-height:150px"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Eff.SU</th><th>ρ kg/m³</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="aepBody"><tr><td colspan="13" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div>
       </div>
       <div class="card"><div class="card-title">Wind Rose</div><div class="rose-canvas-wrap"><canvas id="roseCanvas" width="400" height="350"></canvas></div></div>
       <div class="card"><div class="card-title">Sector OW Flow Speedup</div><div class="canvas-wrap" style="height:150px"><canvas id="bzSectChart"></canvas></div></div>
@@ -491,7 +491,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   </div>
   <div class="tab-bar" style="margin-top:.5rem"><button class="tab-btn active" onclick="showFlowTab(0,this)">OWC</button><button class="tab-btn" onclick="showFlowTab(1,this)">WS Chain</button><button class="tab-btn" onclick="showFlowTab(2,this)">GWC</button><button class="tab-btn" onclick="showFlowTab(3,this)">SWC Detail</button><button class="tab-btn" onclick="showFlowTab(4,this)">Time Series</button><button class="tab-btn" onclick="showFlowTab(5,this)">Calibration</button><button class="tab-btn" onclick="showFlowTab(6,this)">Engine Log</button></div>
   <div class="tab-panel active" id="flowTab0"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val sky" id="wMean">—</div><div class="metric-label">Mean WS m/s</div></div><div class="metric-item"><div class="metric-val" id="wPD">—</div><div class="metric-label">Power W/m²</div></div><div class="metric-item"><div class="metric-val sky" id="wA">—</div><div class="metric-label">Weibull A</div></div><div class="metric-item"><div class="metric-val gold" id="wK">—</div><div class="metric-label">Weibull k</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="wbChart"></canvas></div><div class="tbl-wrap" style="max-height:150px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>Freq%</th><th>A</th><th>k</th><th>WS</th></tr></thead><tbody id="sectBody"></tbody></table></div></div></div>
-  <div class="tab-panel" id="flowTab1"><div class="card"><div id="wscChain">Run analysis</div><div class="tbl-wrap" style="max-height:180px;margin-top:.5rem"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Eff.SU</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="wscBody"><tr><td colspan="12" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.5rem"><canvas id="wscChart"></canvas></div></div></div>
+  <div class="tab-panel" id="flowTab1"><div class="card"><div id="wscChain">Run analysis</div><div class="tbl-wrap" style="max-height:180px;margin-top:.5rem"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Eff.SU</th><th>ρ kg/m³</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="wscBody"><tr><td colspan="13" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.5rem"><canvas id="wscChart"></canvas></div></div></div>
   <div class="tab-panel" id="flowTab2"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="gcZ0">—</div><div class="metric-label">z₀ m</div></div><div class="metric-item"><div class="metric-val sky" id="gcSR">—</div><div class="metric-label">Mean SR</div></div><div class="metric-item"><div class="metric-val" id="gcWS">—</div><div class="metric-label">GWC WS</div></div><div class="metric-item"><div class="metric-val sky" id="gcSW">—</div><div class="metric-label">SWC WS</div></div></div><div id="bzGWCTbl"></div><div class="canvas-wrap" style="height:130px;margin-top:.4rem"><canvas id="shearChart2"></canvas></div></div></div>
   <div class="tab-panel" id="flowTab3"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="bz-maSU">—</div><div class="metric-label">Mast SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-mxSU">—</div><div class="metric-label">Max SU</div></div><div class="metric-item"><div class="metric-val sky" id="bz-miSU">—</div><div class="metric-label">Min SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-rix">—</div><div class="metric-label">RIX %</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>T#</th><th>WindMap SU</th><th>δ%</th><th>Turn°</th><th>OWC</th><th>GWC</th><th>SWC</th></tr></thead><tbody id="bzTBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run WindMap first</td></tr></tbody></table></div><div class="canvas-wrap" style="height:120px;margin-top:.4rem"><canvas id="bzBesChart"></canvas></div><div id="bzIBLnote" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">—</div><div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="metric-item"><div class="metric-val sky" id="bz-iblH">—</div><div class="metric-label">IBL Height m</div></div><div class="metric-item"><div class="metric-val" id="bz-roughRC">—</div><div class="metric-label">Rough. Corr.</div></div></div></div></div>
   <div class="tab-panel" id="flowTab4"><div class="card"><div class="card-title gold">Time Series</div><div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Start Year</label><input class="fi" id="tsSy" type="number" value="2022"></div><div class="fg"><label class="fl">End Year</label><input class="fi" id="tsEy" type="number" value="2022"></div></div><div class="fg"><label class="fl">Step</label><select class="fs" id="tsStep"><option value="1">1-hour</option><option value="3" selected>3-hour</option><option value="6">6-hour</option></select></div><button class="btn btn-gold" style="width:100%;margin-top:.4rem" onclick="runTimeSeries()">⏱ Run Time Series</button><div class="progress"><div class="progress-bar" id="tspb" style="width:0"></div></div><div id="tspt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div><div id="tsOut" style="display:none;margin-top:.5rem"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="tsRc">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val g" id="tsNt">—</div><div class="metric-label">Net GWh/yr</div></div><div class="metric-item"><div class="metric-val o" id="tsWk">—</div><div class="metric-label">Wake %</div></div><div class="metric-item"><div class="metric-val b" id="tsCf">—</div><div class="metric-label">CF %</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="monthChart"></canvas></div><div class="canvas-wrap" style="height:100px;margin-top:.3rem"><canvas id="diurnChart"></canvas></div><button class="btn btn-sm btn-ghost" style="margin-top:.3rem" onclick="exportTSCSV()">↓ Monthly CSV</button><button class="btn btn-sm btn-gold" style="margin-top:.3rem;width:100%" onclick="exportTSPerTurbineHourly()">↓ Per-WTG Hourly CSV</button></div></div></div>
@@ -3106,9 +3106,14 @@ function calcAEP(){
   log('v50.0 OW Flow Model — Jackson-Hunt orographic (Openwind/WAsP methodology)','i');
   log('v47.0 CRITICAL FIXES: (1) Removed grid-wide slope exit from terrainSpeedupJH — local profile always computed, (2) computeHillParameters uses valley floor ref — ridge-top turbines get speedup, (3) BZ model flat terrain: removed isFlatByRIX, only local range check, (4) Replaced bogus RIX formula with BZ.rix','i');
 
-  // v14.0: Per-WTG density correction based on elevation
+  // v55.0: Per-WTG density correction — extrapolated from mast/data source position to each WTG position
+  // Similar to WindPRO/WAsP/Openwind: air density at each WTG accounts for elevation difference
+  // between the reference (mast) position and the WTG position
   const usePerWtg=$('perWtgDensity')?.checked!==false;
-  const refElev=parseFloat($('siteElev').value)||0;
+  // v55.0: Use mast elevation as reference (not generic "site elevation")
+  const curSrcForDensity=S.windSource||'ERA5';
+  const srcWS=S.windSources[curSrcForDensity];
+  const refElev=srcWS?.elevation||(parseFloat($('siteElev').value)||0);
   const T_avg_K=S.era5Atm&&S.era5Atm.temp.length?
     S.era5Atm.temp.filter(v=>v!=null).reduce((s,v,_,a)=>s+v/a.length,0)+273.15 :
     (parseFloat($('siteTemp').value)||10)+273.15;
@@ -3971,10 +3976,11 @@ function updateResultsUI(R){
     </td></tr>
   </table>`;
   const tb=$('aepBody');tb.innerHTML='';
-  // v25.0: Updated to include Eff.SU column for transparency
+  // v55.0: Updated to include ρ (air density) column — extrapolated from mast position to WTG position
   R.perTurbine.forEach(t=>{const tb2=S.turbines[t.i-1]||{};const tr=document.createElement('tr');
     const effSU=t.effSU||parseFloat(t.speedup||1);
-    tr.innerHTML=`<td>T${t.i}</td><td>${(tb2.lat||0).toFixed(4)}</td><td>${(tb2.lon||0).toFixed(4)}</td><td>${(tb2.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${t.ws}</td><td>${t.wake}%</td><td>${t.wakeWS||t.ws}</td><td style="color:var(--acc)">${effSU.toFixed(3)}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;tb.appendChild(tr);});
+    const rho=t.rho||(R.turbDensities&&R.turbDensities[t.i-1]?R.turbDensities[t.i-1].toFixed(3):R.density.toFixed(3));
+    tr.innerHTML=`<td>T${t.i}</td><td>${(tb2.lat||0).toFixed(4)}</td><td>${(tb2.lon||0).toFixed(4)}</td><td>${(tb2.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${t.ws}</td><td>${t.wake}%</td><td>${t.wakeWS||t.ws}</td><td style="color:var(--acc)">${effSU.toFixed(3)}</td><td style="color:var(--sky)">${rho}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;tb.appendChild(tr);});
   drawAEPChart(R.perTurbine);drawShearChart(R.shearProfile);
   if (R.calibrated) {
     if ($('calIndicator')) $('calIndicator').style.display = 'block';
@@ -4067,8 +4073,9 @@ function updateWSChain(R){
     const turb=S.turbines[t.i-1]||{};
     const tr=document.createElement('tr');
     const effSU=t.effSU||parseFloat(t.speedup||1);
-    // v25.0: Show effective speedup that explains WHY free WS differs between WTGs
-    tr.innerHTML=`<td>T${t.i}</td><td>${(turb.lat||0).toFixed(4)}</td><td>${(turb.lon||0).toFixed(4)}</td><td>${(turb.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${freeWS.toFixed(2)}</td><td style="color:${wkPct>5?'var(--wrn)':'var(--grn)'}">${wkPct.toFixed(1)}%</td><td style="color:var(--acc)">${netWS.toFixed(2)}</td><td>${effSU.toFixed(3)}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;
+    const rho=t.rho||R.density.toFixed(4);
+    // v55.0: Show effective speedup + air density that explains WHY free WS differs between WTGs
+    tr.innerHTML=`<td>T${t.i}</td><td>${(turb.lat||0).toFixed(4)}</td><td>${(turb.lon||0).toFixed(4)}</td><td>${(turb.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${freeWS.toFixed(2)}</td><td style="color:${wkPct>5?'var(--wrn)':'var(--grn)'}">${wkPct.toFixed(1)}%</td><td style="color:var(--acc)">${netWS.toFixed(2)}</td><td>${effSU.toFixed(3)}</td><td style="color:var(--sky)">${rho}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;
     tb.appendChild(tr);
   });
 
@@ -4699,7 +4706,7 @@ function exportReport(){
     <tr><td>Weibull (hub, MLE)</td><td>A=${R.hubWb.A.toFixed(2)}, k=${R.hubWb.k.toFixed(2)}</td><td>${R.hubWb.n||'—'} samples, ${R.hubWb.method||'mle'}</td></tr>
     <tr><td>Uncertainty σ (1σ)</td><td>${(R.sigma*100).toFixed(1)}%</td><td>Wind ${(R.u_wind_r*100).toFixed(1)}% + Wake ${(R.u_wake_r*100).toFixed(1)}% + PC ${(R.u_pc_r*100).toFixed(1)}%${isMixedHH?' + HH 1.0%':''} (RSS)</td></tr>
     <tr><td>IEC Class Compliance</td><td>${R.iec?R.iec.cls:'—'}</td><td>${R.iec?(R.iec.ok?'✓ Within limits':'⚠ EXCEEDS '+R.iec.limit+' m/s limit'):'—'}</td></tr>`:'';
-  const tRows=R?R.perTurbine.map(t=>{const tb=S.turbines[t.i-1]||{};return`<tr><td>T${t.i}</td><td>${tb.hh||'—'}</td><td>${tb.lat?.toFixed(4)||''}</td><td>${tb.lon?.toFixed(4)||''}</td><td>${tb.elev?.toFixed(0)||'—'}</td><td>${t.ws}</td><td>${t.wake}%</td><td><b>${t.wakeWS}</b></td><td>${t.gross}</td><td><b>${t.net}</b></td><td>${t.cf}%</td><td>${t.power}</td></tr>`;}).join(''):'';
+  const tRows=R?R.perTurbine.map(t=>{const tb=S.turbines[t.i-1]||{};const rho=t.rho||(R.turbDensities&&R.turbDensities[t.i-1]?R.turbDensities[t.i-1].toFixed(3):R.density.toFixed(3));return`<tr><td>T${t.i}</td><td>${tb.hh||'—'}</td><td>${tb.lat?.toFixed(4)||''}</td><td>${tb.lon?.toFixed(4)||''}</td><td>${tb.elev?.toFixed(0)||'—'}</td><td>${t.ws}</td><td>${t.wake}%</td><td><b>${t.wakeWS}</b></td><td>${rho}</td><td>${t.gross}</td><td><b>${t.net}</b></td><td>${t.cf}%</td><td>${t.power}</td></tr>`;}).join(''):'';
   const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>WindFlow Pro – ${pn}</title>
   <style>body{font-family:sans-serif;max-width:1100px;margin:40px auto;padding:20px;background:#f8f9fa;color:#212529}
   h1{color:#1a56db}h2{color:#1a56db;border-bottom:2px solid #e5e7eb;padding-bottom:5px;margin-top:20px}
@@ -4708,7 +4715,7 @@ function exportReport(){
   .box{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px;text-align:center}
   .big{font-size:20px;font-weight:700;color:#1a56db}.lbl{font-size:10px;color:#6b7280;margin-top:3px}
   .ok{color:#16a34a;font-weight:700}.warn{color:#dc2626;font-weight:700}.tag{display:inline-block;background:#e0edff;color:#1a56db;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600}</style></head><body>
-  <h1>△ WindFlow Pro 52.0 — Wind Resource Assessment Report</h1>
+  <h1>△ WindFlow Pro 55.0 — Wind Resource Assessment Report</h1>
   <p><b>Project:</b> ${pn} &nbsp;|&nbsp; <b>Date:</b> ${now} &nbsp;|&nbsp; <b>Turbine:</b> <span class="tag">${turbineModel}</span> &nbsp;|&nbsp; <b>Wake Model:</b> ${wakeModelName}${isMixedHH?` &nbsp;|&nbsp; <b>Hub Heights:</b> ${hhSummary}`:''}</p>
   <h2>Turbine Specifications</h2>
   <table><tr><th>Parameter</th><th>Value</th></tr>
@@ -4742,14 +4749,14 @@ function exportReport(){
   <tr><td>P90</td><td>${R.P90.toFixed(2)}</td><td>${((R.P90/R.P50-1)*100).toFixed(1)}%</td></tr>
   <tr><td>P99</td><td>${R.P99.toFixed(2)}</td><td>${((R.P99/R.P50-1)*100).toFixed(1)}%</td></tr></table>`:''}
   <h2>Per-Turbine Wind Speed Chain &amp; AEP</h2>
-  <table><tr><th>T#</th>${isMixedHH?'<th>HH(m)</th>':''}<th>Lat</th><th>Lon</th><th>Elev(m)</th><th>Free WS(m/s)</th><th>Wake%</th><th>Net WS(m/s)</th><th>Gross(GWh)</th><th>Net(GWh)</th><th>CF%</th><th>Power(kW)</th></tr>
-  ${R?R.perTurbine.map(t=>{const tb=S.turbines[t.i-1]||{};return`<tr><td>T${t.i}</td>${isMixedHH?`<td>${tb.hh||$('hubH').value}</td>`:''}<td>${tb.lat?.toFixed(4)||''}</td><td>${tb.lon?.toFixed(4)||''}</td><td>${tb.elev?.toFixed(0)||'—'}</td><td>${t.ws}</td><td>${t.wake}%</td><td><b>${t.wakeWS}</b></td><td>${t.gross}</td><td><b>${t.net}</b></td><td>${t.cf}%</td><td>${t.power}</td></tr>`;}).join(''):''}</table>
+  <table><tr><th>T#</th>${isMixedHH?'<th>HH(m)</th>':''}<th>Lat</th><th>Lon</th><th>Elev(m)</th><th>Free WS(m/s)</th><th>Wake%</th><th>Net WS(m/s)</th><th>ρ(kg/m³)</th><th>Gross(GWh)</th><th>Net(GWh)</th><th>CF%</th><th>Power(kW)</th></tr>
+  ${R?R.perTurbine.map(t=>{const tb=S.turbines[t.i-1]||{};const rho=t.rho||(R.turbDensities&&R.turbDensities[t.i-1]?R.turbDensities[t.i-1].toFixed(3):R.density.toFixed(3));return`<tr><td>T${t.i}</td>${isMixedHH?`<td>${tb.hh||$('hubH').value}</td>`:''}<td>${tb.lat?.toFixed(4)||''}</td><td>${tb.lon?.toFixed(4)||''}</td><td>${tb.elev?.toFixed(0)||'—'}</td><td>${t.ws}</td><td>${t.wake}%</td><td><b>${t.wakeWS}</b></td><td>${rho}</td><td>${t.gross}</td><td><b>${t.net}</b></td><td>${t.cf}%</td><td>${t.power}</td></tr>`;}).join(''):''}</table>
   <h2>Turbine Layout (${S.turbines.length} WTGs)</h2>
   <table><tr><th>T#</th><th>Latitude</th><th>Longitude</th><th>Hub Height(m)</th><th>Elevation(m)</th></tr>
   ${S.turbines.map((t,i)=>`<tr><td>T${i+1}</td><td>${t.lat.toFixed(5)}</td><td>${t.lon.toFixed(5)}</td><td>${t.hh}</td><td>${t.elev?.toFixed(0)||'—'}</td></tr>`).join('')}</table>
   ${S.terrain&&S.terrain.grid?`<h2>Terrain Elevation Map</h2><p><img src="${document.getElementById('terrainCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Terrain elevation heatmap with contour lines"></p>`:''}
   ${S.roughnessZones&&S.roughnessZones.length?`<h2>Roughness Map</h2><p><img src="${document.getElementById('roughnessCanvas').toDataURL('image/png')}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px" alt="Roughness zones map with land-use classification"></p>`:''}
-  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 52.0 — WAsP-aligned flow model: OW Flow Jackson-Hunt orographic + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Stability-integrated extrapolation · Deep-array correction · Mortensen-Bowen RIX · WAsP-correct horizontal extrapolation · Bankability report</p>
+  <p style="color:#9ca3af;font-size:10px;margin-top:24px">Generated by WindFlow Pro 55.0 — WAsP-aligned flow model: OW Flow Jackson-Hunt orographic + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake · IEC 61400-12-1 · Per-WTG density · Mixed hub height · RIX calibration · Stability-integrated extrapolation · Deep-array correction · Mortensen-Bowen RIX · WAsP-correct horizontal extrapolation · Bankability report</p>
   </body></html>`;
   dlFile(h,'windflow-report.html','text/html');log('HTML report exported (full chain, mixed HH)','i');
 }
@@ -4807,7 +4814,8 @@ function exportPDFReport(){
 
   const perTurbineRows=R.perTurbine?R.perTurbine.map(t=>{
     const tb=S.turbines[t.i-1]||{};
-    return`<tr><td>${t.i}</td><td>${tb.name||'T'+t.i}</td><td>${(tb.lat||0).toFixed(4)}</td><td>${(tb.lon||0).toFixed(4)}</td><td>${tb.hh||hubH}m</td><td>${t.ws}</td><td>${t.wake}%</td><td>${t.wakeWS}</td><td>${t.net}</td><td>${t.cf}%</td></tr>`;
+    const rho=t.rho||(R.turbDensities&&R.turbDensities[t.i-1]?R.turbDensities[t.i-1].toFixed(3):R.density.toFixed(3));
+    return`<tr><td>${t.i}</td><td>${tb.name||'T'+t.i}</td><td>${(tb.lat||0).toFixed(4)}</td><td>${(tb.lon||0).toFixed(4)}</td><td>${tb.hh||hubH}m</td><td>${t.ws}</td><td>${t.wake}%</td><td>${t.wakeWS}</td><td>${rho}</td><td>${t.net}</td><td>${t.cf}%</td></tr>`;
   }).join(''):'';
 
   const now=new Date().toISOString().split('T')[0];
@@ -4831,7 +4839,7 @@ function exportPDFReport(){
   .footer{margin-top:24px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;text-align:center;}
   @media print{body{padding:0;}h1{page-break-after:avoid;}h2{page-break-after:avoid;}table{page-break-inside:auto;}tr{page-break-inside:avoid;}.kpi-grid{page-break-inside:avoid;}}
 </style></head><body>
-<h1>△ WindFlow Pro 52.0 — ${pn}</h1>
+<h1>△ WindFlow Pro 55.0 — ${pn}</h1>
 <p style="color:#6b7280;font-size:10px;margin-bottom:12px">Generated: ${now} · ${S.turbines.length} × ${turbineModel} (${ratedPow} kW, D=${rotorD}m, HH=${hubH}m) · Wake model: ${$('wakeModel')?.options?.[$('wakeModel').selectedIndex]?.text||'Jensen/PARK'}</p>
 
 <h2>Key Performance Indicators</h2>
@@ -4899,7 +4907,7 @@ function exportPDFReport(){
 ${perTurbineRows?`<div class="section">
 <h2>Per-Turbine Results</h2>
 <table>
-  <tr><th>#</th><th>Name</th><th>Lat</th><th>Lon</th><th>HH</th><th>Free WS</th><th>Wake %</th><th>Wake WS</th><th>Net GWh</th><th>CF %</th></tr>
+  <tr><th>#</th><th>Name</th><th>Lat</th><th>Lon</th><th>HH</th><th>Free WS</th><th>Wake %</th><th>Wake WS</th><th>ρ kg/m³</th><th>Net GWh</th><th>CF %</th></tr>
   ${perTurbineRows}
 </table>
 </div>`:''}
@@ -4916,7 +4924,7 @@ ${perTurbineRows?`<div class="section">
 </ul>
 </div>
 
-<div class="footer">Generated by WindFlow Pro 52.0 — WAsP-aligned flow model · IEC 61400-12-1 · Per-WTG density · Mixed hub height · ${now}</div>
+<div class="footer">Generated by WindFlow Pro 55.0 — WAsP-aligned flow model · IEC 61400-12-1 · Per-WTG density · Mixed hub height · ${now}</div>
 </body></html>`;
 
   // Try opening in a new window for printing
@@ -5489,10 +5497,12 @@ function importWindPRO(raw,fileName){
     sourceHeight:selectedHeight,
     meanWS:mean,
     startDate:ts[0]||'',
-    endDate:ts[ts.length-1]||''
+    endDate:ts[ts.length-1]||'',
+    mastName:'WindPRO'  // v55.0: link back to mast
   };
 
-  // Also store all heights as separate sources
+  // v55.0: Store all heights as separate sources with mastName link
+  const wpHeightEntries=[{height:selectedHeight,sourceName:'WindPRO',meanWS:mean,records:sp.length}];
   heights.forEach((h,hIdx)=>{
     if(hIdx===bestIdx)return; // Already stored as WindPRO
     const hSp=[],hDr=[],hTs=[];
@@ -5510,30 +5520,49 @@ function importWindPRO(raw,fileName){
       }
     }
     if(hSp.length){
-      S.windSources[`WindPRO_${h}m`]={
+      const hMean=hSp.filter(v=>v>0.5).reduce((s,v)=>s+v,0)/Math.max(1,hSp.filter(v=>v>0.5).length);
+      const hSrcName=`WindPRO_${h}m`;
+      S.windSources[hSrcName]={
         speeds:hSp,dirs:hDr,times:hTs,
         mcpFactor:1,mastH:h,elevation:null,
         sourceLat:lat||0,sourceLon:lon||0,sourceHeight:h,
-        meanWS:hSp.filter(v=>v>0.5).reduce((s,v)=>s+v,0)/Math.max(1,hSp.filter(v=>v>0.5).length),
-        startDate:hTs[0]||'',endDate:hTs[hTs.length-1]||''
+        meanWS:hMean,
+        startDate:hTs[0]||'',endDate:hTs[hTs.length-1]||'',
+        mastName:'WindPRO'  // v55.0: link back to mast
       };
+      wpHeightEntries.push({height:h,sourceName:hSrcName,meanWS:hMean,records:hSp.length});
     }
   });
 
-  // Update mast coordinates and height from WindPRO file
+  // Update mast coordinates and height from WindPRO file — v55.0: single mast with heightEntries
   if(lat!==null&&lon!==null){
     $('mastLat').value=lat.toFixed(6);
     $('mastLon').value=lon.toFixed(6);
     $('mastH').value=selectedHeight;
-    // Update or add mast
-    const existingMast=S.masts.find(m=>m.primary);
-    if(existingMast){
+    // v55.0: Check if a mast already exists at this location (within 100m)
+    const existingMastIdx=S.masts.findIndex(m=>{
+      const dLat=(m.lat-lat)*111320,dLon=(m.lon-lon)*111320*Math.cos(lat*Math.PI/180);
+      return Math.sqrt(dLat*dLat+dLon*dLon)<100;
+    });
+    if(existingMastIdx>=0){
+      const existingMast=S.masts[existingMastIdx];
       existingMast.lat=lat;existingMast.lon=lon;existingMast.height=selectedHeight;
       existingMast.name=mastName||existingMast.name;
-      existingMast.heights=heights;
+      existingMast.heightEntries=wpHeightEntries;
+      existingMast.startDate=ts[0]||existingMast.startDate;
+      existingMast.endDate=ts[ts.length-1]||existingMast.endDate;
       renderMastList();
     }else{
-      S.masts=[{id:1,name:mastName||'WindPRO Mast',lat,lon,height:selectedHeight,z0:parseFloat($('z0val').value)||0.0002,primary:true,startDate:ts[0]||'',endDate:ts[ts.length-1]||'',heights:heights}];
+      S.masts.push({
+        id:S.masts.length+1,
+        name:mastName||'WindPRO Mast',
+        lat,lon,height:selectedHeight,
+        z0:parseFloat($('z0val').value)||0.0002,
+        primary:S.masts.length===0,
+        startDate:ts[0]||'',endDate:ts[ts.length-1]||'',
+        heightEntries:wpHeightEntries,
+        source:'WindPRO'
+      });
       renderMastList();
     }
     S._mastUserSet=true;
@@ -5750,10 +5779,22 @@ function importWindographer(raw,fileName){
   const vs=sp.filter(v=>v>0.5);
   const mean=vs.length?vs.reduce((s,v)=>s+v,0)/vs.length:0;
 
-  // ── 6. Store wind data ──
+  // ── 6. Store wind data (v55.0: single mast, all heights as linked sources) ──
   S.wind={speeds:sp,dirs:dr,times:ts};S.mcpFactor=1;
 
-  S.windSources.Windographer={
+  // v55.0: Create a unique base name for this import to avoid overwriting
+  const baseName=siteName||'Windographer';
+  let uniqueName=baseName;
+  let suffix=1;
+  while(S.windSources[uniqueName]&&suffix<20){
+    // If there's already a source with this exact name, append a suffix
+    if(suffix===1&&S.windSources[uniqueName+'_1']){suffix++;continue;}
+    uniqueName=suffix===1?baseName:baseName+'_'+suffix;
+    suffix++;
+  }
+
+  // Store primary height wind source
+  S.windSources[uniqueName]={
     speeds:[...sp],dirs:[...dr],times:[...ts],
     mcpFactor:1,
     mastH:bestWSHeight,
@@ -5763,23 +5804,31 @@ function importWindographer(raw,fileName){
     sourceHeight:bestWSHeight,
     meanWS:mean,
     startDate:ts[0]||'',
-    endDate:ts[ts.length-1]||''
+    endDate:ts[ts.length-1]||'',
+    mastName:uniqueName  // v55.0: link back to mast
   };
 
-  // Store all heights as separate sources
+  // v55.0: Store additional heights as sub-sources linked to same mast
+  const heightEntries=[]; // [{height, sourceName, meanWS, records}]
+  heightEntries.push({height:bestWSHeight,sourceName:uniqueName,meanWS:mean,records:sp.length});
+
   wsHeights.forEach(h=>{
-    if(h===bestWSHeight)return; // Already stored as primary Windographer
     const hData=allHeightData[h];
     if(hData.speeds.length>10){
       const hVs=hData.speeds.filter(v=>v>0.5);
       const hMean=hVs.length?hVs.reduce((s,v)=>s+v,0)/hVs.length:0;
-      S.windSources[`Windographer_${h}m`]={
+      const hSrcName=`${uniqueName}_${h}m`;
+      S.windSources[hSrcName]={
         speeds:[...hData.speeds],dirs:[...hData.dirs],times:hData.speeds.map(()=>''),
         mcpFactor:1,mastH:h,elevation:elevation,
         sourceLat:lat||0,sourceLon:lon||0,sourceHeight:h,
         meanWS:hMean,
-        startDate:'',endDate:''
+        startDate:'',endDate:'',
+        mastName:uniqueName  // v55.0: link back to mast
       };
+      if(h!==bestWSHeight){
+        heightEntries.push({height:h,sourceName:hSrcName,meanWS:hMean,records:hData.speeds.length});
+      }
     }
   });
 
@@ -5794,88 +5843,100 @@ function importWindographer(raw,fileName){
     }
     if(pressVals.length>10){
       const avgPress=pressVals.reduce((s,v)=>s+v,0)/pressVals.length;
-      S.windSources.Windographer.pressure=avgPress;
+      S.windSources[uniqueName].pressure=avgPress;
       log(`Windographer: Avg pressure ${avgPress.toFixed(1)} hPa @ ${pressCol.height}m (${pressVals.length} records)`,'i');
     }
   }
 
-  // ── 7. Update mast entry ──
+  // ── 7. Create/update single mast with all height entries (v55.0) ──
   if(lat!==null&&lon!==null){
     $('mastLat').value=lat.toFixed(6);
     $('mastLon').value=lon.toFixed(6);
     $('mastH').value=bestWSHeight;
 
-    const existingMast=S.masts.find(m=>m.primary);
-    if(existingMast){
-      existingMast.lat=lat;existingMast.lon=lon;existingMast.height=bestWSHeight;
-      existingMast.name=siteName||existingMast.name;
+    // v55.0: Check if a mast already exists at this location (within 100m)
+    const existingMastIdx=S.masts.findIndex(m=>{
+      const dLat=(m.lat-lat)*111320,dLon=(m.lon-lon)*111320*Math.cos(lat*Math.PI/180);
+      return Math.sqrt(dLat*dLat+dLon*dLon)<100;
+    });
+
+    if(existingMastIdx>=0){
+      // Update existing mast with new heights
+      const existingMast=S.masts[existingMastIdx];
+      existingMast.lat=lat;existingMast.lon=lon;
+      existingMast.height=bestWSHeight;
+      existingMast.name=uniqueName;
       if(elevation)existingMast.elevation=elevation;
-      existingMast.heights=wsHeights;
+      existingMast.heightEntries=heightEntries;
       existingMast.startDate=ts[0]||existingMast.startDate;
       existingMast.endDate=ts[ts.length-1]||existingMast.endDate;
-      renderMastList();
+      log(`Windographer: Updated existing mast "${uniqueName}" with ${heightEntries.length} height entries`,'i');
     }else{
-      S.masts=[{id:1,name:siteName||'Windographer Mast',lat,lon,height:bestWSHeight,z0:parseFloat($('z0val').value)||0.03,primary:true,startDate:ts[0]||'',endDate:ts[ts.length-1]||'',elevation:elevation,heights:wsHeights}];
-      renderMastList();
+      // Create new single mast
+      S.masts.push({
+        id:S.masts.length+1,
+        name:uniqueName,
+        lat,lon,
+        height:bestWSHeight,
+        z0:parseFloat($('z0val').value)||0.03,
+        primary:S.masts.length===0,
+        startDate:ts[0]||'',
+        endDate:ts[ts.length-1]||'',
+        elevation:elevation,
+        heightEntries:heightEntries, // v55.0: [{height, sourceName, meanWS, records}]
+        source:'Windographer'
+      });
+      log(`Windographer: Created new mast "${uniqueName}" with ${heightEntries.length} height entries`,'i');
     }
     S._mastUserSet=true;
   }
 
   // ── 8. Draw mast marker on map ──
   drawMastMarkers();
-  if(lat!==null&&lon!==null)addDataSourceMarker('Windographer',lat,lon,bestWSHeight);
+  if(lat!==null&&lon!==null)addDataSourceMarker(uniqueName,lat,lon,bestWSHeight);
 
   // ── 9. Update UI ──
   $('windStat').textContent=`Windographer: ${sp.length.toLocaleString()} records @ ${bestWSHeight}m, mean=${mean.toFixed(2)} m/s (${wsHeights.length} heights, ${emptyRecords} gaps skipped)`;
-  updateWindUI(sp,dr);updateDataSourceUI('Windographer');
+  updateWindUI(sp,dr);updateDataSourceUI(uniqueName);
   log(`Windographer imported: ${sp.length.toLocaleString()} records @ ${bestWSHeight}m, mean=${mean.toFixed(2)} m/s, ${wsHeights.length} WS heights [${wsHeights.map(h=>h+'m').join(', ')}], ${wdHeights.length} WD heights [${wdHeights.map(h=>h+'m').join(', ')}]${lat?`, lat=${lat.toFixed(4)}, lon=${lon.toFixed(4)}`:''}${elevation?`, elev=${elevation}m`:''}${emptyRecords?`, ${emptyRecords} empty rows skipped`:''}`,'i');
   if(typeof validateCheckpoint==='function')validateCheckpoint();
 }
 
-// v54.0: Draw wind mast markers on the map
+// v55.0: Draw wind mast markers on the map — improved for multi-height masts
 function drawMastMarkers(){
   if(!leafMap)return;
   // Remove existing mast markers
   if(S.mastMarkers)S.mastMarkers.forEach(m=>m.remove());
   S.mastMarkers=[];
 
-  // v54.0: Count measurement heights per mast from windSources
-  const mastHeights={};
-  S.masts.forEach(m=>{
-    const baseName=m.name.replace(/\s+/g,'');
-    mastHeights[m.name]={heights:[m.height],allHeights:[m.height]};
-  });
-  // Find multi-height sources matching mast names
-  Object.keys(S.windSources||{}).forEach(k=>{
-    const baseMatch=k.match(/^(.+?)_(\d+)m$/);
-    if(baseMatch){
-      const base=baseMatch[1];
-      // Try to match to a mast
-      S.masts.forEach(m=>{
-        const mName=m.name.replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
-        const bName=base.replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
-        if(mName===bName||mName.startsWith(bName)){
-          if(!mastHeights[m.name])mastHeights[m.name]={heights:[m.height],allHeights:[]};
-          const h=parseInt(baseMatch[2]);
-          if(!mastHeights[m.name].allHeights.includes(h)){
-            mastHeights[m.name].allHeights.push(h);
-          }
-        }
-      });
-    }
-  });
-
   S.masts.forEach((m,i)=>{
-    const mh=mastHeights[m.name]||{allHeights:[m.height]};
-    const nHeights=mh.allHeights.length;
-    const heightStr=nHeights>1?mh.allHeights.sort((a,b)=>b-a).join('/')+'m':m.height+'m';
+    // v55.0: Use heightEntries for display, fall back to legacy heights
+    const hEntries=m.heightEntries||[];
+    const legacyHeights=m.heights||[];
+    const allHeights=hEntries.length?hEntries.map(e=>e.height):legacyHeights;
+    const nHeights=allHeights.length;
+    const heightStr=nHeights>1?allHeights.sort((a,b)=>b-a).join('/')+'m':m.height+'m';
+
     // Mast icon: red diamond with wind vane symbol
     const glow=L.circleMarker([m.lat,m.lon],{radius:12,color:'#ff6b6b',fillColor:'#ff6b6b',fillOpacity:.15,weight:0}).addTo(leafMap);
     const marker=L.circleMarker([m.lat,m.lon],{radius:7,color:'#fff',fillColor:'#ff6b6b',fillOpacity:.9,weight:2}).addTo(leafMap);
     const label=L.marker([m.lat,m.lon],{
-      icon:L.divIcon({className:'',html:`<div style="background:rgba(255,107,107,.85);color:#fff;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;white-space:nowrap;transform:translate(-50%,-180%);text-shadow:0 1px 2px rgba(0,0,0,.4)">${m.name||'Mast '+(i+1)} ${heightStr}${nHeights>1?' ('+nHeights+' heights)':''}</div>`,iconSize:[0,0]})
+      icon:L.divIcon({className:'',html:`<div style="background:rgba(255,107,107,.85);color:#fff;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;white-space:nowrap;transform:translate(-50%,-180%);text-shadow:0 1px 2px rgba(0,0,0,.4)">${m.name||'Mast '+(i+1)} ${heightStr}${nHeights>1?' ('+nHeights+'H)':''}</div>`,iconSize:[0,0]})
     }).addTo(leafMap);
-    marker.bindTooltip(`${m.name||'Mast '+(i+1)}<br>Lat: ${m.lat.toFixed(4)}<br>Lon: ${m.lon.toFixed(4)}<br>Height: ${heightStr}${nHeights>1?'<br>Measurement levels: '+mh.allHeights.sort((a,b)=>b-a).join(', '):''}${m.elevation?'<br>Elev: '+m.elevation+'m':''}${m.startDate?'<br>Period: '+m.startDate.slice(0,10)+' → '+(m.endDate?m.endDate.slice(0,10):''):''}${m.primary?'<br>★ PRIMARY':''}`);
+
+    // v55.0: Enhanced tooltip with per-height info
+    let tooltipHTML=`${m.name||'Mast '+(i+1)}<br>Lat: ${m.lat.toFixed(4)}<br>Lon: ${m.lon.toFixed(4)}<br>Height: ${heightStr}`;
+    if(nHeights>1){
+      tooltipHTML+=`<br>─── Measurement Levels ───`;
+      hEntries.sort((a,b)=>b.height-a.height).forEach(he=>{
+        tooltipHTML+=`<br>${he.height}m: ${he.meanWS.toFixed(2)} m/s (${he.records.toLocaleString()} rec)`;
+      });
+    }
+    if(m.elevation)tooltipHTML+=`<br>Elev: ${m.elevation}m`;
+    if(m.startDate)tooltipHTML+=`<br>Period: ${m.startDate.slice(0,10)} → ${m.endDate?m.endDate.slice(0,10):''}`;
+    if(m.primary)tooltipHTML+=`<br>★ PRIMARY`;
+
+    marker.bindTooltip(tooltipHTML);
     S.mastMarkers.push(glow,marker,label);
   });
 }
@@ -5900,7 +5961,7 @@ try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 54.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
+log('WindFlow Pro 55.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
 // v51.0: Load saved NREL API key from localStorage
 try{const savedKey=localStorage.getItem('nrelApiKey');if(savedKey&&$('nrelApiKey'))$('nrelApiKey').value=savedKey;}catch(e){}
 // v51.0: Auto-save NREL API key on input change
@@ -6310,7 +6371,8 @@ function exportBankabilityReport(){
 
   const turbRows=R?R.perTurbine.map(t=>{
     const tb=S.turbines[t.i-1]||{};
-    return `<tr><td>T${t.i}</td>${isMixedHH?`<td>${tb.hh||$('hubH').value}</td>`:''}<td>${tb.lat?.toFixed(5)||''}</td><td>${tb.lon?.toFixed(5)||''}</td><td>${tb.elev?.toFixed(0)||'-'}</td><td>${t.ws}</td><td>${t.wake}%</td><td><b>${t.wakeWS}</b></td><td>${t.gross}</td><td><b>${t.net}</b></td><td>${t.cf}%</td></tr>`;
+    const rho=t.rho||(R.turbDensities&&R.turbDensities[t.i-1]?R.turbDensities[t.i-1].toFixed(3):R.density.toFixed(3));
+    return `<tr><td>T${t.i}</td>${isMixedHH?`<td>${tb.hh||$('hubH').value}</td>`:''}<td>${tb.lat?.toFixed(5)||''}</td><td>${tb.lon?.toFixed(5)||''}</td><td>${tb.elev?.toFixed(0)||'-'}</td><td>${t.ws}</td><td>${t.wake}%</td><td><b>${t.wakeWS}</b></td><td>${rho}</td><td>${t.gross}</td><td><b>${t.net}</b></td><td>${t.cf}%</td></tr>`;
   }).join(''):'';
 
   const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Wind Energy Assessment — ${pn}</title>
@@ -6342,7 +6404,7 @@ function exportBankabilityReport(){
 <div class="cover">
   <h1>${pn}</h1>
   <p>Wind Energy Assessment Report</p>
-  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 52.0 &mdash; ${now}</p>
+  <p style="font-size:11px;color:#888">Generated by WindFlow Pro 55.0 &mdash; ${now}</p>
 </div>
 
 <h2>1. Executive Summary</h2>
@@ -6398,7 +6460,7 @@ ${roseImg?`<h3>Wind Rose</h3><div style="text-align:center"><img src="${roseImg}
 
 <div class="page-break"></div>
 <h2>6. Per-Turbine Wind Speed Chain &amp; Energy Yield</h2>
-<table><tr><th>WTG</th>${isMixedHH?'<th>HH(m)</th>':''}<th>Lat</th><th>Lon</th><th>Elev(m)</th><th>Free WS(m/s)</th><th>Wake%</th><th>Net WS(m/s)</th><th>Gross(GWh)</th><th>Net(GWh)</th><th>CF%</th></tr>
+<table><tr><th>WTG</th>${isMixedHH?'<th>HH(m)</th>':''}<th>Lat</th><th>Lon</th><th>Elev(m)</th><th>Free WS(m/s)</th><th>Wake%</th><th>Net WS(m/s)</th><th>ρ(kg/m³)</th><th>Gross(GWh)</th><th>Net(GWh)</th><th>CF%</th></tr>
 ${turbRows}</table>
 
 <h2>7. Turbine Layout Coordinates</h2>
@@ -6409,7 +6471,7 @@ ${terrCanvasImg?`<h2>8. Detailed Terrain Elevation Map</h2><p><img src="${terrCa
 ${roughCanvasImg?`<h2>9. Detailed Roughness Map</h2><p><img src="${roughCanvasImg}" style="max-width:100%;border:1px solid #d1d5db;border-radius:6px" alt="Roughness"></p>`:''}
 
 <p style="color:#9ca3af;font-size:9px;margin-top:30px;border-top:1px solid #e5e7eb;padding-top:10px">
-Generated by WindFlow Pro 52.0 &mdash; WAsP-aligned flow model: OW Flow Jackson-Hunt orographic + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; WAsP-correct horizontal extrapolation &middot; Bankability report format</p>
+Generated by WindFlow Pro 55.0 &mdash; WAsP-aligned flow model: OW Flow Jackson-Hunt orographic + IBL roughness + GDL stability + MCP LT correction + Jensen/PARK wake &middot; IEC 61400-12-1 &middot; Per-WTG density &middot; Mixed hub height &middot; RIX calibration &middot; WAsP-correct horizontal extrapolation &middot; Bankability report format</p>
 </body></html>`;
 
   dlFile(h,`WindAssessment_${pn.replace(/\s+/g,'_')}.html`,'text/html');
@@ -10989,7 +11051,8 @@ function drawPowerCurve(){
 // ── MULTI-MAST SUPPORT ──
 if(!S.masts)S.masts=[];
 function addMast(){
-  const m={id:S.masts.length+1,name:'Mast '+(S.masts.length+1),lat:parseFloat($('mastLat')?.value||55.5),lon:parseFloat($('mastLon')?.value||7.9),height:parseFloat($('mastH')?.value||100),z0:parseFloat($('z0val')?.value||0.0002),primary:S.masts.length===0,startDate:'',endDate:'',heights:[parseFloat($('mastH')?.value||100)]};
+  const h=parseFloat($('mastH')?.value||100);
+  const m={id:S.masts.length+1,name:'Mast '+(S.masts.length+1),lat:parseFloat($('mastLat')?.value||55.5),lon:parseFloat($('mastLon')?.value||7.9),height:h,z0:parseFloat($('z0val')?.value||0.0002),primary:S.masts.length===0,startDate:'',endDate:'',heightEntries:[{height:h,sourceName:null,meanWS:0,records:0}]};
   S.masts.push(m);
   renderMastList();drawMastMarkers();
   editMast(S.masts.length-1);
@@ -11015,29 +11078,142 @@ function saveMast(){
   renderMastList();drawMastMarkers();
   log(`Mast saved: ${m.name} (${m.lat}, ${m.lon}, ${m.height}m)${m.primary?' [PRIMARY]':''}`,'i');
 }
-function removeMast(){
-  const idx=parseInt($('mastEditCard').dataset.idx);
-  if(isNaN(idx))return;
+function removeMast(idx){
+  // v55.0: Support both old-style (from edit card) and new-style (from mast list) calls
+  if(idx===undefined){
+    idx=parseInt($('mastEditCard')?.dataset?.idx);
+    if(isNaN(idx))return;
+  }
+  const m=S.masts[idx];if(!m)return;
+  // v55.0: Also remove linked wind sources
+  if(m.heightEntries&&m.heightEntries.length){
+    if(!confirm(`Remove entire mast "${m.name}" and all ${m.heightEntries.length} height entries?\nThis will also remove associated wind data sources.`))return;
+    m.heightEntries.forEach(he=>{
+      if(S.windSources[he.sourceName]){
+        if(S.windSource===he.sourceName)S.windSource='ERA5';
+        delete S.windSources[he.sourceName];
+      }
+    });
+  }
   S.masts.splice(idx,1);
-  $('mastEditCard').style.display='none';
-  renderMastList();drawMastMarkers();
+  if($('mastEditCard'))$('mastEditCard').style.display='none';
+  renderMastList();drawMastMarkers();updateDataSourceUI(S.windSource||'ERA5');
+  log(`Mast "${m.name}" removed`,'i');
 }
 function syncMastToUI(){
   if(S.masts.length===0){
     // Create default mast from existing fields
-    S.masts=[{id:1,name:'Mast 1',lat:parseFloat($('mastLat')?.value||55.5),lon:parseFloat($('mastLon')?.value||7.9),height:parseFloat($('mastH')?.value||100),z0:parseFloat($('z0val')?.value||0.0002),primary:true,startDate:'',endDate:''}];
+    const h=parseFloat($('mastH')?.value||100);
+    S.masts=[{id:1,name:'Mast 1',lat:parseFloat($('mastLat')?.value||55.5),lon:parseFloat($('mastLon')?.value||7.9),height:h,z0:parseFloat($('z0val')?.value||0.0002),primary:true,startDate:'',endDate:'',heightEntries:[{height:h,sourceName:null,meanWS:0,records:0}]}];
   }
   renderMastList();
 }
 function renderMastList(){
   const el=$('mastList');if(!el)return;
   el.innerHTML='';
+  if(!S.masts.length){
+    el.innerHTML='<div style="font-size:.6rem;color:var(--text3);padding:.5rem">No masts defined. Add a mast or import wind data.</div>';
+    return;
+  }
   S.masts.forEach((m,i)=>{
     const div=document.createElement('div');div.className='mast-card'+(m.primary?' primary':'');
-    div.innerHTML=`<div class="mast-header"><span class="mast-name">${m.name}${m.primary?' ★':''}</span><button class="btn btn-sm btn-ghost" onclick="editMast(${i})" style="padding:.15rem .4rem;font-size:.5rem">Edit</button></div><div style="font-size:.6rem;color:var(--text3)">Lat: ${m.lat.toFixed(4)} · Lon: ${m.lon.toFixed(4)} · H: ${m.heights&&m.heights.length>1?m.heights.sort((a,b)=>b-a).join('/')+'m':m.height+'m'}${m.elevation?' · Elev: '+m.elevation+'m':''}${m.startDate?' · '+m.startDate.slice(0,10)+'→'+(m.endDate?m.endDate.slice(0,10):''):''}</div>`;
-    div.style.cursor='pointer';div.onclick=function(e){if(e.target.tagName!=='BUTTON')editMast(i);};
+    // v55.0: Get height entries (new format) or fall back to legacy heights array
+    const hEntries=m.heightEntries||[];
+    const legacyHeights=m.heights||[];
+    const hasMultiHeight=hEntries.length>1||(legacyHeights.length>1&&!hEntries.length);
+    const heightStr=hEntries.length>1?hEntries.sort((a,b)=>b.height-a.height).map(e=>e.height+'m').join('/'):
+                   legacyHeights.length>1?legacyHeights.sort((a,b)=>b-a).join('/')+'m':m.height+'m';
+
+    let heightsHTML='';
+    if(hEntries.length>1){
+      heightsHTML=`<div style="margin-top:.3rem;border-top:1px solid var(--border);padding-top:.3rem">`;
+      hEntries.sort((a,b)=>b.height-a.height).forEach((he,hi)=>{
+        const src=S.windSources[he.sourceName];
+        const recs=src?src.speeds.length:0;
+        heightsHTML+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:.1rem .2rem;font-size:.55rem;color:var(--text3);${hi>0?'border-top:1px dashed var(--border2)':''}">
+          <span style="cursor:pointer;color:var(--sky)" ondblclick="renameMastHeight(${i},${hi})" title="Double-click to rename">${he.height}m</span>
+          <span style="color:var(--text3)">${he.meanWS.toFixed(2)} m/s · ${recs.toLocaleString()} rec</span>
+          <button class="btn btn-sm btn-danger" style="padding:.05rem .3rem;font-size:.45rem;border:none;background:transparent;color:var(--red)" onclick="removeMastHeight(${i},${hi})" title="Remove this height">✕</button>
+        </div>`;
+      });
+      heightsHTML+=`</div>`;
+    }
+
+    div.innerHTML=`<div class="mast-header">
+      <span class="mast-name" ondblclick="renameMast(${i})" title="Double-click to rename" style="cursor:pointer">${m.name}${m.primary?' ★':''}</span>
+      <div style="display:flex;gap:.2rem">
+        <button class="btn btn-sm btn-ghost" onclick="editMast(${i})" style="padding:.15rem .4rem;font-size:.5rem">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="removeMast(${i})" style="padding:.15rem .4rem;font-size:.5rem">🗑</button>
+      </div>
+    </div>
+    <div style="font-size:.6rem;color:var(--text3)">Lat: ${m.lat.toFixed(4)} · Lon: ${m.lon.toFixed(4)} · H: ${heightStr}${m.elevation?' · Elev: '+m.elevation+'m':''}${m.startDate?' · '+m.startDate.slice(0,10)+'→'+(m.endDate?m.endDate.slice(0,10):''):''}</div>
+    ${heightsHTML}`;
+    div.style.cursor='pointer';div.onclick=function(e){if(e.target.tagName!=='BUTTON'&&!e.target.closest('button')&&e.target.tagName!=='SPAN'){editMast(i);}};
     el.appendChild(div);
   });
+}
+
+// v55.0: Rename a mast
+function renameMast(idx){
+  const m=S.masts[idx];if(!m)return;
+  const newName=prompt('Enter new mast name:',m.name);
+  if(!newName||newName===m.name)return;
+  // Update linked wind sources
+  const oldName=m.name;
+  m.name=newName;
+  // Update windSource mastName references
+  Object.keys(S.windSources||{}).forEach(k=>{
+    if(S.windSources[k].mastName===oldName)S.windSources[k].mastName=newName;
+  });
+  renderMastList();drawMastMarkers();
+  log(`Mast renamed: "${oldName}" → "${newName}"`,'i');
+}
+
+// v55.0: Rename a specific measurement height
+function renameMastHeight(mastIdx,heightIdx){
+  const m=S.masts[mastIdx];if(!m||!m.heightEntries||!m.heightEntries[heightIdx])return;
+  const he=m.heightEntries[heightIdx];
+  const newLabel=prompt(`Rename height ${he.height}m label:`,he.height+'m');
+  if(!newLabel)return;
+  he.label=newLabel;
+  renderMastList();
+  log(`Mast "${m.name}" height ${he.height}m renamed to "${newLabel}"`,'i');
+}
+
+// v55.0: Remove a specific measurement height from a mast
+function removeMastHeight(mastIdx,heightIdx){
+  const m=S.masts[mastIdx];if(!m||!m.heightEntries)return;
+  const he=m.heightEntries[heightIdx];if(!he)return;
+  if(!confirm(`Remove height ${he.height}m from mast "${m.name}"?\nThis will also remove the associated wind data source "${he.sourceName}".`))return;
+  // Remove the wind source
+  if(S.windSources[he.sourceName]){
+    // If this was the current wind source, switch away first
+    if(S.windSource===he.sourceName){
+      const remaining=m.heightEntries.filter((_,i)=>i!==heightIdx);
+      if(remaining.length>0){
+        S.windSource=remaining[0].sourceName;
+        const ws=S.windSources[remaining[0].sourceName];
+        if(ws){S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[]};S.mcpFactor=ws.mcpFactor||1;}
+      }
+    }
+    delete S.windSources[he.sourceName];
+    log(`Removed wind source "${he.sourceName}"`,'i');
+  }
+  // Remove from height entries
+  m.heightEntries.splice(heightIdx,1);
+  // If the removed height was the primary height, update
+  if(m.height===he.height&&m.heightEntries.length>0){
+    m.height=m.heightEntries[0].height;
+    if($('mastH'))$('mastH').value=m.height;
+  }
+  // If no heights left, remove the entire mast
+  if(m.heightEntries.length===0){
+    S.masts.splice(mastIdx,1);
+    log(`Mast "${m.name}" removed (no heights remaining)`,'i');
+  }else{
+    log(`Removed height ${he.height}m from mast "${m.name}" (${m.heightEntries.length} heights remaining)`,'i');
+  }
+  renderMastList();drawMastMarkers();updateDataSourceUI(S.windSource||'ERA5');
 }
 function importMastData(event){
   const f=event.target.files[0];if(!f)return;
@@ -11047,7 +11223,7 @@ function importMastData(event){
       for(let i=0;i<lines.length;i++){
         const p=lines[i].split(/[,\t;]/);if(i===0&&isNaN(+p[0]))continue;
         const lat=+p[0],lon=+p[1],h=p[2]?+p[2]:100,name=p[3]||'Mast '+(S.masts.length+1);
-        if(!isNaN(lat)&&!isNaN(lon))S.masts.push({id:S.masts.length+1,name,lat,lon,height:h,z0:0.03,primary:S.masts.length===0,startDate:'',endDate:''});
+        if(!isNaN(lat)&&!isNaN(lon))S.masts.push({id:S.masts.length+1,name,lat,lon,height:h,z0:0.03,primary:S.masts.length===0,startDate:'',endDate:'',heightEntries:[{height:h,sourceName:null,meanWS:0,records:0}]});
       }
       renderMastList();drawMastMarkers();log(`Imported ${S.masts.length} masts from ${f.name}`,'i');
     }catch(err){log('Mast import failed: '+err.message,'e');}
@@ -11739,7 +11915,7 @@ function updateReportingDashboard(){
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
   // v42.1: Also save S.results so user doesn't have to re-run analysis after loading
-  const data={version:'54.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0',nrelApiKey:$('nrelApiKey')?.value||''}};
+  const data={version:'55.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate,mastName:v.mastName||null,pressure:v.pressure||null}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0',nrelApiKey:$('nrelApiKey')?.value||''}};
   const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v42.1, results included)','i');
 }
 
@@ -11765,7 +11941,7 @@ function exportWaspProject(){
 
   // Build project summary file with WAsP import instructions
   let lines=[];
-  lines.push(`WAsP Project Export - WindFlow Pro 52.0`);
+  lines.push(`WAsP Project Export - WindFlow Pro 55.0`);
   lines.push(`Project: ${projName}`);
   lines.push(`Date: ${new Date().toISOString().split('T')[0]}`);
   lines.push('');
@@ -12243,7 +12419,7 @@ function exportRoughnessMap(){
   }
 
   // Fallback: polar roughness rose format (WAsP native, not Openwind)
-  let map=`! WAsP Roughness Map - exported from WindFlow Pro 53.0\n`;
+  let map=`! WAsP Roughness Map - exported from WindFlow Pro 55.0\n`;
   map+=`! Site: ${$('projName')?.value||'Project'} at ${lat.toFixed(4)}N ${lon.toFixed(4)}E\n`;
   map+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
   map+=`${nSectors} 0\n`; // nSectors, 0 = polar format
@@ -12687,7 +12863,7 @@ function exportWRG(){
   const rho=parseFloat($('airDen')?.value)||1.225;
 
   // Build the WRG file
-  let wrg=`! Wind Resource Grid - WindFlow Pro 53.0\n`;
+  let wrg=`! Wind Resource Grid - WindFlow Pro 55.0\n`;
   wrg+=`! Project: ${$('projName')?.value||'Project'}\n`;
   wrg+=`! Date: ${new Date().toISOString().split('T')[0]}\n`;
   wrg+=`! Turbine: ${$('tcls').options[$('tcls').selectedIndex]?.text||'Custom'}\n`;
