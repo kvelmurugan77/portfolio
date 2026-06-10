@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 55.0</title>
+<title>WindFlow Pro 56.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 55.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 56.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -482,7 +482,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div id="mcResults" style="font-size:.6rem;color:var(--text3);margin-top:.3rem;display:none"></div>
       </div>
       <div class="card"><div class="card-title">Per-Turbine AEP</div>
-        <div class="tbl-wrap" style="max-height:150px"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Eff.SU</th><th>ρ kg/m³</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="aepBody"><tr><td colspan="13" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div>
+        <div class="tbl-wrap" style="max-height:150px"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Eff.SU</th><th>ρ kg/m³</th><th>Mast</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="aepBody"><tr><td colspan="14" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div>
       </div>
       <div class="card"><div class="card-title">Wind Rose</div><div class="rose-canvas-wrap"><canvas id="roseCanvas" width="400" height="350"></canvas></div></div>
       <div class="card"><div class="card-title">Sector OW Flow Speedup</div><div class="canvas-wrap" style="height:150px"><canvas id="bzSectChart"></canvas></div></div>
@@ -491,7 +491,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
   </div>
   <div class="tab-bar" style="margin-top:.5rem"><button class="tab-btn active" onclick="showFlowTab(0,this)">OWC</button><button class="tab-btn" onclick="showFlowTab(1,this)">WS Chain</button><button class="tab-btn" onclick="showFlowTab(2,this)">GWC</button><button class="tab-btn" onclick="showFlowTab(3,this)">SWC Detail</button><button class="tab-btn" onclick="showFlowTab(4,this)">Time Series</button><button class="tab-btn" onclick="showFlowTab(5,this)">Calibration</button><button class="tab-btn" onclick="showFlowTab(6,this)">Engine Log</button></div>
   <div class="tab-panel active" id="flowTab0"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val sky" id="wMean">—</div><div class="metric-label">Mean WS m/s</div></div><div class="metric-item"><div class="metric-val" id="wPD">—</div><div class="metric-label">Power W/m²</div></div><div class="metric-item"><div class="metric-val sky" id="wA">—</div><div class="metric-label">Weibull A</div></div><div class="metric-item"><div class="metric-val gold" id="wK">—</div><div class="metric-label">Weibull k</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="wbChart"></canvas></div><div class="tbl-wrap" style="max-height:150px;margin-top:.4rem"><table class="dt"><thead><tr><th>Dir</th><th>Freq%</th><th>A</th><th>k</th><th>WS</th></tr></thead><tbody id="sectBody"></tbody></table></div></div></div>
-  <div class="tab-panel" id="flowTab1"><div class="card"><div id="wscChain">Run analysis</div><div class="tbl-wrap" style="max-height:180px;margin-top:.5rem"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Eff.SU</th><th>ρ kg/m³</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="wscBody"><tr><td colspan="13" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.5rem"><canvas id="wscChart"></canvas></div></div></div>
+  <div class="tab-panel" id="flowTab1"><div class="card"><div id="wscChain">Run analysis</div><div class="tbl-wrap" style="max-height:180px;margin-top:.5rem"><table class="dt"><thead><tr><th>WTG</th><th>Lat</th><th>Lon</th><th>Elev</th><th>HH</th><th>Free WS</th><th>Wake%</th><th>Net WS</th><th>Eff.SU</th><th>ρ kg/m³</th><th>Mast</th><th>Gross GWh</th><th>Net GWh</th><th>CF%</th></tr></thead><tbody id="wscBody"><tr><td colspan="14" style="text-align:center;color:var(--text3);padding:.4rem">Run analysis</td></tr></tbody></table></div><div class="canvas-wrap" style="height:130px;margin-top:.5rem"><canvas id="wscChart"></canvas></div></div></div>
   <div class="tab-panel" id="flowTab2"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="gcZ0">—</div><div class="metric-label">z₀ m</div></div><div class="metric-item"><div class="metric-val sky" id="gcSR">—</div><div class="metric-label">Mean SR</div></div><div class="metric-item"><div class="metric-val" id="gcWS">—</div><div class="metric-label">GWC WS</div></div><div class="metric-item"><div class="metric-val sky" id="gcSW">—</div><div class="metric-label">SWC WS</div></div></div><div id="bzGWCTbl"></div><div class="canvas-wrap" style="height:130px;margin-top:.4rem"><canvas id="shearChart2"></canvas></div></div></div>
   <div class="tab-panel" id="flowTab3"><div class="card"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="bz-maSU">—</div><div class="metric-label">Mast SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-mxSU">—</div><div class="metric-label">Max SU</div></div><div class="metric-item"><div class="metric-val sky" id="bz-miSU">—</div><div class="metric-label">Min SU</div></div><div class="metric-item"><div class="metric-val gold" id="bz-rix">—</div><div class="metric-label">RIX %</div></div></div><div class="tbl-wrap" style="max-height:200px;margin-top:.4rem"><table class="dt"><thead><tr><th>T#</th><th>WindMap SU</th><th>δ%</th><th>Turn°</th><th>OWC</th><th>GWC</th><th>SWC</th></tr></thead><tbody id="bzTBody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:.4rem">Run WindMap first</td></tr></tbody></table></div><div class="canvas-wrap" style="height:120px;margin-top:.4rem"><canvas id="bzBesChart"></canvas></div><div id="bzIBLnote" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">—</div><div class="g2" style="gap:.4rem;margin-top:.3rem"><div class="metric-item"><div class="metric-val sky" id="bz-iblH">—</div><div class="metric-label">IBL Height m</div></div><div class="metric-item"><div class="metric-val" id="bz-roughRC">—</div><div class="metric-label">Rough. Corr.</div></div></div></div></div>
   <div class="tab-panel" id="flowTab4"><div class="card"><div class="card-title gold">Time Series</div><div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Start Year</label><input class="fi" id="tsSy" type="number" value="2022"></div><div class="fg"><label class="fl">End Year</label><input class="fi" id="tsEy" type="number" value="2022"></div></div><div class="fg"><label class="fl">Step</label><select class="fs" id="tsStep"><option value="1">1-hour</option><option value="3" selected>3-hour</option><option value="6">6-hour</option></select></div><button class="btn btn-gold" style="width:100%;margin-top:.4rem" onclick="runTimeSeries()">⏱ Run Time Series</button><div class="progress"><div class="progress-bar" id="tspb" style="width:0"></div></div><div id="tspt" style="font-size:.52rem;color:var(--text3);margin-top:.2rem">—</div><div id="tsOut" style="display:none;margin-top:.5rem"><div class="g3" style="gap:.4rem"><div class="metric-item"><div class="metric-val" id="tsRc">—</div><div class="metric-label">Records</div></div><div class="metric-item"><div class="metric-val g" id="tsNt">—</div><div class="metric-label">Net GWh/yr</div></div><div class="metric-item"><div class="metric-val o" id="tsWk">—</div><div class="metric-label">Wake %</div></div><div class="metric-item"><div class="metric-val b" id="tsCf">—</div><div class="metric-label">CF %</div></div></div><div class="canvas-wrap" style="height:120px;margin-top:.5rem"><canvas id="monthChart"></canvas></div><div class="canvas-wrap" style="height:100px;margin-top:.3rem"><canvas id="diurnChart"></canvas></div><button class="btn btn-sm btn-ghost" style="margin-top:.3rem" onclick="exportTSCSV()">↓ Monthly CSV</button><button class="btn btn-sm btn-gold" style="margin-top:.3rem;width:100%" onclick="exportTSPerTurbineHourly()">↓ Per-WTG Hourly CSV</button></div></div></div>
@@ -657,7 +657,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </div>
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// WINDFLOW PRO 52.0 — Step-Based Wizard · ERA5T Density · Per-WTG ρ · Humidity · WAsP-Aligned · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Centralized Coords · Dynamic Data Source Position
+// WINDFLOW PRO 56.0 — Step-Based Wizard · Multi-Mast IDW · Per-WTG Density · WAsP-Aligned · OWC→GWC→SWC · IBL · Wake Dir Var · Terrain SU · Centralized Coords · Dynamic Data Source Position
 // ═══════════════════════════════════════════════════════════════════
 const $=id=>document.getElementById(id);
 function log(m,t='i'){const d=$('elog');if(!d)return;const s=document.createElement('span');s.className={i:'li',w:'lw',e:'le'}[t]||'li';s.textContent=`[${new Date().toLocaleTimeString()}] ${m}\n`;d.appendChild(s);d.scrollTop=1e6}
@@ -3106,20 +3106,25 @@ function calcAEP(){
   log('v50.0 OW Flow Model — Jackson-Hunt orographic (Openwind/WAsP methodology)','i');
   log('v47.0 CRITICAL FIXES: (1) Removed grid-wide slope exit from terrainSpeedupJH — local profile always computed, (2) computeHillParameters uses valley floor ref — ridge-top turbines get speedup, (3) BZ model flat terrain: removed isFlatByRIX, only local range check, (4) Replaced bogus RIX formula with BZ.rix','i');
 
-  // v55.0: Per-WTG density correction — extrapolated from mast/data source position to each WTG position
+  // v56.0: Per-WTG density correction — extrapolated from mast/data source position to each WTG position
   // Similar to WindPRO/WAsP/Openwind: air density at each WTG accounts for elevation difference
   // between the reference (mast) position and the WTG position
   const usePerWtg=$('perWtgDensity')?.checked!==false;
-  // v55.0: Use mast elevation as reference (not generic "site elevation")
+  // v56.0: Use mast elevation as reference — prefer S.masts elevation over windSource elevation
   const curSrcForDensity=S.windSource||'ERA5';
   const srcWS=S.windSources[curSrcForDensity];
-  const refElev=srcWS?.elevation||(parseFloat($('siteElev').value)||0);
+  // Find the mast that matches the current wind source for elevation reference
+  const refMast=S.masts.find(m=>m.name===srcWS?.mastName||(m.heightEntries&&m.heightEntries.some(he=>he.sourceName===curSrcForDensity)));
+  const refElev=refMast?.elevation||srcWS?.elevation||(parseFloat($('siteElev').value)||0);
   const T_avg_K=S.era5Atm&&S.era5Atm.temp.length?
     S.era5Atm.temp.filter(v=>v!=null).reduce((s,v,_,a)=>s+v/a.length,0)+273.15 :
     (parseFloat($('siteTemp').value)||10)+273.15;
+  if(usePerWtg&&refElev>0){
+    log(`v56.0: Per-WTG density reference: mast "${refMast?.name||curSrcForDensity}" elevation=${refElev}m`,'i');
+  }
   const turbDensities=S.turbines.map((t,ti)=>{
     if(!usePerWtg)return density;
-    const tElev=t.elev!==undefined?t.elev:refElev;
+    const tElev=t.elev!==undefined&&t.elev!==null?t.elev:refElev;
     return perWtgDensityCorrection(density,refElev,tElev,T_avg_K);
   });
   const turbLUTs=turbDensities.map(d=>buildLUT(pc,d));
@@ -3912,6 +3917,405 @@ function calcAEP(){
   return{mastH,hubHH,z0,mastMean,hubMean,rotorMeanWS,rotAvgFactor,mastWb,hubWb,mcpFactor:mcpF,density,PD:.5*density*hubMean**3,grossAEP:grossG,wakeLoss:wakeL,netAEP:netF,CF,instMW,P50,P75,P90,P99,sigma:sig,u_wind_r,u_wake_r,u_pc_r,u_den_r:Math.abs(density-1.225)/1.225*0.5,perTurbine:perT,sectors,gwcSectors,shearProfile,rix,lut,iec,bzEnabled:BZ.enabled,rotorAvgUsed:useRotorAvg,isMixedHH,turbineHHs,hhScaleFactors,densitySource:$('densMethod')?.textContent||'ISA',turbDensities,perWtgDensityUsed:usePerWtg,isFlatTerrain};
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// v56.0: MULTI-MAST AEP CALCULATION
+// Industry-standard approach: per-WTG mast assignment with inverse-distance
+// weighting (IDW) when multiple masts are available.
+//
+// Methodology (matching WAsP/OpenWind/WindPRO):
+//   1. For each WTG, compute distance to every mast with wind data
+//   2. Assign WTG to nearest mast (primary method)
+//   3. When multiple masts are available, use IDW to blend wind climates
+//   4. Per-WTG air density is extrapolated from the assigned mast's elevation
+//   5. Results include per-WTG mast assignment and air density
+//
+// IDW power parameter: p=2 (standard in wind energy, same as OpenWind SEY)
+// Minimum weight for distant masts: 5% (prevents ignoring useful data)
+// ══════════════════════════════════════════════════════════════════════
+
+function calcMultiMastAEP(){
+  if(!S.turbines.length)return null;
+
+  // ── Step 1: Identify masts with usable wind data ──
+  const mastsWithData=[];
+  S.masts.forEach((m,mi)=>{
+    // Find the best wind source for this mast
+    let bestSource=null,bestSourceName=null;
+    // Check heightEntries for linked sources
+    if(m.heightEntries&&m.heightEntries.length){
+      for(const he of m.heightEntries){
+        if(he.sourceName&&S.windSources[he.sourceName]&&S.windSources[he.sourceName].speeds&&S.windSources[he.sourceName].speeds.length>100){
+          if(!bestSource||he.height>mastH_forSource(S.windSources[he.sourceName])){
+            bestSource=S.windSources[he.sourceName];
+            bestSourceName=he.sourceName;
+          }
+        }
+      }
+    }
+    // Also check if mast name matches a wind source
+    if(!bestSource){
+      const nameSrc=S.windSources[m.name];
+      if(nameSrc&&nameSrc.speeds&&nameSrc.speeds.length>100){
+        bestSource=nameSrc;bestSourceName=m.name;
+      }
+    }
+    // Also check windSource mastName references
+    if(!bestSource){
+      for(const [k,v] of Object.entries(S.windSources||{})){
+        if(v.mastName===m.name&&v.speeds&&v.speeds.length>100){
+          if(!bestSource||mastH_forSource(v)>mastH_forSource(bestSource)){
+            bestSource=v;bestSourceName=k;
+          }
+        }
+      }
+    }
+    if(bestSource){
+      mastsWithData.push({
+        mast:m,
+        mastIndex:mi,
+        source:bestSource,
+        sourceName:bestSourceName,
+        lat:m.lat,
+        lon:m.lon,
+        elevation:m.elevation||bestSource.elevation||0,
+        height:mastH_forSource(bestSource),
+        meanWS:bestSource.meanWS||0
+      });
+    }
+  });
+
+  // If no masts with data, fall back to current S.wind
+  if(!mastsWithData.length){
+    log('Multi-mast: No masts with wind data found — falling back to single-source AEP','w');
+    return calcAEP();
+  }
+
+  // If only one mast with data, still use multi-mast path for proper
+  // per-WTG mast assignment and air density referencing
+  const nMasts=mastsWithData.length;
+  log(`── Multi-Mast AEP (v56.0) — ${nMasts} mast(s) with wind data ──`,'i');
+  mastsWithData.forEach((md,i)=>{
+    log(`  Mast ${i+1}: "${md.mast.name}" @ ${md.lat.toFixed(4)}°, ${md.lon.toFixed(4)}°, ${md.height}m, mean=${md.meanWS.toFixed(2)} m/s, source="${md.sourceName}"${md.mast.primary?' [PRIMARY]':''}`,'i');
+  });
+
+  // ── Step 2: Compute per-WTG distance to each mast ──
+  const n=S.turbines.length;
+  const wtgMastDist=S.turbines.map(t=>
+    mastsWithData.map(md=>{
+      const dLat=(t.lat-md.lat)*111320;
+      const dLon=(t.lon-md.lon)*111320*Math.cos(md.lat*Math.PI/180);
+      return Math.sqrt(dLat*dLat+dLon*dLon); // meters
+    })
+  );
+
+  // ── Step 3: Compute IDW weights for each WTG ──
+  // Power parameter p=2 (standard in wind energy, same as OpenWind SEY)
+  const IDW_POWER=2;
+  // Maximum influence distance: beyond this, a mast's weight is 5% minimum
+  const MAX_INFLUENCE_DIST=50000; // 50km
+  // For single mast: all weight goes to that mast
+  const wtgWeights=S.turbines.map((t,ti)=>{
+    if(nMasts===1){
+      return [1.0]; // single mast gets all weight
+    }
+    const dists=wtgMastDist[ti];
+    // IDW weights: w_i = 1/d_i^p, normalized
+    let weights=dists.map(d=>1/Math.max(d,100)**IDW_POWER);
+    const wSum=weights.reduce((s,w)=>s+w,0);
+    weights=weights.map(w=>w/wSum);
+    // Ensure minimum 5% weight for all masts within MAX_INFLUENCE_DIST
+    // This prevents ignoring useful data from distant masts
+    const hasMinWeight=weights.every((w,mi)=>dists[mi]>MAX_INFLUENCE_DIST||w>=0.05);
+    if(!hasMinWeight){
+      const MIN_WEIGHT=0.05;
+      // Redistribute: apply minimum, then normalize
+      weights=weights.map((w,mi)=>dists[mi]>MAX_INFLUENCE_DIST?w:Math.max(w,MIN_WEIGHT));
+      const newSum=weights.reduce((s,w)=>s+w,0);
+      weights=weights.map(w=>w/newSum);
+    }
+    return weights;
+  });
+
+  // ── Step 4: Assign each WTG to nearest mast (for display) ──
+  const wtgAssignedMast=S.turbines.map((t,ti)=>{
+    let minDist=Infinity,nearestIdx=0;
+    wtgMastDist[ti].forEach((d,mi)=>{if(d<minDist){minDist=d;nearestIdx=mi;}});
+    return nearestIdx;
+  });
+
+  // Log mast assignments
+  const assignmentSummary={};
+  wtgAssignedMast.forEach(mi=>{
+    const name=mastsWithData[mi].mast.name;
+    assignmentSummary[name]=(assignmentSummary[name]||0)+1;
+  });
+  log(`  WTG assignment: ${Object.entries(assignmentSummary).map(([k,v])=>`${k}: ${v} WTGs`).join(', ')}`,'i');
+
+  // ── Step 5: Run calcAEP() for each mast's wind data ──
+  // Save current state so we can restore it after
+  const savedWind=S.wind?{speeds:[...S.wind.speeds],dirs:[...S.wind.dirs],times:S.wind.times?[...S.wind.times]:[]}:null;
+  const savedMcpFactor=S.mcpFactor;
+  const savedWindSource=S.windSource;
+  const savedMastH=$('mastH')?.value;
+  const savedMastLat=$('mastLat')?.value;
+  const savedMastLon=$('mastLon')?.value;
+  const savedBZ=JSON.parse(JSON.stringify({
+    enabled:BZ.enabled,speedups:BZ.speedups,sectorSpeedups:BZ.sectorSpeedups,
+    mastSectorSU:BZ.mastSectorSU,mastSU:BZ.mastSU,rix:BZ.rix,
+    sectorRoughRC:BZ.sectorRoughRC,turbRoughRC:BZ.turbRoughRC,
+    sectorTurning:BZ.sectorTurning,mastSectorTurning:BZ.mastSectorTurning,
+    sectorInclination:BZ.sectorInclination,sectorSU:BZ.sectorSU,
+    calibration:BZ.calibration,turbDistM:BZ.turbDistM,
+    showLayer:BZ.showLayer,grid:BZ.grid,mastSectorSU_raw:BZ.mastSectorSU_raw,
+    speedups:BZ.speedups
+  }));
+
+  const mastResults=[];
+
+  for(let mi=0;mi<nMasts;mi++){
+    const md=mastsWithData[mi];
+    log(`  [${mi+1}/${nMasts}] Running AEP with mast "${md.mast.name}" (${md.sourceName})...`,'i');
+
+    // Switch wind data to this mast's source
+    S.wind={speeds:[...md.source.speeds],dirs:[...md.source.dirs],times:md.source.times?[...md.source.times]:[]};
+    S.mcpFactor=md.source.mcpFactor||1;
+    S.windSource=md.sourceName;
+    if($('mastH'))$('mastH').value=md.height;
+    if($('mastLat'))$('mastLat').value=md.lat.toFixed(6);
+    if($('mastLon'))$('mastLon').value=md.lon.toFixed(6);
+
+    // Reset BZ for each mast (different reference point)
+    BZ.enabled=false;BZ.speedups=[];BZ.sectorSpeedups=[];
+    BZ.mastSectorSU=[];BZ.mastSU=1;BZ.rix=0;
+    BZ.sectorRoughRC=[];BZ.turbRoughRC=[];
+    BZ.sectorTurning=[];BZ.mastSectorTurning=[];
+    BZ.sectorInclination=[];BZ.sectorSU=[];
+    BZ.calibration=null;BZ.turbDistM=[];
+
+    // Run terrain analysis if available (for BZ speedups specific to this mast)
+    // Note: BZ uses the mast position as reference, so it needs to be recomputed
+    const targetHH=parseFloat($('hubH').value)||120;
+    const curSrcH=md.height;
+    if(Math.abs(curSrcH-targetHH)>1&&S.wind&&S.wind.speeds){
+      try{runVertExtrap();}catch(e){}
+    }
+    if(S.terrain&&S.terrain.grid&&S.terrain.grid.length){
+      try{runBZModel();}catch(e){log(`  BZ model warning for mast "${md.mast.name}": ${e.message}`,'w');}
+    }
+
+    const R=calcAEP();
+    if(!R){
+      log(`  ⚠ AEP calculation failed for mast "${md.mast.name}" — skipping`,'w');
+      mastResults.push(null);
+      continue;
+    }
+
+    mastResults.push({
+      mastData:md,
+      result:R,
+      perTurbineGross:R.perTurbine.map(pt=>parseFloat(pt.gross)),
+      perTurbineNet:R.perTurbine.map(pt=>parseFloat(pt.net)),
+      perTurbineCF:R.perTurbine.map(pt=>parseFloat(pt.cf)),
+      perTurbineFreeWS:R.perTurbine.map(pt=>parseFloat(pt.ws)),
+      perTurbineWakeWS:R.perTurbine.map(pt=>parseFloat(pt.wakeWS)),
+      perTurbineWake:R.perTurbine.map(pt=>parseFloat(pt.wake)),
+      perTurbineRho:R.turbDensities||R.perTurbine.map(pt=>parseFloat(pt.rho)),
+      perTurbineEffSU:R.perTurbine.map(pt=>parseFloat(pt.effSU)||1),
+      grossAEP:R.grossAEP,
+      netAEP:R.netAEP,
+      wakeLoss:R.wakeLoss,
+      CF:R.CF,
+      hubMean:R.hubMean,
+      rotorMeanWS:R.rotorMeanWS,
+      sectors:R.sectors,
+      gwcSectors:R.gwcSectors,
+      shearProfile:R.shearProfile
+    });
+
+    log(`  [${mi+1}/${nMasts}] Mast "${md.mast.name}": Net=${R.netAEP.toFixed(2)} GWh, Wake=${R.wakeLoss.toFixed(1)}%, CF=${R.CF.toFixed(1)}%`,'i');
+  }
+
+  // ── Step 6: Restore original state ──
+  if(savedWind){S.wind=savedWind;}else{S.wind=null;}
+  S.mcpFactor=savedMcpFactor;
+  S.windSource=savedWindSource;
+  if($('mastH')&&savedMastH)$('mastH').value=savedMastH;
+  if($('mastLat')&&savedMastLat)$('mastLat').value=savedMastLat;
+  if($('mastLon')&&savedMastLon)$('mastLon').value=savedMastLon;
+  // Restore BZ state
+  Object.assign(BZ,savedBZ);
+
+  // ── Step 7: Combine per-WTG results using IDW weights ──
+  const validResults=mastResults.filter(r=>r!==null);
+  if(!validResults.length){
+    log('Multi-mast: All AEP calculations failed — falling back to single-source','e');
+    return calcAEP();
+  }
+
+  // If only one valid mast result, use it directly but add mast assignment info
+  if(validResults.length===1){
+    log('Multi-mast: Only one mast produced valid results — using single-mast AEP','i');
+    const R=validResults[0].result;
+    // Add mast assignment info to per-turbine results
+    R.perTurbine=R.perTurbine.map((pt,i)=>({
+      ...pt,
+      assignedMast:mastsWithData[wtgAssignedMast[i]]?.mast?.name||'—',
+      mastDist:wtgMastDist[i][wtgAssignedMast[i]]?.toFixed(0)||'—'
+    }));
+    R.multiMast=true;
+    R.mastCount=1;
+    R.mastNames=[mastsWithData[0]?.mast?.name];
+    return R;
+  }
+
+  // Multiple valid mast results: IDW combination
+  log(`  Combining ${validResults.length} mast results using IDW (p=${IDW_POWER})...`,'i');
+
+  // Map valid results back to their mast indices
+  const validMastIndices=mastResults.map((r,i)=>r!==null?i:-1).filter(i=>i>=0);
+
+  const combinedPerTurbine=S.turbines.map((t,ti)=>{
+    // Get weights for valid masts only
+    const weights=validMastIndices.map(mi=>wtgWeights[ti][mi]);
+    const wSum=weights.reduce((s,w)=>s+w,0);
+    const normWeights=weights.map(w=>w/wSum);
+
+    // IDW-blend per-WTG metrics
+    let gross=0,net=0,cf=0,freeWS=0,wakeWS=0,rho=0,effSU=0;
+    validMastIndices.forEach((mi,vi)=>{
+      const mr=mastResults[mi];
+      const w=normWeights[vi];
+      gross+=mr.perTurbineGross[ti]*w;
+      net+=mr.perTurbineNet[ti]*w;
+      cf+=mr.perTurbineCF[ti]*w;
+      freeWS+=mr.perTurbineFreeWS[ti]*w;
+      wakeWS+=mr.perTurbineWakeWS[ti]*w;
+      rho+=mr.perTurbineRho[ti]*w;
+      effSU+=mr.perTurbineEffSU[ti]*w;
+    });
+
+    const wake=gross>0?(gross-net)/gross*100:0;
+    const assignedIdx=wtgAssignedMast[ti];
+    const assignedMastName=mastsWithData[assignedIdx]?.mast?.name||'—';
+
+    // For IDW with multiple masts, show dominant mast and weight info
+    const dominantWeight=Math.max(...normWeights);
+    const dominantMastIdx=validMastIndices[normWeights.indexOf(dominantWeight)];
+
+    return{
+      i:ti+1,
+      ws:freeWS.toFixed(2),
+      hubWS:validResults[0].result.perTurbine[ti]?.hubWS||'—',
+      rotorWS:validResults[0].result.perTurbine[ti]?.rotorWS||'—',
+      wake:wake.toFixed(1),
+      wakeWS:wakeWS.toFixed(2),
+      net:net.toFixed(3),
+      cf:cf.toFixed(1),
+      gross:gross.toFixed(3),
+      power:validResults[0].result.perTurbine[ti]?.power||'—',
+      hh:t.hh||parseFloat($('hubH').value)||120,
+      speedup:effSU.toFixed(4),
+      rho:rho.toFixed(4),
+      effSU:effSU,
+      assignedMast:assignedMastName,
+      mastDist:wtgMastDist[ti][assignedIdx]?.toFixed(0)||'—',
+      dominantMast:mastsWithData[dominantMastIdx]?.mast?.name||'—',
+      dominantWeight:(dominantWeight*100).toFixed(0),
+      nMasts:validResults.length
+    };
+  });
+
+  // Compute combined totals
+  const combinedGross=combinedPerTurbine.reduce((s,pt)=>s+parseFloat(pt.gross),0);
+  const combinedNet=combinedPerTurbine.reduce((s,pt)=>s+parseFloat(pt.net),0);
+  const combinedWakeLoss=combinedGross>0?(combinedGross-combinedNet)/combinedGross*100:0;
+  const pc=getPC();
+  const instMW=n*pc.rated/1000;
+  const combinedCF=combinedNet*1000/(instMW*8760)*100;
+  const availPct=parseFloat($('availabilityPct')?.value)||95;
+  const otherL=parseFloat($('otherLoss').value)||5;
+  const lossM=1-otherL/100;
+  const availM=availPct/100;
+  const netFinal=combinedNet*lossM*availM;
+  const netFinalCF=netFinal*1000/(instMW*8760)*100;
+
+  // Combined uncertainty (use worst-case from individual mast results)
+  const maxSigma=Math.max(...validResults.map(r=>r.result.sigma||0.1));
+  const P50=netFinal,P75=P50*(1-0.674*maxSigma),P90=P50*(1-1.282*maxSigma),P99=P50*(1-2.326*maxSigma);
+
+  // Use first valid result's sectors/shearProfile for display
+  const refResult=validResults[0].result;
+  // Average hubMean and rotorMeanWS across masts (weighted by primary mast)
+  const primaryMastResult=mastResults[0]; // first mast is primary or closest
+
+  // Combined densities
+  const combinedDensities=S.turbines.map((t,ti)=>{
+    const weights=validMastIndices.map(mi=>wtgWeights[ti][mi]);
+    const wSum=weights.reduce((s,w)=>s+w,0);
+    return validMastIndices.reduce((rho,mi,vi)=>{
+      return rho+mastResults[mi].perTurbineRho[ti]*(weights[vi]/wSum);
+    },0);
+  });
+
+  log(`  Multi-Mast Combined: Gross=${combinedGross.toFixed(2)} GWh, Wake=${combinedWakeLoss.toFixed(1)}%, Net=${combinedNet.toFixed(2)} GWh (before losses), Final=${netFinal.toFixed(2)} GWh, CF=${netFinalCF.toFixed(1)}%`,'i');
+
+  return{
+    mastH:refResult.mastH,
+    hubHH:refResult.hubHH,
+    z0:refResult.z0,
+    mastMean:primaryMastResult?.hubMean||refResult.mastMean,
+    hubMean:primaryMastResult?.hubMean||refResult.hubMean,
+    rotorMeanWS:primaryMastResult?.rotorMeanWS||refResult.rotorMeanWS,
+    rotAvgFactor:refResult.rotAvgFactor,
+    mastWb:refResult.mastWb,
+    hubWb:refResult.hubWb,
+    mcpFactor:refResult.mcpFactor,
+    density:refResult.density,
+    PD:refResult.PD,
+    grossAEP:combinedGross,
+    wakeLoss:combinedWakeLoss,
+    netAEP:netFinal,
+    netAEP_final:netFinal,
+    CF:netFinalCF,
+    instMW,
+    P50,P75,P90,P99,
+    sigma:maxSigma,
+    u_wind_r:refResult.u_wind_r,
+    u_wake_r:refResult.u_wake_r,
+    u_pc_r:refResult.u_pc_r,
+    u_den_r:refResult.u_den_r,
+    perTurbine:combinedPerTurbine,
+    sectors:refResult.sectors,
+    gwcSectors:refResult.gwcSectors,
+    shearProfile:refResult.shearProfile||primaryMastResult?.result?.shearProfile,
+    rix:refResult.rix,
+    lut:refResult.lut,
+    iec:refResult.iec,
+    bzEnabled:refResult.bzEnabled,
+    rotorAvgUsed:refResult.rotorAvgUsed,
+    isMixedHH:refResult.isMixedHH,
+    turbineHHs:refResult.turbineHHs,
+    hhScaleFactors:refResult.hhScaleFactors,
+    densitySource:refResult.densitySource,
+    turbDensities:combinedDensities,
+    perWtgDensityUsed:true,
+    isFlatTerrain:refResult.isFlatTerrain,
+    // Multi-mast specific fields
+    multiMast:true,
+    mastCount:validResults.length,
+    mastNames:mastsWithData.map(md=>md.mast.name),
+    mastWeights:wtgWeights,
+    mastDistances:wtgMastDist,
+    wtgAssignedMast:wtgAssignedMast,
+    individualMastResults:mastResults
+  };
+}
+
+// Helper: extract mastH from a wind source
+function mastH_forSource(ws){
+  return ws.sourceHeight||ws.mastH||100;
+}
+
 function runAnalysis(){
   if(!S.turbines.length){alert('Add turbines (grid generator or Demo)');return;}
   if(!S.wind){alert('Load wind data (ERA5 tab or Import)');return;}
@@ -3976,11 +4380,13 @@ function updateResultsUI(R){
     </td></tr>
   </table>`;
   const tb=$('aepBody');tb.innerHTML='';
-  // v55.0: Updated to include ρ (air density) column — extrapolated from mast position to WTG position
+  // v56.0: Updated to include Mast assignment column — shows which mast each WTG uses
   R.perTurbine.forEach(t=>{const tb2=S.turbines[t.i-1]||{};const tr=document.createElement('tr');
     const effSU=t.effSU||parseFloat(t.speedup||1);
     const rho=t.rho||(R.turbDensities&&R.turbDensities[t.i-1]?R.turbDensities[t.i-1].toFixed(3):R.density.toFixed(3));
-    tr.innerHTML=`<td>T${t.i}</td><td>${(tb2.lat||0).toFixed(4)}</td><td>${(tb2.lon||0).toFixed(4)}</td><td>${(tb2.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${t.ws}</td><td>${t.wake}%</td><td>${t.wakeWS||t.ws}</td><td style="color:var(--acc)">${effSU.toFixed(3)}</td><td style="color:var(--sky)">${rho}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;tb.appendChild(tr);});
+    const mastInfo=t.assignedMast||'—';
+    const mastDisplay=mastInfo.length>12?mastInfo.substring(0,10)+'…':mastInfo;
+    tr.innerHTML=`<td>T${t.i}</td><td>${(tb2.lat||0).toFixed(4)}</td><td>${(tb2.lon||0).toFixed(4)}</td><td>${(tb2.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${t.ws}</td><td>${t.wake}%</td><td>${t.wakeWS||t.ws}</td><td style="color:var(--acc)">${effSU.toFixed(3)}</td><td style="color:var(--sky)">${rho}</td><td style="color:var(--gold);font-size:.55rem" title="${mastInfo} (${t.mastDist||'—'}m)">${mastDisplay}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;tb.appendChild(tr);});
   drawAEPChart(R.perTurbine);drawShearChart(R.shearProfile);
   if (R.calibrated) {
     if ($('calIndicator')) $('calIndicator').style.display = 'block';
@@ -4074,8 +4480,10 @@ function updateWSChain(R){
     const tr=document.createElement('tr');
     const effSU=t.effSU||parseFloat(t.speedup||1);
     const rho=t.rho||R.density.toFixed(4);
-    // v55.0: Show effective speedup + air density that explains WHY free WS differs between WTGs
-    tr.innerHTML=`<td>T${t.i}</td><td>${(turb.lat||0).toFixed(4)}</td><td>${(turb.lon||0).toFixed(4)}</td><td>${(turb.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${freeWS.toFixed(2)}</td><td style="color:${wkPct>5?'var(--wrn)':'var(--grn)'}">${wkPct.toFixed(1)}%</td><td style="color:var(--acc)">${netWS.toFixed(2)}</td><td>${effSU.toFixed(3)}</td><td style="color:var(--sky)">${rho}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;
+    const mastInfo=t.assignedMast||'—';
+    const mastDisplay=mastInfo.length>12?mastInfo.substring(0,10)+'…':mastInfo;
+    // v56.0: Show effective speedup + air density + mast assignment
+    tr.innerHTML=`<td>T${t.i}</td><td>${(turb.lat||0).toFixed(4)}</td><td>${(turb.lon||0).toFixed(4)}</td><td>${(turb.elev||0).toFixed(0)}</td><td>${t.hh||$('hubH').value}m</td><td>${freeWS.toFixed(2)}</td><td style="color:${wkPct>5?'var(--wrn)':'var(--grn)'}">${wkPct.toFixed(1)}%</td><td style="color:var(--acc)">${netWS.toFixed(2)}</td><td>${effSU.toFixed(3)}</td><td style="color:var(--sky)">${rho}</td><td style="color:var(--gold);font-size:.55rem" title="${mastInfo} (${t.mastDist||'—'}m)">${mastDisplay}</td><td>${t.gross}</td><td style="color:var(--grn);font-weight:700">${t.net}</td><td>${t.cf}%</td>`;
     tb.appendChild(tr);
   });
 
@@ -4647,7 +5055,7 @@ async function loadDemo(site='horns'){
 // ── TABS ──
 function exportLayoutCSV(){if(!S.turbines.length){alert('No turbines');return;}let c='Name,Lat,Lon,HH_m,Elev_m\n';S.turbines.forEach((t,i)=>c+=`T${i+1},${t.lat},${t.lon},${t.hh},${t.elev??''}\n`);dlFile(c,'layout.csv','text/csv');}
 function exportLayoutKML(){if(!S.turbines.length){alert('No turbines');return;}let k='<?xml version="1.0"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>\n';S.turbines.forEach((t,i)=>k+=`<Placemark><name>T${i+1}</name><ExtendedData><Data name="hub_height"><value>${t.hh}</value></Data></ExtendedData><Point><coordinates>${t.lon},${t.lat},${t.elev??0}</coordinates></Point></Placemark>\n`);k+='</Document></kml>';dlFile(k,'layout.kml','application/vnd.google-earth.kml+xml');}
-function exportAEPCSV(){if(!S.results){alert('Run analysis first');return;}const R=S.results;const turbineModel=$('tcls').options[$('tcls').selectedIndex]?.text||'Custom';const densSrc=$('densMethod')?.textContent||'ISA';let c=`Project,${$('projName').value}\nTurbine Model,${turbineModel}\nData Source,${S.windSource||'ERA5'}\nSite Lat,${$('mastLat').value}\nSite Lon,${$('mastLon').value}\nData Source Height (m),${$('mastH').value}\nHub HH (m),${$('hubH').value}\nRoughness z0 (m),${$('z0val').value}\nShear alpha,${$('shearA').value}\nAir Density (kg/m3),${R.density.toFixed(3)}\nDensity Source,${densSrc}\nPer-WTG Density,${R.perWtgDensityUsed?'Yes':'No'}\nMCP Factor,${R.mcpFactor.toFixed(3)}\nMast Mean WS (m/s),${R.mastMean.toFixed(2)}\nHub Mean WS (m/s),${R.hubMean.toFixed(2)}\nWeibull A (hub),${R.hubWb.A.toFixed(3)}\nWeibull k (hub),${R.hubWb.k.toFixed(3)}\nGross AEP (GWh),${R.grossAEP.toFixed(3)}\nNet AEP (GWh),${R.netAEP.toFixed(3)}\nWake Loss (%),${R.wakeLoss.toFixed(2)}\nCF (%),${R.CF.toFixed(2)}\nP50 (GWh),${R.P50.toFixed(3)}\nP75 (GWh),${R.P75.toFixed(3)}\nP90 (GWh),${R.P90.toFixed(3)}\nP99 (GWh),${R.P99.toFixed(3)}\nUncertainty sigma (%),${(R.sigma*100).toFixed(1)}\nIEC Class,${R.iec?R.iec.cls:'—'}\nMixed Hub Heights,${R.isMixedHH?'Yes':'No'}\n\nT#,HH_m,Lat,Lon,Elev_m,Rho_kgm3,Free_WS_ms,Wake_pct,Net_WS_ms,Gross_GWh,Net_GWh,CF_pct,Power_kW\n`;R.perTurbine.forEach((t,i)=>{const tb=S.turbines[i]||{};c+=`T${t.i},${tb.hh||$('hubH').value},${tb.lat?.toFixed(5)||''},${tb.lon?.toFixed(5)||''},${tb.elev?.toFixed(0)||''},${t.rho||R.density.toFixed(4)},${t.ws},${t.wake},${t.wakeWS},${t.gross},${t.net},${t.cf},${t.power}\n`;});dlFile(c,'aep_results.csv','text/csv');log('AEP CSV exported','i');}
+function exportAEPCSV(){if(!S.results){alert('Run analysis first');return;}const R=S.results;const turbineModel=$('tcls').options[$('tcls').selectedIndex]?.text||'Custom';const densSrc=$('densMethod')?.textContent||'ISA';const multiMastInfo=R.multiMast?`\nMulti-Mast,${R.mastCount} masts (IDW)\nMast Names,${(R.mastNames||[]).join('; ')}`:'';let c=`Project,${$('projName').value}\nTurbine Model,${turbineModel}\nData Source,${S.windSource||'ERA5'}\nSite Lat,${$('mastLat').value}\nSite Lon,${$('mastLon').value}\nData Source Height (m),${$('mastH').value}\nHub HH (m),${$('hubH').value}\nRoughness z0 (m),${$('z0val').value}\nShear alpha,${$('shearA').value}\nAir Density (kg/m3),${R.density.toFixed(3)}\nDensity Source,${densSrc}\nPer-WTG Density,${R.perWtgDensityUsed?'Yes':'No'}\nMCP Factor,${R.mcpFactor.toFixed(3)}\nMast Mean WS (m/s),${R.mastMean.toFixed(2)}\nHub Mean WS (m/s),${R.hubMean.toFixed(2)}\nWeibull A (hub),${R.hubWb.A.toFixed(3)}\nWeibull k (hub),${R.hubWb.k.toFixed(3)}\nGross AEP (GWh),${R.grossAEP.toFixed(3)}\nNet AEP (GWh),${R.netAEP.toFixed(3)}\nWake Loss (%),${R.wakeLoss.toFixed(2)}\nCF (%),${R.CF.toFixed(2)}\nP50 (GWh),${R.P50.toFixed(3)}\nP75 (GWh),${R.P75.toFixed(3)}\nP90 (GWh),${R.P90.toFixed(3)}\nP99 (GWh),${R.P99.toFixed(3)}\nUncertainty sigma (%),${(R.sigma*100).toFixed(1)}\nIEC Class,${R.iec?R.iec.cls:'—'}\nMixed Hub Heights,${R.isMixedHH?'Yes':'No'}${multiMastInfo}\n\nT#,HH_m,Lat,Lon,Elev_m,Rho_kgm3,Assigned_Mast,Mast_Dist_m,Free_WS_ms,Wake_pct,Net_WS_ms,Gross_GWh,Net_GWh,CF_pct,Power_kW\n`;R.perTurbine.forEach((t,i)=>{const tb=S.turbines[i]||{};c+=`T${t.i},${tb.hh||$('hubH').value},${tb.lat?.toFixed(5)||''},${tb.lon?.toFixed(5)||''},${tb.elev?.toFixed(0)||''},${t.rho||R.density.toFixed(4)},${t.assignedMast||'—'},${t.mastDist||'—'},${t.ws},${t.wake},${t.wakeWS},${t.gross},${t.net},${t.cf},${t.power}\n`;});dlFile(c,'aep_results.csv','text/csv');log('AEP CSV exported','i');}
 function exportWindCSV(){if(!S.wind){alert('No wind data');return;}let c='DateTime,WS_ms,Dir_deg\n';for(let i=0;i<S.wind.speeds.length;i++)c+=`${S.wind.times[i]||i},${S.wind.speeds[i].toFixed(2)},${S.wind.dirs[i].toFixed(1)}\n`;dlFile(c,'wind_data.csv','text/csv');log('Wind CSV exported','i');}
 function exportWindTab(){if(!S.wind){alert('No wind data');return;}let t='WASP_tab_v2\n';for(let i=0;i<S.wind.speeds.length;i++)t+=`${S.wind.speeds[i].toFixed(2)}\t${S.wind.dirs[i].toFixed(1)}\n`;dlFile(t,'wind.tab','text/plain');log('WAsP .tab exported','i');}
 function exportTSCSV(){if(!S.tsData){alert('Run time series first');return;}const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];let c='Month,Gross_MWh,Net_MWh\n';S.tsData.mG.forEach((g,i)=>c+=`${mn[i]},${(g/1000).toFixed(2)},${(S.tsData.mN[i]/1000).toFixed(2)}\n`);dlFile(c,'timeseries.csv','text/csv');log('TS CSV exported','i');}
@@ -11915,7 +12323,7 @@ function updateReportingDashboard(){
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
   // v42.1: Also save S.results so user doesn't have to re-run analysis after loading
-  const data={version:'55.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate,mastName:v.mastName||null,pressure:v.pressure||null}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0',nrelApiKey:$('nrelApiKey')?.value||''}};
+  const data={version:'56.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate,mastName:v.mastName||null,pressure:v.pressure||null}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0',nrelApiKey:$('nrelApiKey')?.value||''}};
   const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v42.1, results included)','i');
 }
 
@@ -14925,41 +15333,86 @@ async function runWAsPAnalysis(){
   await new Promise(r => setTimeout(r, 100));
 
   try {
-    // v54.0: Multi-source analysis — run AEP for each selected source
-    const sourcesToRun=isMultiSource?selectedSources:[srcName||S.windSource||'primary'];
-    const multiResults=[];
+    // v56.0: Multi-mast AEP — automatically detect and use multiple masts
+    // Count masts that have linked wind data sources
+    const mastsWithData=S.masts.filter(m=>{
+      if(m.heightEntries&&m.heightEntries.length){
+        return m.heightEntries.some(he=>he.sourceName&&S.windSources[he.sourceName]&&S.windSources[he.sourceName].speeds&&S.windSources[he.sourceName].speeds.length>100);
+      }
+      // Also check mastName references in windSources
+      return Object.values(S.windSources||{}).some(ws=>ws.mastName===m.name&&ws.speeds&&ws.speeds.length>100);
+    });
 
-    for(let si=0;si<sourcesToRun.length;si++){
-      const thisSrc=sourcesToRun[si];
+    const useMultiMast=mastsWithData.length>=1; // Use multi-mast path even for 1 mast (for proper assignment)
+    const isTrueMultiMast=mastsWithData.length>=2;
 
-      // For multi-source, switch to each source before running
-      if(isMultiSource && S.windSources[thisSrc]){
-        const ws=S.windSources[thisSrc];
-        S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[]};
-        S.mcpFactor=ws.mcpFactor||1;
-        S.windSource=thisSrc;
-        if(ws.sourceHeight&&$('mastH'))$('mastH').value=ws.sourceHeight;
-        else if(ws.mastH&&$('mastH'))$('mastH').value=ws.mastH;
-        if(ws.sourceLat!=null&&ws.sourceLon!=null){
-          $('mastLat').value=ws.sourceLat.toFixed(3);$('mastLon').value=ws.sourceLon.toFixed(3);
+    let R;
+
+    if(useMultiMast){
+      // v56.0: Use multi-mast AEP with per-WTG mast assignment + IDW
+      statusEl.textContent = isTrueMultiMast?'Running Multi-Mast AEP (IDW)...':'Running Single-Mast AEP...';
+      pbEl.style.width = '75%';
+      log(`  v56.0: ${isTrueMultiMast?'Multi-Mast':'Single-Mast'} AEP with ${mastsWithData.length} mast(s) and per-WTG assignment`,'i');
+
+      // Restore primary wind source for BZ/terrain pre-computation (already done above)
+      // Then call calcMultiMastAEP which handles per-mast switching internally
+      R = calcMultiMastAEP();
+    } else if(isMultiSource){
+      // v54.0: Legacy multi-source path (when no masts defined but multiple sources selected)
+      const sourcesToRun=selectedSources;
+      const multiResults=[];
+
+      for(let si=0;si<sourcesToRun.length;si++){
+        const thisSrc=sourcesToRun[si];
+
+        if(S.windSources[thisSrc]){
+          const ws=S.windSources[thisSrc];
+          S.wind={speeds:[...ws.speeds],dirs:[...ws.dirs],times:ws.times?[...ws.times]:[]};
+          S.mcpFactor=ws.mcpFactor||1;
+          S.windSource=thisSrc;
+          if(ws.sourceHeight&&$('mastH'))$('mastH').value=ws.sourceHeight;
+          else if(ws.mastH&&$('mastH'))$('mastH').value=ws.mastH;
+          if(ws.sourceLat!=null&&ws.sourceLon!=null){
+            $('mastLat').value=ws.sourceLat.toFixed(3);$('mastLon').value=ws.sourceLon.toFixed(3);
+          }
+          log(`  [${si+1}/${sourcesToRun.length}] Running with ${thisSrc} @ ${((ws.sourceHeight||ws.mastH)||'?')}m`,'i');
+          pbEl.style.width = (70 + 25*(si/sourcesToRun.length)) + '%';
+          statusEl.textContent = `Running ${thisSrc} (${si+1}/${sourcesToRun.length})...`;
+
+          const curSrcH=ws.sourceHeight||ws.mastH||parseFloat($('mastH')?.value||100);
+          if(Math.abs(curSrcH-targetHH)>1){
+            try{runVertExtrap();}catch(e){}
+          }
         }
-        log(`  [${si+1}/${sourcesToRun.length}] Running with ${thisSrc} @ ${((ws.sourceHeight||ws.mastH)||'?')}m`,'i');
-        pbEl.style.width = (70 + 25*(si/sourcesToRun.length)) + '%';
-        statusEl.textContent = `Running ${thisSrc} (${si+1}/${sourcesToRun.length})...`;
 
-        // Re-apply VE for this source
-        const curSrcH=ws.sourceHeight||ws.mastH||parseFloat($('mastH')?.value||100);
-        if(Math.abs(curSrcH-targetHH)>1){
-          try{runVertExtrap();}catch(e){}
+        let srcR = calcAEP();
+        if(!srcR){
+          log(`  [${thisSrc}] AEP calculation failed — skipping`,'w');
+          continue;
         }
+
+        if (!S.waspCalibration || S.waspCalibration.source === 'default') autoApplyDefaultCalibration();
+        if ($('calApplyCB')?.checked && S.waspCalibration) srcR = applyWaspCalibration(srcR);
+
+        multiResults.push({source:thisSrc,netAEP:srcR.netAEP_final||srcR.netAEP,grossAEP:srcR.grossAEP,wakeLoss:srcR.wakeLoss,CF:srcR.CF,meanWS:srcR.hubMean});
+        log(`  [${thisSrc}] Net=${(srcR.netAEP_final||srcR.netAEP).toFixed(2)} GWh, Wake=${srcR.wakeLoss.toFixed(1)}%, CF=${srcR.CF.toFixed(1)}%`,'i');
+        R = srcR; // use last as main
       }
 
-    let R = calcAEP();
+      if(isMultiSource && multiResults.length>1){
+        log('── Multi-Source Summary (legacy, no masts defined) ──','i');
+        multiResults.forEach(r=>{
+          log(`  ${r.source}: Net=${r.netAEP.toFixed(2)} GWh, Wake=${r.wakeLoss.toFixed(1)}%, CF=${r.CF.toFixed(1)}%`,'i');
+        });
+        const avgNet=multiResults.reduce((s,r)=>s+r.netAEP,0)/multiResults.length;
+        log(`  Average Net AEP: ${avgNet.toFixed(2)} GWh (${multiResults.length} sources)`,'i');
+      }
+    } else {
+      // Single source, no masts — standard AEP
+      R = calcAEP();
+    }
+
     if (!R) {
-      if(isMultiSource){
-        log(`  [${thisSrc}] AEP calculation failed — skipping`,'w');
-        continue;
-      }
       statusEl.textContent = 'Error in AEP calculation';
       statusEl.style.color = 'var(--red)';
       runBtn.disabled = false;
@@ -14970,15 +15423,14 @@ async function runWAsPAnalysis(){
     const elecLoss = parseFloat($('electricalLossPct')?.value) || 2;
 
     if (!S.waspCalibration || S.waspCalibration.source === 'default') autoApplyDefaultCalibration();
-    if ($('calApplyCB')?.checked && S.waspCalibration) R = applyWaspCalibration(R);
-
-    // v54.0: Store per-source results
-    if(isMultiSource){
-      multiResults.push({source:thisSrc,netAEP:R.netAEP_final||R.netAEP,grossAEP:R.grossAEP,wakeLoss:R.wakeLoss,CF:R.CF,meanWS:R.hubMean});
-      log(`  [${thisSrc}] Net=${(R.netAEP_final||R.netAEP).toFixed(2)} GWh, Wake=${R.wakeLoss.toFixed(1)}%, CF=${R.CF.toFixed(1)}%`,'i');
+    // Only apply calibration if not multi-mast (multi-mast handles its own combination)
+    if (!$('calApplyCB')?.checked || !S.waspCalibration || R.multiMast) {
+      // Multi-mast results don't need additional calibration
+    } else {
+      R = applyWaspCalibration(R);
     }
 
-    // Use the last (or only) result as the main result
+    // Use the result as the main result
     S.results = R;
     updateResultsUI(R);
     updateWindUI(S.wind.speeds, S.wind.dirs);
@@ -14991,27 +15443,29 @@ async function runWAsPAnalysis(){
       const minFree = Math.min(...freeWSvals).toFixed(2), maxFree = Math.max(...freeWSvals).toFixed(2);
       log('  Free-stream WS range: ' + minFree + '\u2013' + maxFree + ' m/s', 'i');
     }
-    } // end multi-source loop
+
+    // Log multi-mast summary if applicable
+    if(R.multiMast && R.mastCount>1){
+      log('── Multi-Mast AEP Summary (IDW combined) ──','i');
+      if(R.individualMastResults){
+        R.individualMastResults.forEach((mr,i)=>{
+          if(mr)log(`  Mast "${mr.mastData.mast.name}": Net=${mr.netAEP.toFixed(2)} GWh, Wake=${mr.wakeLoss.toFixed(1)}%, CF=${mr.CF.toFixed(1)}%`,'i');
+        });
+      }
+      log(`  Combined: Net=${(R.netAEP_final||R.netAEP).toFixed(2)} GWh, Wake=${R.wakeLoss.toFixed(1)}%, CF=${R.CF.toFixed(1)}%`,'i');
+    }
 
     pbEl.style.width = '100%';
     statusEl.textContent = '\u2713 Complete';
     statusEl.style.color = 'var(--mint)';
 
-    // v54.0: Log multi-source summary
-    if(isMultiSource && multiResults.length>1){
-      log('── Multi-Source Summary ──','i');
-      multiResults.forEach(r=>{
-        log(`  ${r.source}: Net=${r.netAEP.toFixed(2)} GWh, Wake=${r.wakeLoss.toFixed(1)}%, CF=${r.CF.toFixed(1)}%`,'i');
-      });
-      const avgNet=multiResults.reduce((s,r)=>s+r.netAEP,0)/multiResults.length;
-      log(`  Average Net AEP: ${avgNet.toFixed(2)} GWh (${multiResults.length} sources)`,'i');
-    }
-
-    const R=S.results;
+    R=S.results;
     const netFinal = R.netAEP_final || R.netAEP;
-    setStatus('\u2713 Net AEP: ' + netFinal.toFixed(2) + ' GWh | Wake: ' + R.wakeLoss.toFixed(1) + '% | CF: ' + R.CF.toFixed(1) + '%' + (R.bzEnabled ? ' [BZ]' : '') + (R.calibrated ? ' [WAsP Cal]' : '') + (isMultiSource ? ` [${selectedSources.length} sources]` : ''));
+    const mastInfo = R.multiMast ? ` [${R.mastCount} mast(s) IDW]` : '';
+    const srcInfo = isMultiSource&&!R.multiMast ? ` [${selectedSources.length} sources]` : '';
+    setStatus('\u2713 Net AEP: ' + netFinal.toFixed(2) + ' GWh | Wake: ' + R.wakeLoss.toFixed(1) + '% | CF: ' + R.CF.toFixed(1) + '%' + (R.bzEnabled ? ' [BZ]' : '') + (R.calibrated ? ' [WAsP Cal]' : '') + mastInfo + srcInfo);
     $('sbAEP').textContent = netFinal.toFixed(2) + ' GWh';
-    log('\u2713 WAsP Analysis complete: Gross=' + R.grossAEP.toFixed(2) + ' GWh \u00b7 Wake=' + R.wakeLoss.toFixed(1) + '% \u00b7 Net=' + R.netAEP.toFixed(2) + ' GWh \u00b7 CF=' + R.CF.toFixed(1) + '%' + (R.bzEnabled ? ' \u00b7 BZ' : '') + (R.calibrated ? ' \u00b7 WAsP-cal' : '') + (useREWS ? ' \u00b7 REWS' : '') + (useGeo ? ' \u00b7 Geo' : '') + (isMultiSource ? ` \u00b7 ${selectedSources.length} sources` : ''), 'i');
+    log('\u2713 WAsP Analysis complete: Gross=' + R.grossAEP.toFixed(2) + ' GWh \u00b7 Wake=' + R.wakeLoss.toFixed(1) + '% \u00b7 Net=' + R.netAEP.toFixed(2) + ' GWh \u00b7 CF=' + R.CF.toFixed(1) + '%' + (R.bzEnabled ? ' \u00b7 BZ' : '') + (R.calibrated ? ' \u00b7 WAsP-cal' : '') + (useREWS ? ' \u00b7 REWS' : '') + (useGeo ? ' \u00b7 Geo' : '') + mastInfo + srcInfo, 'i');
 
   } catch (e) {
     log('Engine error: ' + e.message, 'e');
