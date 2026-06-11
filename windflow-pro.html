@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 56.0</title>
+<title>WindFlow Pro 57.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -71,7 +71,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 56.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 57.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -345,7 +345,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
     <div>
       <div class="card"><div class="card-title green">Download Terrain</div>
         <div class="g2" style="gap:.4rem"><div class="fg"><label class="fl">Data Source</label><select class="fs" id="terrSource" onchange="onTerrSourceChange()"><option value="openmeteo" selected>Open-Meteo (current)</option><option value="srtm">SRTM (OpenTopography)</option></select></div><div class="fg"><label class="fl">Radius (km)</label><input class="fi" id="terrR" type="number" value="10" min="2" max="50"></div></div>
-        <div id="srtmOpts" style="display:none"><div class="fg" style="margin-top:.4rem"><label class="fl">OpenTopography API Key</label><input class="fi" id="otApiKey" placeholder="Free key at opentopography.org" style="font-size:.65rem"><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">Get free API key: <a href="https://opentopography.org" target="_blank" style="color:var(--sky)">opentopography.org</a></div></div><div class="fg" style="margin-top:.3rem"><label class="fl">SRTM Resolution</label><select class="fs" id="srtmRes"><option value="SRTMGL1" selected>SRTMGL1 ~30m</option><option value="SRTMGL3">SRTMGL3 ~90m</option><option value="SRTMGL1_E">SRTMGL1-E 30m (enhanced)</option><option value="COP30">COP30 ~30m (global)</option><option value="COP90">COP90 ~90m (global)</option></select><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">SRTMGL1/3: USA. COP30/90: global. SRTMGL1-E: USA enhanced.</div></div></div>
+        <div id="srtmOpts" style="display:none"><div class="fg" style="margin-top:.4rem"><label class="fl">OpenTopography API Key</label><input class="fi" id="otApiKey" value="b1d63b2bff65ec2d073939ae41af0ff3" placeholder="Free key at opentopography.org" style="font-size:.65rem"><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">Default key provided. Get your own: <a href="https://opentopography.org" target="_blank" style="color:var(--sky)">opentopography.org</a></div></div><div class="fg" style="margin-top:.3rem"><label class="fl">SRTM Resolution</label><select class="fs" id="srtmRes"><option value="SRTMGL1" selected>SRTMGL1 ~30m</option><option value="SRTMGL3">SRTMGL3 ~90m</option><option value="SRTMGL1_E">SRTMGL1-E 30m (enhanced)</option><option value="COP30">COP30 ~30m (global)</option><option value="COP90">COP90 ~90m (global)</option></select><div style="font-size:.5rem;color:var(--text3);margin-top:.15rem">SRTMGL1/3: USA. COP30/90: global. SRTMGL1-E: USA enhanced.</div></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Grid</label><select class="fs" id="terrG"><option value="20" selected>20×20</option><option value="30">30×30</option><option value="40">40×40</option><option value="50">50×50</option><option value="60">60×60</option><option value="80">80×80</option><option value="100">100×100</option></select></div><div class="fg"><label class="fl">Contour Int</label><select class="fs" id="terrCI"><option value="auto" selected>Auto</option><option value="5">5m</option><option value="10">10m</option><option value="20">20m</option></select></div></div>
         <div class="g2" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Lat <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="terrLa" type="number" value="55.500" step="0.001" readonly></div><div class="fg"><label class="fl">Lon <span style="font-size:.52rem;color:var(--text3)">(from Site)</span></label><input class="fi" id="terrLo" type="number" value="7.900" step="0.001" readonly></div></div>
         <div class="fg" style="margin-top:.4rem"><label class="fl">Opacity</label><input class="fi" id="terrOp" type="range" min="0" max="1" step="0.05" value="0.5" oninput="redrawCanvas()"></div>
@@ -5893,9 +5893,17 @@ function importWindPRO(raw,fileName){
 
   // Use the selected height as mast height
   const selectedHeight=heights[bestIdx];
-  const sourceName='WindPRO';
+  // v57.0: Create a unique base name for this import to avoid overwriting previous WindPRO imports
+  const baseName=mastName||'WindPRO';
+  let sourceName=baseName;
+  let suffix=1;
+  while(S.windSources[sourceName]&&suffix<20){
+    if(suffix===1&&S.windSources[baseName+'_1']){suffix++;continue;}
+    sourceName=suffix===1?baseName:baseName+'_'+suffix;
+    suffix++;
+  }
 
-  S.windSources.WindPRO={
+  S.windSources[sourceName]={
     speeds:[...sp],dirs:[...dr],times:[...ts],
     mcpFactor:1,
     mastH:selectedHeight,
@@ -5906,13 +5914,13 @@ function importWindPRO(raw,fileName){
     meanWS:mean,
     startDate:ts[0]||'',
     endDate:ts[ts.length-1]||'',
-    mastName:'WindPRO'  // v55.0: link back to mast
+    mastName:sourceName  // v55.0: link back to mast
   };
 
   // v55.0: Store all heights as separate sources with mastName link
-  const wpHeightEntries=[{height:selectedHeight,sourceName:'WindPRO',meanWS:mean,records:sp.length}];
+  const wpHeightEntries=[{height:selectedHeight,sourceName:sourceName,meanWS:mean,records:sp.length}];
   heights.forEach((h,hIdx)=>{
-    if(hIdx===bestIdx)return; // Already stored as WindPRO
+    if(hIdx===bestIdx)return; // Already stored as primary source
     const hSp=[],hDr=[],hTs=[];
     for(let i=dataStart;i<lines.length;i++){
       const line=lines[i].trim();if(!line)continue;
@@ -5929,14 +5937,14 @@ function importWindPRO(raw,fileName){
     }
     if(hSp.length){
       const hMean=hSp.filter(v=>v>0.5).reduce((s,v)=>s+v,0)/Math.max(1,hSp.filter(v=>v>0.5).length);
-      const hSrcName=`WindPRO_${h}m`;
+      const hSrcName=`${sourceName}_${h}m`;
       S.windSources[hSrcName]={
         speeds:hSp,dirs:hDr,times:hTs,
         mcpFactor:1,mastH:h,elevation:null,
         sourceLat:lat||0,sourceLon:lon||0,sourceHeight:h,
         meanWS:hMean,
         startDate:hTs[0]||'',endDate:hTs[hTs.length-1]||'',
-        mastName:'WindPRO'  // v55.0: link back to mast
+        mastName:sourceName  // v55.0: link back to mast
       };
       wpHeightEntries.push({height:h,sourceName:hSrcName,meanWS:hMean,records:hSp.length});
     }
@@ -5955,7 +5963,7 @@ function importWindPRO(raw,fileName){
     if(existingMastIdx>=0){
       const existingMast=S.masts[existingMastIdx];
       existingMast.lat=lat;existingMast.lon=lon;existingMast.height=selectedHeight;
-      existingMast.name=mastName||existingMast.name;
+      existingMast.name=sourceName;
       existingMast.heightEntries=wpHeightEntries;
       existingMast.startDate=ts[0]||existingMast.startDate;
       existingMast.endDate=ts[ts.length-1]||existingMast.endDate;
@@ -5963,7 +5971,7 @@ function importWindPRO(raw,fileName){
     }else{
       S.masts.push({
         id:S.masts.length+1,
-        name:mastName||'WindPRO Mast',
+        name:sourceName,
         lat,lon,height:selectedHeight,
         z0:parseFloat($('z0val').value)||0.0002,
         primary:S.masts.length===0,
@@ -5980,7 +5988,7 @@ function importWindPRO(raw,fileName){
   drawMastMarkers();
 
   $('windStat').textContent=`WindPRO: ${sp.length.toLocaleString()} records @ ${selectedHeight}m, mean=${mean.toFixed(2)} m/s (${heights.length} heights available)`;
-  updateWindUI(sp,dr);updateDataSourceUI('WindPRO');
+  updateWindUI(sp,dr);updateDataSourceUI(sourceName);
   log(`WindPRO imported: ${sp.length.toLocaleString()} records @ ${selectedHeight}m, mean=${mean.toFixed(2)} m/s, ${heights.length} heights [${heights.map(h=>h+'m').join(', ')}], ${skippedStatus} records skipped (bad status)${lat?`, lat=${lat.toFixed(4)}, lon=${lon.toFixed(4)}`:''}`,'i');
   if(typeof validateCheckpoint==='function')validateCheckpoint();
 }
@@ -6369,7 +6377,7 @@ try{initMap();}catch(e){console.error('initMap crashed:',e);log('initMap crashed
 ['useERA5TDensity','useHumidity','perWtgDensity'].forEach(id=>{
   const el=$(id);if(el)el.addEventListener('change',()=>{calcDensity();log(`Density option ${id} changed → ρ=${$('airDen').value} kg/m³`,'i');});
 });
-log('WindFlow Pro 55.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
+log('WindFlow Pro 57.0 ready. A: Site → Power Curve → Wind Data → MCP & Extrapolation │ B: Terrain → WAsP Flow → Reporting','i');
 // v51.0: Load saved NREL API key from localStorage
 try{const savedKey=localStorage.getItem('nrelApiKey');if(savedKey&&$('nrelApiKey'))$('nrelApiKey').value=savedKey;}catch(e){}
 // v51.0: Auto-save NREL API key on input change
@@ -12323,7 +12331,7 @@ function updateReportingDashboard(){
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
   // v42.1: Also save S.results so user doesn't have to re-run analysis after loading
-  const data={version:'56.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate,mastName:v.mastName||null,pressure:v.pressure||null}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0',nrelApiKey:$('nrelApiKey')?.value||''}};
+  const data={version:'57.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate,mastName:v.mastName||null,pressure:v.pressure||null}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0',nrelApiKey:$('nrelApiKey')?.value||''}};
   const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v42.1, results included)','i');
 }
 
@@ -13434,8 +13442,7 @@ const ESA_Z0={0:0.2,10:0.03,11:0.03,12:0.1,20:0.03,30:0.1,40:0.2,50:0.03,60:0.03
 async function downloadSRTMTerrain(){
   const c=getSiteCenter();
   const radKm=parseFloat($('terrR').value)||10;
-  const apiKey=$('otApiKey')?.value||'';
-  if(!apiKey){alert('Enter OpenTopography API key (free at opentopography.org)');return;}
+  const apiKey=$('otApiKey')?.value||'b1d63b2bff65ec2d073939ae41af0ff3';
   const demType=$('srtmRes')?.value||'SRTMGL1';
   const dLat=radKm/111.32,dLon=radKm/(111.32*Math.cos(c.lat*Math.PI/180));
   const south=(c.lat-dLat).toFixed(6),north=(c.lat+dLat).toFixed(6);
@@ -14414,8 +14421,7 @@ function handleLandCoverUpload(event){
 function downloadSRTMGeoTIFF(){
   const c=getSiteCenter();
   const radKm=parseFloat($('terrR').value)||10;
-  const apiKey=$('otApiKey')?.value||'';
-  if(!apiKey){alert('Enter OpenTopography API key first (in Step 5 Terrain)');return;}
+  const apiKey=$('otApiKey')?.value||'b1d63b2bff65ec2d073939ae41af0ff3';
   const dLat=radKm/111.32,dLon=radKm/(111.32*Math.cos(c.lat*Math.PI/180));
   const south=(c.lat-dLat).toFixed(6),north=(c.lat+dLat).toFixed(6);
   const west=(c.lon-dLon).toFixed(6),east=(c.lon+dLon).toFixed(6);
