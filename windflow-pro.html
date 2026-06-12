@@ -201,7 +201,7 @@ a.back-link{font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:
         <div style="display:flex;gap:.4rem;margin-top:.5rem"><button class="btn btn-sm btn-primary" onclick="saveMast()">💾 Save</button><button class="btn btn-sm btn-danger" onclick="removeMast()">🗑 Remove</button></div>
       </div>
       <div class="card"><div class="card-title gold">Upload Wind Data</div>
-        <div class="upload-zone" id="windUploadZone"><input id="impWind" type="file" accept=".csv,.tab,.txt" onchange="importWind(event)"><span class="upload-icon">💨</span><span class="upload-text">Upload wind time-series CSV / WindPRO / Windographer</span><span class="upload-hint">CSV: timestamp, ws, wd · WindPRO & Windographer (.txt) auto-detected</span></div>
+        <div class="upload-zone" id="windUploadZone"><input id="impWind" type="file" accept=".csv,.tab,.txt,.wrg" onchange="importWind(event)"><span class="upload-icon">💨</span><span class="upload-text">Upload wind data CSV / WindPRO / Windographer / WRG</span><span class="upload-hint">CSV: timestamp, ws, wd · WindPRO & Windographer (.txt) auto-detected · WRG: WAsP Resource Grid</span></div>
         <div id="windStat" style="font-size:.62rem;color:var(--text3);margin-top:.3rem">No wind data — use ERA5 download or Import</div>
       </div>
     </div>
@@ -798,6 +798,15 @@ function updateWindDataRegistry(){
   if(!keys.length){el.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--text3)">No data sources loaded</td></tr>';return;}
   // v49.0: Grid resolution labels per data source — show each source's ACTUAL grid
   const gridLabels={ERA5:'0.25°',ERA5T:'0.25°',ERA5_LT:'0.25°',MERRA2:'0.5°×0.625°',NCEP:'1.875°',NEWA:'~3km',GWA:'~3km',CSV:'—'};
+  function getGridLabel(k){
+    if(gridLabels[k])return gridLabels[k];
+    const ku=k.toUpperCase();
+    if(ku.startsWith('WINDPRO'))return 'point';
+    if(ku.startsWith('WINDOGRAPHER'))return 'point';
+    if(ku.startsWith('WRG'))return 'grid';
+    if(ku.startsWith('CSV'))return '—';
+    return '—';
+  }
 
   // v54.0: Group sources by mast/site name
   const groups={};
@@ -823,7 +832,7 @@ function updateWindDataRegistry(){
     const wbA=ws.weibullA||'—';const wbK=ws.weibullK||'—';
     const lat=ws.sourceLat!=null?ws.sourceLat.toFixed(4):'—';
     const lon=ws.sourceLon!=null?ws.sourceLon.toFixed(4):'—';
-    const grid=gridLabels[k]||'—';
+    const grid=getGridLabel(k);
     const hh=ws.sourceHeight||ws.mastH||'—';
     const sd=ws.startDate||'—';const ed=ws.endDate||'—';
     const active=S.windSource===k;
@@ -837,7 +846,7 @@ function updateWindDataRegistry(){
     // Get common lat/lon from main source
     const mLat=mainSrc&&mainSrc.sourceLat!=null?mainSrc.sourceLat.toFixed(4):(S.windSources[groups[base][0]]?.sourceLat?.toFixed(4)||'—');
     const mLon=mainSrc&&mainSrc.sourceLon!=null?mainSrc.sourceLon.toFixed(4):(S.windSources[groups[base][0]]?.sourceLon?.toFixed(4)||'—');
-    const mGrid=gridLabels[base]||'—';
+    const mGrid=getGridLabel(base);
     // Main source row (if exists)
     if(mainSrc){
       const vs=mainSrc.speeds||[];
@@ -5711,7 +5720,7 @@ function autoCenterMap(){
   autoFocusMap(); // v26.0: Use the proper auto-focus with 20km extent
   log(`Map focused on layout: ${S.turbines.length} turbines`,'i');
 }
-// v54.0: Import wind data — supports simple CSV, WindPRO Meteo Data Export, and Windographer export formats
+// v57.0: Import wind data — supports simple CSV, WindPRO Meteo Data Export, Windographer export, and WRG formats
 // WindPRO format: header with coordinates, multi-height tab-separated data with status flags
 // Windographer format: header with site metadata, tab-separated columns with per-height WS/WD/Temp/Press/Hum
 function importWind(ev){
@@ -5719,6 +5728,11 @@ function importWind(ev){
   const r=new FileReader();
   r.onload=e=>{
     const raw=e.target.result;
+    // v57.0: Auto-detect WRG (WAsP Resource Grid) format — .wrg extension or WRG header pattern
+    if(f.name.toLowerCase().endsWith('.wrg')||/^\d+\s+\d+\s+[\-\d.]+\s+[\-\d.]+\s+[\d.]+/m.test(raw.trim())){
+      importWRG(raw,f.name);
+      return;
+    }
     // Auto-detect WindPRO Meteo Data Export format
     if(raw.includes('WindPRO Meteo Data Export')||raw.includes('WindPRO Meteodata Export')){
       importWindPRO(raw,f.name);
@@ -6315,6 +6329,279 @@ function importWindographer(raw,fileName){
   $('windStat').textContent=`Windographer: ${sp.length.toLocaleString()} records @ ${bestWSHeight}m, mean=${mean.toFixed(2)} m/s (${wsHeights.length} heights, ${emptyRecords} gaps skipped)`;
   updateWindUI(sp,dr);updateDataSourceUI(uniqueName);
   log(`Windographer imported: ${sp.length.toLocaleString()} records @ ${bestWSHeight}m, mean=${mean.toFixed(2)} m/s, ${wsHeights.length} WS heights [${wsHeights.map(h=>h+'m').join(', ')}], ${wdHeights.length} WD heights [${wdHeights.map(h=>h+'m').join(', ')}]${lat?`, lat=${lat.toFixed(4)}, lon=${lon.toFixed(4)}`:''}${elevation?`, elev=${elevation}m`:''}${emptyRecords?`, ${emptyRecords} empty rows skipped`:''}`,'i');
+  if(typeof validateCheckpoint==='function')validateCheckpoint();
+}
+
+// v57.0: Import WAsP Resource Grid (.wrg) format
+// WRG format contains sector-wise Weibull parameters (A, k, frequency) on a regular UTM grid.
+// Each grid point has: height elevation A k powerDensity nSectors [freq×1000 A×10 k×100] per sector
+// For AEP calculation, we convert the sector Weibull data at each turbine's nearest grid point
+// into a synthetic time series that preserves the directional frequency distribution.
+function importWRG(raw,fileName){
+  const lines=raw.split(/\r?\n/).filter(l=>l.trim()&&!l.trim().startsWith('!'));
+
+  // ── 1. Parse header line: Nx Ny Xmin Ymin cellSize ──
+  let headerIdx=0;
+  // Skip any comment lines at the top
+  for(let i=0;i<lines.length;i++){
+    const parts=lines[i].trim().split(/\s+/);
+    if(parts.length>=5&&!isNaN(+parts[0])&&!isNaN(+parts[1])&&!isNaN(+parts[2])&&!isNaN(+parts[3])&&!isNaN(+parts[4])){
+      headerIdx=i;break;
+    }
+  }
+  const headerParts=lines[headerIdx].trim().split(/\s+/);
+  const nx=parseInt(headerParts[0]);
+  const ny=parseInt(headerParts[1]);
+  const xMin=parseFloat(headerParts[2]);
+  const yMin=parseFloat(headerParts[3]);
+  const cellSize=parseFloat(headerParts[4]);
+
+  if(!nx||!ny||isNaN(xMin)||isNaN(yMin)||isNaN(cellSize)||nx<1||ny<1){
+    alert('WRG: Could not parse header line (expected: Nx Ny Xmin Ymin cellSize)');
+    return;
+  }
+
+  log(`WRG: Header parsed — ${nx}×${ny} grid, Xmin=${xMin}, Ymin=${yMin}, cellSize=${cellSize}m`,'i');
+
+  // ── 2. Determine UTM zone from user settings ──
+  // Try to infer from existing turbine/layout positions, otherwise use site settings
+  let utmZone=null;
+  let isNorth=true;
+  if(S.turbines&&S.turbines.length){
+    const cLat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
+    const cLon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
+    utmZone=utmZoneFromLatLon(cLat,cLon);
+    isNorth=cLat>=0;
+    log(`WRG: UTM Zone ${utmZone}${isNorth?'N':'S'} inferred from layout center (${cLat.toFixed(4)}°, ${cLon.toFixed(4)}°)`,'i');
+  }else{
+    // Use site coordinates
+    const siteLat=parseFloat($('e5La')?.value||$('mastLat')?.value||55.5);
+    const siteLon=parseFloat($('e5Lo')?.value||$('mastLon')?.value||7.9);
+    utmZone=utmZoneFromLatLon(siteLat,siteLon);
+    isNorth=siteLat>=0;
+    log(`WRG: UTM Zone ${utmZone}${isNorth?'N':'S'} from site coordinates`,'i');
+  }
+
+  // ── 3. Parse all grid points ──
+  const gridPoints=[];
+  const dataStart=headerIdx+1;
+  let nSectors=12; // default, will be read from first data line
+
+  for(let i=dataStart;i<lines.length&&gridPoints.length<nx*ny;i++){
+    const line=lines[i].trim();
+    if(!line)continue;
+    const parts=line.split(/\s+/);
+    if(parts.length<6)continue;
+
+    const height=parseFloat(parts[0]);
+    const elevation=parseFloat(parts[1]);
+    const overallA=parseFloat(parts[2]);
+    const overallK=parseFloat(parts[3]);
+    const powerDensity=parseFloat(parts[4]);
+    nSectors=parseInt(parts[5])||12;
+
+    // Parse sector data: [freq×1000 A×10 k×100] per sector (3 values per sector)
+    const sectorData=[];
+    const sectorStart=6;
+    for(let s=0;s<nSectors;s++){
+      const base=sectorStart+s*3;
+      if(base+2>=parts.length)break;
+      const freq=parseFloat(parts[base])/1000;     // ‰ → fraction
+      const A=parseFloat(parts[base+1])/10;          // dm/s → m/s
+      const k=parseFloat(parts[base+2])/100;         // ×100 → actual
+      sectorData.push({freq:Math.max(0,freq),A:Math.max(0.1,A),k:Math.max(0.5,Math.min(5,k))});
+    }
+
+    gridPoints.push({height,elevation,overallA,overallK,powerDensity,sectorData});
+  }
+
+  if(!gridPoints.length){
+    alert('WRG: No valid grid point data found');
+    return;
+  }
+
+  log(`WRG: Parsed ${gridPoints.length} grid points with ${nSectors} sectors`,'i');
+
+  // ── 4. Compute grid point lat/lon from UTM coordinates ──
+  // Data is in column-major order (X varies fastest): for each Y row, for each X column
+  const gridLatLon=[];
+  for(let iy=0;iy<ny;iy++){
+    for(let ix=0;ix<nx;ix++){
+      const idx=iy*nx+ix;
+      if(idx>=gridPoints.length)break;
+      const utmE=xMin+ix*cellSize;
+      const utmN=yMin+iy*cellSize;
+      const ll=utmToLatLon(utmE,utmN,utmZone,isNorth);
+      gridLatLon.push({lat:ll.lat,lon:ll.lon,utmE,utmN,idx});
+    }
+  }
+
+  // ── 5. For each grid point, generate a synthetic time series from sector Weibull data ──
+  // We generate synthetic wind data at the "best" grid point (center or nearest to site center)
+  // The synthetic data preserves sector frequencies and Weibull distributions
+  function generateSyntheticTimeSeries(sectorData,nSec,totalRecords){
+    const sp=[],dr=[],ts=[];
+    const sectorWidth=360/nSec;
+    // Distribute records proportionally across sectors
+    let totalFreq=sectorData.reduce((s,sec)=>s+sec.freq,0);
+    if(totalFreq<=0)totalFreq=1;
+
+    // Weibull random variate using inverse CDF: x = A * (-ln(1-U))^(1/k)
+    function weibullRandom(A,k){
+      const u=Math.random();
+      return A*Math.pow(-Math.log(1-u),1/k);
+    }
+
+    for(let s=0;s<nSec;s++){
+      const nRecords=Math.round(sectorData[s].freq/totalFreq*totalRecords);
+      const dirCenter=(s+0.5)*sectorWidth; // sector center direction
+      for(let r=0;r<nRecords;r++){
+        const ws=weibullRandom(sectorData[s].A,sectorData[s].k);
+        // Add some directional spread within the sector
+        const dirSpread=(Math.random()-0.5)*sectorWidth*0.8;
+        const dir=(dirCenter+dirSpread+360)%360;
+        if(ws>=0&&ws<80){
+          sp.push(ws);
+          dr.push(dir);
+          ts.push('');
+        }
+      }
+    }
+    return{speeds:sp,dirs:dr,times:ts};
+  }
+
+  // ── 6. Find the best grid point (nearest to site center or turbine centroid) ──
+  let centerLat,centerLon;
+  if(S.turbines&&S.turbines.length){
+    centerLat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
+    centerLon=S.turbines.reduce((s,t)=>s+t.lon,0)/S.turbines.length;
+  }else{
+    centerLat=parseFloat($('e5La')?.value||$('mastLat')?.value||55.5);
+    centerLon=parseFloat($('e5Lo')?.value||$('mastLon')?.value||7.9);
+  }
+
+  // Find nearest grid point to center
+  let bestDist=Infinity,bestIdx=0;
+  gridLatLon.forEach((gp,i)=>{
+    const d=Math.sqrt((gp.lat-centerLat)**2+(gp.lon-centerLon)**2)*111;
+    if(d<bestDist){bestDist=d;bestIdx=i;}
+  });
+
+  const bestGP=gridPoints[bestIdx];
+  const bestLL=gridLatLon[bestIdx];
+
+  log(`WRG: Nearest grid point to site center: index ${bestIdx}, dist=${bestDist.toFixed(2)}km, (${bestLL.lat.toFixed(4)}°, ${bestLL.lon.toFixed(4)}°)`,'i');
+  log(`WRG: Grid point data: H=${bestGP.height}m, elev=${bestGP.elevation.toFixed(1)}m, A=${bestGP.overallA.toFixed(2)}, k=${bestGP.overallK.toFixed(2)}, PD=${bestGP.powerDensity.toFixed(1)} W/m²`,'i');
+
+  // ── 7. Generate synthetic time series from the best grid point's sector data ──
+  const totalRecords=8760; // 1 year hourly
+  const synthetic=generateSyntheticTimeSeries(bestGP.sectorData,nSectors,totalRecords);
+
+  if(!synthetic.speeds.length){
+    alert('WRG: Could not generate synthetic wind data from grid point');
+    return;
+  }
+
+  const mean=synthetic.speeds.filter(v=>v>0.5).reduce((s,v,_,a)=>s+v/a.length,0);
+
+  // ── 8. Store as wind source ──
+  S.wind={speeds:synthetic.speeds,dirs:synthetic.dirs,times:synthetic.times};S.mcpFactor=1;
+
+  const baseName=fileName.replace(/\.[^.]+$/,'').replace(/[^A-Za-z0-9_\-]/g,'_');
+  let sourceName=`WRG_${baseName}`;
+  let suffix=1;
+  while(S.windSources[sourceName]&&suffix<20){
+    sourceName=`WRG_${baseName}_${suffix}`;
+    suffix++;
+  }
+
+  S.windSources[sourceName]={
+    speeds:[...synthetic.speeds],dirs:[...synthetic.dirs],times:[...synthetic.times],
+    mcpFactor:1,
+    mastH:bestGP.height,
+    elevation:bestGP.elevation,
+    sourceLat:bestLL.lat,
+    sourceLon:bestLL.lon,
+    sourceHeight:bestGP.height,
+    meanWS:mean,
+    startDate:'',endDate:'',
+    mastName:sourceName,
+    // WRG-specific metadata
+    wrgGrid:{nx,ny,xMin,yMin,cellSize,utmZone,isNorth,nSectors,gridPoints,gridLatLon}
+  };
+
+  // ── 9. Create mast entry ──
+  const heightEntries=[{height:bestGP.height,sourceName:sourceName,meanWS:mean,records:synthetic.speeds.length}];
+
+  // Check if mast already exists near this location
+  const existingMastIdx=S.masts.findIndex(m=>{
+    const dLat=(m.lat-bestLL.lat)*111320,dLon=(m.lon-bestLL.lon)*111320*Math.cos(bestLL.lat*Math.PI/180);
+    return Math.sqrt(dLat*dLat+dLon*dLon)<100;
+  });
+
+  if(existingMastIdx>=0){
+    const existingMast=S.masts[existingMastIdx];
+    existingMast.heightEntries=heightEntries;
+    existingMast.startDate='';existingMast.endDate='';
+    renderMastList();
+  }else{
+    S.masts.push({
+      id:S.masts.length+1,
+      name:sourceName,
+      lat:bestLL.lat,lon:bestLL.lon,
+      height:bestGP.height,
+      z0:parseFloat($('z0val').value)||0.03,
+      primary:S.masts.length===0,
+      startDate:'',endDate:'',
+      elevation:bestGP.elevation,
+      heightEntries:heightEntries,
+      source:'WRG'
+    });
+    renderMastList();
+  }
+  S._mastUserSet=true;
+
+  // ── 10. Also generate per-turbine wind sources if turbines exist ──
+  // Each turbine gets wind data from its nearest WRG grid point
+  if(S.turbines&&S.turbines.length>1){
+    log(`WRG: Generating per-turbine wind data from nearest grid points for ${S.turbines.length} turbines...`,'i');
+    S.turbines.forEach((turbine,ti)=>{
+      let tBestDist=Infinity,tBestIdx=0;
+      gridLatLon.forEach((gp,i)=>{
+        const d=Math.sqrt((gp.lat-turbine.lat)**2+(gp.lon-turbine.lon)**2)*111;
+        if(d<tBestDist){tBestDist=d;tBestIdx=i;}
+      });
+      // Only create separate source if this turbine's nearest grid point differs from the main one
+      if(tBestIdx!==bestIdx){
+        const tGP=gridPoints[tBestIdx];
+        const tLL=gridLatLon[tBestIdx];
+        const tSynthetic=generateSyntheticTimeSeries(tGP.sectorData,nSectors,totalRecords);
+        const tMean=tSynthetic.speeds.filter(v=>v>0.5).reduce((s,v,_,a)=>s+v/a.length,0);
+        const tSrcName=`${sourceName}_T${ti+1}`;
+        S.windSources[tSrcName]={
+          speeds:[...tSynthetic.speeds],dirs:[...tSynthetic.dirs],times:[...tSynthetic.times],
+          mcpFactor:1,mastH:tGP.height,elevation:tGP.elevation,
+          sourceLat:tLL.lat,sourceLon:tLL.lon,sourceHeight:tGP.height,
+          meanWS:tMean,startDate:'',endDate:'',mastName:sourceName
+        };
+      }
+    });
+  }
+
+  // ── 11. Update site coordinates from grid point ──
+  $('mastLat').value=bestLL.lat.toFixed(6);
+  $('mastLon').value=bestLL.lon.toFixed(6);
+  $('mastH').value=bestGP.height;
+  if(bestGP.elevation)$('siteElev').value=bestGP.elevation.toFixed(0);
+
+  // ── 12. Draw markers on map ──
+  drawMastMarkers();
+  addDataSourceMarker(sourceName,bestLL.lat,bestLL.lon,bestGP.height);
+
+  // ── 13. Update UI ──
+  $('windStat').textContent=`WRG: ${nx}×${ny} grid, ${nSectors} sectors, nearest pt mean=${mean.toFixed(2)} m/s @ ${bestGP.height}m`;
+  updateWindUI(synthetic.speeds,synthetic.dirs);updateDataSourceUI(sourceName);
+  log(`WRG imported: ${fileName} — ${nx}×${ny} grid (${gridPoints.length} pts), ${nSectors} sectors, nearest grid point @ (${bestLL.lat.toFixed(4)}°, ${bestLL.lon.toFixed(4)}°), mean=${mean.toFixed(2)} m/s @ ${bestGP.height}m, elev=${bestGP.elevation.toFixed(0)}m`,'i');
   if(typeof validateCheckpoint==='function')validateCheckpoint();
 }
 
@@ -13932,12 +14219,19 @@ const DSMARKER_STYLES={
   NCEP:{bg:'#fb923c',border:'#fff',label:'NCEP',shadow:'rgba(251,146,60,.6)'},
   MERRA2:{bg:'#f5a623',border:'#fff',label:'MERRA-2',shadow:'rgba(245,166,35,.6)'},
   NEWA:{bg:'#00d68f',border:'#fff',label:'NEWA',shadow:'rgba(0,214,143,.6)'},
-  CSV:{bg:'#e05050',border:'#fff',label:'CSV',shadow:'rgba(224,80,80,.6)'}
+  CSV:{bg:'#e05050',border:'#fff',label:'CSV',shadow:'rgba(224,80,80,.6)'},
+  WINDPRO:{bg:'#e05050',border:'#fff',label:'WindPRO',shadow:'rgba(224,80,80,.6)'},
+  WINDOGRAPHER:{bg:'#e05050',border:'#fff',label:'Windog.',shadow:'rgba(224,80,80,.6)'},
+  WRG:{bg:'#a855f7',border:'#fff',label:'WRG',shadow:'rgba(168,85,247,.6)'}
 };
 function addDataSourceMarker(source,lat,lon,hh){
   if(!leafMap)return;
   const key=source.replace(/[^A-Z0-9]/g,'').toUpperCase();
-  const style=DSMARKER_STYLES[source]||DSMARKER_STYLES[key]||DSMARKER_STYLES.CSV;
+  // v57.0: Match prefix for dynamic source names
+  const style=DSMARKER_STYLES[source]||DSMARKER_STYLES[key]||
+    (key.startsWith('WINDPRO')?DSMARKER_STYLES.WINDPRO:
+     key.startsWith('WINDOGRAPHER')?DSMARKER_STYLES.WINDOGRAPHER:
+     key.startsWith('WRG')?DSMARKER_STYLES.WRG:DSMARKER_STYLES.CSV);
   const markerKey=source==='ERA5T'?'era5Marker':source.toLowerCase().replace(/[^a-z0-9]/g,'')+'Marker';
   // Remove old marker for this source
   if(S[markerKey]){S[markerKey].remove();S[markerKey]=null;}
@@ -14001,7 +14295,16 @@ function updateDataSourcePosInfo(){
   const srcElev=ws.elevation;
   // v44.0: Show grid resolution for data source
   const DS_RES_LABEL={ERA5:'0.25° (~31km)',ERA5T:'0.25° (~31km)',ERA5_LT:'0.25° (~31km)',MERRA2:'0.5°×0.625° (~50km)',NEWA:'3km',GWA:'0.25° (~31km proxy)',NREL:'2km WTK V2',NCEP:'~1.875° (~210km)',CSV:'point'};
-  const resLabel=DS_RES_LABEL[src]||'unknown';
+  // v57.0: Match prefix for dynamic source names
+  let resLabel=DS_RES_LABEL[src];
+  if(!resLabel){
+    const srcU=src.toUpperCase();
+    if(srcU.startsWith('WINDPRO'))resLabel='point (mast)';
+    else if(srcU.startsWith('WINDOGRAPHER'))resLabel='point (mast)';
+    else if(srcU.startsWith('WRG'))resLabel='grid (WRG)';
+    else if(srcU.startsWith('CSV'))resLabel='point';
+    else resLabel='unknown';
+  }
   let distTxt='';
   if(S.turbines.length){
     const cLat=S.turbines.reduce((s,t)=>s+t.lat,0)/S.turbines.length;
