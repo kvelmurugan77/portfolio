@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WTG Technical Due Diligence Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07111e;--bg2:#0d1e30;--bg3:#132435;--bg4:#1a2f42;
+  --mint:#00d68f;--mint2:rgba(0,214,143,.12);--mint3:rgba(0,214,143,.06);
+  --gold:#f5a623;--gold2:rgba(245,166,35,.12);
+  --red:#e05050;--red2:rgba(224,80,80,.12);
+  --sky:#4ab3e8;--sky2:rgba(74,179,232,.12);
+  --purple:#a78bfa;--purple2:rgba(167,139,250,.12);
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.04);
+  --text:rgba(255,255,255,.88);--text2:rgba(255,255,255,.5);--text3:rgba(255,255,255,.28);
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  --radius:8px;--radius2:4px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);color:var(--text);background:var(--bg);min-height:100vh}
+
+/* ── TOP BAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1.5rem;border-bottom:1px solid var(--border);background:var(--bg)}
+.topbar-brand{display:flex;align-items:center;gap:.8rem}
+.brand-badge{background:var(--mint);color:var(--bg);font-family:var(--mono);font-size:.6rem;font-weight:600;padding:.25rem .6rem;border-radius:2px;letter-spacing:.08em}
+.brand-title{font-size:.82rem;font-weight:600;letter-spacing:.04em;color:var(--text)}
+.brand-sub{font-size:.62rem;color:var(--text3);font-family:var(--mono);margin-top:.1rem}
+.topbar-right{display:flex;align-items:center;gap:.6rem}
+a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);text-decoration:none;padding:.4rem .8rem;border:1px solid var(--border);border-radius:var(--radius2);transition:all .2s}
+a.back-link:hover{color:var(--mint);border-color:var(--mint)}
+
+/* ── STEPPER ── */
+.stepper{display:flex;align-items:center;padding:.6rem 1.5rem;border-bottom:1px solid var(--border);background:var(--bg2);gap:0;overflow-x:auto}
+.step-item{display:flex;align-items:center;gap:.45rem;padding:.45rem .7rem;cursor:pointer;border-radius:var(--radius2);transition:background .2s;white-space:nowrap;flex-shrink:0}
+.step-item:hover{background:rgba(255,255,255,.04)}
+.step-item.active{background:var(--mint2)}
+.step-item.done .step-num{background:rgba(0,214,143,.2);border-color:var(--mint);color:var(--mint)}
+.step-item.active .step-num{background:var(--mint);border-color:var(--mint);color:var(--bg)}
+.step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;border:1.5px solid var(--border);color:var(--text3);transition:all .25s;flex-shrink:0;font-family:var(--mono)}
+.step-label{font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);transition:color .2s}
+.step-item.active .step-label{color:var(--mint)}
+.step-item.done .step-label{color:var(--text2)}
+.step-connector{width:20px;height:1px;background:var(--border);flex-shrink:0;margin:0 2px}
+
+/* ── LAYOUT ── */
+.main{max-width:1480px;margin:0 auto;padding:1.2rem 1.5rem 3rem}
+.step-panel{display:none;animation:fadeIn .35s ease}
+.step-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── CARDS ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem;margin-bottom:1rem}
+.card-title{font-size:.6rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text3);margin-bottom:1rem;display:flex;align-items:center;gap:.6rem}
+.card-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.card-title.green{color:var(--mint)}
+.card-title.gold{color:var(--gold)}
+.card-title.sky{color:var(--sky)}
+.card-title.purple{color:var(--purple)}
+.card-title.red{color:var(--red)}
+
+/* ── GRID ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+
+/* ── FORMS ── */
+.fg{margin-bottom:.85rem}
+.fl{display:block;font-size:.57rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:.3rem;font-family:var(--mono)}
+.fi,.fs{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);font-family:var(--sans);font-size:.8rem;color:var(--text);padding:.48rem .7rem;outline:none;transition:border-color .2s}
+.fi:focus,.fs:focus{border-color:var(--mint)}
+.fi:read-only{opacity:.6;cursor:default}
+.fs option{background:var(--bg);color:var(--text)}
+textarea.fi{resize:vertical;min-height:80px;font-size:.78rem;line-height:1.5}
+.form-row{display:flex;gap:.6rem;align-items:end}
+.form-row .fg{flex:1}
+
+/* ── BUTTONS ── */
+.btn{font-family:var(--sans);font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border:none;padding:.6rem 1.3rem;border-radius:var(--radius2);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:.45rem}
+.btn-primary{background:var(--mint);color:var(--bg)}
+.btn-primary:hover{background:#00f0a0;transform:translateY(-1px)}
+.btn-ghost{background:none;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--mint);color:var(--mint)}
+.btn-danger{background:var(--red2);color:var(--red);border:1px solid rgba(224,80,80,.2)}
+.btn-danger:hover{background:rgba(224,80,80,.2)}
+.btn-gold{background:var(--gold);color:var(--bg)}
+.btn-gold:hover{background:#ffc04a}
+.btn-sky{background:var(--sky);color:var(--bg)}
+.btn-sky:hover{background:#6dc5f0}
+.btn-sm{padding:.35rem .75rem;font-size:.6rem}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* ── TABLES ── */
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:auto}
+.tbl-wrap::-webkit-scrollbar{width:4px;height:4px}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+table.dt{width:100%;border-collapse:collapse;font-size:.72rem;min-width:600px}
+table.dt th{text-align:left;font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:.55rem .7rem;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--bg2);z-index:1;font-family:var(--mono)}
+table.dt td{padding:.48rem .7rem;border-bottom:1px solid var(--border2);color:var(--text2);font-weight:300;vertical-align:top}
+table.dt tr:last-child td{border-bottom:none}
+table.dt tr:hover td{background:rgba(255,255,255,.02)}
+
+/* ── BADGES ── */
+.badge{display:inline-block;font-size:.52rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.2rem .55rem;border-radius:2px;font-family:var(--mono)}
+.badge-mint{background:var(--mint2);color:var(--mint)}
+.badge-gold{background:var(--gold2);color:var(--gold)}
+.badge-red{background:var(--red2);color:var(--red)}
+.badge-sky{background:var(--sky2);color:var(--sky)}
+.badge-purple{background:var(--purple2);color:var(--purple)}
+
+/* ── CHECKLIST ── */
+.checklist{list-style:none;padding:0}
+.checklist-item{display:flex;align-items:flex-start;gap:.7rem;padding:.7rem .8rem;border-bottom:1px solid var(--border2);transition:background .15s}
+.checklist-item:hover{background:rgba(255,255,255,.02)}
+.checklist-item:last-child{border-bottom:none}
+.check-item-num{font-family:var(--mono);font-size:.6rem;font-weight:700;color:var(--text3);min-width:28px;padding-top:.15rem}
+.check-item-body{flex:1}
+.check-item-text{font-size:.8rem;color:var(--text);line-height:1.5;font-weight:300}
+.check-item-sub{font-size:.68rem;color:var(--text3);margin-top:.2rem;line-height:1.4}
+.check-item-controls{display:flex;align-items:center;gap:.4rem;flex-shrink:0;margin-top:.15rem}
+.check-btn{width:26px;height:26px;border-radius:3px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;transition:all .15s;font-family:var(--mono)}
+.check-btn:hover{border-color:var(--mint)}
+.check-btn.pass{background:var(--mint2);border-color:var(--mint);color:var(--mint)}
+.check-btn.fail{background:var(--red2);border-color:var(--red);color:var(--red)}
+.check-btn.conditional{background:var(--gold2);border-color:var(--gold);color:var(--gold)}
+.check-btn.na{background:var(--sky2);border-color:var(--sky);color:var(--sky)}
+.check-item-notes{margin-top:.4rem}
+.check-item-notes textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);font-family:var(--sans);font-size:.72rem;color:var(--text);padding:.35rem .55rem;outline:none;resize:vertical;min-height:40px;transition:border-color .2s}
+.check-item-notes textarea:focus{border-color:var(--mint)}
+
+/* ── CATEGORY HEADER ── */
+.cat-header{display:flex;align-items:center;gap:.7rem;padding:.7rem .9rem;background:var(--bg3);border-radius:var(--radius2);margin-bottom:.3rem;cursor:pointer;transition:background .15s;user-select:none}
+.cat-header:hover{background:var(--bg4)}
+.cat-icon{font-size:1.1rem}
+.cat-title{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text)}
+.cat-count{font-family:var(--mono);font-size:.55rem;color:var(--text3);margin-left:auto}
+.cat-toggle{font-size:.6rem;color:var(--text3);transition:transform .2s}
+.cat-header.open .cat-toggle{transform:rotate(180deg)}
+.cat-body{overflow:hidden;transition:max-height .3s ease;max-height:0}
+.cat-body.open{max-height:5000px}
+
+/* ── SEVERITY INDICATOR ── */
+.sev-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.sev-critical{background:var(--red)}
+.sev-major{background:var(--gold)}
+.sev-minor{background:var(--sky)}
+.sev-observation{background:var(--text3)}
+
+/* ── RISK MATRIX ── */
+.risk-matrix{display:grid;grid-template-columns:auto repeat(5,1fr);gap:2px;font-size:.6rem;font-family:var(--mono)}
+.risk-cell{padding:.5rem .3rem;text-align:center;border-radius:2px;font-weight:600;min-height:32px;display:flex;align-items:center;justify-content:center}
+.risk-header{background:var(--bg3);color:var(--text3);font-weight:700}
+.risk-1{background:rgba(0,214,143,.15);color:var(--mint)}
+.risk-2{background:rgba(74,179,232,.15);color:var(--sky)}
+.risk-3{background:rgba(245,166,35,.15);color:var(--gold)}
+.risk-4{background:rgba(224,80,80,.15);color:var(--red)}
+.risk-5{background:rgba(224,80,80,.3);color:#ff7070}
+
+/* ── STATUS PILLS ── */
+.status-pill{display:inline-flex;align-items:center;gap:.3rem;font-size:.58rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.2rem .6rem;border-radius:10px;font-family:var(--mono)}
+.status-open{background:var(--red2);color:var(--red)}
+.status-review{background:var(--gold2);color:var(--gold)}
+.status-accepted{background:var(--mint2);color:var(--mint)}
+.status-rejected{background:rgba(255,255,255,.06);color:var(--text3)}
+.status-conditional{background:var(--sky2);color:var(--sky)}
+.status-closed{background:var(--mint2);color:var(--mint)}
+
+/* ── PROGRESS BAR ── */
+.progress-bar{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:.3rem}
+.progress-fill{height:100%;background:var(--mint);border-radius:2px;transition:width .4s ease}
+
+/* ── STAT CARDS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.7rem;margin-bottom:1.2rem}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:.8rem;text-align:center}
+.stat-num{font-size:1.6rem;font-weight:700;font-family:var(--mono);line-height:1}
+.stat-label{font-size:.52rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-top:.3rem}
+.stat-num.mint{color:var(--mint)}
+.stat-num.gold{color:var(--gold)}
+.stat-num.red{color:var(--red)}
+.stat-num.sky{color:var(--sky)}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:2.5rem 1rem;color:var(--text3)}
+.empty-state .empty-icon{font-size:2.2rem;opacity:.4;margin-bottom:.8rem}
+.empty-state .empty-text{font-size:.85rem;font-weight:300;margin-bottom:.5rem;color:var(--text2)}
+.empty-state .empty-hint{font-size:.7rem;font-family:var(--mono)}
+
+/* ── INLINE EDIT ── */
+.inline-edit{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);font-family:var(--sans);font-size:.78rem;color:var(--text);padding:.35rem .55rem;outline:none;transition:border-color .2s;width:100%}
+.inline-edit:focus{border-color:var(--mint)}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:none;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.active{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;max-width:600px;width:100%;max-height:80vh;overflow-y:auto}
+.modal-title{font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mint);margin-bottom:1rem;font-family:var(--mono)}
+
+/* ── TOAST ── */
+.toast-container{position:fixed;bottom:1.5rem;right:1.5rem;z-index:2000;display:flex;flex-direction:column;gap:.5rem}
+.toast{padding:.6rem 1rem;border-radius:var(--radius2);font-size:.72rem;font-weight:600;animation:toastIn .3s ease;background:var(--bg2);border:1px solid var(--mint);color:var(--mint);display:flex;align-items:center;gap:.5rem}
+.toast.error{border-color:var(--red);color:var(--red)}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .stepper{padding:.4rem .8rem}
+  .main{padding:.8rem}
+  .stat-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px){
+  .stat-grid{grid-template-columns:1fr}
+  .form-row{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-badge">WTG DD</span>
+    <div>
+      <div class="brand-title">WTG Technical Due Diligence</div>
+      <div class="brand-sub">Senior Engineer — Wind Turbine Generators</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <a href="index.html" class="back-link">← Portfolio</a>
+  </div>
+</div>
+
+<!-- STEPPER -->
+<div class="stepper" id="stepper">
+  <div class="step-item active" data-step="1"><span class="step-num">1</span><span class="step-label">WTG Type</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="2"><span class="step-num">2</span><span class="step-label">TD2 Checklist</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="3"><span class="step-num">3</span><span class="step-label">Findings</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="4"><span class="step-num">4</span><span class="step-label">ETR Builder</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="5"><span class="step-num">5</span><span class="step-label">Deviations</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="6"><span class="step-num">6</span><span class="step-label">Risk Register</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="7"><span class="step-num">7</span><span class="step-label">Lessons</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="8"><span class="step-num">8</span><span class="step-label">Report</span></div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+<!-- ═══════════ STEP 1: WTG TYPE REGISTRATION ═══════════ -->
+<div class="step-panel active" id="step1">
+  <div class="card">
+    <div class="card-title green">WTG Type Registration</div>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:1.2rem;font-weight:300;line-height:1.6">Register the Wind Turbine Generator type under evaluation. This information forms the basis for the Technical Due Diligence assessment and is referenced throughout the workflow — from checklist evaluation to Employer's Technical Requirements generation and deviation management.</p>
+    <div class="g2">
+      <div>
+        <div class="fg">
+          <label class="fl">Manufacturer</label>
+          <input type="text" class="fi" id="wtgMfr" placeholder="e.g. Vestas, Siemens Gamesa, GE Vernova">
+        </div>
+        <div class="fg">
+          <label class="fl">WTG Model / Type</label>
+          <input type="text" class="fi" id="wtgModel" placeholder="e.g. V236-15.0 MW, SG 14-222 DD">
+        </div>
+        <div class="fg">
+          <label class="fl">Type Certificate Reference</label>
+          <input type="text" class="fi" id="wtgCertRef" placeholder="e.g. DNV-TC-12345">
+        </div>
+        <div class="fg">
+          <label class="fl">IEC Wind Class</label>
+          <select class="fs" id="wtgIecClass">
+            <option value="">Select IEC Class</option>
+            <option value="I-A">Class I — High Wind (A: 50 m/s)</option>
+            <option value="I-B">Class I — High Wind (B: 42.5 m/s)</option>
+            <option value="I-C">Class I — High Wind (C: 37.5 m/s)</option>
+            <option value="II-A">Class II — Medium Wind (A: 42.5 m/s)</option>
+            <option value="II-B">Class II — Medium Wind (B: 37.5 m/s)</option>
+            <option value="II-C">Class II — Medium Wind (C: 30 m/s)</option>
+            <option value="III-A">Class III — Low Wind (A: 37.5 m/s)</option>
+            <option value="III-B">Class III — Low Wind (B: 30 m/s)</option>
+            <option value="III-C">Class III — Low Wind (C: 25 m/s)</option>
+            <option value="IV">Class IV — Very Low Wind</option>
+            <option value="S">Class S — Special / Site-Specific</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Rated Power (MW)</label>
+            <input type="number" class="fi" id="wtgRatedPower" placeholder="15.0" step="0.1">
+          </div>
+          <div class="fg">
+            <label class="fl">Rotor Diameter (m)</label>
+            <input type="number" class="fi" id="wtgRotorDiam" placeholder="236">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Hub Height (m)</label>
+            <input type="number" class="fi" id="wtgHubHeight" placeholder="148">
+          </div>
+          <div class="fg">
+            <label class="fl">Swept Area (m²)</label>
+            <input type="text" class="fi" id="wtgSweptArea" readonly placeholder="Auto-calculated">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Cut-in Wind Speed (m/s)</label>
+            <input type="number" class="fi" id="wtgCutIn" placeholder="3" step="0.5">
+          </div>
+          <div class="fg">
+            <label class="fl">Rated Wind Speed (m/s)</label>
+            <input type="number" class="fi" id="wtgRatedWS" placeholder="12" step="0.5">
+          </div>
+          <div class="fg">
+            <label class="fl">Cut-out Wind Speed (m/s)</label>
+            <input type="number" class="fi" id="wtgCutOut" placeholder="25" step="0.5">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Generator Type</label>
+            <select class="fs" id="wtgGenType">
+              <option value="">Select Type</option>
+              <option value="DD-PMSG">Direct Drive — PMSG</option>
+              <option value="DD-EE">Direct Drive — Electrically Excited</option>
+              <option value="DFIG">Doubly-Fed Induction Generator</option>
+              <option value="PMSG-MG">PMSG with Medium-Speed Gearbox</option>
+              <option value="SCIG">Squirrel Cage Induction Generator</option>
+              <option value="EESG">Electrically Excited Synchronous Generator</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Drive Train</label>
+            <select class="fs" id="wtgDrive">
+              <option value="">Select Type</option>
+              <option value="DD">Direct Drive (Gearless)</option>
+              <option value="1S">Single-Stage Gearbox</option>
+              <option value="2S">Two-Stage Gearbox</option>
+              <option value="3S">Three-Stage Gearbox</option>
+              <option value="MS">Medium-Speed Multi-Stage</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title gold">Additional WTG Specifications</div>
+    <div class="g3">
+      <div class="fg">
+        <label class="fl">Blade Count</label>
+        <input type="number" class="fi" id="wtgBlades" value="3" min="2" max="6">
+      </div>
+      <div class="fg">
+        <label class="fl">Blade Length (m)</label>
+        <input type="number" class="fi" id="wtgBladeLen" placeholder="115">
+      </div>
+      <div class="fg">
+        <label class="fl">Max Tip Speed (m/s)</label>
+        <input type="number" class="fi" id="wtgTipSpeed" placeholder="85" step="1">
+      </div>
+      <div class="fg">
+        <label class="fl">Rotor Speed Range (rpm)</label>
+        <input type="text" class="fi" id="wtgRpmRange" placeholder="e.g. 5–12">
+      </div>
+      <div class="fg">
+        <label class="fl">Nacelle Mass (tonnes)</label>
+        <input type="number" class="fi" id="wtgNacMass" placeholder="650" step="1">
+      </div>
+      <div class="fg">
+        <label class="fl">Tower Mass (tonnes)</label>
+        <input type="number" class="fi" id="wtgTowerMass" placeholder="900" step="1">
+      </div>
+      <div class="fg">
+        <label class="fl">Tower Type</label>
+        <select class="fs" id="wtgTowerType">
+          <option value="">Select Type</option>
+          <option value="tubular-steel">Tubular Steel</option>
+          <option value="concrete">Concrete</option>
+          <option value="hybrid">Hybrid (Steel + Concrete)</option>
+          <option value="lattice">Lattice</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Foundation Type</label>
+        <select class="fs" id="wtgFoundType">
+          <option value="">Select Type</option>
+          <option value="monopile">Monopile</option>
+          <option value="jacket">Jacket</option>
+          <option value="gravity">Gravity Base</option>
+          <option value="floating">Floating</option>
+          <option value="shallow">Shallow / Onshore Spread</option>
+          <option value="piled">Piled (Onshore)</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Grid Voltage (kV)</label>
+        <input type="text" class="fi" id="wtgGridVoltage" placeholder="e.g. 33 / 66">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title sky">Power Curve & Thrust Curve Upload</div>
+    <p style="font-size:.78rem;color:var(--text3);margin-bottom:1rem;font-weight:300">Upload the manufacturer's certified power curve and thrust coefficient curve (CSV format: wind_speed, power_kw [, ct]). These curves are used throughout the due diligence evaluation and referenced in the ETR.</p>
+    <div class="g2">
+      <div>
+        <div class="fg">
+          <label class="fl">Power Curve File (CSV)</label>
+          <input type="file" class="fi" id="powerCurveFile" accept=".csv,.txt">
+        </div>
+        <div id="powerCurveStatus" style="font-size:.65rem;color:var(--text3);font-family:var(--mono);margin-top:-.5rem"></div>
+      </div>
+      <div>
+        <div class="fg">
+          <label class="fl">Thrust Curve File (CSV)</label>
+          <input type="file" class="fi" id="thrustCurveFile" accept=".csv,.txt">
+        </div>
+        <div id="thrustCurveStatus" style="font-size:.65rem;color:var(--text3);font-family:var(--mono);margin-top:-.5rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end;gap:.6rem;margin-top:.5rem">
+    <button class="btn btn-primary" onclick="saveWTGType();goStep(2)">Save & Continue →</button>
+  </div>
+</div>
+
+<!-- ═══════════ STEP 2: TECHNICAL DUE DILIGENCE CHECKLIST ═══════════ -->
+<div class="step-panel" id="step2">
+  <div class="card">
+    <div class="card-title green">Technical Due Diligence Checklist</div>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:1rem;font-weight:300;line-height:1.6">Systematically evaluate the WTG type against industry standards, certification requirements, and project-specific criteria. Each item should be assessed as <strong style="color:var(--mint)">Pass</strong>, <strong style="color:var(--red)">Fail</strong>, <strong style="color:var(--gold)">Conditional</strong>, or <strong style="color:var(--sky)">N/A</strong>. Findings from failed or conditional items should be documented in Step 3.</p>
+    <div id="ddChecklistContainer"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:.5rem">
+    <button class="btn btn-ghost" onclick="goStep(1)">← Back</button>
+    <button class="btn btn-primary" onclick="saveChecklist();goStep(3)">Save & Continue →</button>
+  </div>
+</div>
+
+<!-- ═══════════ STEP 3: FINDINGS & RECOMMENDATIONS ═══════════ -->
+<div class="step-panel" id="step3">
+  <div class="card">
+    <div class="card-title green">Findings & Recommendations</div>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:1rem;font-weight:300;line-height:1.6">Document all findings from the Technical Due Diligence evaluation. Categorise each finding by severity, link to the relevant checklist item, and provide clear recommendations for resolution. Critical and Major findings require mandatory resolution before procurement close-out.</p>
+    <div class="stat-grid" id="findingsStats"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <span style="font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-family:var(--mono)">All Findings</span>
+      <button class="btn btn-primary btn-sm" onclick="openFindingModal()">+ Add Finding</button>
+    </div>
+    <div class="tbl-wrap">
+      <table class="dt" id="findingsTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Severity</th>
+            <th>Category</th>
+            <th>Finding</th>
+            <th>Recommendation</th>
+            <th>Ref. Item</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="findingsBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="findingsEmpty">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-text">No findings documented yet</div>
+      <div class="empty-hint">Click "+ Add Finding" to document a due diligence finding</div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:.5rem">
+    <button class="btn btn-ghost" onclick="goStep(2)">← Back</button>
+    <button class="btn btn-primary" onclick="goStep(4)">Continue to ETR Builder →</button>
+  </div>
+</div>
+
+<!-- ═══════════ STEP 4: EMPLOYER'S TECHNICAL REQUIREMENTS ═══════════ -->
+<div class="step-panel" id="step4">
+  <div class="card">
+    <div class="card-title gold">Employer's Technical Requirements (ETR)</div>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:1rem;font-weight:300;line-height:1.6">Develop the Employer's Technical Requirements document tailored to the specific project. The ETR defines the minimum technical requirements that WTG suppliers must comply with, and serves as the baseline for evaluating supplier deviations during procurement. Each section can be customised to suit project-specific conditions.</p>
+    <div id="etrSections"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:.5rem">
+    <button class="btn btn-ghost" onclick="goStep(3)">← Back</button>
+    <button class="btn btn-primary" onclick="saveETR();goStep(5)">Save & Continue →</button>
+  </div>
+</div>
+
+<!-- ═══════════ STEP 5: DEVIATION MANAGEMENT ═══════════ -->
+<div class="step-panel" id="step5">
+  <div class="card">
+    <div class="card-title purple">WTG Supplier Deviation Management</div>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:1rem;font-weight:300;line-height:1.6">During the project procurement phase, manage the close-out of any WTG supplier deviations to the Employer's Technical Requirements. Ensure the relevant technical expertise is consulted on each point of deviation to reach closure. Any associated residual risks must be implemented in the project risk register (Step 6).</p>
+    <div class="stat-grid" id="deviationStats"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <span style="font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-family:var(--mono)">Deviation Register</span>
+      <button class="btn btn-primary btn-sm" onclick="openDeviationModal()">+ Log Deviation</button>
+    </div>
+    <div class="tbl-wrap">
+      <table class="dt" id="deviationsTable">
+        <thead>
+          <tr>
+            <th>Dev. ID</th>
+            <th>ETR Clause</th>
+            <th>Deviation Description</th>
+            <th>Supplier Justification</th>
+            <th>Technical Expert</th>
+            <th>Consulted?</th>
+            <th>Status</th>
+            <th>Residual Risk</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="deviationsBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="deviationsEmpty">
+      <div class="empty-icon">📋</div>
+      <div class="empty-text">No deviations logged yet</div>
+      <div class="empty-hint">Click "+ Log Deviation" when a supplier deviates from ETR</div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:.5rem">
+    <button class="btn btn-ghost" onclick="goStep(4)">← Back</button>
+    <button class="btn btn-primary" onclick="goStep(6)">Continue to Risk Register →</button>
+  </div>
+</div>
+
+<!-- ═══════════ STEP 6: RISK REGISTER ═══════════ -->
+<div class="step-panel" id="step6">
+  <div class="card">
+    <div class="card-title red">Project Risk Register</div>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:1rem;font-weight:300;line-height:1.6">Track all residual risks arising from WTG supplier deviations, due diligence findings, and project-specific conditions. Risks linked to deviations are automatically populated. Use the risk matrix to classify likelihood and impact, and document mitigation measures for each risk entry.</p>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-title red">Risk Matrix</div>
+      <div class="risk-matrix">
+        <div class="risk-cell risk-header"></div>
+        <div class="risk-cell risk-header">Negligible (1)</div>
+        <div class="risk-cell risk-header">Minor (2)</div>
+        <div class="risk-cell risk-header">Moderate (3)</div>
+        <div class="risk-cell risk-header">Major (4)</div>
+        <div class="risk-cell risk-header">Critical (5)</div>
+        <div class="risk-cell risk-header">Almost Certain (5)</div>
+        <div class="risk-cell risk-3">5</div><div class="risk-cell risk-4">10</div><div class="risk-cell risk-4">15</div><div class="risk-cell risk-5">20</div><div class="risk-cell risk-5">25</div>
+        <div class="risk-cell risk-header">Likely (4)</div>
+        <div class="risk-cell risk-2">4</div><div class="risk-cell risk-3">8</div><div class="risk-cell risk-4">12</div><div class="risk-cell risk-5">16</div><div class="risk-cell risk-5">20</div>
+        <div class="risk-cell risk-header">Possible (3)</div>
+        <div class="risk-cell risk-1">3</div><div class="risk-cell risk-2">6</div><div class="risk-cell risk-3">9</div><div class="risk-cell risk-4">12</div><div class="risk-cell risk-5">15</div>
+        <div class="risk-cell risk-header">Unlikely (2)</div>
+        <div class="risk-cell risk-1">2</div><div class="risk-cell risk-1">4</div><div class="risk-cell risk-2">6</div><div class="risk-cell risk-3">8</div><div class="risk-cell risk-4">10</div>
+        <div class="risk-cell risk-header">Rare (1)</div>
+        <div class="risk-cell risk-1">1</div><div class="risk-cell risk-1">2</div><div class="risk-cell risk-1">3</div><div class="risk-cell risk-2">4</div><div class="risk-cell risk-3">5</div>
+      </div>
+      <div style="display:flex;gap:.8rem;margin-top:.8rem;flex-wrap:wrap">
+        <span style="display:flex;align-items:center;gap:.3rem;font-size:.55rem;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:rgba(0,214,143,.3)"></span>Low (1–3)</span>
+        <span style="display:flex;align-items:center;gap:.3rem;font-size:.55rem;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:rgba(74,179,232,.3)"></span>Medium (4–6)</span>
+        <span style="display:flex;align-items:center;gap:.3rem;font-size:.55rem;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:rgba(245,166,35,.3)"></span>High (8–12)</span>
+        <span style="display:flex;align-items:center;gap:.3rem;font-size:.55rem;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:rgba(224,80,80,.3)"></span>Very High (15–25)</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title red">Risk Summary</div>
+      <div class="stat-grid" id="riskStats"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <span style="font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-family:var(--mono)">Risk Register Entries</span>
+      <button class="btn btn-danger btn-sm" onclick="openRiskModal()">+ Add Risk</button>
+    </div>
+    <div class="tbl-wrap">
+      <table class="dt" id="riskTable">
+        <thead>
+          <tr>
+            <th>Risk ID</th>
+            <th>Source</th>
+            <th>Description</th>
+            <th>L</th>
+            <th>I</th>
+            <th>Score</th>
+            <th>Mitigation</th>
+            <th>Residual L</th>
+            <th>Residual I</th>
+            <th>Residual Score</th>
+            <th>Owner</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="riskBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="riskEmpty">
+      <div class="empty-icon">⚠️</div>
+      <div class="empty-text">No risks registered yet</div>
+      <div class="empty-hint">Add risks manually or they auto-populate from deviations</div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:.5rem">
+    <button class="btn btn-ghost" onclick="goStep(5)">← Back</button>
+    <button class="btn btn-primary" onclick="goStep(7)">Continue to Lessons Learnt →</button>
+  </div>
+</div>
+
+<!-- ═══════════ STEP 7: LESSONS LEARNT ═══════════ -->
+<div class="step-panel" id="step7">
+  <div class="card">
+    <div class="card-title sky">Lessons Learnt</div>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:1rem;font-weight:300;line-height:1.6">Capture lessons learnt from construction and operational projects to ensure they are considered when updating the Employer's Technical Requirements. Each lesson should reference the applicable ETR section and indicate whether an ETR update is recommended. This creates a continuous improvement cycle across projects.</p>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <span style="font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-family:var(--mono)">Lessons Register</span>
+      <button class="btn btn-sky btn-sm" onclick="openLessonModal()">+ Add Lesson</button>
+    </div>
+    <div class="tbl-wrap">
+      <table class="dt" id="lessonsTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Category</th>
+            <th>Lesson</th>
+            <th>Source Project</th>
+            <th>ETR Impact</th>
+            <th>ETR Update Needed?</th>
+            <th>ETR Section</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="lessonsBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="lessonsEmpty">
+      <div class="empty-icon">📖</div>
+      <div class="empty-text">No lessons recorded yet</div>
+      <div class="empty-hint">Capture lessons from construction and operational projects</div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:.5rem">
+    <button class="btn btn-ghost" onclick="goStep(6)">← Back</button>
+    <button class="btn btn-primary" onclick="goStep(8)">Generate Report →</button>
+  </div>
+</div>
+
+<!-- ═══════════ STEP 8: REPORT ═══════════ -->
+<div class="step-panel" id="step8">
+  <div class="card">
+    <div class="card-title green">Due Diligence Report</div>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:1.2rem;font-weight:300;line-height:1.6">Generate a comprehensive Technical Due Diligence report consolidating all findings, recommendations, deviation status, risk register, and lessons learnt. The report includes the Employer's Technical Requirements as an appendix and is suitable for project management review and procurement governance.</p>
+    <div class="stat-grid" id="reportStats"></div>
+  </div>
+  <div class="card">
+    <div class="card-title gold">Report Contents</div>
+    <div id="reportPreview" style="font-size:.78rem;line-height:1.7;color:var(--text2)"></div>
+  </div>
+  <div class="card">
+    <div class="card-title sky">Export</div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="exportHTMLReport()">📄 Export HTML Report</button>
+      <button class="btn btn-gold" onclick="exportJSONData()">💾 Export JSON Data</button>
+      <button class="btn btn-ghost" onclick="window.print()">🖨️ Print</button>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:flex-start;margin-top:.5rem">
+    <button class="btn btn-ghost" onclick="goStep(7)">← Back</button>
+  </div>
+</div>
+
+</div><!-- end .main -->
+
+<!-- ═══════════ MODALS ═══════════ -->
+
+<!-- Finding Modal -->
+<div class="modal-overlay" id="findingModal">
+  <div class="modal">
+    <div class="modal-title">Add Finding</div>
+    <div class="fg">
+      <label class="fl">Severity</label>
+      <select class="fs" id="fSev">
+        <option value="Critical">Critical</option>
+        <option value="Major">Major</option>
+        <option value="Minor" selected>Minor</option>
+        <option value="Observation">Observation</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">Category</label>
+      <select class="fs" id="fCat">
+        <option value="Design Standards">Design Standards</option>
+        <option value="Structural Integrity">Structural Integrity</option>
+        <option value="Electrical Systems">Electrical Systems</option>
+        <option value="Control & Protection">Control & Protection</option>
+        <option value="Safety Systems">Safety Systems</option>
+        <option value="Environmental Compliance">Environmental Compliance</option>
+        <option value="Performance">Performance</option>
+        <option value="Manufacturing Quality">Manufacturing Quality</option>
+        <option value="Type Certificate">Type Certificate</option>
+        <option value="Warranty & Service">Warranty & Service</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">Finding Description</label>
+      <textarea class="fi" id="fDesc" rows="3" placeholder="Describe the finding in detail..."></textarea>
+    </div>
+    <div class="fg">
+      <label class="fl">Recommendation</label>
+      <textarea class="fi" id="fRec" rows="2" placeholder="Recommended resolution or action..."></textarea>
+    </div>
+    <div class="fg">
+      <label class="fl">Reference Checklist Item (optional)</label>
+      <input type="text" class="fi" id="fRef" placeholder="e.g. 2.3, 4.1">
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+      <button class="btn btn-ghost" onclick="closeModal('findingModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addFinding()">Add Finding</button>
+    </div>
+  </div>
+</div>
+
+<!-- Deviation Modal -->
+<div class="modal-overlay" id="deviationModal">
+  <div class="modal">
+    <div class="modal-title">Log Supplier Deviation</div>
+    <div class="fg">
+      <label class="fl">ETR Clause Reference</label>
+      <input type="text" class="fi" id="dEtrClause" placeholder="e.g. 3.2.1 — Generator Type">
+    </div>
+    <div class="fg">
+      <label class="fl">Deviation Description</label>
+      <textarea class="fi" id="dDesc" rows="3" placeholder="Describe the supplier's deviation from ETR..."></textarea>
+    </div>
+    <div class="fg">
+      <label class="fl">Supplier Justification</label>
+      <textarea class="fi" id="dJustif" rows="2" placeholder="Supplier's rationale for the deviation..."></textarea>
+    </div>
+    <div class="fg">
+      <label class="fl">Technical Expert to Consult</label>
+      <input type="text" class="fi" id="dExpert" placeholder="e.g. Structural Engineer, Electrical Lead">
+    </div>
+    <div class="fg">
+      <label class="fl">Expert Consulted?</label>
+      <select class="fs" id="dConsulted">
+        <option value="No">No</option>
+        <option value="Pending">Pending</option>
+        <option value="Yes">Yes</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">Residual Risk?</label>
+      <select class="fs" id="dRisk">
+        <option value="None">None</option>
+        <option value="Low">Low</option>
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+      <button class="btn btn-ghost" onclick="closeModal('deviationModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addDeviation()">Log Deviation</button>
+    </div>
+  </div>
+</div>
+
+<!-- Risk Modal -->
+<div class="modal-overlay" id="riskModal">
+  <div class="modal">
+    <div class="modal-title">Add Risk Entry</div>
+    <div class="fg">
+      <label class="fl">Source</label>
+      <select class="fs" id="rSource">
+        <option value="Deviation">WTG Supplier Deviation</option>
+        <option value="Finding">Due Diligence Finding</option>
+        <option value="Site Conditions">Site Conditions</option>
+        <option value="Contractual">Contractual</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">Risk Description</label>
+      <textarea class="fi" id="rDesc" rows="2" placeholder="Describe the risk..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="fg">
+        <label class="fl">Likelihood (1–5)</label>
+        <select class="fs" id="rLikelihood">
+          <option value="1">1 — Rare</option>
+          <option value="2">2 — Unlikely</option>
+          <option value="3" selected>3 — Possible</option>
+          <option value="4">4 — Likely</option>
+          <option value="5">5 — Almost Certain</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Impact (1–5)</label>
+        <select class="fs" id="rImpact">
+          <option value="1">1 — Negligible</option>
+          <option value="2">2 — Minor</option>
+          <option value="3" selected>3 — Moderate</option>
+          <option value="4">4 — Major</option>
+          <option value="5">5 — Critical</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Mitigation Measures</label>
+      <textarea class="fi" id="rMit" rows="2" placeholder="Planned mitigation..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="fg">
+        <label class="fl">Residual Likelihood</label>
+        <select class="fs" id="rResL">
+          <option value="1">1 — Rare</option>
+          <option value="2" selected>2 — Unlikely</option>
+          <option value="3">3 — Possible</option>
+          <option value="4">4 — Likely</option>
+          <option value="5">5 — Almost Certain</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Residual Impact</label>
+        <select class="fs" id="rResI">
+          <option value="1">1 — Negligible</option>
+          <option value="2" selected>2 — Minor</option>
+          <option value="3">3 — Moderate</option>
+          <option value="4">4 — Major</option>
+          <option value="5">5 — Critical</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Risk Owner</label>
+      <input type="text" class="fi" id="rOwner" placeholder="e.g. Project Manager, Technical Lead">
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+      <button class="btn btn-ghost" onclick="closeModal('riskModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addRisk()">Add Risk</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lesson Modal -->
+<div class="modal-overlay" id="lessonModal">
+  <div class="modal">
+    <div class="modal-title">Add Lesson Learnt</div>
+    <div class="fg">
+      <label class="fl">Category</label>
+      <select class="fs" id="lCat">
+        <option value="Design">Design</option>
+        <option value="Manufacturing">Manufacturing</option>
+        <option value="Installation">Installation</option>
+        <option value="Operations">Operations</option>
+        <option value="Procurement">Procurement</option>
+        <option value="Commissioning">Commissioning</option>
+        <option value="Warranty">Warranty</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">Lesson Description</label>
+      <textarea class="fi" id="lDesc" rows="3" placeholder="Describe the lesson learnt..."></textarea>
+    </div>
+    <div class="fg">
+      <label class="fl">Source Project</label>
+      <input type="text" class="fi" id="lProject" placeholder="e.g. Project Alpha, Wind Farm Beta">
+    </div>
+    <div class="fg">
+      <label class="fl">Impact on ETR</label>
+      <textarea class="fi" id="lImpact" rows="2" placeholder="How does this lesson affect the ETR?"></textarea>
+    </div>
+    <div class="fg">
+      <label class="fl">ETR Update Required?</label>
+      <select class="fs" id="lEtrUpdate">
+        <option value="Yes">Yes — ETR update recommended</option>
+        <option value="No">No — For reference only</option>
+        <option value="Under Review">Under Review</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">Applicable ETR Section</label>
+      <input type="text" class="fi" id="lEtrSection" placeholder="e.g. 3.2 Electrical Requirements">
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+      <button class="btn btn-ghost" onclick="closeModal('lessonModal')">Cancel</button>
+      <button class="btn btn-sky" onclick="addLesson()">Add Lesson</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   WTG TECHNICAL DUE DILIGENCE TOOL
+   Senior Engineer — Wind Turbine Generators
+   ═══════════════════════════════════════════════════════ */
+
+// ── STATE ──
+let currentStep = 1;
+const state = {
+  wtg: {},
+  checklist: {},
+  findings: [],
+  deviations: [],
+  risks: [],
+  lessons: [],
+  etr: {}
+};
+
+// Load saved state
+try {
+  const saved = localStorage.getItem('wtgDDState');
+  if (saved) Object.assign(state, JSON.parse(saved));
+} catch(e) {}
+
+function saveState() {
+  try { localStorage.setItem('wtgDDState', JSON.stringify(state)); } catch(e) {}
+}
+
+// ── STEPPER NAVIGATION ──
+function goStep(n) {
+  currentStep = n;
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.step-item').forEach(s => {
+    const sn = parseInt(s.dataset.step);
+    s.classList.remove('active','done');
+    if (sn === n) s.classList.add('active');
+    else if (sn < n) s.classList.add('done');
+  });
+  const panel = document.getElementById('step' + n);
+  if (panel) panel.classList.add('active');
+  // Render step-specific content
+  if (n === 2) renderChecklist();
+  if (n === 3) renderFindings();
+  if (n === 4) renderETR();
+  if (n === 5) renderDeviations();
+  if (n === 6) renderRisks();
+  if (n === 7) renderLessons();
+  if (n === 8) renderReport();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.querySelectorAll('.step-item').forEach(s => {
+  s.addEventListener('click', () => goStep(parseInt(s.dataset.step)));
+});
+
+// ── STEP 1: WTG TYPE ──
+function saveWTGType() {
+  state.wtg = {
+    mfr: document.getElementById('wtgMfr').value,
+    model: document.getElementById('wtgModel').value,
+    certRef: document.getElementById('wtgCertRef').value,
+    iecClass: document.getElementById('wtgIecClass').value,
+    ratedPower: document.getElementById('wtgRatedPower').value,
+    rotorDiam: document.getElementById('wtgRotorDiam').value,
+    hubHeight: document.getElementById('wtgHubHeight').value,
+    sweptArea: document.getElementById('wtgSweptArea').value,
+    cutIn: document.getElementById('wtgCutIn').value,
+    ratedWS: document.getElementById('wtgRatedWS').value,
+    cutOut: document.getElementById('wtgCutOut').value,
+    genType: document.getElementById('wtgGenType').value,
+    drive: document.getElementById('wtgDrive').value,
+    blades: document.getElementById('wtgBlades').value,
+    bladeLen: document.getElementById('wtgBladeLen').value,
+    tipSpeed: document.getElementById('wtgTipSpeed').value,
+    rpmRange: document.getElementById('wtgRpmRange').value,
+    nacMass: document.getElementById('wtgNacMass').value,
+    towerMass: document.getElementById('wtgTowerMass').value,
+    towerType: document.getElementById('wtgTowerType').value,
+    foundType: document.getElementById('wtgFoundType').value,
+    gridVoltage: document.getElementById('wtgGridVoltage').value
+  };
+  saveState();
+  toast('WTG type data saved');
+}
+
+// Auto-calculate swept area
+document.getElementById('wtgRotorDiam').addEventListener('input', function() {
+  const d = parseFloat(this.value);
+  if (d > 0) {
+    document.getElementById('wtgSweptArea').value = Math.round(Math.PI * Math.pow(d/2, 2)).toLocaleString();
+  }
+});
+
+// Power curve / thrust curve upload
+document.getElementById('powerCurveFile').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    document.getElementById('powerCurveStatus').textContent = `✓ ${file.name} loaded (${(file.size/1024).toFixed(1)} KB)`;
+    document.getElementById('powerCurveStatus').style.color = 'var(--mint)';
+  }
+});
+document.getElementById('thrustCurveFile').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    document.getElementById('thrustCurveStatus').textContent = `✓ ${file.name} loaded (${(file.size/1024).toFixed(1)} KB)`;
+    document.getElementById('thrustCurveStatus').style.color = 'var(--mint)';
+  }
+});
+
+// Populate saved WTG data
+function populateWTGFields() {
+  if (!state.wtg.mfr) return;
+  const fields = ['mfr','model','certRef','iecClass','ratedPower','rotorDiam','hubHeight',
+    'sweptArea','cutIn','ratedWS','cutOut','genType','drive','blades','bladeLen',
+    'tipSpeed','rpmRange','nacMass','towerMass','towerType','foundType','gridVoltage'];
+  const ids = ['wtgMfr','wtgModel','wtgCertRef','wtgIecClass','wtgRatedPower','wtgRotorDiam',
+    'wtgHubHeight','wtgSweptArea','wtgCutIn','wtgRatedWS','wtgCutOut','wtgGenType','wtgDrive',
+    'wtgBlades','wtgBladeLen','wtgTipSpeed','wtgRpmRange','wtgNacMass','wtgTowerMass',
+    'wtgTowerType','wtgFoundType','wtgGridVoltage'];
+  fields.forEach((f, i) => {
+    if (state.wtg[f] && document.getElementById(ids[i])) {
+      document.getElementById(ids[i]).value = state.wtg[f];
+    }
+  });
+}
+
+// ── STEP 2: CHECKLIST ──
+const checklistData = [
+  {
+    category: 'Design Standards Compliance',
+    icon: '📐',
+    items: [
+      { id: '2.1', text: 'IEC 61400-1 Design Requirements compliance verified', sub: 'Confirm the WTG type certificate references IEC 61400-1:2019 or later edition' },
+      { id: '2.2', text: 'IEC 61400-3 Offshore design requirements (if applicable)', sub: 'For offshore WTGs, verify compliance with IEC 61400-3-1:2019 / 3-2:2023' },
+      { id: '2.3', text: 'Type Certificate issued by accredited certification body', sub: 'DNV, TÜV, Bureau Veritas, or equivalent IECRE-recognised body' },
+      { id: '2.4', text: 'Site-specific design assessment available or planned', sub: 'Per IEC 61400-1 §8, for conditions outside type certificate envelope' },
+      { id: '2.5', text: 'Design loads verification against site conditions', sub: 'Confirm design load cases (DLCs) cover site-specific wind, wave, seismic conditions' },
+      { id: '2.6', text: 'Extreme wind speed Vref compatible with site wind climate', sub: 'Site 50-year return wind speed does not exceed WTG Vref rating' }
+    ]
+  },
+  {
+    category: 'Structural Integrity — Blades',
+    icon: '🔧',
+    items: [
+      { id: '3.1', text: 'Blade structural design and fatigue verification', sub: 'IEC 61400-5 compliance or equivalent; review blade root bending moments' },
+      { id: '3.2', text: 'Blade material certification and traceability', sub: 'Fibre/reinforcement type, resin system, adhesive — manufacturer data sheets' },
+      { id: '3.3', text: 'Blade root connection design and bolt preload specification', sub: 'T-bolt or pin connection; verify preload methodology and relaxation' },
+      { id: '3.4', text: 'Leading edge protection system (LEP) evaluation', sub: 'Review LEP type, expected service life, and inspection interval' },
+      { id: '3.5', text: 'Lightning protection system per IEC 61400-24', sub: 'Receptors, down-conductor sizing, and earthing path verification' },
+      { id: '3.6', text: 'Blade ice detection / anti-icing system (if applicable)', sub: 'Cold climate site requirements per IEC 61400-15' }
+    ]
+  },
+  {
+    category: 'Structural Integrity — Tower & Foundation',
+    icon: '🏗️',
+    items: [
+      { id: '4.1', text: 'Tower structural design verification', sub: 'Fatigue and ultimate limit state checks; shell buckling per Eurocode 3 / DNV' },
+      { id: '4.2', text: 'Tower natural frequency confirmation', sub: 'Verify tower frequency relative to rotor excitation frequencies (1P, 3P)' },
+      { id: '4.3', text: 'Flange connection design and bolt preload', sub: 'Bolt grade, preload method (tensioning vs. torque), and inspection plan' },
+      { id: '4.4', text: 'Foundation design adequacy for site soil conditions', sub: 'Geotechnical report review; bearing capacity, settlement, and liquefaction' },
+      { id: '4.5', text: 'Corrosion protection system (C2–C5 per ISO 12944)', sub: 'Coating system specification, thickness, and inspection regime' },
+      { id: '4.6', text: 'Grouted connection design (offshore)', sub: 'DNV-ST-0126 compliance; grout material, shrinkage, and fatigue capacity' }
+    ]
+  },
+  {
+    category: 'Electrical Systems',
+    icon: '⚡',
+    items: [
+      { id: '5.1', text: 'Generator design and efficiency verification', sub: 'Review type test results; verify efficiency at rated and partial loads' },
+      { id: '5.2', text: 'Converter / inverter specification and grid code compliance', sub: 'Confirm fault ride-through, reactive power capability per grid code requirements' },
+      { id: '5.3', text: 'Transformer specification and sizing', sub: 'Rated power, impedance, tap changer range, and cooling type' },
+      { id: '5.4', text: 'MV switchgear specification', sub: 'Vacuum or SF6; short-circuit rating; disconnect and earthing capability' },
+      { id: '5.5', text: 'Cable sizing and routing within nacelle and tower', sub: 'Current-carrying capacity, voltage drop, and fire rating per IEC 60332' },
+      { id: '5.6', text: 'Earthing and lightning protection system design', sub: 'IEC 61400-24 compliance; earthing grid, down-conductors, surge protection' }
+    ]
+  },
+  {
+    category: 'Control & Protection Systems',
+    icon: '🎛️',
+    items: [
+      { id: '6.1', text: 'Pitch system design and redundancy', sub: 'Individual blade pitch; hydraulic vs. electric; fail-safe operation' },
+      { id: '6.2', text: 'Yaw system design and control strategy', sub: 'Active yaw; bearing specification; yaw brake; cable twist management' },
+      { id: '6.3', text: 'Overspeed protection system redundancy', sub: 'At least two independent overspeed protection systems per IEC 61400-1' },
+      { id: '6.4', text: 'Brake system design (mechanical / aerodynamic)', sub: 'Rotor lock capability; emergency brake activation logic' },
+      { id: '6.5', text: 'SCADA system specification and data interface', sub: 'IEC 61400-25 compliance; data points, sampling rate, alarm management' },
+      { id: '6.6', text: 'Condition monitoring system (CMS) specification', sub: 'Vibration sensors, oil particle analysis; IEC 61400-25-6 compliance' }
+    ]
+  },
+  {
+    category: 'Safety & Environmental',
+    icon: '🛡️',
+    items: [
+      { id: '7.1', text: 'Fire protection system in nacelle', sub: 'Detection and suppression; extinguishing agent; auto-shutdown logic' },
+      { id: '7.2', text: 'Emergency descent / rescue equipment', sub: 'Controlled descent device; hub and nacelle evacuation routes' },
+      { id: '7.3', text: 'Noise emission levels and compliance', sub: 'IEC 61400-11 measurement; guaranteed sound power level vs. site limits' },
+      { id: '7.4', text: 'Shadow flicker assessment methodology', sub: 'IEC 61400-28; worst-case calculation; mitigation via curtailment' },
+      { id: '7.5', text: 'Aviation obstacle lighting and marking', sub: 'Per national aviation authority requirements; medium/high intensity' },
+      { id: '7.6', text: 'Environmental impact — oil containment and spill prevention', sub: 'Gearbox oil, hydraulic fluid, and transformer oil containment measures' }
+    ]
+  },
+  {
+    category: 'Performance Verification',
+    icon: '📊',
+    items: [
+      { id: '8.1', text: 'Power curve guarantee and test methodology', sub: 'IEC 61400-12-1 methodology; annual energy production guarantee basis' },
+      { id: '8.2', text: 'Power curve verification at site conditions', sub: 'Air density correction; turbulence and shear adjustments; site calibration' },
+      { id: '8.3', text: 'Mechanical loads measurement campaign (if required)', sub: 'IEC 61400-13; blade root, tower base, and main shaft load measurement' },
+      { id: '8.4', text: 'Noise performance verification', sub: 'IEC 61400-11 post-installation measurement; tonality assessment' },
+      { id: '8.5', text: 'Availability guarantee and calculation methodology', sub: 'Definition of availability; exclusions; time-based vs. production-based' },
+      { id: '8.6', text: 'AEP estimation methodology and assumptions', sub: 'Wind resource, losses, and uncertainty; P50/P75/P90 definitions' }
+    ]
+  },
+  {
+    category: 'Manufacturing & Quality',
+    icon: '🏭',
+    items: [
+      { id: '9.1', text: 'Manufacturer quality management system certification', sub: 'ISO 9001 certification scope; manufacturing facility audit results' },
+      { id: '9.2', text: 'Blade manufacturing process and quality control', sub: 'Layup process, curing, root insert bonding, and final inspection' },
+      { id: '9.3', text: 'Nacelle assembly quality control procedures', sub: 'Torque/tension records, alignment checks, and functional testing' },
+      { id: '9.4', text: 'Tower manufacturing and coating quality', sub: 'Weld inspection (NDT), coating thickness, and holiday detection' },
+      { id: '9.5', text: 'Factory acceptance test (FAT) scope and results', sub: 'Generator, converter, pitch/yaw system, and full nacelle FAT' },
+      { id: '9.6', text: 'Supply chain risk assessment for critical components', sub: 'Single-source dependencies; lead times; alternative suppliers' }
+    ]
+  },
+  {
+    category: 'Type Certificate & Warranty',
+    icon: '📜',
+    items: [
+      { id: '10.1', text: 'Type Certificate scope and validity', sub: 'Confirm scope covers site conditions; certificate expiry and renewal' },
+      { id: '10.2', text: 'Design Basis document review', sub: 'Verify design assumptions match or bound site conditions' },
+      { id: '10.3', text: 'Warranty terms — scope, duration, and exclusions', sub: 'Availability, power curve, component warranty, and defect liability' },
+      { id: '10.4', text: 'Service agreement scope and KPIs', sub: 'Preventive maintenance schedule, response times, and spare parts' },
+      { id: '10.5', text: 'Insurance requirements and liability provisions', sub: 'Product liability, delay in start-up, and business interruption coverage' },
+      { id: '10.6', text: 'Spare parts inventory and availability guarantee', sub: 'Critical spares list; delivery time for non-stocked items' }
+    ]
+  }
+];
+
+function renderChecklist() {
+  const container = document.getElementById('ddChecklistContainer');
+  let html = '';
+  checklistData.forEach((cat, ci) => {
+    const saved = state.checklist[cat.category] || {};
+    const passCount = Object.values(saved).filter(v => v.status === 'pass').length;
+    const total = cat.items.length;
+    const pct = total ? Math.round(passCount / total * 100) : 0;
+    html += `<div style="margin-bottom:.5rem">
+      <div class="cat-header open" onclick="toggleCat(this)">
+        <span class="cat-icon">${cat.icon}</span>
+        <span class="cat-title">${cat.category}</span>
+        <span class="cat-count">${passCount}/${total} passed</span>
+        <span class="cat-toggle">▼</span>
+      </div>
+      <div class="cat-body open">
+        <div style="padding:.4rem .8rem">
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        </div>
+        <ul class="checklist">`;
+    cat.items.forEach((item, ii) => {
+      const s = saved[item.id] || {};
+      const statusClass = s.status || '';
+      const notes = s.notes || '';
+      html += `<li class="checklist-item">
+        <span class="check-item-num">${item.id}</span>
+        <div class="check-item-body">
+          <div class="check-item-text">${item.text}</div>
+          <div class="check-item-sub">${item.sub}</div>
+          <div class="check-item-notes" style="${notes ? '' : 'display:none'}">
+            <textarea placeholder="Notes..." onchange="updateCheckItem('${cat.category}','${item.id}','notes',this.value)">${notes}</textarea>
+          </div>
+        </div>
+        <div class="check-item-controls">
+          <button class="check-btn ${statusClass === 'pass' ? 'pass' : ''}" onclick="updateCheckItem('${cat.category}','${item.id}','status','pass')" title="Pass">P</button>
+          <button class="check-btn ${statusClass === 'fail' ? 'fail' : ''}" onclick="updateCheckItem('${cat.category}','${item.id}','status','fail')" title="Fail">F</button>
+          <button class="check-btn ${statusClass === 'conditional' ? 'conditional' : ''}" onclick="updateCheckItem('${cat.category}','${item.id}','status','conditional')" title="Conditional">C</button>
+          <button class="check-btn ${statusClass === 'na' ? 'na' : ''}" onclick="updateCheckItem('${cat.category}','${item.id}','status','na')" title="N/A">N</button>
+        </div>
+      </li>`;
+    });
+    html += `</ul></div></div>`;
+  });
+  container.innerHTML = html;
+}
+
+function toggleCat(el) {
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+
+function updateCheckItem(cat, id, field, value) {
+  if (!state.checklist[cat]) state.checklist[cat] = {};
+  if (!state.checklist[cat][id]) state.checklist[cat][id] = {};
+  state.checklist[cat][id][field] = value;
+  saveState();
+  renderChecklist();
+  // Show notes field when status is set
+  if (field === 'status' && (value === 'fail' || value === 'conditional')) {
+    const notesEl = document.querySelector(`[onchange*="'${cat}','${id}'"]`);
+    if (notesEl) notesEl.closest('.checklist-item').querySelector('.check-item-notes').style.display = '';
+  }
+}
+
+function saveChecklist() {
+  saveState();
+  toast('Checklist saved');
+}
+
+// ── STEP 3: FINDINGS ──
+function renderFindings() {
+  const body = document.getElementById('findingsBody');
+  const empty = document.getElementById('findingsEmpty');
+  const statsEl = document.getElementById('findingsStats');
+
+  const crit = state.findings.filter(f => f.severity === 'Critical').length;
+  const maj = state.findings.filter(f => f.severity === 'Major').length;
+  const min = state.findings.filter(f => f.severity === 'Minor').length;
+  const obs = state.findings.filter(f => f.severity === 'Observation').length;
+
+  statsEl.innerHTML = `
+    <div class="stat-card"><div class="stat-num red">${crit}</div><div class="stat-label">Critical</div></div>
+    <div class="stat-card"><div class="stat-num gold">${maj}</div><div class="stat-label">Major</div></div>
+    <div class="stat-card"><div class="stat-num sky">${min}</div><div class="stat-label">Minor</div></div>
+    <div class="stat-card"><div class="stat-num">${obs}</div><div class="stat-label">Observation</div></div>
+    <div class="stat-card"><div class="stat-num mint">${state.findings.length}</div><div class="stat-label">Total</div></div>`;
+
+  if (state.findings.length === 0) {
+    body.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  body.innerHTML = state.findings.map((f, i) => `
+    <tr>
+      <td style="font-family:var(--mono);font-weight:700;color:var(--text)">F-${String(i+1).padStart(3,'0')}</td>
+      <td><span class="sev-dot sev-${f.severity.toLowerCase()}"></span> <span style="font-size:.7rem">${f.severity}</span></td>
+      <td><span class="badge badge-${f.severity==='Critical'?'red':f.severity==='Major'?'gold':f.severity==='Minor'?'sky':'mint'}">${f.category}</span></td>
+      <td style="max-width:250px;white-space:normal">${f.description}</td>
+      <td style="max-width:200px;white-space:normal">${f.recommendation}</td>
+      <td style="font-family:var(--mono)">${f.ref || '—'}</td>
+      <td><span class="badge badge-mint">Open</span></td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteFinding(${i})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function openFindingModal() { document.getElementById('findingModal').classList.add('active'); }
+function addFinding() {
+  const f = {
+    severity: document.getElementById('fSev').value,
+    category: document.getElementById('fCat').value,
+    description: document.getElementById('fDesc').value,
+    recommendation: document.getElementById('fRec').value,
+    ref: document.getElementById('fRef').value
+  };
+  if (!f.description.trim()) return toast('Please describe the finding', true);
+  state.findings.push(f);
+  saveState();
+  closeModal('findingModal');
+  document.getElementById('fDesc').value = '';
+  document.getElementById('fRec').value = '';
+  document.getElementById('fRef').value = '';
+  renderFindings();
+  toast('Finding added');
+}
+function deleteFinding(i) {
+  state.findings.splice(i, 1);
+  saveState();
+  renderFindings();
+}
+
+// ── STEP 4: ETR BUILDER ──
+const etrTemplate = [
+  {
+    id: '1', title: 'General Requirements', icon: '📋',
+    content: `<p>This section defines the general technical requirements applicable to the supply, installation, commissioning, and warranty of the Wind Turbine Generators for the project.</p>`,
+    clauses: [
+      { id: '1.1', title: 'Scope of Supply', text: 'The WTG supplier shall supply all equipment, materials, and services necessary for the complete and operational wind turbine generators, including but not limited to: nacelle assembly, rotor blades, tower, foundation interface, electrical systems, control and protection systems, SCADA, CMS, and all associated ancillary equipment.' },
+      { id: '1.2', title: 'Applicable Standards', text: 'The WTG shall be designed, manufactured, and tested in accordance with the latest editions of IEC 61400 series, applicable Eurocodes, DNV standards, and local regulatory requirements. All equipment shall be CE-marked where applicable.' },
+      { id: '1.3', title: 'Project Site Conditions', text: 'The WTG shall be suitable for the site-specific environmental conditions as defined in the Site Design Data document, including wind climate, temperature range, humidity, altitude, seismic zone, and any site-specific hazards.' },
+      { id: '1.4', title: 'Design Lifetime', text: 'The minimum design lifetime shall be 25 years for structural components and 20 years for electrical and mechanical components, unless otherwise specified. Fatigue design shall account for the site-specific wind climate.' },
+      { id: '1.5', title: 'Documentation Requirements', text: 'The supplier shall provide complete design documentation, type certificates, manufacturing quality records, test reports, operation and maintenance manuals, and as-built drawings in accordance with the project documentation schedule.' }
+    ]
+  },
+  {
+    id: '2', title: 'WTG Specifications', icon: '⚙️',
+    content: `<p>This section specifies the minimum performance and design requirements for the wind turbine generator type.</p>`,
+    clauses: [
+      { id: '2.1', title: 'Rated Power & Rotor Diameter', text: `The WTG shall have a minimum rated power of [specified] MW and a minimum rotor diameter of [specified] m. The specific power shall not exceed [specified] W/m² unless justified by energy yield analysis.` },
+      { id: '2.2', title: 'IEC Wind Class', text: 'The WTG shall be certified for the applicable IEC wind class as defined by the site wind climate. Site-specific design assessment shall be provided if site conditions exceed the type certificate envelope.' },
+      { id: '2.3', title: 'Power Curve Guarantee', text: 'The supplier shall guarantee the power curve in accordance with IEC 61400-12-1. The guaranteed power curve shall be measured at standard air density (1.225 kg/m³) with correction methodology for site-specific air density.' },
+      { id: '2.4', title: 'Generator & Converter', text: 'The WTG shall employ a [PMSG/DFIG/other] generator with full or partial scale converter. The converter shall provide reactive power capability in accordance with grid code requirements.' },
+      { id: '2.5', title: 'Noise Emission Guarantee', text: 'The WTG guaranteed sound power level shall not exceed [specified] dB(A) at 95% rated power. Tonal audibility shall comply with IEC 61400-11 requirements.' },
+      { id: '2.6', title: 'Availability Guarantee', text: 'The WTG availability shall be guaranteed at minimum 97% on a time-weighted basis, excluding planned maintenance and force majeure events, calculated in accordance with the defined methodology.' }
+    ]
+  },
+  {
+    id: '3', title: 'Electrical Requirements', icon: '⚡',
+    content: `<p>This section defines the electrical system requirements including grid code compliance, power quality, and protection requirements.</p>`,
+    clauses: [
+      { id: '3.1', title: 'Grid Code Compliance', text: 'The WTG shall comply with all applicable grid code requirements at the point of common coupling (PCC), including fault ride-through, reactive power capability, frequency response, and voltage regulation.' },
+      { id: '3.2', title: 'Voltage & Frequency Range', text: 'The WTG shall operate continuously within the specified voltage and frequency ranges defined by the grid code. Momentary capabilities for voltage and frequency excursions shall be documented.' },
+      { id: '3.3', title: 'Power Quality', text: 'Flicker, harmonics, and voltage fluctuation emissions shall comply with IEC 61400-21-1. The supplier shall provide power quality test results from type testing.' },
+      { id: '3.4', title: 'MV Cable & Switchgear', text: 'MV cable and switchgear within the WTG shall be rated for the specified voltage level and short-circuit current. The switchgear shall include disconnect, earthing, and protection functions.' },
+      { id: '3.5', title: 'Earthing & Lightning Protection', text: 'The WTG earthing system shall comply with IEC 61400-24 and provide a low-impedance path for lightning currents. The earthing system shall be integrated with the foundation earthing.' }
+    ]
+  },
+  {
+    id: '4', title: 'Civil & Structural', icon: '🏗️',
+    content: `<p>This section covers civil and structural requirements for the tower and foundation interface.</p>`,
+    clauses: [
+      { id: '4.1', title: 'Tower Design', text: 'The tower shall be designed in accordance with Eurocode 3 / DNV-ST-0124. The tower natural frequency shall be verified against rotor excitation frequencies with adequate margin.' },
+      { id: '4.2', title: 'Foundation Interface', text: 'The supplier shall provide all loads (ultimate, fatigue, and serviceability) at the tower base / foundation interface with adequate safety factors for foundation design.' },
+      { id: '4.3', title: 'Corrosion Protection', text: 'All structural steelwork shall be protected against corrosion in accordance with ISO 12944 for the specified corrosivity category (minimum C4 for onshore, C5-M for offshore).' },
+      { id: '4.4', title: 'Bolted Connections', text: 'All flange connections shall use high-strength preloaded bolts per EN 14399. The preload methodology (hydraulic tensioning or calibrated torque) shall be specified with tooling requirements.' }
+    ]
+  },
+  {
+    id: '5', title: 'Control & SCADA', icon: '🎛️',
+    content: `<p>This section defines the control system, SCADA, and condition monitoring requirements.</p>`,
+    clauses: [
+      { id: '5.1', title: 'Control System', text: 'The WTG control system shall provide safe and efficient operation across the full operating envelope. Pitch and yaw control strategies shall be documented.' },
+      { id: '5.2', title: 'SCADA System', text: 'The SCADA system shall comply with IEC 61400-25 and provide real-time monitoring, data logging, alarm management, and remote control capability. Minimum data point list and sampling intervals shall be agreed.' },
+      { id: '5.3', title: 'Condition Monitoring', text: 'A condition monitoring system (CMS) per IEC 61400-25-6 shall be provided for main bearing, gearbox (if applicable), generator, and tower. Vibration sensors shall cover low-frequency and high-frequency ranges.' },
+      { id: '5.4', title: 'Cybersecurity', text: 'The control and communication systems shall implement cybersecurity measures in accordance with IEC 62443. Remote access shall use encrypted connections with multi-factor authentication.' }
+    ]
+  },
+  {
+    id: '6', title: 'Safety & Compliance', icon: '🛡️',
+    content: `<p>This section covers safety systems, environmental compliance, and regulatory requirements.</p>`,
+    clauses: [
+      { id: '6.1', title: 'Overspeed Protection', text: 'A minimum of two independent overspeed protection systems shall be provided per IEC 61400-1. The systems shall be designed on a fail-safe principle with diverse initiation and actuation mechanisms.' },
+      { id: '6.2', title: 'Fire Protection', text: 'The nacelle shall be equipped with an automatic fire detection and suppression system. The system shall trigger automatic shutdown and disconnect upon activation.' },
+      { id: '6.3', title: 'Emergency & Rescue', text: 'Controlled descent devices shall be provided at nacelle and hub positions. All rescue equipment shall be certified per EN 1496 and maintained per manufacturer requirements.' },
+      { id: '6.4', title: 'Environmental Compliance', text: 'The WTG shall comply with all applicable environmental regulations including noise, shadow flicker, and environmental protection measures. Oil containment shall prevent ground/water contamination.' }
+    ]
+  },
+  {
+    id: '7', title: 'Warranty & Service', icon: '📜',
+    content: `<p>This section defines the warranty, service agreement, and long-term support requirements.</p>`,
+    clauses: [
+      { id: '7.1', title: 'Warranty Period', text: 'The WTG warranty period shall be minimum 5 years from COD, covering all defects in design, materials, and workmanship. Extended warranty options for up to 10 years shall be quoted.' },
+      { id: '7.2', title: 'Availability & AEP Warranty', text: 'The supplier shall guarantee minimum WTG availability and annual energy production (AEP) as defined in separate schedule. Liquidated damages shall apply for underperformance.' },
+      { id: '7.3', title: 'Service Agreement', text: 'A full-scope service agreement shall be provided for a minimum of 10 years, covering preventive and corrective maintenance, spare parts, remote monitoring, and technical support.' },
+      { id: '7.4', title: 'Deviation Handling', text: 'Any deviation from the Employer\'s Technical Requirements shall be formally documented, technically evaluated by relevant experts, and accepted only with documented residual risk assessment. All accepted deviations and residual risks shall be recorded in the project risk register.' }
+    ]
+  }
+];
+
+function renderETR() {
+  const container = document.getElementById('etrSections');
+  let html = '';
+  etrTemplate.forEach((sec, si) => {
+    const saved = state.etr[sec.id] || {};
+    html += `<div class="card" style="margin-bottom:1rem">
+      <div class="cat-header open" onclick="toggleCat(this)">
+        <span class="cat-icon">${sec.icon}</span>
+        <span class="cat-title">${sec.id}. ${sec.title}</span>
+        <span class="cat-toggle">▼</span>
+      </div>
+      <div class="cat-body open" style="padding-top:.8rem">
+        <div style="font-size:.78rem;color:var(--text2);line-height:1.6;margin-bottom:1rem">${sec.content}</div>`;
+    sec.clauses.forEach((cl, ci) => {
+      const savedText = saved[cl.id] !== undefined ? saved[cl.id] : cl.text;
+      html += `<div style="margin-bottom:1rem;padding-left:.5rem;border-left:2px solid var(--border)">
+        <div style="font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mint);margin-bottom:.3rem;font-family:var(--mono)">${cl.id} ${cl.title}</div>
+        <textarea class="inline-edit" rows="3" style="width:100%;min-height:60px;font-size:.76rem;line-height:1.5" onchange="updateETR('${sec.id}','${cl.id}',this.value)">${savedText}</textarea>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  container.innerHTML = html;
+}
+
+function updateETR(secId, clauseId, value) {
+  if (!state.etr[secId]) state.etr[secId] = {};
+  state.etr[secId][clauseId] = value;
+  saveState();
+}
+
+function saveETR() {
+  saveState();
+  toast('ETR document saved');
+}
+
+// ── STEP 5: DEVIATIONS ──
+let devCounter = state.deviations.length;
+
+function renderDeviations() {
+  const body = document.getElementById('deviationsBody');
+  const empty = document.getElementById('deviationsEmpty');
+  const statsEl = document.getElementById('deviationStats');
+
+  const open = state.deviations.filter(d => d.status === 'Open').length;
+  const review = state.deviations.filter(d => d.status === 'Under Review').length;
+  const accepted = state.deviations.filter(d => d.status === 'Accepted').length;
+  const conditional = state.deviations.filter(d => d.status === 'Conditional').length;
+
+  statsEl.innerHTML = `
+    <div class="stat-card"><div class="stat-num red">${open}</div><div class="stat-label">Open</div></div>
+    <div class="stat-card"><div class="stat-num gold">${review}</div><div class="stat-label">Under Review</div></div>
+    <div class="stat-card"><div class="stat-num mint">${accepted}</div><div class="stat-label">Accepted</div></div>
+    <div class="stat-card"><div class="stat-num sky">${conditional}</div><div class="stat-label">Conditional</div></div>
+    <div class="stat-card"><div class="stat-num">${state.deviations.length}</div><div class="stat-label">Total</div></div>`;
+
+  if (state.deviations.length === 0) {
+    body.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  body.innerHTML = state.deviations.map((d, i) => {
+    const statusClass = d.status === 'Open' ? 'status-open' : d.status === 'Under Review' ? 'status-review' : d.status === 'Accepted' ? 'status-accepted' : d.status === 'Rejected' ? 'status-rejected' : 'status-conditional';
+    return `<tr>
+      <td style="font-family:var(--mono);font-weight:700;color:var(--text)">DEV-${String(i+1).padStart(3,'0')}</td>
+      <td style="font-family:var(--mono);font-size:.68rem">${d.etrClause}</td>
+      <td style="max-width:200px;white-space:normal">${d.description}</td>
+      <td style="max-width:160px;white-space:normal">${d.justification}</td>
+      <td style="font-size:.72rem">${d.expert}</td>
+      <td><span class="badge ${d.consulted === 'Yes' ? 'badge-mint' : d.consulted === 'Pending' ? 'badge-gold' : 'badge-red'}">${d.consulted}</span></td>
+      <td>
+        <select class="inline-edit" style="font-size:.62rem;padding:.2rem .4rem;width:auto" onchange="updateDeviationStatus(${i},this.value)">
+          <option ${d.status==='Open'?'selected':''}>Open</option>
+          <option ${d.status==='Under Review'?'selected':''}>Under Review</option>
+          <option ${d.status==='Accepted'?'selected':''}>Accepted</option>
+          <option ${d.status==='Rejected'?'selected':''}>Rejected</option>
+          <option ${d.status==='Conditional'?'selected':''}>Conditional</option>
+        </select>
+      </td>
+      <td><span class="badge ${d.risk==='High'?'badge-red':d.risk==='Medium'?'badge-gold':d.risk==='Low'?'badge-sky':'badge-mint'}">${d.risk}</span></td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteDeviation(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function openDeviationModal() { document.getElementById('deviationModal').classList.add('active'); }
+function addDeviation() {
+  const d = {
+    etrClause: document.getElementById('dEtrClause').value,
+    description: document.getElementById('dDesc').value,
+    justification: document.getElementById('dJustif').value,
+    expert: document.getElementById('dExpert').value,
+    consulted: document.getElementById('dConsulted').value,
+    risk: document.getElementById('dRisk').value,
+    status: 'Open'
+  };
+  if (!d.description.trim()) return toast('Please describe the deviation', true);
+  state.deviations.push(d);
+  // Auto-add to risk register if residual risk
+  if (d.risk !== 'None') {
+    const lMap = { Low: 2, Medium: 3, High: 4 };
+    state.risks.push({
+      source: 'Deviation',
+      description: `Residual risk from DEV-${String(state.deviations.length).padStart(3,'0')}: ${d.description.substring(0, 80)}`,
+      likelihood: lMap[d.risk] || 2,
+      impact: lMap[d.risk] || 2,
+      mitigation: 'See deviation management plan',
+      resLikelihood: Math.max(1, (lMap[d.risk] || 2) - 1),
+      resImpact: Math.max(1, (lMap[d.risk] || 2) - 1),
+      owner: d.expert || 'TBD'
+    });
+  }
+  saveState();
+  closeModal('deviationModal');
+  document.getElementById('dEtrClause').value = '';
+  document.getElementById('dDesc').value = '';
+  document.getElementById('dJustif').value = '';
+  document.getElementById('dExpert').value = '';
+  renderDeviations();
+  toast('Deviation logged');
+}
+function updateDeviationStatus(i, status) {
+  state.deviations[i].status = status;
+  saveState();
+}
+function deleteDeviation(i) {
+  state.deviations.splice(i, 1);
+  saveState();
+  renderDeviations();
+}
+
+// ── STEP 6: RISK REGISTER ──
+function renderRisks() {
+  const body = document.getElementById('riskBody');
+  const empty = document.getElementById('riskEmpty');
+  const statsEl = document.getElementById('riskStats');
+
+  const low = state.risks.filter(r => r.likelihood * r.impact <= 3).length;
+  const med = state.risks.filter(r => { const s = r.likelihood * r.impact; return s >= 4 && s <= 6; }).length;
+  const high = state.risks.filter(r => { const s = r.likelihood * r.impact; return s >= 8 && s <= 12; }).length;
+  const vhigh = state.risks.filter(r => r.likelihood * r.impact >= 15).length;
+
+  statsEl.innerHTML = `
+    <div class="stat-card"><div class="stat-num mint">${low}</div><div class="stat-label">Low Risk</div></div>
+    <div class="stat-card"><div class="stat-num sky">${med}</div><div class="stat-label">Medium Risk</div></div>
+    <div class="stat-card"><div class="stat-num gold">${high}</div><div class="stat-label">High Risk</div></div>
+    <div class="stat-card"><div class="stat-num red">${vhigh}</div><div class="stat-label">Very High</div></div>`;
+
+  if (state.risks.length === 0) {
+    body.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  body.innerHTML = state.risks.map((r, i) => {
+    const score = r.likelihood * r.impact;
+    const resScore = r.resLikelihood * r.resImpact;
+    const scoreClass = score <= 3 ? 'mint' : score <= 6 ? 'sky' : score <= 12 ? 'gold' : 'red';
+    const resClass = resScore <= 3 ? 'mint' : resScore <= 6 ? 'sky' : resScore <= 12 ? 'gold' : 'red';
+    return `<tr>
+      <td style="font-family:var(--mono);font-weight:700;color:var(--text)">R-${String(i+1).padStart(3,'0')}</td>
+      <td><span class="badge badge-${r.source==='Deviation'?'purple':r.source==='Finding'?'gold':'sky'}">${r.source}</span></td>
+      <td style="max-width:180px;white-space:normal">${r.description}</td>
+      <td style="font-family:var(--mono);text-align:center">${r.likelihood}</td>
+      <td style="font-family:var(--mono);text-align:center">${r.impact}</td>
+      <td style="font-family:var(--mono);text-align:center;font-weight:700;color:var(--${scoreClass})">${score}</td>
+      <td style="max-width:150px;white-space:normal">${r.mitigation}</td>
+      <td style="font-family:var(--mono);text-align:center">${r.resLikelihood}</td>
+      <td style="font-family:var(--mono);text-align:center">${r.resImpact}</td>
+      <td style="font-family:var(--mono);text-align:center;font-weight:700;color:var(--${resClass})">${resScore}</td>
+      <td style="font-size:.72rem">${r.owner}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteRisk(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function openRiskModal() { document.getElementById('riskModal').classList.add('active'); }
+function addRisk() {
+  const r = {
+    source: document.getElementById('rSource').value,
+    description: document.getElementById('rDesc').value,
+    likelihood: parseInt(document.getElementById('rLikelihood').value),
+    impact: parseInt(document.getElementById('rImpact').value),
+    mitigation: document.getElementById('rMit').value,
+    resLikelihood: parseInt(document.getElementById('rResL').value),
+    resImpact: parseInt(document.getElementById('rResI').value),
+    owner: document.getElementById('rOwner').value
+  };
+  if (!r.description.trim()) return toast('Please describe the risk', true);
+  state.risks.push(r);
+  saveState();
+  closeModal('riskModal');
+  document.getElementById('rDesc').value = '';
+  document.getElementById('rMit').value = '';
+  document.getElementById('rOwner').value = '';
+  renderRisks();
+  toast('Risk added');
+}
+function deleteRisk(i) {
+  state.risks.splice(i, 1);
+  saveState();
+  renderRisks();
+}
+
+// ── STEP 7: LESSONS LEARNT ──
+function renderLessons() {
+  const body = document.getElementById('lessonsBody');
+  const empty = document.getElementById('lessonsEmpty');
+
+  if (state.lessons.length === 0) {
+    body.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  body.innerHTML = state.lessons.map((l, i) => `
+    <tr>
+      <td style="font-family:var(--mono);font-weight:700;color:var(--text)">LL-${String(i+1).padStart(3,'0')}</td>
+      <td><span class="badge badge-sky">${l.category}</span></td>
+      <td style="max-width:250px;white-space:normal">${l.description}</td>
+      <td style="font-size:.72rem">${l.project}</td>
+      <td style="max-width:180px;white-space:normal">${l.impact}</td>
+      <td><span class="badge ${l.etrUpdate === 'Yes' ? 'badge-gold' : l.etrUpdate === 'Under Review' ? 'badge-purple' : 'badge-mint'}">${l.etrUpdate}</span></td>
+      <td style="font-family:var(--mono);font-size:.68rem">${l.etrSection || '—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteLesson(${i})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function openLessonModal() { document.getElementById('lessonModal').classList.add('active'); }
+function addLesson() {
+  const l = {
+    category: document.getElementById('lCat').value,
+    description: document.getElementById('lDesc').value,
+    project: document.getElementById('lProject').value,
+    impact: document.getElementById('lImpact').value,
+    etrUpdate: document.getElementById('lEtrUpdate').value,
+    etrSection: document.getElementById('lEtrSection').value
+  };
+  if (!l.description.trim()) return toast('Please describe the lesson', true);
+  state.lessons.push(l);
+  saveState();
+  closeModal('lessonModal');
+  document.getElementById('lDesc').value = '';
+  document.getElementById('lProject').value = '';
+  document.getElementById('lImpact').value = '';
+  document.getElementById('lEtrSection').value = '';
+  renderLessons();
+  toast('Lesson recorded');
+}
+function deleteLesson(i) {
+  state.lessons.splice(i, 1);
+  saveState();
+  renderLessons();
+}
+
+// ── STEP 8: REPORT ──
+function renderReport() {
+  const wtg = state.wtg;
+  const statsEl = document.getElementById('reportStats');
+  const totalChecks = checklistData.reduce((s, c) => s + c.items.length, 0);
+  const passedChecks = Object.values(state.checklist).reduce((s, cat) => s + Object.values(cat).filter(v => v.status === 'pass').length, 0);
+
+  statsEl.innerHTML = `
+    <div class="stat-card"><div class="stat-num mint">${passedChecks}/${totalChecks}</div><div class="stat-label">Checks Passed</div></div>
+    <div class="stat-card"><div class="stat-num ${state.findings.filter(f=>f.severity==='Critical').length>0?'red':'mint'}">${state.findings.length}</div><div class="stat-label">Findings</div></div>
+    <div class="stat-card"><div class="stat-num gold">${state.deviations.length}</div><div class="stat-label">Deviations</div></div>
+    <div class="stat-card"><div class="stat-num sky">${state.risks.length}</div><div class="stat-label">Risks</div></div>
+    <div class="stat-card"><div class="stat-num">${state.lessons.length}</div><div class="stat-label">Lessons</div></div>`;
+
+  const preview = document.getElementById('reportPreview');
+  let html = `<div style="border-bottom:2px solid var(--mint);padding-bottom:1.2rem;margin-bottom:1.2rem">
+    <h2 style="font-size:1.3rem;font-weight:700;color:var(--text);margin-bottom:.3rem">WTG Technical Due Diligence Report</h2>
+    <div style="font-size:.72rem;color:var(--text3);font-family:var(--mono)">Generated: ${new Date().toISOString().split('T')[0]} | WTG: ${wtg.mfr || 'N/A'} ${wtg.model || 'N/A'} | ${wtg.ratedPower || '—'} MW</div>
+  </div>`;
+
+  html += `<h3 style="font-size:.85rem;font-weight:700;color:var(--mint);margin:1rem 0 .5rem">1. WTG Summary</h3>
+  <p>Manufacturer: <strong>${wtg.mfr || 'N/A'}</strong> | Model: <strong>${wtg.model || 'N/A'}</strong> | Rated Power: <strong>${wtg.ratedPower || 'N/A'} MW</strong> | Rotor Diameter: <strong>${wtg.rotorDiam || 'N/A'} m</strong> | Hub Height: <strong>${wtg.hubHeight || 'N/A'} m</strong> | IEC Class: <strong>${wtg.iecClass || 'N/A'}</strong></p>`;
+
+  html += `<h3 style="font-size:.85rem;font-weight:700;color:var(--mint);margin:1rem 0 .5rem">2. Due Diligence Checklist Summary</h3>
+  <p>${passedChecks} of ${totalChecks} checklist items passed. ${totalChecks - passedChecks} items require attention.</p>`;
+
+  if (state.findings.length > 0) {
+    html += `<h3 style="font-size:.85rem;font-weight:700;color:var(--mint);margin:1rem 0 .5rem">3. Key Findings</h3>
+    <ul style="padding-left:1.2rem">`;
+    state.findings.forEach((f, i) => {
+      html += `<li style="margin-bottom:.4rem"><span class="sev-dot sev-${f.severity.toLowerCase()}"></span> <strong>F-${String(i+1).padStart(3,'0')}</strong> [${f.severity}] ${f.description} — <em>${f.recommendation}</em></li>`;
+    });
+    html += `</ul>`;
+  }
+
+  if (state.deviations.length > 0) {
+    html += `<h3 style="font-size:.85rem;font-weight:700;color:var(--mint);margin:1rem 0 .5rem">4. Supplier Deviations</h3>
+    <ul style="padding-left:1.2rem">`;
+    state.deviations.forEach((d, i) => {
+      html += `<li style="margin-bottom:.4rem"><strong>DEV-${String(i+1).padStart(3,'0')}</strong> [${d.status}] ${d.etrClause}: ${d.description}</li>`;
+    });
+    html += `</ul>`;
+  }
+
+  if (state.risks.length > 0) {
+    html += `<h3 style="font-size:.85rem;font-weight:700;color:var(--mint);margin:1rem 0 .5rem">5. Risk Register Summary</h3>
+    <ul style="padding-left:1.2rem">`;
+    state.risks.forEach((r, i) => {
+      const score = r.likelihood * r.impact;
+      html += `<li style="margin-bottom:.4rem"><strong>R-${String(i+1).padStart(3,'0')}</strong> (Score: ${score}) ${r.description}</li>`;
+    });
+    html += `</ul>`;
+  }
+
+  if (state.lessons.length > 0) {
+    html += `<h3 style="font-size:.85rem;font-weight:700;color:var(--mint);margin:1rem 0 .5rem">6. Lessons Learnt</h3>
+    <ul style="padding-left:1.2rem">`;
+    state.lessons.forEach((l, i) => {
+      html += `<li style="margin-bottom:.4rem"><strong>LL-${String(i+1).padStart(3,'0')}</strong> [${l.category}] ${l.description} (ETR Update: ${l.etrUpdate})</li>`;
+    });
+    html += `</ul>`;
+  }
+
+  html += `<h3 style="font-size:.85rem;font-weight:700;color:var(--mint);margin:1rem 0 .5rem">Appendix A — Employer's Technical Requirements</h3>
+  <p style="color:var(--text3)">Full ETR document as edited in Step 4. Export HTML report for complete ETR content.</p>`;
+
+  preview.innerHTML = html;
+}
+
+function exportHTMLReport() {
+  const wtg = state.wtg;
+  const totalChecks = checklistData.reduce((s, c) => s + c.items.length, 0);
+  const passedChecks = Object.values(state.checklist).reduce((s, cat) => s + Object.values(cat).filter(v => v.status === 'pass').length, 0);
+
+  let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>WTG TD2 Report — ${wtg.mfr || 'WTG'} ${wtg.model || ''}</title>
+<style>
+  body{font-family:Segoe UI,Tahoma,Geneva,sans-serif;max-width:900px;margin:2rem auto;padding:0 1.5rem;color:#1a1a2e;line-height:1.6;font-size:.9rem}
+  h1{color:#07111e;border-bottom:3px solid #00d68f;padding-bottom:.5rem;font-size:1.5rem}
+  h2{color:#07111e;font-size:1.15rem;margin-top:1.8rem;border-bottom:1px solid #ddd;padding-bottom:.3rem}
+  h3{color:#333;font-size:1rem;margin-top:1.2rem}
+  table{width:100%;border-collapse:collapse;margin:.8rem 0}
+  th{background:#07111e;color:white;padding:.5rem .7rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;text-align:left}
+  td{padding:.45rem .7rem;border-bottom:1px solid #eee;font-size:.82rem}
+  .sev-critical{color:#e05050;font-weight:700}
+  .sev-major{color:#f5a623;font-weight:700}
+  .sev-minor{color:#4ab3e8;font-weight:700}
+  .sev-observation{color:#888}
+  .pass{color:#00d68f;font-weight:700}
+  .fail{color:#e05050;font-weight:700}
+  .cond{color:#f5a623;font-weight:700}
+  .meta{font-size:.72rem;color:#888;margin-bottom:1rem}
+  @media print{body{margin:0;padding:1rem}}
+</style></head><body>`;
+
+  html += `<h1>WTG Technical Due Diligence Report</h1>
+  <div class="meta">Date: ${new Date().toISOString().split('T')[0]} | WTG: ${wtg.mfr || 'N/A'} ${wtg.model || 'N/A'} | ${wtg.ratedPower || '—'} MW | IEC ${wtg.iecClass || 'N/A'}</div>`;
+
+  html += `<h2>1. WTG Specifications</h2>
+  <table><tr><th>Parameter</th><th>Value</th></tr>
+  <tr><td>Manufacturer</td><td>${wtg.mfr || 'N/A'}</td></tr>
+  <tr><td>Model</td><td>${wtg.model || 'N/A'}</td></tr>
+  <tr><td>Rated Power</td><td>${wtg.ratedPower || 'N/A'} MW</td></tr>
+  <tr><td>Rotor Diameter</td><td>${wtg.rotorDiam || 'N/A'} m</td></tr>
+  <tr><td>Hub Height</td><td>${wtg.hubHeight || 'N/A'} m</td></tr>
+  <tr><td>IEC Class</td><td>${wtg.iecClass || 'N/A'}</td></tr>
+  <tr><td>Cut-in / Rated / Cut-out</td><td>${wtg.cutIn || '—'} / ${wtg.ratedWS || '—'} / ${wtg.cutOut || '—'} m/s</td></tr>
+  <tr><td>Generator Type</td><td>${wtg.genType || 'N/A'}</td></tr>
+  <tr><td>Drive Train</td><td>${wtg.drive || 'N/A'}</td></tr>
+  </table>`;
+
+  html += `<h2>2. Checklist Results (${passedChecks}/${totalChecks} Passed)</h2>`;
+  checklistData.forEach(cat => {
+    html += `<h3>${cat.category}</h3><table><tr><th>ID</th><th>Item</th><th>Status</th><th>Notes</th></tr>`;
+    cat.items.forEach(item => {
+      const s = (state.checklist[cat.category] && state.checklist[cat.category][item.id]) || {};
+      const status = s.status || '—';
+      const cls = status === 'pass' ? 'pass' : status === 'fail' ? 'fail' : status === 'conditional' ? 'cond' : '';
+      html += `<tr><td>${item.id}</td><td>${item.text}</td><td class="${cls}">${status.toUpperCase()}</td><td>${s.notes || ''}</td></tr>`;
+    });
+    html += `</table>`;
+  });
+
+  if (state.findings.length > 0) {
+    html += `<h2>3. Findings & Recommendations</h2><table><tr><th>ID</th><th>Severity</th><th>Category</th><th>Finding</th><th>Recommendation</th><th>Ref</th></tr>`;
+    state.findings.forEach((f, i) => {
+      html += `<tr><td>F-${String(i+1).padStart(3,'0')}</td><td class="sev-${f.severity.toLowerCase()}">${f.severity}</td><td>${f.category}</td><td>${f.description}</td><td>${f.recommendation}</td><td>${f.ref || '—'}</td></tr>`;
+    });
+    html += `</table>`;
+  }
+
+  if (state.deviations.length > 0) {
+    html += `<h2>4. Supplier Deviations</h2><table><tr><th>ID</th><th>ETR Clause</th><th>Description</th><th>Justification</th><th>Expert</th><th>Consulted</th><th>Status</th><th>Risk</th></tr>`;
+    state.deviations.forEach((d, i) => {
+      html += `<tr><td>DEV-${String(i+1).padStart(3,'0')}</td><td>${d.etrClause}</td><td>${d.description}</td><td>${d.justification}</td><td>${d.expert}</td><td>${d.consulted}</td><td>${d.status}</td><td>${d.risk}</td></tr>`;
+    });
+    html += `</table>`;
+  }
+
+  if (state.risks.length > 0) {
+    html += `<h2>5. Risk Register</h2><table><tr><th>ID</th><th>Source</th><th>Description</th><th>L</th><th>I</th><th>Score</th><th>Mitigation</th><th>Res. L</th><th>Res. I</th><th>Res. Score</th><th>Owner</th></tr>`;
+    state.risks.forEach((r, i) => {
+      html += `<tr><td>R-${String(i+1).padStart(3,'0')}</td><td>${r.source}</td><td>${r.description}</td><td>${r.likelihood}</td><td>${r.impact}</td><td>${r.likelihood*r.impact}</td><td>${r.mitigation}</td><td>${r.resLikelihood}</td><td>${r.resImpact}</td><td>${r.resLikelihood*r.resImpact}</td><td>${r.owner}</td></tr>`;
+    });
+    html += `</table>`;
+  }
+
+  if (state.lessons.length > 0) {
+    html += `<h2>6. Lessons Learnt</h2><table><tr><th>ID</th><th>Category</th><th>Lesson</th><th>Project</th><th>ETR Update</th><th>ETR Section</th></tr>`;
+    state.lessons.forEach((l, i) => {
+      html += `<tr><td>LL-${String(i+1).padStart(3,'0')}</td><td>${l.category}</td><td>${l.description}</td><td>${l.project}</td><td>${l.etrUpdate}</td><td>${l.etrSection || '—'}</td></tr>`;
+    });
+    html += `</table>`;
+  }
+
+  html += `<h2>Appendix A — Employer's Technical Requirements</h2>`;
+  etrTemplate.forEach(sec => {
+    html += `<h3>${sec.id}. ${sec.title}</h3>`;
+    sec.clauses.forEach(cl => {
+      const savedText = (state.etr[sec.id] && state.etr[sec.id][cl.id]) || cl.text;
+      html += `<p><strong>${cl.id} ${cl.title}</strong><br>${savedText}</p>`;
+    });
+  });
+
+  html += `</body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `WTG_TD2_Report_${(wtg.model || 'WTG').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('HTML report exported');
+}
+
+function exportJSONData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `WTG_DD_Data_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('JSON data exported');
+}
+
+// ── MODAL HELPERS ──
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('active');
+  });
+});
+
+// ── TOAST ──
+function toast(msg, isError) {
+  const container = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.textContent = msg;
+  container.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ── INIT ──
+populateWTGFields();
+</script>
+</body>
+</html>
