@@ -731,6 +731,7 @@ button:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
 const $=id=>document.getElementById(id);
 function log(m,t='i'){const d=$('elog');if(!d)return;const s=document.createElement('span');s.className={i:'li',w:'lw',e:'le'}[t]||'li';s.textContent=`[${new Date().toLocaleTimeString()}] ${m}\n`;d.appendChild(s);d.scrollTop=1e6}
 // v58.0: Assumption audit log
+let currentStep=1; // Declare early to avoid TDZ error in logAssumption
 function logAssumption(action,detail){
   const entry={ts:new Date().toISOString(),action,detail,source:S.windSource||'none',step:currentStep};
   S.assumptionLog.push(entry);
@@ -11712,7 +11713,7 @@ function syncSiteCoordinates(){
 }
 
 // ── STEP NAVIGATION ──
-let currentStep=1;
+// currentStep already declared at top of script
 function goToStep(n){
   // v40.0: 5-step workflow
   if(n>=4 && !S._windValidated){
