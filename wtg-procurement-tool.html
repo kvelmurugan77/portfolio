@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WTG Procurement Management Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07111e;--bg2:#0d1e30;--bg3:#132435;--bg4:#1a2f42;
+  --mint:#00d68f;--mint2:rgba(0,214,143,.12);--mint3:rgba(0,214,143,.06);
+  --gold:#f5a623;--gold2:rgba(245,166,35,.12);
+  --red:#e05050;--red2:rgba(224,80,80,.12);
+  --sky:#4ab3e8;--sky2:rgba(74,179,232,.12);
+  --purple:#a78bfa;--purple2:rgba(167,139,250,.12);
+  --orange:#f97316;--orange2:rgba(249,115,22,.12);
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.04);
+  --text:rgba(255,255,255,.88);--text2:rgba(255,255,255,.5);--text3:rgba(255,255,255,.28);
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  --radius:8px;--radius2:4px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);color:var(--text);background:var(--bg);min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1.5rem;border-bottom:1px solid var(--border);background:var(--bg);flex-wrap:wrap;gap:.5rem}
+.topbar-brand{display:flex;align-items:center;gap:.8rem}
+.brand-badge{background:var(--mint);color:var(--bg);font-family:var(--mono);font-size:.6rem;font-weight:600;padding:.25rem .6rem;border-radius:2px;letter-spacing:.08em}
+.brand-title{font-size:.82rem;font-weight:600;letter-spacing:.04em;color:var(--text)}
+.brand-sub{font-size:.62rem;color:var(--text3);font-family:var(--mono);margin-top:.1rem}
+.topbar-right{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);text-decoration:none;padding:.4rem .8rem;border:1px solid var(--border);border-radius:var(--radius2);transition:all .2s}
+a.back-link:hover{color:var(--mint);border-color:var(--mint)}
+.project-pill{font-size:.58rem;font-family:var(--mono);color:var(--mint);background:var(--mint3);padding:.25rem .6rem;border-radius:10px;border:1px solid rgba(0,214,143,.15);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.project-pill:hover{background:var(--mint2)}
+.stepper{display:flex;align-items:center;padding:.6rem 1.5rem;border-bottom:1px solid var(--border);background:var(--bg2);gap:0;overflow-x:auto}
+.step-item{display:flex;align-items:center;gap:.45rem;padding:.45rem .7rem;cursor:pointer;border-radius:var(--radius2);transition:background .2s;white-space:nowrap;flex-shrink:0}
+.step-item:hover{background:rgba(255,255,255,.04)}
+.step-item.active{background:var(--mint2)}
+.step-item.done .step-num{background:rgba(0,214,143,.2);border-color:var(--mint);color:var(--mint)}
+.step-item.active .step-num{background:var(--mint);border-color:var(--mint);color:var(--bg)}
+.step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;border:1.5px solid var(--border);color:var(--text3);transition:all .25s;flex-shrink:0;font-family:var(--mono)}
+.step-label{font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);transition:color .2s}
+.step-item.active .step-label{color:var(--mint)}
+.step-item.done .step-label{color:var(--text2)}
+.step-connector{width:20px;height:1px;background:var(--border);flex-shrink:0;margin:0 2px}
+.main{max-width:1480px;margin:0 auto;padding:1.2rem 1.5rem 3rem}
+.step-panel{display:none;animation:fadeIn .35s ease}
+.step-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem;margin-bottom:1rem}
+.card-title{font-size:.6rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text3);margin-bottom:1rem;display:flex;align-items:center;gap:.6rem}
+.card-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.card-title.green{color:var(--mint)}
+.card-title.gold{color:var(--gold)}
+.card-title.sky{color:var(--sky)}
+.card-title.purple{color:var(--purple)}
+.card-title.red{color:var(--red)}
+.card-title.orange{color:var(--orange)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.fg{margin-bottom:.85rem}
+.fl{display:block;font-size:.57rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:.3rem;font-family:var(--mono)}
+.fi,.fs{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);font-family:var(--sans);font-size:.8rem;color:var(--text);padding:.48rem .7rem;outline:none;transition:border-color .2s}
+.fi:focus,.fs:focus{border-color:var(--mint)}
+.fi:read-only{opacity:.6;cursor:default}
+.fi.warn{border-color:var(--gold);background:var(--gold2)}
+.fi.error{border-color:var(--red);background:var(--red2)}
+.fs option{background:var(--bg);color:var(--text)}
+textarea.fi{resize:vertical;min-height:80px;font-size:.78rem;line-height:1.5}
+.form-row{display:flex;gap:.6rem;align-items:end}
+.form-row .fg{flex:1}
+.tooltip{position:relative;display:inline-block;cursor:help}
+.tooltip .tiptext{visibility:hidden;width:300px;background:var(--bg4);color:var(--text2);font-size:.7rem;line-height:1.4;padding:.6rem .8rem;border-radius:var(--radius2);border:1px solid var(--border);position:absolute;z-index:100;bottom:125%;left:50%;transform:translateX(-50%);opacity:0;transition:opacity .2s;font-weight:300;font-family:var(--sans);text-transform:none;letter-spacing:normal}
+.tooltip:hover .tiptext{visibility:visible;opacity:1}
+.tooltip-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--border);color:var(--text3);font-size:.5rem;font-family:var(--mono);font-weight:700;margin-left:.3rem;flex-shrink:0}
+.btn{font-family:var(--sans);font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border:none;padding:.6rem 1.3rem;border-radius:var(--radius2);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:.45rem}
+.btn-primary{background:var(--mint);color:var(--bg)}
+.btn-primary:hover{background:#00f0a0;transform:translateY(-1px)}
+.btn-ghost{background:none;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--mint);color:var(--mint)}
+.btn-danger{background:var(--red2);color:var(--red);border:1px solid rgba(224,80,80,.2)}
+.btn-danger:hover{background:rgba(224,80,80,.2)}
+.btn-gold{background:var(--gold);color:var(--bg)}
+.btn-gold:hover{background:#ffc04a}
+.btn-sky{background:var(--sky);color:var(--bg)}
+.btn-sky:hover{background:#6dc5f0}
+.btn-sm{padding:.35rem .75rem;font-size:.6rem}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:auto;max-height:520px}
+.tbl-wrap::-webkit-scrollbar{width:4px;height:4px}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+table.dt{width:100%;border-collapse:collapse;font-size:.72rem;min-width:600px}
+table.dt th{text-align:left;font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:.55rem .7rem;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--bg2);z-index:1;font-family:var(--mono)}
+table.dt td{padding:.48rem .7rem;border-bottom:1px solid var(--border2);color:var(--text2);font-weight:300;vertical-align:top}
+table.dt tr:last-child td{border-bottom:none}
+table.dt tr:hover td{background:rgba(255,255,255,.02)}
+table.dt td.num,table.dt th.num{text-align:right;font-family:var(--mono)}
+table.dt td.act{white-space:nowrap}
+.badge{display:inline-block;font-size:.52rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.2rem .55rem;border-radius:2px;font-family:var(--mono)}
+.badge-mint{background:var(--mint2);color:var(--mint)}
+.badge-gold{background:var(--gold2);color:var(--gold)}
+.badge-red{background:var(--red2);color:var(--red)}
+.badge-sky{background:var(--sky2);color:var(--sky)}
+.badge-purple{background:var(--purple2);color:var(--purple)}
+.badge-orange{background:var(--orange2);color:var(--orange)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-bottom:1.2rem}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:.9rem;text-align:center;transition:transform .2s,border-color .2s}
+.stat-card:hover{transform:translateY(-2px);border-color:var(--mint)}
+.stat-num{font-size:1.55rem;font-weight:700;font-family:var(--mono);line-height:1}
+.stat-label{font-size:.5rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-top:.35rem}
+.stat-sub{font-size:.6rem;color:var(--text3);margin-top:.25rem;font-family:var(--mono)}
+.stat-num.mint{color:var(--mint)}
+.stat-num.gold{color:var(--gold)}
+.stat-num.red{color:var(--red)}
+.stat-num.sky{color:var(--sky)}
+.stat-num.purple{color:var(--purple)}
+.stat-num.orange{color:var(--orange)}
+.empty-state{text-align:center;padding:2.5rem 1rem;color:var(--text3)}
+.empty-state .empty-icon{font-size:2.2rem;opacity:.4;margin-bottom:.8rem}
+.empty-state .empty-text{font-size:.85rem;font-weight:300;margin-bottom:.5rem;color:var(--text2)}
+.empty-state .empty-hint{font-size:.7rem;font-family:var(--mono)}
+.inline-edit{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);font-family:var(--sans);font-size:.78rem;color:var(--text);padding:.35rem .55rem;outline:none;transition:border-color .2s;width:100%}
+.inline-edit:focus{border-color:var(--mint)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:none;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.active{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;max-width:780px;width:100%;max-height:88vh;overflow-y:auto}
+.modal-title{font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mint);margin-bottom:1rem;font-family:var(--mono);display:flex;align-items:center;justify-content:space-between}
+.modal-title .close-btn{background:none;border:none;color:var(--text3);font-size:1.2rem;cursor:pointer;padding:0 .3rem;line-height:1}
+.modal-title .close-btn:hover{color:var(--red)}
+.toast-container{position:fixed;bottom:1.5rem;right:1.5rem;z-index:2000;display:flex;flex-direction:column;gap:.5rem}
+.toast{padding:.6rem 1rem;border-radius:var(--radius2);font-size:.72rem;font-weight:600;animation:toastIn .3s ease;background:var(--bg2);border:1px solid var(--mint);color:var(--mint);display:flex;align-items:center;gap:.5rem}
+.toast.error{border-color:var(--red);color:var(--red)}
+.toast.warn{border-color:var(--gold);color:var(--gold)}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.progress-bar{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:.35rem}
+.progress-fill{height:100%;border-radius:3px;transition:width .4s ease}
+.status-pill{display:inline-flex;align-items:center;gap:.3rem;font-size:.56rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.2rem .55rem;border-radius:10px;font-family:var(--mono)}
+.status-open{background:var(--red2);color:var(--red)}
+.status-review{background:var(--gold2);color:var(--gold)}
+.status-accepted{background:var(--mint2);color:var(--mint)}
+.status-rejected{background:rgba(255,255,255,.06);color:var(--text3)}
+.status-conditional{background:var(--sky2);color:var(--sky)}
+.status-closed{background:var(--mint2);color:var(--mint)}
+.status-draft{background:var(--bg3);color:var(--text3)}
+.status-issued{background:var(--purple2);color:var(--purple)}
+.status-awarded{background:var(--mint2);color:var(--mint)}
+.status-active{background:var(--sky2);color:var(--sky)}
+.status-delayed{background:var(--red2);color:var(--red)}
+.status-delivered{background:var(--mint2);color:var(--mint)}
+.status-paid{background:var(--mint2);color:var(--mint)}
+.status-pending{background:var(--gold2);color:var(--gold)}
+.status-cancelled{background:rgba(255,255,255,.06);color:var(--text3)}
+.status-manufacturing{background:var(--sky2);color:var(--sky)}
+.status-shipped{background:var(--purple2);color:var(--purple)}
+.status-onstock{background:var(--mint2);color:var(--mint)}
+.status-installed{background:var(--mint2);color:var(--mint)}
+.status-commissioned{background:var(--mint2);color:var(--mint)}
+.filter-bar{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.8rem}
+.filter-bar .fs{width:auto;min-width:140px;font-size:.68rem;padding:.3rem .5rem}
+.filter-bar .fi{width:200px;font-size:.68rem;padding:.3rem .5rem}
+.toggle-group{display:inline-flex;border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden}
+.toggle-opt{padding:.35rem .8rem;font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .15s;color:var(--text3);background:var(--bg3);font-family:var(--mono);border:none}
+.toggle-opt.active{background:var(--mint);color:var(--bg)}
+.toggle-opt:hover:not(.active){background:var(--bg4)}
+.warning-box{background:var(--gold2);border:1px solid rgba(245,166,35,.25);border-radius:var(--radius2);padding:.6rem .8rem;font-size:.72rem;color:var(--gold);margin-bottom:.8rem;display:flex;align-items:flex-start;gap:.5rem}
+.warning-box .w-icon{font-size:1rem;flex-shrink:0}
+.danger-box{background:var(--red2);border:1px solid rgba(224,80,80,.25);border-radius:var(--radius2);padding:.6rem .8rem;font-size:.72rem;color:var(--red);margin-bottom:.8rem;display:flex;align-items:flex-start;gap:.5rem}
+.danger-box .w-icon{font-size:1rem;flex-shrink:0}
+.info-box{background:var(--sky2);border:1px solid rgba(74,179,232,.25);border-radius:var(--radius2);padding:.6rem .8rem;font-size:.72rem;color:var(--sky);margin-bottom:.8rem;display:flex;align-items:flex-start;gap:.5rem}
+.info-box .w-icon{font-size:1rem;flex-shrink:0}
+.success-box{background:var(--mint2);border:1px solid rgba(0,214,143,.25);border-radius:var(--radius2);padding:.6rem .8rem;font-size:.72rem;color:var(--mint);margin-bottom:.8rem;display:flex;align-items:flex-start;gap:.5rem}
+.success-box .w-icon{font-size:1rem;flex-shrink:0}
+.section-divider{display:flex;align-items:center;gap:.7rem;margin:1.4rem 0 .9rem}
+.section-divider .sd-text{font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);font-family:var(--mono)}
+.section-divider::before{content:'';flex:1;height:1px;background:var(--border)}
+.section-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.8rem;margin-bottom:1.2rem}
+.kpi-card{background:linear-gradient(135deg,var(--bg3) 0%,var(--bg2) 100%);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.2rem;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--mint)}
+.kpi-card.gold::before{background:var(--gold)}
+.kpi-card.red::before{background:var(--red)}
+.kpi-card.sky::before{background:var(--sky)}
+.kpi-card.purple::before{background:var(--purple)}
+.kpi-card.orange::before{background:var(--orange)}
+.kpi-label{font-size:.55rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:.35rem}
+.kpi-value{font-size:1.5rem;font-weight:700;font-family:var(--mono);color:var(--text);line-height:1.1}
+.kpi-value.mint{color:var(--mint)}
+.kpi-value.gold{color:var(--gold)}
+.kpi-value.red{color:var(--red)}
+.kpi-value.sky{color:var(--sky)}
+.kpi-value.purple{color:var(--purple)}
+.kpi-sub{font-size:.6rem;color:var(--text3);margin-top:.3rem;font-family:var(--mono)}
+.kpi-trend{display:inline-flex;align-items:center;gap:.2rem;font-size:.55rem;padding:.1rem .35rem;border-radius:8px;margin-top:.3rem;font-family:var(--mono)}
+.kpi-trend.up{background:var(--mint2);color:var(--mint)}
+.kpi-trend.down{background:var(--red2);color:var(--red)}
+.kpi-trend.flat{background:var(--bg3);color:var(--text3)}
+.chart-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:1rem;height:340px;position:relative}
+.chart-legend{display:flex;gap:1rem;flex-wrap:wrap;margin-top:.6rem;font-size:.65rem;color:var(--text2)}
+.chart-legend .lg-item{display:flex;align-items:center;gap:.4rem}
+.chart-legend .lg-swatch{width:14px;height:3px;border-radius:2px}
+.alert-row{display:flex;align-items:flex-start;gap:.7rem;padding:.6rem .8rem;border-radius:var(--radius2);background:var(--bg3);border:1px solid var(--border);margin-bottom:.4rem;font-size:.72rem}
+.alert-row .a-icon{flex-shrink:0;font-size:.9rem;line-height:1.2}
+.alert-row.critical{border-left:3px solid var(--red)}
+.alert-row.critical .a-icon{color:var(--red)}
+.alert-row.major{border-left:3px solid var(--gold)}
+.alert-row.major .a-icon{color:var(--gold)}
+.alert-row.minor{border-left:3px solid var(--sky)}
+.alert-row.minor .a-icon{color:var(--sky)}
+.alert-row.info{border-left:3px solid var(--mint)}
+.alert-row.info .a-icon{color:var(--mint)}
+.alert-row .a-body{flex:1}
+.alert-row .a-title{font-size:.72rem;font-weight:600;color:var(--text);margin-bottom:.15rem}
+.alert-row .a-meta{font-size:.6rem;color:var(--text3);font-family:var(--mono)}
+.alert-row .a-action{font-size:.6rem;color:var(--mint);margin-top:.2rem;font-family:var(--mono)}
+.cat-tag{display:inline-block;font-size:.55rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.18rem .5rem;border-radius:2px;font-family:var(--mono)}
+.cat-wtg{background:rgba(0,214,143,.15);color:var(--mint)}
+.cat-bop-civil{background:rgba(245,166,35,.15);color:var(--gold)}
+.cat-bop-elec{background:rgba(74,179,232,.15);color:var(--sky)}
+.cat-transformer{background:rgba(167,139,250,.15);color:var(--purple)}
+.cat-cable{background:rgba(249,115,22,.15);color:var(--orange)}
+.cat-switchyard{background:rgba(224,80,80,.15);color:var(--red)}
+.cat-scada{background:rgba(255,255,255,.08);color:var(--text2)}
+.cat-other{background:var(--bg3);color:var(--text3)}
+.section-tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--border);margin-bottom:1rem;overflow-x:auto}
+.section-tab{padding:.55rem .9rem;font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;font-family:var(--mono);white-space:nowrap;transition:all .15s}
+.section-tab:hover{color:var(--text)}
+.section-tab.active{color:var(--mint);border-bottom-color:var(--mint)}
+.subpanel{display:none}
+.subpanel.active{display:block}
+.risk-matrix{display:grid;grid-template-columns:auto repeat(5,1fr);gap:2px;font-size:.6rem;font-family:var(--mono)}
+.risk-cell{padding:.55rem .35rem;text-align:center;border-radius:2px;font-weight:600;min-height:36px;display:flex;align-items:center;justify-content:center;position:relative}
+.risk-header{background:var(--bg3);color:var(--text3);font-weight:700}
+.risk-1{background:rgba(0,214,143,.15);color:var(--mint)}
+.risk-2{background:rgba(245,166,35,.15);color:var(--gold)}
+.risk-3{background:rgba(249,115,22,.2);color:var(--orange)}
+.risk-4{background:rgba(224,80,80,.2);color:var(--red)}
+.score-pill{display:inline-flex;align-items:center;justify-content:center;width:38px;height:22px;border-radius:3px;font-family:var(--mono);font-size:.62rem;font-weight:700}
+.score-5{background:rgba(0,214,143,.2);color:var(--mint)}
+.score-4{background:rgba(0,214,143,.12);color:var(--mint)}
+.score-3{background:var(--gold2);color:var(--gold)}
+.score-2{background:var(--orange2);color:var(--orange)}
+.score-1{background:var(--red2);color:var(--red)}
+.score-na{background:var(--bg3);color:var(--text3)}
+.timeline{position:relative;padding-left:1.8rem}
+.timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--border)}
+.tl-item{position:relative;padding:.6rem 0 .6rem 1rem;border-bottom:1px solid var(--border2)}
+.tl-item:last-child{border-bottom:none}
+.tl-item::before{content:'';position:absolute;left:-1.4rem;top:.85rem;width:12px;height:12px;border-radius:50%;background:var(--bg3);border:2px solid var(--text3)}
+.tl-item.done::before{background:var(--mint);border-color:var(--mint)}
+.tl-item.active::before{background:var(--gold);border-color:var(--gold)}
+.tl-item.delayed::before{background:var(--red);border-color:var(--red)}
+.tl-date{font-size:.58rem;font-family:var(--mono);color:var(--text3);letter-spacing:.06em}
+.tl-title{font-size:.78rem;color:var(--text);font-weight:600;margin:.2rem 0}
+.tl-meta{font-size:.66rem;color:var(--text2);font-weight:300}
+.tab-summary{display:flex;gap:1.5rem;flex-wrap:wrap;padding:.7rem .9rem;background:var(--bg3);border-radius:var(--radius2);margin-bottom:1rem;font-size:.7rem}
+.tab-summary .ts-item{display:flex;flex-direction:column;gap:.2rem}
+.tab-summary .ts-label{font-size:.55rem;font-family:var(--mono);color:var(--text3);letter-spacing:.1em;text-transform:uppercase}
+.tab-summary .ts-value{font-size:.85rem;font-weight:700;color:var(--text);font-family:var(--mono)}
+.tab-summary .ts-value.mint{color:var(--mint)}
+.tab-summary .ts-value.gold{color:var(--gold)}
+.tab-summary .ts-value.red{color:var(--red)}
+.tab-summary .ts-value.sky{color:var(--sky)}
+.note-text{font-size:.68rem;color:var(--text3);font-style:italic;margin-top:.4rem;line-height:1.5}
+.act-btn{font-family:var(--mono);font-size:.55rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.2rem .5rem;border-radius:2px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .15s;margin-right:.2rem}
+.act-btn:hover{border-color:var(--mint);color:var(--mint)}
+.act-btn.danger:hover{border-color:var(--red);color:var(--red)}
+.act-btn.gold:hover{border-color:var(--gold);color:var(--gold)}
+.act-btn.sky:hover{border-color:var(--sky);color:var(--sky)}
+footer{padding:1.5rem 2rem;border-top:1px solid var(--border);text-align:center;font-size:.65rem;color:var(--text3);font-family:var(--mono);letter-spacing:.1em}
+@media(max-width:900px){
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .main{padding:1rem}
+  .stepper{padding:.5rem 1rem}
+  .step-label{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-badge">PROC</span>
+    <div>
+      <div class="brand-title">WTG Procurement Management</div>
+      <div class="brand-sub">EPC · Vendor Mgmt · Strategic Sourcing · Contracts · Capex Execution</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="project-pill" id="projectPill" onclick="goStep(0)">No project loaded</span>
+    <button class="btn btn-ghost btn-sm" onclick="newProject()">New</button>
+    <button class="btn btn-ghost btn-sm" onclick="loadSampleProject()">Load Sample</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportData()">Export JSON</button>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importFile').click()">Import</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    <a class="back-link" href="./index.html#tools">← Back to Portfolio</a>
+  </div>
+</div>
+
+<!-- STEPPER -->
+<div class="stepper" id="stepper">
+  <div class="step-item active" data-step="0" onclick="goStep(0)"><span class="step-num">▸</span><span class="step-label">Project</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="1" onclick="goStep(1)"><span class="step-num">1</span><span class="step-label">Dashboard</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="2" onclick="goStep(2)"><span class="step-num">2</span><span class="step-label">Procurement Plan</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="3" onclick="goStep(3)"><span class="step-num">3</span><span class="step-label">Vendors</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="4" onclick="goStep(4)"><span class="step-num">4</span><span class="step-label">RFQ &amp; Bids</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="5" onclick="goStep(5)"><span class="step-num">5</span><span class="step-label">Contracts</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="6" onclick="goStep(6)"><span class="step-num">6</span><span class="step-label">Capex &amp; Execution</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="7" onclick="goStep(7)"><span class="step-num">7</span><span class="step-label">Reports</span></div>
+</div>
+
+<div class="main">
+
+<!-- ═══════ STEP 0: PROJECT ═══════ -->
+<div class="step-panel active" id="step0">
+  <div class="card">
+    <div class="card-title green">Procurement Project Setup</div>
+    <p style="font-size:.78rem;color:var(--text2);font-weight:300;line-height:1.7;margin-bottom:1.4rem;max-width:90ch">
+      Configure the wind project procurement context. The tool captures the full EPC procurement lifecycle — from capex planning and strategic sourcing through vendor management, techno-commercial negotiation, contract execution, and capex/cash-flow tracking — across all major scope categories: <strong style="color:var(--mint)">WTG, BoP (Civil &amp; Electrical), Transformers, Cables, Switchyard, SCADA</strong>.
+    </p>
+    <div class="g2">
+      <div>
+        <div class="fg">
+          <label class="fl">Project Name <span style="color:var(--red)">*</span></label>
+          <input type="text" class="fi" id="pName" placeholder="e.g. Dobrogea Wind Farm Phase 2 — 200 MW" oninput="autoSave()">
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Project Code</label>
+            <input type="text" class="fi" id="pCode" placeholder="DOB-P2" oninput="autoSave()">
+          </div>
+          <div class="fg">
+            <label class="fl">Country</label>
+            <select class="fs" id="pCountry" onchange="autoSave()">
+              <option value="">Select</option>
+              <option>India</option><option>UK</option><option>Germany</option><option>Denmark</option>
+              <option>Spain</option><option>Portugal</option><option>Romania</option><option>Japan</option>
+              <option>Vietnam</option><option>Sweden</option><option>France</option><option>Brazil</option>
+              <option>USA</option><option>Australia</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Project Capacity (MW)</label>
+            <input type="number" class="fi" id="pMW" placeholder="200" oninput="autoSave()">
+          </div>
+          <div class="fg">
+            <label class="fl">No. of WTGs</label>
+            <input type="number" class="fi" id="pNumWTG" placeholder="40" oninput="autoSave()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">WTG Model</label>
+            <input type="text" class="fi" id="pWTGModel" placeholder="e.g. Vestas V162-6.2 MW" oninput="autoSave()">
+          </div>
+          <div class="fg">
+            <label class="fl">WTG OEM</label>
+            <input type="text" class="fi" id="pWTGOEM" placeholder="Vestas" oninput="autoSave()">
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Developer / Owner</label>
+            <input type="text" class="fi" id="pOwner" placeholder="e.g. Blue Power Partners" oninput="autoSave()">
+          </div>
+          <div class="fg">
+            <label class="fl">EPC Contractor</label>
+            <input type="text" class="fi" id="pEPC" placeholder="e.g. Vestas Wind Systems" oninput="autoSave()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Procurement Lead</label>
+            <input type="text" class="fi" id="pLead" placeholder="Name" oninput="autoSave()">
+          </div>
+          <div class="fg">
+            <label class="fl">COD Target</label>
+            <input type="date" class="fi" id="pCOD" oninput="autoSave()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Project Currency</label>
+            <select class="fs" id="pCurrency" onchange="autoSave()">
+              <option>EUR (€)</option><option>GBP (£)</option><option>USD ($)</option><option>INR (₹)</option><option>JPY (¥)</option><option>Other</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Total Capex Budget</label>
+            <input type="text" class="fi" id="pBudget" placeholder="e.g. 220,000,000" oninput="autoSave()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Procurement Type</label>
+            <select class="fs" id="pType" onchange="autoSave()">
+              <option>WTG Supply Only</option>
+              <option>WTG Supply &amp; Install (EPC)</option>
+              <option>Full Balance of Plant (BoP) EPC</option>
+              <option>Multilateral — WTG + BoP + Switchyard</option>
+              <option>Developer-led (split contracts)</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Onshore / Offshore</label>
+            <div class="toggle-group">
+              <button class="toggle-opt active" id="togOn" onclick="setSite('Onshore')">Onshore</button>
+              <button class="toggle-opt" id="togOff" onclick="setSite('Offshore')">Offshore</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:.6rem;margin-top:1rem;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="goStep(1)">Open Dashboard →</button>
+      <button class="btn btn-ghost" onclick="loadSampleProject()">Load Sample Project</button>
+      <button class="btn btn-ghost" onclick="saveSession()">Save Session</button>
+      <button class="btn btn-ghost" onclick="loadSession()">Load Session</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title sky">Tool Capabilities — Maps to Job Requirements</div>
+    <div class="g2">
+      <div>
+        <div class="section-divider"><span class="sd-text">Wind EPC / Project Procurement</span></div>
+        <ul style="list-style:none;padding:0;font-size:.74rem;color:var(--text2);line-height:1.8">
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> End-to-end EPC procurement workflow — BoQ, RFQ, contracts, execution, closeout</li>
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> Project procurement plan with long-lead item identification &amp; critical path</li>
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> Scope category coverage: WTG, BoP Civil, BoP Electrical, Transformers, Cables, Switchyard, SCADA</li>
+        </ul>
+        <div class="section-divider"><span class="sd-text">Vendor Management &amp; Strategic Sourcing</span></div>
+        <ul style="list-style:none;padding:0;font-size:.74rem;color:var(--text2);line-height:1.8">
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> Approved Vendor List (AVL) with pre-qualification tracking &amp; expiries</li>
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> 5-axis vendor evaluation: Technical, Commercial, HSE, Financial, Delivery</li>
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> Strategic sourcing — category strategy, market intelligence, single/dual/multi-source policy</li>
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> Vendor performance scorecards with post-delivery rating &amp; lessons learnt</li>
+        </ul>
+      </div>
+      <div>
+        <div class="section-divider"><span class="sd-text">Techno-Commercial Negotiation</span></div>
+        <ul style="list-style:none;padding:0;font-size:.74rem;color:var(--text2);line-height:1.8">
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> RFQ register with multi-vendor issuance &amp; bid validity tracking</li>
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> Bid comparison matrix — technical compliance + commercial scoring</li>
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> Total Cost of Ownership (TCO) calculator — Capex + Opex + Spares + LD exposure</li>
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> Should-cost analysis &amp; negotiation tracker with savings capture</li>
+        </ul>
+        <div class="section-divider"><span class="sd-text">Capex Procurement &amp; Contract Management</span></div>
+        <ul style="list-style:none;padding:0;font-size:.74rem;color:var(--text2);line-height:1.8">
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> Contract register with milestone tracking, LD calculation, variations &amp; warranty</li>
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> Cash-flow S-curve — planned vs actual capex deployment with variance</li>
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> Payment milestone tracker with retention, advance, &amp; performance bond</li>
+          <li style="padding:.25rem 0"><span style="color:var(--mint)">▸</span> Expediting &amp; delivery tracking — manufacturing, shipment, site receipt</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ STEP 1: DASHBOARD ═══════ -->
+<div class="step-panel" id="step1">
+  <div class="kpi-row" id="dashKPIs"></div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-title sky">Capex S-Curve — Planned vs Actual <span class="tooltip"><span class="tooltip-icon">?</span><span class="tiptext">Cumulative capex deployment over time. Planned curve is built from contract payment schedules; actual curve is built from paid milestones. Variance &gt; 5% triggers alert.</span></span></div>
+      <div class="chart-box"><canvas id="scurveChart"></canvas></div>
+      <div class="chart-legend">
+        <div class="lg-item"><div class="lg-swatch" style="background:var(--sky)"></div>Planned Cumulative</div>
+        <div class="lg-item"><div class="lg-swatch" style="background:var(--mint)"></div>Actual Cumulative</div>
+        <div class="lg-item"><div class="lg-swatch" style="background:var(--gold);opacity:.6"></div>Forecast (remaining)</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title purple">Capex by Category <span class="tooltip"><span class="tooltip-icon">?</span><span class="tiptext">Distribution of awarded contract value across procurement scope categories. Useful for tracking capex deployment strategy &amp; identifying concentration risk.</span></span></div>
+      <div class="chart-box"><canvas id="catChart"></canvas></div>
+      <div class="chart-legend" id="catLegend"></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-title gold">Critical Alerts &amp; Expediting Actions</div>
+      <div id="alertList">
+        <div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">No active alerts</div><div class="empty-hint">Load sample project to see populated alerts</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title green">Upcoming Milestones (Next 60 days)</div>
+      <div id="upcomingMilestones">
+        <div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">No upcoming milestones</div><div class="empty-hint">Define contract milestones to see them here</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Procurement Status by Category</div>
+    <div class="tbl-wrap">
+      <table class="dt" id="catStatusTable">
+        <thead><tr><th>Category</th><th>Items</th><th class="num">Budget</th><th class="num">Awarded</th><th class="num">Committed</th><th class="num">Paid</th><th>Progress</th><th>Status</th></tr></thead>
+        <tbody><tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">Load sample project to view category breakdown</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-title orange">Recent PO Awards</div>
+      <div class="tbl-wrap" style="max-height:300px">
+        <table class="dt" id="recentAwardsTable">
+          <thead><tr><th>PO No.</th><th>Vendor</th><th>Category</th><th class="num">Value</th><th>Date</th></tr></thead>
+          <tbody><tr><td colspan="5" style="text-align:center;color:var(--text3);padding:1.5rem">No awards recorded</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title red">Top Vendor Spend</div>
+      <div class="tbl-wrap" style="max-height:300px">
+        <table class="dt" id="topVendorsTable">
+          <thead><tr><th>Vendor</th><th>Category</th><th class="num">Total Awarded</th><th>POs</th></tr></thead>
+          <tbody><tr><td colspan="4" style="text-align:center;color:var(--text3);padding:1.5rem">No vendor spend</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ STEP 2: PROCUREMENT PLAN ═══════ -->
+<div class="step-panel" id="step2">
+  <div class="section-tabs">
+    <button class="section-tab active" data-sub="2a" onclick="switchSub(2,'2a')">Bill of Quantities</button>
+    <button class="section-tab" data-sub="2b" onclick="switchSub(2,'2b')">Procurement Schedule</button>
+    <button class="section-tab" data-sub="2c" onclick="switchSub(2,'2c')">Long-Lead Items</button>
+    <button class="section-tab" data-sub="2d" onclick="switchSub(2,'2d')">Capex Budget</button>
+    <button class="section-tab" data-sub="2e" onclick="switchSub(2,'2e')">Sourcing Strategy</button>
+  </div>
+
+  <!-- 2a: BoQ -->
+  <div class="subpanel active" id="sub2a">
+    <div class="card">
+      <div class="card-title green">Bill of Quantities (BoQ) — Procurement Scope Breakdown</div>
+      <div class="filter-bar">
+        <select class="fs" id="boqFilterCat" onchange="renderBoQ()">
+          <option value="">All Categories</option>
+          <option>WTG</option><option>BoP Civil</option><option>BoP Electrical</option>
+          <option>Transformer</option><option>Cable</option><option>Switchyard</option><option>SCADA</option><option>Other</option>
+        </select>
+        <input type="text" class="fi" id="boqSearch" placeholder="Search item / vendor..." oninput="renderBoQ()">
+        <button class="btn btn-primary btn-sm" onclick="openBoQModal()">+ Add BoQ Item</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportTable('boqTable','BoQ')">Export CSV</button>
+      </div>
+      <div class="tab-summary" id="boqSummary"></div>
+      <div class="tbl-wrap">
+        <table class="dt" id="boqTable">
+          <thead><tr><th>#</th><th>Category</th><th>Item Description</th><th>Spec / Model</th><th class="num">Qty</th><th>UoM</th><th class="num">Unit Budget</th><th class="num">Total Budget</th><th>Long-Lead</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="10" style="text-align:center;color:var(--text3);padding:2rem">No BoQ items. Click "+ Add BoQ Item" or load sample project.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2b: Schedule -->
+  <div class="subpanel" id="sub2b">
+    <div class="card">
+      <div class="card-title sky">Procurement Schedule — Critical Path &amp; Milestones</div>
+      <p style="font-size:.72rem;color:var(--text3);line-height:1.6;margin-bottom:1rem;max-width:90ch">
+        The procurement schedule drives the project critical path. Long-lead items (WTG, transformers, MV cables) typically have 8–14 month lead times and must be ordered before FID for on-time COD. Drag-tolerant float is calculated against COD target.
+      </p>
+      <div class="filter-bar">
+        <button class="btn btn-primary btn-sm" onclick="openScheduleModal()">+ Add Milestone</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportTable('schedTable','Schedule')">Export CSV</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dt" id="schedTable">
+          <thead><tr><th>#</th><th>Milestone</th><th>Category</th><th>Planned Date</th><th>Forecast Date</th><th>Actual Date</th><th>Float (days)</th><th>Critical Path</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="10" style="text-align:center;color:var(--text3);padding:2rem">No milestones defined.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2c: Long-Lead -->
+  <div class="subpanel" id="sub2c">
+    <div class="card">
+      <div class="card-title gold">Long-Lead Item Tracker</div>
+      <p style="font-size:.72rem;color:var(--text3);line-height:1.6;margin-bottom:1rem;max-width:90ch">
+        Items with manufacturing lead time &gt; 6 months that must be ordered before FID to maintain COD. Tool auto-flags any BoQ item marked "Long-Lead" and tracks PO issuance vs latest order date.
+      </p>
+      <div class="tbl-wrap">
+        <table class="dt" id="llTable">
+          <thead><tr><th>Item</th><th>Category</th><th>Vendor</th><th class="num">Lead Time (wks)</th><th>Required On-Site</th><th>Latest Order Date</th><th>PO Issued</th><th>Status</th></tr></thead>
+          <tbody><tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">No long-lead items flagged.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2d: Capex Budget -->
+  <div class="subpanel" id="sub2d">
+    <div class="card">
+      <div class="card-title purple">Capex Budget — Category Allocation &amp; Variance</div>
+      <div class="tab-summary" id="budgetSummary"></div>
+      <div class="tbl-wrap">
+        <table class="dt" id="budgetTable">
+          <thead><tr><th>Category</th><th class="num">Budget</th><th class="num">Committed (Awarded)</th><th class="num">Paid to Date</th><th class="num">Variance (Budget − Committed)</th><th>% Used</th><th>Status</th></tr></thead>
+          <tbody><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:2rem">No budget data. Add BoQ items to build category budget.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2e: Sourcing Strategy -->
+  <div class="subpanel" id="sub2e">
+    <div class="card">
+      <div class="card-title orange">Strategic Sourcing — Category Playbook</div>
+      <p style="font-size:.72rem;color:var(--text3);line-height:1.6;margin-bottom:1rem;max-width:90ch">
+        Category-level sourcing strategy defines market approach, source policy (single / dual / multi), preferred OEMs, and negotiation levers. Each row captures the playbook the procurement team will follow for that scope category.
+      </p>
+      <div class="filter-bar">
+        <button class="btn btn-primary btn-sm" onclick="openSourcingModal()">+ Add Strategy</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dt" id="sourcingTable">
+          <thead><tr><th>Category</th><th>Market Landscape</th><th>Source Policy</th><th>Preferred Vendors</th><th>Negotiation Lever</th><th>Risk</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:2rem">No sourcing strategies defined.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ STEP 3: VENDORS ═══════ -->
+<div class="step-panel" id="step3">
+  <div class="section-tabs">
+    <button class="section-tab active" data-sub="3a" onclick="switchSub(3,'3a')">Approved Vendor List</button>
+    <button class="section-tab" data-sub="3b" onclick="switchSub(3,'3b')">Vendor Evaluation</button>
+    <button class="section-tab" data-sub="3c" onclick="switchSub(3,'3c')">Performance Scorecards</button>
+  </div>
+
+  <!-- 3a: AVL -->
+  <div class="subpanel active" id="sub3a">
+    <div class="card">
+      <div class="card-title green">Approved Vendor List (AVL) <span class="tooltip"><span class="tooltip-icon">?</span><span class="tiptext">Master register of pre-qualified vendors per scope category. Status: Approved / Conditional / Suspended / Blacklisted. Pre-qualification validity typically 2 years — expired entries auto-flagged.</span></span></div>
+      <div class="filter-bar">
+        <select class="fs" id="avlFilterCat" onchange="renderAVL()">
+          <option value="">All Categories</option>
+          <option>WTG</option><option>BoP Civil</option><option>BoP Electrical</option>
+          <option>Transformer</option><option>Cable</option><option>Switchyard</option><option>SCADA</option><option>Other</option>
+        </select>
+        <select class="fs" id="avlFilterStatus" onchange="renderAVL()">
+          <option value="">All Status</option>
+          <option>Approved</option><option>Conditional</option><option>Suspended</option><option>Blacklisted</option>
+        </select>
+        <input type="text" class="fi" id="avlSearch" placeholder="Search vendor..." oninput="renderAVL()">
+        <button class="btn btn-primary btn-sm" onclick="openVendorModal()">+ Add Vendor</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportTable('avlTable','AVL')">Export CSV</button>
+      </div>
+      <div class="tab-summary" id="avlSummary"></div>
+      <div class="tbl-wrap">
+        <table class="dt" id="avlTable">
+          <thead><tr><th>Vendor</th><th>Category</th><th>Country</th><th>Contact</th><th>Pre-Qual Date</th><th>Expiry</th><th>Source Policy</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">No vendors. Click "+ Add Vendor" or load sample project.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3b: Vendor Evaluation -->
+  <div class="subpanel" id="sub3b">
+    <div class="card">
+      <div class="card-title sky">5-Axis Vendor Evaluation <span class="tooltip"><span class="tooltip-icon">?</span><span class="tiptext">Composite vendor scoring across Technical, Commercial, HSE, Financial, and Delivery axes (1–5 scale). Weighted total drives vendor ranking. Use during pre-qualification or post-tender evaluation.</span></span></div>
+      <div class="filter-bar">
+        <button class="btn btn-primary btn-sm" onclick="openEvalModal()">+ New Evaluation</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportTable('evalTable','VendorEval')">Export CSV</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dt" id="evalTable">
+          <thead><tr><th>Vendor</th><th>Category</th><th class="num">Technical</th><th class="num">Commercial</th><th class="num">HSE</th><th class="num">Financial</th><th class="num">Delivery</th><th class="num">Weighted Score</th><th>Recommendation</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="10" style="text-align:center;color:var(--text3);padding:2rem">No evaluations recorded.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3c: Performance -->
+  <div class="subpanel" id="sub3c">
+    <div class="card">
+      <div class="card-title gold">Vendor Performance Scorecards (Post-Delivery)</div>
+      <p style="font-size:.72rem;color:var(--text3);line-height:1.6;margin-bottom:1rem;max-width:90ch">
+        Post-delivery performance rating — captures actual delivery vs promise, quality defects (ppm), NCR count, HSE incidents, and response time. Feeds back into AVL status &amp; future sourcing decisions.
+      </p>
+      <div class="filter-bar">
+        <button class="btn btn-primary btn-sm" onclick="openPerfModal()">+ Add Scorecard</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dt" id="perfTable">
+          <thead><tr><th>Vendor</th><th>Contract</th><th>On-Time %</th><th>Defects (ppm)</th><th>NCRs</th><th>HSE Incidents</th><th>Response (days)</th><th class="num">Overall</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">No performance scorecards recorded.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ STEP 4: RFQ & BIDS ═══════ -->
+<div class="step-panel" id="step4">
+  <div class="section-tabs">
+    <button class="section-tab active" data-sub="4a" onclick="switchSub(4,'4a')">RFQ Register</button>
+    <button class="section-tab" data-sub="4b" onclick="switchSub(4,'4b')">Bid Comparison Matrix</button>
+    <button class="section-tab" data-sub="4c" onclick="switchSub(4,'4c')">TCO Calculator</button>
+    <button class="section-tab" data-sub="4d" onclick="switchSub(4,'4d')">Negotiation Tracker</button>
+    <button class="section-tab" data-sub="4e" onclick="switchSub(4,'4e')">Should-Cost Analysis</button>
+  </div>
+
+  <!-- 4a: RFQ Register -->
+  <div class="subpanel active" id="sub4a">
+    <div class="card">
+      <div class="card-title green">RFQ Register <span class="tooltip"><span class="tooltip-icon">?</span><span class="tiptext">Master register of all Requests for Quotation issued. Tracks RFQ date, bid validity, vendors invited, bids received, technical evaluation status, and award status. Each RFQ links to a BoQ category.</span></span></div>
+      <div class="filter-bar">
+        <select class="fs" id="rfqFilterCat" onchange="renderRFQ()">
+          <option value="">All Categories</option>
+          <option>WTG</option><option>BoP Civil</option><option>BoP Electrical</option>
+          <option>Transformer</option><option>Cable</option><option>Switchyard</option><option>SCADA</option><option>Other</option>
+        </select>
+        <select class="fs" id="rfqFilterStatus" onchange="renderRFQ()">
+          <option value="">All Status</option>
+          <option>Draft</option><option>Issued</option><option>Bids Received</option><option>Under Evaluation</option><option>Awarded</option><option>Cancelled</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openRFQModal()">+ New RFQ</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportTable('rfqTable','RFQ')">Export CSV</button>
+      </div>
+      <div class="tab-summary" id="rfqSummary"></div>
+      <div class="tbl-wrap">
+        <table class="dt" id="rfqTable">
+          <thead><tr><th>RFQ #</th><th>Title</th><th>Category</th><th>Issued</th><th>Bid Validity</th><th>Vendors Invited</th><th>Bids Received</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">No RFQs. Click "+ New RFQ" or load sample project.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4b: Bid Comparison -->
+  <div class="subpanel" id="sub4b">
+    <div class="card">
+      <div class="card-title sky">Bid Comparison Matrix — Techno-Commercial Evaluation</div>
+      <p style="font-size:.72rem;color:var(--text3);line-height:1.6;margin-bottom:1rem;max-width:90ch">
+        Side-by-side bid comparison across technical compliance, commercial pricing, payment terms, delivery, warranty, and total evaluated price. Lowest evaluated price is auto-highlighted; non-compliant bids are flagged.
+      </p>
+      <div class="filter-bar">
+        <select class="fs" id="bcmRFQ" onchange="renderBidComparison()">
+          <option value="">Select RFQ...</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openBidModal()">+ Add Bid</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportTable('bidTable','Bids')">Export CSV</button>
+      </div>
+      <div id="bidComparisonContainer">
+        <div class="empty-state"><div class="empty-icon">⚖️</div><div class="empty-text">No RFQ selected</div><div class="empty-hint">Select an RFQ above to view bid comparison matrix</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4c: TCO -->
+  <div class="subpanel" id="sub4c">
+    <div class="card">
+      <div class="card-title purple">Total Cost of Ownership (TCO) Calculator <span class="tooltip"><span class="tooltip-icon">?</span><span class="tiptext">Beyond bid price — captures 20-year Opex (maintenance, spares, replacements), LD exposure, performance bond cost, financing cost of payment terms. Recommended award basis for WTG &amp; BoP with long service life.</span></span></div>
+      <div class="filter-bar">
+        <select class="fs" id="tcoRFQ" onchange="renderTCO()">
+          <option value="">Select RFQ...</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="exportTable('tcoTable','TCO')">Export CSV</button>
+      </div>
+      <div id="tcoContainer">
+        <div class="empty-state"><div class="empty-icon">💰</div><div class="empty-text">No RFQ selected</div><div class="empty-hint">TCO comparison will appear here</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4d: Negotiation -->
+  <div class="subpanel" id="sub4d">
+    <div class="card">
+      <div class="card-title gold">Techno-Commercial Negotiation Tracker</div>
+      <p style="font-size:.72rem;color:var(--text3);line-height:1.6;margin-bottom:1rem;max-width:90ch">
+        Tracks every negotiation round — initial offer, counter-offer, agreed position, and savings captured vs opening bid. Captures negotiation lever (price, payment terms, scope, warranty, LD cap, performance bond).
+      </p>
+      <div class="filter-bar">
+        <button class="btn btn-primary btn-sm" onclick="openNegotiationModal()">+ Add Negotiation</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportTable('negTable','Negotiations')">Export CSV</button>
+      </div>
+      <div class="tab-summary" id="negSummary"></div>
+      <div class="tbl-wrap">
+        <table class="dt" id="negTable">
+          <thead><tr><th>RFQ / PO</th><th>Vendor</th><th>Lever</th><th class="num">Initial</th><th class="num">Counter</th><th class="num">Agreed</th><th class="num">Savings</th><th>Round</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="10" style="text-align:center;color:var(--text3);padding:2rem">No negotiations tracked.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4e: Should-Cost -->
+  <div class="subpanel" id="sub4e">
+    <div class="card">
+      <div class="card-title orange">Should-Cost Analysis</div>
+      <p style="font-size:.72rem;color:var(--text3);line-height:1.6;margin-bottom:1rem;max-width:90ch">
+        Bottom-up cost build-up — material, labour, manufacturing overhead, SG&amp;A, logistics, margin — to identify vendor pricing gaps &amp; set negotiation walk-away points. Diff &gt; 15% triggers deep-dive.
+      </p>
+      <div class="filter-bar">
+        <button class="btn btn-primary btn-sm" onclick="openShouldCostModal()">+ Add Should-Cost</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dt" id="scTable">
+          <thead><tr><th>Item</th><th>Category</th><th class="num">Material</th><th class="num">Labour</th><th class="num">Overhead</th><th class="num">Logistics</th><th class="num">Margin</th><th class="num">Should-Cost</th><th class="num">Vendor Quote</th><th class="num">Diff %</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="11" style="text-align:center;color:var(--text3);padding:2rem">No should-cost analyses recorded.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ STEP 5: CONTRACTS ═══════ -->
+<div class="step-panel" id="step5">
+  <div class="section-tabs">
+    <button class="section-tab active" data-sub="5a" onclick="switchSub(5,'5a')">Contract Register</button>
+    <button class="section-tab" data-sub="5b" onclick="switchSub(5,'5b')">Milestone Tracking</button>
+    <button class="section-tab" data-sub="5c" onclick="switchSub(5,'5c')">LD &amp; Variations</button>
+    <button class="section-tab" data-sub="5d" onclick="switchSub(5,'5d')">Warranty &amp; Bonds</button>
+  </div>
+
+  <!-- 5a: Register -->
+  <div class="subpanel active" id="sub5a">
+    <div class="card">
+      <div class="card-title green">Contract Register <span class="tooltip"><span class="tooltip-icon">?</span><span class="tiptext">Master register of all executed contracts / POs. Tracks contract value, vendor, scope, execution window, and status. Each contract links to milestone schedule &amp; payment terms.</span></span></div>
+      <div class="filter-bar">
+        <select class="fs" id="ctrFilterCat" onchange="renderContracts()">
+          <option value="">All Categories</option>
+          <option>WTG</option><option>BoP Civil</option><option>BoP Electrical</option>
+          <option>Transformer</option><option>Cable</option><option>Switchyard</option><option>SCADA</option><option>Other</option>
+        </select>
+        <select class="fs" id="ctrFilterStatus" onchange="renderContracts()">
+          <option value="">All Status</option>
+          <option>Draft</option><option>Active</option><option>Suspended</option><option>Completed</option><option>Terminated</option>
+        </select>
+        <input type="text" class="fi" id="ctrSearch" placeholder="Search PO/vendor..." oninput="renderContracts()">
+        <button class="btn btn-primary btn-sm" onclick="openContractModal()">+ Add Contract</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportTable('ctrTable','Contracts')">Export CSV</button>
+      </div>
+      <div class="tab-summary" id="ctrSummary"></div>
+      <div class="tbl-wrap">
+        <table class="dt" id="ctrTable">
+          <thead><tr><th>PO / Contract #</th><th>Title</th><th>Category</th><th>Vendor</th><th class="num">Value</th><th>Effective Date</th><th>Delivery Date</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">No contracts. Click "+ Add Contract" or load sample project.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5b: Milestones -->
+  <div class="subpanel" id="sub5b">
+    <div class="card">
+      <div class="card-title sky">Contract Milestone Tracking — Payment &amp; Delivery</div>
+      <div class="filter-bar">
+        <select class="fs" id="msContract" onchange="renderMilestones()">
+          <option value="">All Contracts</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openMilestoneModal()">+ Add Milestone</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dt" id="msTable">
+          <thead><tr><th>Contract</th><th>Milestone</th><th>Type</th><th class="num">Value</th><th>% of Contract</th><th>Planned</th><th>Actual</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">No milestones. Add a contract first, then define its payment &amp; delivery milestones.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5c: LD & Variations -->
+  <div class="subpanel" id="sub5c">
+    <div class="card">
+      <div class="card-title red">Liquidated Damages (LD) &amp; Variations Register</div>
+      <p style="font-size:.72rem;color:var(--text3);line-height:1.6;margin-bottom:1rem;max-width:90ch">
+        LD accrues automatically against delayed milestones at the contractually agreed rate (typically 0.5% of contract value per week, capped at 10–15%). Variations capture scope additions / deductions with cost &amp; schedule impact.
+      </p>
+      <div class="filter-bar">
+        <button class="btn btn-primary btn-sm" onclick="openVariationModal()">+ Add Variation / LD</button>
+      </div>
+      <div class="g2">
+        <div>
+          <div class="card-title">Variations</div>
+          <div class="tbl-wrap" style="max-height:400px">
+            <table class="dt" id="varTable">
+              <thead><tr><th>Contract</th><th>Type</th><th>Description</th><th class="num">Cost Impact</th><th>Schedule Impact</th><th>Status</th></tr></thead>
+              <tbody><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:1.5rem">No variations recorded</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="card-title">LD Summary</div>
+          <div class="tbl-wrap" style="max-height:400px">
+            <table class="dt" id="ldTable">
+              <thead><tr><th>Contract</th><th>Delayed Milestone</th><th class="num">Days Delay</th><th class="num">LD Rate</th><th class="num">LD Accrued</th><th class="num">LD Cap</th></tr></thead>
+              <tbody><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:1.5rem">No LD accrued</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5d: Warranty & Bonds -->
+  <div class="subpanel" id="sub5d">
+    <div class="card">
+      <div class="card-title purple">Warranty &amp; Bonds Tracker</div>
+      <p style="font-size:.72rem;color:var(--text3);line-height:1.6;margin-bottom:1rem;max-width:90ch">
+        Tracks warranty periods (typically 2–5 years for WTG, 1–2 years for BoP), performance bonds (10% of contract value, valid till COD + defects period), advance payment bank guarantees (recovered against progress), and retention money release schedule.
+      </p>
+      <div class="filter-bar">
+        <button class="btn btn-primary btn-sm" onclick="openWarrantyModal()">+ Add Warranty / Bond</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dt" id="wbTable">
+          <thead><tr><th>Contract</th><th>Vendor</th><th>Type</th><th>Value</th><th>Issue Date</th><th>Expiry</th><th>Days Remaining</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">No warranties or bonds tracked.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ STEP 6: CAPEX & EXECUTION ═══════ -->
+<div class="step-panel" id="step6">
+  <div class="section-tabs">
+    <button class="section-tab active" data-sub="6a" onclick="switchSub(6,'6a')">Cash-Flow S-Curve</button>
+    <button class="section-tab" data-sub="6b" onclick="switchSub(6,'6b')">Payment Tracker</button>
+    <button class="section-tab" data-sub="6c" onclick="switchSub(6,'6c')">Expediting &amp; Delivery</button>
+    <button class="section-tab" data-sub="6d" onclick="switchSub(6,'6d')">Site Receipt &amp; Reconciliation</button>
+  </div>
+
+  <!-- 6a: Cash Flow -->
+  <div class="subpanel active" id="sub6a">
+    <div class="card">
+      <div class="card-title sky">Capex Cash-Flow — Planned vs Actual vs Forecast</div>
+      <div class="tab-summary" id="cfSummary"></div>
+      <div class="chart-box" style="height:380px"><canvas id="cfChart"></canvas></div>
+      <div class="chart-legend">
+        <div class="lg-item"><div class="lg-swatch" style="background:var(--sky)"></div>Planned Monthly</div>
+        <div class="lg-item"><div class="lg-swatch" style="background:var(--mint)"></div>Actual Monthly</div>
+        <div class="lg-item"><div class="lg-swatch" style="background:var(--gold);opacity:.6"></div>Forecast Monthly</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Monthly Cash-Flow Detail</div>
+      <div class="tbl-wrap" style="max-height:380px">
+        <table class="dt" id="cfTable">
+          <thead><tr><th>Month</th><th class="num">Planned</th><th class="num">Actual</th><th class="num">Forecast</th><th class="num">Cum. Planned</th><th class="num">Cum. Actual</th><th class="num">Variance</th></tr></thead>
+          <tbody><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:1.5rem">No cash-flow data. Define contract payment milestones to build S-curve.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6b: Payment Tracker -->
+  <div class="subpanel" id="sub6b">
+    <div class="card">
+      <div class="card-title green">Payment Tracker — Milestone-Based Capex Release</div>
+      <p style="font-size:.72rem;color:var(--text3);line-height:1.6;margin-bottom:1rem;max-width:90ch">
+        Tracks every payment milestone across all contracts — invoice status, certification (Engineer / PMC), retention deduction, advance recovery, performance bond status, and payment due date. Critical for capex planning &amp; vendor cash management.
+      </p>
+      <div class="filter-bar">
+        <select class="fs" id="payFilterStatus" onchange="renderPayments()">
+          <option value="">All Status</option>
+          <option>Pending Certification</option><option>Certified</option><option>Paid</option><option>On Hold</option><option>Rejected</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="exportTable('payTable','Payments')">Export CSV</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dt" id="payTable">
+          <thead><tr><th>Contract</th><th>Vendor</th><th>Milestone</th><th class="num">Invoice Value</th><th class="num">Retention</th><th class="num">Advance Recov.</th><th class="num">Net Payable</th><th>Due Date</th><th>Status</th></tr></thead>
+          <tbody><tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">No payments tracked.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6c: Expediting -->
+  <div class="subpanel" id="sub6c">
+    <div class="card">
+      <div class="card-title gold">Expediting &amp; Delivery Tracker</div>
+      <p style="font-size:.72rem;color:var(--text3);line-height:1.6;margin-bottom:1rem;max-width:90ch">
+        Manufacturing-stage visibility for long-lead items — opens with fabrication milestones (raw material, sub-assembly, FAT, shipment, site receipt). Auto-flags any item behind schedule for expediting intervention.
+      </p>
+      <div class="filter-bar">
+        <select class="fs" id="expFilterStatus" onchange="renderExpediting()">
+          <option value="">All Stages</option>
+          <option>Raw Material</option><option>Manufacturing</option><option>FAT</option><option>Shipped</option><option>In Transit</option><option>On Site</option><option>Installed</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openExpeditingModal()">+ Add Item</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dt" id="expTable">
+          <thead><tr><th>Item</th><th>Contract</th><th>Vendor</th><th>Stage</th><th>Planned</th><th>Actual</th><th>Forecast On-Site</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">No items in expediting tracker.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6d: Site Receipt -->
+  <div class="subpanel" id="sub6d">
+    <div class="card">
+      <div class="card-title purple">Site Material Receipt &amp; Reconciliation</div>
+      <p style="font-size:.72rem;color:var(--text3);line-height:1.6;margin-bottom:1rem;max-width:90ch">
+        Site receipt log — captures delivered qty vs PO qty, MTR (Material Test Report) verification, damage in transit, MRIR (Material Receiving Inspection Report) status, and reconciliation against contract. Critical for closing out POs &amp; triggering retention release.
+      </p>
+      <div class="filter-bar">
+        <button class="btn btn-primary btn-sm" onclick="openReceiptModal()">+ Add Receipt</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dt" id="rcptTable">
+          <thead><tr><th>PO #</th><th>Item</th><th class="num">PO Qty</th><th class="num">Received</th><th class="num">Short / Damage</th><th>MRIR Status</th><th>MTR Verified</th><th>Receipt Date</th><th>Actions</th></tr></thead>
+          <tbody><tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">No material receipts logged.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ STEP 7: REPORTS ═══════ -->
+<div class="step-panel" id="step7">
+  <div class="card">
+    <div class="card-title green">Procurement Reports &amp; Export Suite</div>
+    <p style="font-size:.78rem;color:var(--text2);font-weight:300;line-height:1.7;margin-bottom:1.4rem;max-width:90ch">
+      One-click export of procurement deliverables — suitable for project management review, capex governance, lender reporting, and audit. Reports are generated as standalone HTML with embedded charts that can be opened in any browser, printed to PDF, or shared with stakeholders.
+    </p>
+    <div class="g3">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:1.2rem">
+        <div style="font-size:1.6rem;margin-bottom:.5rem">📊</div>
+        <div style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.5rem">Procurement Dashboard Report</div>
+        <div style="font-size:.7rem;color:var(--text3);line-height:1.5;margin-bottom:.8rem">KPI summary, S-curve, capex by category, milestone status, vendor spend, top alerts</div>
+        <button class="btn btn-primary btn-sm" onclick="genReport('dashboard')">Generate HTML</button>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:1.2rem">
+        <div style="font-size:1.6rem;margin-bottom:.5rem">💰</div>
+        <div style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.5rem">Capex &amp; Cash-Flow Report</div>
+        <div style="font-size:.7rem;color:var(--text3);line-height:1.5;margin-bottom:.8rem">Category-wise budget vs committed vs paid, S-curve, variance analysis, forecast</div>
+        <button class="btn btn-primary btn-sm" onclick="genReport('capex')">Generate HTML</button>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:1.2rem">
+        <div style="font-size:1.6rem;margin-bottom:.5rem">🏢</div>
+        <div style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.5rem">Vendor Performance Report</div>
+        <div style="font-size:.7rem;color:var(--text3);line-height:1.5;margin-bottom:.8rem">AVL status, evaluation scores, performance scorecards, lessons learnt</div>
+        <button class="btn btn-primary btn-sm" onclick="genReport('vendor')">Generate HTML</button>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:1.2rem">
+        <div style="font-size:1.6rem;margin-bottom:.5rem">⚖️</div>
+        <div style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.5rem">Bid &amp; Negotiation Report</div>
+        <div style="font-size:.7rem;color:var(--text3);line-height:1.5;margin-bottom:.8rem">RFQ history, bid comparison, TCO analysis, negotiation savings captured</div>
+        <button class="btn btn-primary btn-sm" onclick="genReport('bid')">Generate HTML</button>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:1.2rem">
+        <div style="font-size:1.6rem;margin-bottom:.5rem">📜</div>
+        <div style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.5rem">Contract &amp; LD Report</div>
+        <div style="font-size:.7rem;color:var(--text3);line-height:1.5;margin-bottom:.8rem">Contract register, milestone status, LD accrued, variations, warranty/bond expiry</div>
+        <button class="btn btn-primary btn-sm" onclick="genReport('contract')">Generate HTML</button>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:1.2rem">
+        <div style="font-size:1.6rem;margin-bottom:.5rem">🚚</div>
+        <div style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.5rem">Expediting &amp; Delivery Report</div>
+        <div style="font-size:.7rem;color:var(--text3);line-height:1.5;margin-bottom:.8rem">Manufacturing stage, FAT status, shipment, site receipt, reconciliation</div>
+        <button class="btn btn-primary btn-sm" onclick="genReport('expediting')">Generate HTML</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title sky">Bulk CSV Export</div>
+    <div class="g4">
+      <button class="btn btn-ghost" onclick="exportAllCSV()">Export All Tables (ZIP)</button>
+      <button class="btn btn-ghost" onclick="exportData()">Export Full Session (JSON)</button>
+      <button class="btn btn-ghost" onclick="window.print()">Print Current View</button>
+      <button class="btn btn-ghost" onclick="newProject()">Clear &amp; Start New</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title gold">Procurement Maturity Self-Assessment</div>
+    <p style="font-size:.72rem;color:var(--text3);line-height:1.6;margin-bottom:1rem;max-width:90ch">
+      Reflects how comprehensively the current project captures the 5 job requirements. Tool populates each axis based on data entered — empty fields show gaps in coverage.
+    </p>
+    <div id="maturityChart" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:1rem;height:340px;position:relative"><canvas id="maturityRadar"></canvas></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<footer>WTG PROCUREMENT MANAGEMENT TOOL · EPC LIFECYCLE · VENDOR · SOURCING · CONTRACTS · CAPEX · v1.0</footer>
+
+<!-- Modal container -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   WTG PROCUREMENT MANAGEMENT TOOL — JS ENGINE
+   Single-file SPA with localStorage persistence, sample data,
+   7 modules, modals, charts (canvas), CSV/HTML/JSON export.
+   ════════════════════════════════════════════════════════════ */
+
+// ─── STATE ───────────────────────────────────────────────────
+let S = { project:{}, boq:[], schedule:[], vendors:[], evaluations:[], performance:[],
+          sourcing:[], rfqs:[], bids:[], negotiations:[], shouldcost:[],
+          contracts:[], milestones:[], variations:[], warranties:[],
+          payments:[], expediting:[], receipts:[], currentStep:0 };
+const LS_KEY='wtg_proc_v1';
+
+// ─── HELPERS ─────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const fmt=n=>{ if(isNaN(n)||n==null)return '—'; if(Math.abs(n)>=1e9)return (n/1e9).toFixed(2)+'B'; if(Math.abs(n)>=1e6)return (n/1e6).toFixed(2)+'M'; if(Math.abs(n)>=1e3)return (n/1e3).toFixed(1)+'k'; return Number(n).toLocaleString(); };
+const fmtMoney=n=>{ if(isNaN(n)||n==null)return '—'; const sym=(S.project.currency||'€').match(/[\€\£\$\₹\¥]/)?.[0]||'€'; return sym+fmt(n); };
+const fmtPct=n=>{ if(isNaN(n)||n==null)return '—'; return Number(n).toFixed(1)+'%'; };
+const today=()=>new Date().toISOString().split('T')[0];
+const daysBetween=(a,b)=>{ if(!a||!b)return 0; return Math.round((new Date(b)-new Date(a))/86400000); };
+const uid=pre=>pre+'_'+Math.random().toString(36).slice(2,9);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const catClass=c=>({WTG:'cat-wtg','BoP Civil':'cat-bop-civil','BoP Electrical':'cat-bop-elec',Transformer:'cat-transformer',Cable:'cat-cable',Switchyard:'cat-switchyard',SCADA:'cat-scada',Other:'cat-other'}[c]||'cat-other');
+const catColor=c=>({WTG:'#00d68f','BoP Civil':'#f5a623','BoP Electrical':'#4ab3e8',Transformer:'#a78bfa',Cable:'#f97316',Switchyard:'#e05050',SCADA:'#888',Other:'#555'}[c]||'#555');
+const num=v=>{ const n=parseFloat(String(v||'').replace(/[^0-9.\-]/g,'')); return isNaN(n)?0:n; };
+
+function toast(msg,type='ok'){
+  const t=document.createElement('div');
+  t.className='toast'+(type==='err'?' error':type==='warn'?' warn':'');
+  t.textContent=msg;
+  $('toastContainer').appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},3000);
+}
+
+function autoSave(){
+  if(!S.project)return;
+  S.project.name=$('pName').value;
+  S.project.code=$('pCode').value;
+  S.project.country=$('pCountry').value;
+  S.project.mw=$('pMW').value;
+  S.project.numWTG=$('pNumWTG').value;
+  S.project.wtgModel=$('pWTGModel').value;
+  S.project.wtgOEM=$('pWTGOEM').value;
+  S.project.owner=$('pOwner').value;
+  S.project.epc=$('pEPC').value;
+  S.project.lead=$('pLead').value;
+  S.project.cod=$('pCOD').value;
+  S.project.currency=$('pCurrency').value;
+  S.project.budget=$('pBudget').value;
+  S.project.type=$('pType').value;
+  save();
+  updateProjectPill();
+}
+
+function setSite(t){
+  S.project.site=t;
+  $('togOn').classList.toggle('active',t==='Onshore');
+  $('togOff').classList.toggle('active',t==='Offshore');
+  save();
+}
+
+function updateProjectPill(){
+  const p=S.project;
+  $('projectPill').textContent=p&&p.name?p.name+' ('+(p.code||'—')+')':'No project loaded';
+}
+
+// ─── PERSISTENCE ─────────────────────────────────────────────
+function save(){
+  try{ localStorage.setItem(LS_KEY,JSON.stringify(S)); }catch(e){ console.warn('Save failed',e); }
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);
+    if(raw){ S=JSON.parse(raw); return true; }
+  }catch(e){ console.warn('Load failed',e); }
+  return false;
+}
+function saveSession(){
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='wtg-proc-'+(S.project.code||'session')+'-'+today()+'.json';
+  a.click();
+  toast('Session exported as JSON');
+}
+function loadSession(){
+  const input=document.createElement('input');
+  input.type='file';input.accept='.json';
+  input.onchange=e=>{
+    const f=e.target.files[0]; if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{ try{ S=JSON.parse(ev.target.result); save(); refreshAll(); toast('Session loaded'); }catch(err){ toast('Invalid file','err'); } };
+    r.readAsText(f);
+  };
+  input.click();
+}
+function exportData(){ saveSession(); }
+function importData(e){
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{ try{ S=JSON.parse(ev.target.result); save(); refreshAll(); toast('Data imported'); }catch(err){ toast('Invalid JSON','err'); } };
+  r.readAsText(f);
+}
+function newProject(){
+  if(!confirm('Clear current session and start a new project?'))return;
+  S={project:{currency:'EUR (€)',site:'Onshore'},boq:[],schedule:[],vendors:[],evaluations:[],performance:[],
+     sourcing:[],rfqs:[],bids:[],negotiations:[],shouldcost:[],
+     contracts:[],milestones:[],variations:[],warranties:[],
+     payments:[],expediting:[],receipts:[],currentStep:0};
+  save(); refreshAll(); goStep(0);
+  toast('New project started');
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────
+function goStep(n){
+  document.querySelectorAll('.step-panel').forEach(p=>p.classList.remove('active'));
+  $('step'+n)?.classList.add('active');
+  document.querySelectorAll('.step-item').forEach(s=>s.classList.remove('active','done'));
+  document.querySelectorAll('.step-item').forEach(s=>{
+    const sn=parseInt(s.dataset.step);
+    if(sn<n)s.classList.add('done');
+    if(sn===n)s.classList.add('active');
+  });
+  S.currentStep=n; save();
+  // Render the panel
+  if(n===1)renderDashboard();
+  if(n===2){ renderBoQ(); renderSchedule(); renderLongLead(); renderBudget(); renderSourcing(); }
+  if(n===3){ renderAVL(); renderEval(); renderPerf(); }
+  if(n===4){ renderRFQ(); populateRFQSelects(); renderNegotiations(); renderShouldCost(); }
+  if(n===5){ renderContracts(); populateContractSelects(); renderMilestones(); renderVariationsLD(); renderWarranty(); }
+  if(n===6){ renderCashFlow(); renderPayments(); renderExpediting(); renderReceipts(); }
+  if(n===7)renderMaturity();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function switchSub(step,sub){
+  document.querySelectorAll('#step'+step+' .subpanel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('#step'+step+' .section-tab').forEach(p=>p.classList.remove('active'));
+  $('sub'+sub).classList.add('active');
+  document.querySelector(`#step${step} .section-tab[data-sub="${sub}"]`)?.classList.add('active');
+  if(step===4&&sub==='4b')renderBidComparison();
+  if(step===4&&sub==='4c')renderTCO();
+  if(step===5&&sub==='5b')renderMilestones();
+}
+
+// ─── FORM POPULATION ─────────────────────────────────────────
+function populateProjectForm(){
+  const p=S.project||{};
+  $('pName').value=p.name||'';
+  $('pCode').value=p.code||'';
+  $('pCountry').value=p.country||'';
+  $('pMW').value=p.mw||'';
+  $('pNumWTG').value=p.numWTG||'';
+  $('pWTGModel').value=p.wtgModel||'';
+  $('pWTGOEM').value=p.wtgOEM||'';
+  $('pOwner').value=p.owner||'';
+  $('pEPC').value=p.epc||'';
+  $('pLead').value=p.lead||'';
+  $('pCOD').value=p.cod||'';
+  $('pCurrency').value=p.currency||'EUR (€)';
+  $('pBudget').value=p.budget||'';
+  $('pType').value=p.type||'WTG Supply Only';
+  if(p.site==='Offshore')setSite('Offshore');else setSite('Onshore');
+  updateProjectPill();
+}
+function refreshAll(){
+  populateProjectForm();
+  goStep(S.currentStep||0);
+}
+
+// ─── MODAL ───────────────────────────────────────────────────
+function openModal(html){
+  $('modalContent').innerHTML=html;
+  $('modalOverlay').classList.add('active');
+}
+function closeModal(){ $('modalOverlay').classList.remove('active'); }
+$('modalOverlay').addEventListener('click',e=>{ if(e.target===$('modalOverlay'))closeModal(); });
+
+function modalField(label,id,type='text',opts={}){
+  const val=opts.value!=null?opts.value:'';
+  const ro=opts.readonly?'readonly':'';
+  const star=opts.required?' <span style="color:var(--red)">*</span>':'';
+  const ph=opts.placeholder?`placeholder="${opts.placeholder}"`:'';
+  if(type==='textarea')return `<div class="fg"><label class="fl">${label}${star}</label><textarea class="fi" id="${id}" ${ph}>${esc(val)}</textarea></div>`;
+  if(type==='select')return `<div class="fg"><label class="fl">${label}${star}</label><select class="fs" id="${id}">${opts.options.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select></div>`;
+  return `<div class="fg"><label class="fl">${label}${star}</label><input type="${type}" class="fi" id="${id}" value="${esc(val)}" ${ph} ${ro}></div>`;
+}
+
+// ─── CSV EXPORT ──────────────────────────────────────────────
+function exportTable(tableId,name){
+  const tbl=$(tableId); if(!tbl)return;
+  const rows=[...tbl.querySelectorAll('tr')];
+  const csv=rows.map(r=>[...r.querySelectorAll('th,td')].map(c=>{
+    let t=c.textContent.trim().replace(/\s+/g,' ');
+    if(t.includes(',')||t.includes('"')||t.includes('\n'))t='"'+t.replace(/"/g,'""')+'"';
+    return t;
+  }).join(',')).join('\n');
+  const blob=new Blob(["\ufeff"+csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${name}-${(S.project.code||'export')}-${today()}.csv`;
+  a.click();
+  toast(name+' CSV exported');
+}
+function exportAllCSV(){
+  const tables=['boqTable','schedTable','budgetTable','sourcingTable','avlTable','evalTable','perfTable',
+                'rfqTable','negTable','scTable','ctrTable','msTable','varTable','ldTable','wbTable',
+                'cfTable','payTable','expTable','rcptTable'];
+  tables.forEach((t,i)=>setTimeout(()=>exportTable(t,t.replace('Table','')),i*200));
+}
+
+// (Continued in next section — renderers for each module)
+</script>
+
+
