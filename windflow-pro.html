@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 60.0</title>
+<title>WindFlow Pro 60.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -72,7 +72,7 @@ button:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 60.0</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 60.1</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -185,7 +185,7 @@ button:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
             <div id="lossTreeResult" style="margin-top:.3rem;font-size:.55rem;color:var(--text3)"></div>
           </div>
         </details>
-        <div class="g3" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wake Model</label><select class="fs" id="wakeModel"><option value="bastankhah" selected>Bastankhah Gaussian (2016)</option><option value="jensen">Jensen/PARK</option></select></div><div class="fg"><label class="fl">Wake Combination</label><select class="fs" id="wakeCombination"><option value="energy" selected>Energy Balance (recommended)</option><option value="rss">Root-Sum-Square</option><option value="linear">Linear Sum (not recommended)</option></select></div><div class="fg"><label class="fl">&nbsp;</label><div style="padding-top:.25rem"><label style="font-size:.62rem;cursor:pointer;display:flex;align-items:center;gap:.3rem"><input type="checkbox" id="rotorAvgCB" checked style="accent-color:var(--mint)"><span>Rotor-averaged WS</span></label></div></div></div>
+        <div class="g3" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Wake Model</label><select class="fs" id="wakeModel"><option value="bastankhah" selected>Bastankhah Gaussian (2016)</option><option value="jensen">Jensen/PARK</option></select></div><div class="fg"><label class="fl">Wake Combination</label><select class="fs" id="wakeCombination"><option value="energy" selected>Energy Balance / RSS (Katic 1986, recommended)</option><option value="linear">Linear Sum (not recommended)</option></select></div><div class="fg"><label class="fl">&nbsp;</label><div style="padding-top:.25rem"><label style="font-size:.62rem;cursor:pointer;display:flex;align-items:center;gap:.3rem"><input type="checkbox" id="rotorAvgCB" checked style="accent-color:var(--mint)"><span>Rotor-averaged WS</span></label></div></div></div>
         <div class="g3" style="gap:.4rem;margin-top:.4rem"><div class="fg"><label class="fl">Ambient TI %</label><input class="fi" id="ambientTI" type="number" value="" step="0.5" placeholder="Auto from z₀"></div><div class="fg"><label class="fl">Availability %</label><input class="fi" id="availabilityPct" type="number" value="95" min="80" max="100" step="0.5"></div><div class="fg"><label class="fl">Electrical Loss %</label><input class="fi" id="electricalLossPct" type="number" value="2" min="0" max="20" step="0.5"></div></div>
       </div>
     </div>
@@ -1893,10 +1893,14 @@ function jensenWake(txy,ws,dir,lut,kw){
     if(deficits[j].length===0)continue;
     let totalDef;
     const combMethod=$('wakeCombination')?.value||'linear';
-    if(combMethod==='rss'){
+    // v60.1 AUDIT FIX: "Energy Balance" now uses the same code path as "RSS"
+    // (Katic 1986 sum-of-squares). The previous "Energy Balance" branch divided
+    // by the wake count N, producing a root-MEAN-square that under-estimated
+    // total wake deficit by 29–65% for turbines in 2–8 overlapping wakes — the
+    // typical interior-turbine case for a 142-WTG layout. Per independent code
+    // audit (WindFlow_Pro_Audit_and_Layout_Analysis.md §2.1).
+    if(combMethod==='rss'||combMethod==='energy'){
       totalDef=Math.sqrt(deficits[j].reduce((s,d)=>s+d.def*d.def,0));
-    }else if(combMethod==='energy'){
-      totalDef=1-Math.sqrt(Math.max(0,deficits[j].reduce((s,d)=>s+(1-d.def)*(1-d.def),0)/Math.max(1,deficits[j].length)));
     }else{
       totalDef=deficits[j].reduce((s,d)=>s+d.def,0);
     }
@@ -2035,10 +2039,13 @@ function bastankhahWake(txy,ws,dir,lut,kw){
     if(deficits[j].length===0)continue;
     let totalDef;
     const combMethod=$('wakeCombination')?.value||'energy';
-    if(combMethod==='rss'){
+    // v60.1 AUDIT FIX: "Energy Balance" now uses the same code path as "RSS"
+    // (Katic 1986 sum-of-squares). Previous Energy Balance branch divided by
+    // the wake count N, producing a root-MEAN-square that under-estimated total
+    // wake deficit by 29–65% for turbines in 2–8 overlapping wakes. Per
+    // independent code audit (WindFlow_Pro_Audit_and_Layout_Analysis.md §2.1).
+    if(combMethod==='rss'||combMethod==='energy'){
       totalDef=Math.sqrt(deficits[j].reduce((s,d)=>s+d.def*d.def,0));
-    }else if(combMethod==='energy'){
-      totalDef=1-Math.sqrt(Math.max(0,deficits[j].reduce((s,d)=>s+(1-d.def)*(1-d.def),0)/Math.max(1,deficits[j].length)));
     }else{
       totalDef=Math.min(0.80,deficits[j].reduce((s,d)=>s+d.def,0));
     }
