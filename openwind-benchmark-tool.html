@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Openwind × WindFlow Pro Benchmark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07111e;--bg2:#0d1e30;--bg3:#132435;--bg4:#1a2f42;
+  --mint:#00d68f;--mint2:rgba(0,214,143,.12);--mint3:rgba(0,214,143,.06);
+  --gold:#f5a623;--gold2:rgba(245,166,35,.12);
+  --red:#e05050;--red2:rgba(224,80,80,.12);
+  --sky:#4ab3e8;--sky2:rgba(74,179,232,.12);
+  --purple:#a78bfa;--purple2:rgba(167,139,250,.12);
+  --orange:#f97316;--orange2:rgba(249,115,22,.12);
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.04);
+  --text:rgba(255,255,255,.88);--text2:rgba(255,255,255,.5);--text3:rgba(255,255,255,.28);
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  --ok:#22c55e;--warn:#fbbf24;--bad:#ef4444;
+  --radius:8px;--radius2:4px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);color:var(--text);background:var(--bg);min-height:100vh;font-size:.82rem;line-height:1.45}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1.5rem;border-bottom:1px solid var(--border);background:var(--bg);flex-wrap:wrap;gap:.5rem;position:sticky;top:0;z-index:50}
+.topbar-brand{display:flex;align-items:center;gap:.8rem}
+.brand-badge{background:var(--mint);color:var(--bg);font-family:var(--mono);font-size:.6rem;font-weight:600;padding:.25rem .6rem;border-radius:2px;letter-spacing:.08em}
+.brand-badge.alt{background:var(--sky)}
+.brand-title{font-size:.82rem;font-weight:600;letter-spacing:.04em;color:var(--text)}
+.brand-sub{font-size:.62rem;color:var(--text3);font-family:var(--mono);margin-top:.1rem}
+.topbar-right{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);text-decoration:none;padding:.4rem .8rem;border:1px solid var(--border);border-radius:var(--radius2);transition:all .2s}
+a.back-link:hover{color:var(--mint);border-color:var(--mint)}
+.btn{font-family:var(--mono);font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:.5rem .9rem;border-radius:var(--radius2);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center;gap:.35rem}
+.btn:hover{border-color:var(--mint);color:var(--mint)}
+.btn-sky{background:var(--sky2);border-color:rgba(74,179,232,.3);color:var(--sky)}
+.btn-sky:hover{background:var(--sky);color:var(--bg)}
+.btn-mint{background:var(--mint2);border-color:rgba(0,214,143,.3);color:var(--mint)}
+.btn-mint:hover{background:var(--mint);color:var(--bg)}
+.btn-ghost{background:transparent}
+.btn-danger{background:var(--red2);border-color:rgba(224,80,80,.3);color:var(--red)}
+.btn-danger:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.container{max-width:1400px;margin:0 auto;padding:1.5rem}
+.intro{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem 1.8rem;margin-bottom:1.5rem}
+.intro h1{font-size:1.4rem;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+.intro h1 .vs{color:var(--gold);margin:0 .5rem;font-family:var(--mono);font-weight:400}
+.intro p{color:var(--text2);max-width:90ch;font-size:.78rem;line-height:1.55}
+.intro .legend{display:flex;flex-wrap:wrap;gap:1.2rem;margin-top:1rem;font-size:.62rem;font-family:var(--mono);color:var(--text3)}
+.intro .legend span{display:flex;align-items:center;gap:.4rem}
+.intro .legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.dot-ok{background:var(--ok)}.dot-warn{background:var(--warn)}.dot-bad{background:var(--bad)}
+section.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem 1.5rem;margin-bottom:1.2rem}
+section.card h2{font-size:.95rem;font-weight:600;letter-spacing:-.01em;margin-bottom:.4rem;display:flex;align-items:center;gap:.6rem}
+section.card h2 .num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:var(--mint2);color:var(--mint);border-radius:50%;font-family:var(--mono);font-size:.7rem;font-weight:600;border:1px solid rgba(0,214,143,.3)}
+section.card .desc{color:var(--text3);font-size:.7rem;margin-bottom:1rem;font-style:italic}
+section.card h3{font-size:.82rem;font-weight:600;letter-spacing:.02em;margin:1.2rem 0 .6rem;color:var(--sky);text-transform:uppercase;font-family:var(--mono)}
+.fg{display:flex;flex-direction:column;gap:.3rem}
+.fg label{font-size:.62rem;color:var(--text2);font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase}
+.fg label .req{color:var(--red);margin-left:.2rem}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  font-family:var(--sans);font-size:.78rem;background:var(--bg);color:var(--text);
+  border:1px solid var(--border);border-radius:var(--radius2);padding:.5rem .65rem;
+  transition:all .15s;width:100%
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--mint);background:var(--bg2)}
+textarea{resize:vertical;font-family:var(--mono);font-size:.7rem;line-height:1.4}
+input[type=file]{font-size:.62rem;color:var(--text2)}
+input[type=file]::file-selector-button{font-family:var(--mono);font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:.35rem .65rem;border-radius:var(--radius2);border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;margin-right:.6rem}
+input[type=file]::file-selector-button:hover{border-color:var(--mint);color:var(--mint)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem}
+.g2-2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+@media(max-width:900px){.g2,.g3,.g4,.g2-2{grid-template-columns:1fr}}
+.tool-col{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.1rem}
+.tool-col.wfp{border-top:3px solid var(--mint)}
+.tool-col.ow{border-top:3px solid var(--sky)}
+.tool-col h4{font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-family:var(--mono);margin-bottom:.8rem;display:flex;align-items:center;gap:.5rem}
+.tool-col.wfp h4{color:var(--mint)}
+.tool-col.ow h4{color:var(--sky)}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.4rem}
+@media(max-width:900px){.kpi-row{grid-template-columns:1fr 1fr}}
+.kpi-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.2rem;text-align:center;border-top:3px solid var(--text3)}
+.kpi-card.ok{border-top-color:var(--ok)}
+.kpi-card.warn{border-top-color:var(--warn)}
+.kpi-card.bad{border-top-color:var(--bad)}
+.kpi-card.na{opacity:.5}
+.kpi-label{font-size:.6rem;color:var(--text3);text-transform:uppercase;font-family:var(--mono);letter-spacing:.06em;margin-bottom:.4rem}
+.kpi-val{font-size:1.8rem;font-weight:700;font-family:var(--mono);letter-spacing:-.02em;line-height:1}
+.kpi-card.ok .kpi-val{color:var(--ok)}
+.kpi-card.warn .kpi-val{color:var(--warn)}
+.kpi-card.bad .kpi-val{color:var(--bad)}
+.kpi-flag{font-size:.6rem;color:var(--text2);margin-top:.4rem;text-transform:uppercase;font-family:var(--mono);letter-spacing:.06em}
+.kpi-sub{font-size:.6rem;color:var(--text3);margin-top:.2rem;font-family:var(--mono)}
+.chart-wrap{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem}
+.chart-wrap svg{display:block;width:100%;height:auto;max-width:100%}
+.chart-title{font-size:.7rem;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem}
+.chart-legend{display:flex;gap:1.2rem;font-size:.65rem;font-family:var(--mono);color:var(--text2);justify-content:center;margin-top:.6rem;flex-wrap:wrap}
+.chart-legend span{display:flex;align-items:center;gap:.35rem}
+.chart-legend .swatch{width:14px;height:8px;border-radius:1px;display:inline-block}
+table{width:100%;border-collapse:collapse;font-size:.7rem}
+table th{background:var(--bg);color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;font-size:.58rem;font-weight:600;padding:.5rem .6rem;text-align:left;border-bottom:1px solid var(--border)}
+table td{padding:.5rem .6rem;border-bottom:1px solid var(--border2);color:var(--text)}
+table td.num{font-family:var(--mono);text-align:right}
+table tr:hover td{background:var(--bg3)}
+.parity-row .status{display:inline-flex;align-items:center;gap:.3rem;font-family:var(--mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;padding:.2rem .5rem;border-radius:2px}
+.parity-row .status.ok{background:rgba(34,197,94,.12);color:var(--ok)}
+.parity-row .status.warn{background:rgba(251,191,36,.12);color:var(--warn)}
+.parity-row .status.bad{background:rgba(239,68,68,.12);color:var(--bad)}
+.parity-row .status.na{background:var(--bg3);color:var(--text3)}
+.outliers{margin-top:.6rem}
+.outliers table{font-size:.65rem}
+.outliers td.bad{color:var(--bad);font-weight:600}
+.outliers td.warn{color:var(--warn)}
+.verdict-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem 1.6rem;border-left:4px solid var(--text3)}
+.verdict-box.ok{border-left-color:var(--ok)}
+.verdict-box.warn{border-left-color:var(--warn)}
+.verdict-box.bad{border-left-color:var(--bad)}
+.verdict-box h3{font-size:.95rem;font-weight:600;margin-bottom:.6rem;text-transform:none;letter-spacing:0;font-family:var(--sans);color:var(--text);margin-top:0}
+.verdict-box.ok h3{color:var(--ok)}
+.verdict-box.warn h3{color:var(--warn)}
+.verdict-box.bad h3{color:var(--bad)}
+.verdict-box p{color:var(--text2);font-size:.75rem;line-height:1.55;margin-bottom:.5rem}
+.verdict-box ul{padding-left:1.2rem;color:var(--text2);font-size:.72rem;line-height:1.6}
+.note{font-size:.62rem;color:var(--text3);font-style:italic;margin-top:.4rem;line-height:1.5}
+.warn-banner{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:var(--radius2);padding:.6rem .8rem;font-size:.7rem;color:var(--warn);margin-bottom:.8rem;display:flex;gap:.5rem;align-items:flex-start}
+.warn-banner .ico{flex-shrink:0}
+.danger-banner{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:var(--radius2);padding:.6rem .8rem;font-size:.7rem;color:var(--bad);margin-bottom:.8rem}
+.info-banner{background:var(--sky2);border:1px solid rgba(74,179,232,.3);border-radius:var(--radius2);padding:.6rem .8rem;font-size:.7rem;color:var(--sky);margin-bottom:.8rem}
+.export-row{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.8rem}
+footer{padding:1.5rem;text-align:center;color:var(--text3);font-size:.62rem;font-family:var(--mono);border-top:1px solid var(--border);margin-top:2rem}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--bg3);border:1px solid var(--mint);color:var(--mint);padding:.7rem 1rem;border-radius:var(--radius);font-size:.72rem;font-family:var(--mono);z-index:100;opacity:0;transform:translateY(20px);transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+@media print{
+  .topbar,.export-row,.btn,footer{display:none!important}
+  body{background:#fff;color:#000;font-size:10pt}
+  section.card,section.card *{color:#000!important;background:#fff!important;border-color:#ccc!important}
+  .kpi-card,.tool-col,.chart-wrap,.verdict-box{break-inside:avoid}
+  .intro{background:#fff!important}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-badge alt">BENCH</span>
+    <div>
+      <div class="brand-title">Openwind × WindFlow Pro Benchmark</div>
+      <div class="brand-sub">Identical inputs · side-by-side AEP / wake / uncertainty deltas</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a>
+    <button class="btn btn-ghost" onclick="saveLocal()">💾 Save</button>
+    <label class="btn btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadLocal(event)"></label>
+    <button class="btn btn-danger" onclick="clearAll()">✕ Clear</button>
+  </div>
+</div>
+
+<div class="container">
+
+<div class="intro">
+  <h1>Openwind <span class="vs">×</span> WindFlow Pro Benchmark</h1>
+  <p>This tool captures identical inputs for both engines, computes deltas with traffic-light thresholds, and produces a structured verdict you can attach to a due-diligence pack. Openwind is the bankable reference; WindFlow Pro is the screening tool being validated. Fill Sections 1–5 with results from each tool's export, and Sections 6–7 update automatically.</p>
+  <div class="legend">
+    <span><span class="dot dot-ok"></span> Δ &lt; 5% — within tolerance</span>
+    <span><span class="dot dot-warn"></span> 5–10% — investigate drivers</span>
+    <span><span class="dot dot-bad"></span> &gt; 10% — significant divergence</span>
+    <span style="margin-left:auto">Thresholds aligned with IEA Wind Task 37 / IEC 61400-15-1 uncertainty-band guidance.</span>
+  </div>
+</div>
+
+<!-- ============ SECTION 1: SHARED PROJECT CONTEXT ============ -->
+<section class="card">
+  <h2><span class="num">1</span> Shared Project Context</h2>
+  <div class="desc">Both tools must use the same project, site, and terrain classification. The terrain class drives the verdict thresholds.</div>
+  <div class="g3">
+    <div class="fg"><label>Project name <span class="req">*</span></label><input type="text" id="projName" placeholder="e.g. 142WTG_MY210_HH144m"></div>
+    <div class="fg"><label>Site centroid lat</label><input type="number" id="siteLat" step="0.0001" placeholder="24.318"></div>
+    <div class="fg"><label>Site centroid lon</label><input type="number" id="siteLon" step="0.0001" placeholder="44.367"></div>
+  </div>
+  <div class="g3" style="margin-top:.8rem">
+    <div class="fg"><label>Terrain classification <span class="req">*</span></label>
+      <select id="terrainType">
+        <option value="flat">Flat — RIX &lt; 5%</option>
+        <option value="gentle">Gentle — RIX 5–10%</option>
+        <option value="moderate">Moderate — RIX 10–20%</option>
+        <option value="complex">Complex — RIX &gt; 20%</option>
+        <option value="escarpment">Escarpment-adjacent</option>
+        <option value="forest">Forest / canopy</option>
+        <option value="offshore">Offshore</option>
+      </select>
+    </div>
+    <div class="fg"><label>Site area (km²)</label><input type="number" id="siteArea" step="0.1"></div>
+    <div class="fg"><label>Benchmark date</label><input type="date" id="benchDate"></div>
+  </div>
+  <div class="g2" style="margin-top:.8rem">
+    <div class="fg"><label>Analyst</label><input type="text" id="analyst" placeholder="Your name"></div>
+    <div class="fg"><label>Purpose</label>
+      <select id="purpose">
+        <option>Internal QA — validate WindFlow Pro against Openwind</option>
+        <option>Pre-feasibility screening calibration</option>
+        <option>Bankability stage gate — confirm Openwind required</option>
+        <option>Methodology audit — quantify model divergence</option>
+        <option>Portfolio demo — show tool capability range</option>
+      </select>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECTION 2: SHARED PHYSICAL INPUTS ============ -->
+<section class="card">
+  <h2><span class="num">2</span> Shared Physical Inputs</h2>
+  <div class="desc">These MUST be identical between the two tools. Any mismatch is flagged in the parity checklist (Section 6).</div>
+
+  <h3>Turbine model</h3>
+  <div class="g4">
+    <div class="fg"><label>Manufacturer / model</label><input type="text" id="wtgModel" placeholder="e.g. Envision EN-156"></div>
+    <div class="fg"><label>Rated power (MW)</label><input type="number" id="ratedMW" step="0.1" placeholder="6.0"></div>
+    <div class="fg"><label>Rotor diameter (m)</label><input type="number" id="rotD" step="0.1" placeholder="180"></div>
+    <div class="fg"><label>Hub height (m)</label><input type="number" id="hubH" step="0.1" placeholder="144"></div>
+  </div>
+  <div class="g3" style="margin-top:.6rem">
+    <div class="fg"><label>IEC class</label>
+      <select id="iecClass">
+        <option>IEC Class IA</option><option>IEC Class IB</option><option>IEC Class IC</option>
+        <option>IEC Class IIA</option><option>IEC Class IIB</option><option>IEC Class IIC</option>
+        <option>IEC Class IIIA</option><option>IEC Class IIIB</option><option>IEC Class IIIC</option>
+        <option>IEC Class S (special)</option><option>Typhoon class T</option>
+      </select>
+    </div>
+    <div class="fg"><label>WTG count</label><input type="number" id="wtgCount" placeholder="142"></div>
+    <div class="fg"><label>Installed capacity (MW)</label><input type="number" id="instMW" step="0.1" placeholder="852"></div>
+  </div>
+
+  <h3>Layout — paste coordinates (id, lat, lon)</h3>
+  <div class="fg">
+    <textarea id="wtgCoords" rows="5" placeholder="T-01,24.3180,44.3670&#10;T-02,24.3185,44.3675&#10;... (one row per turbine)"></textarea>
+    <div class="note">Both tools must load the SAME coordinate set. If WindFlow Pro used a KMZ, export it to CSV first and paste here. For Openwind, paste the same WTG table.</div>
+  </div>
+
+  <h3>Wind data — must be identical source</h3>
+  <div class="g3">
+    <div class="fg"><label>Primary wind data source</label>
+      <select id="windSource">
+        <option>Validated on-site mast (≥12 months)</option>
+        <option>ERA5 reanalysis</option>
+        <option>ERA5T near-real-time</option>
+        <option>MERRA-2</option>
+        <option>NEWA mesoscale</option>
+        <option>GWA 3.1</option>
+        <option>GWA 4.0</option>
+        <option>SODAR / LiDAR (remote sensing)</option>
+        <option>Multiple masts (IDW)</option>
+      </select>
+    </div>
+    <div class="fg"><label>Measurement height (m)</label><input type="number" id="measH" placeholder="120"></div>
+    <div class="fg"><label>Measurement period</label><input type="text" id="measPeriod" placeholder="e.g. 2018-01 to 2019-12"></div>
+  </div>
+
+  <h3>Loss assumptions</h3>
+  <div class="g4">
+    <div class="fg"><label>Availability (%)</label><input type="number" id="avail" value="95" step="0.1"></div>
+    <div class="fg"><label>Electrical loss (%)</label><input type="number" id="elec" value="2" step="0.1"></div>
+    <div class="fg"><label>Curtailed / other (%)</label><input type="number" id="otherLoss" value="2" step="0.1"></div>
+    <div class="fg"><label>Environmental / IEC 61400-15-1 (%)</label><input type="number" id="envLoss" value="1.5" step="0.1"></div>
+  </div>
+</section>
+
+<!-- ============ SECTION 3: METHODOLOGY PER TOOL ============ -->
+<section class="card">
+  <h2><span class="num">3</span> Methodology per Tool</h2>
+  <div class="desc">These settings are TOOL-SPECIFIC. Differences are expected and tracked in the parity checklist — they are the likely drivers of any divergence.</div>
+
+  <div class="g2-2">
+    <!-- WindFlow Pro column -->
+    <div class="tool-col wfp">
+      <h4>● WindFlow Pro</h4>
+      <div class="fg"><label>Wake model</label>
+        <select id="wfpWakeModel">
+          <option>Bastankhah-Porté-Agel Gaussian (2016)</option>
+          <option>Jensen / PARK</option>
+          <option>Ainslie Eddy-Viscosity</option>
+          <option>PARK2 Deep-Array</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-top:.6rem"><label>Wake combination</label>
+        <select id="wfpWakeComb">
+          <option>Energy Balance / RSS (Katic 1986)</option>
+          <option>Linear Sum</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-top:.6rem"><label>Terrain flow model</label>
+        <select id="wfpTerrainModel">
+          <option>Jackson-Hunt orographic (linearized)</option>
+          <option>BZ LUT</option>
+          <option>None — flat assumption</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-top:.6rem"><label>IBL model</label>
+        <select id="wfpIBL">
+          <option>Simplified single-change</option>
+          <option>Rao-Meyers-Plate (full)</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-top:.6rem"><label>MCP method</label>
+        <select id="wfpMCP">
+          <option>Linear regression</option>
+          <option>Matrix method</option>
+          <option>Variance ratio</option>
+          <option>Weibull ratio</option>
+          <option>None (no MCP — direct mesoscale)</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-top:.6rem"><label>Ambient TI (%)</label><input type="number" id="wfpTI" step="0.1" placeholder="8.0"></div>
+      <div class="fg" style="margin-top:.6rem"><label>Tool version</label><input type="text" id="wfpVer" value="60.1"></div>
+    </div>
+
+    <!-- Openwind column -->
+    <div class="tool-col ow">
+      <h4>● Openwind</h4>
+      <div class="fg"><label>Wake model</label>
+        <select id="owWakeModel">
+          <option>Eddy-Viscosity (Ainslie)</option>
+          <option>Bastankhah-Porté-Agel Gaussian</option>
+          <option>Jensen / PARK</option>
+          <option>CFD-Turbor / LES</option>
+          <option>Deep-Array (Schlez)</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-top:.6rem"><label>Wake combination</label>
+        <select id="owWakeComb">
+          <option>Sum of squares (Katic 1986)</option>
+          <option>Linear</option>
+          <option>Geometric</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-top:.6rem"><label>Terrain flow model</label>
+        <select id="owTerrainModel">
+          <option>IBZ Jackson-Hunt</option>
+          <option>MS3DJH/3D</option>
+          <option>CFD (Reynolds-averaged Navier-Stokes)</option>
+          <option>LES (large-eddy simulation)</option>
+          <option>None — flat assumption</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-top:.6rem"><label>IBL model</label>
+        <select id="owIBL">
+          <option>Rao-Meyers-Plate (full)</option>
+          <option>Troen-Petersen</option>
+          <option>Simplified single-change</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-top:.6rem"><label>MCP method</label>
+        <select id="owMCP">
+          <option>Linear regression</option>
+          <option>Matrix method</option>
+          <option>Variance ratio</option>
+          <option>Weibull ratio</option>
+          <option>WindPRO-style directional MCP</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-top:.6rem"><label>Ambient TI (%)</label><input type="number" id="owTI" step="0.1" placeholder="8.0"></div>
+      <div class="fg" style="margin-top:.6rem"><label>Openwind version</label><input type="text" id="owVer" placeholder="Openwind 1.0"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECTION 4: WINDFLOW PRO RESULTS ============ -->
+<section class="card">
+  <h2><span class="num">4</span> WindFlow Pro Results</h2>
+  <div class="desc">Enter values from WindFlow Pro's results panel / export. All AEP values in GWh/yr (net of stated losses).</div>
+
+  <div class="info-banner">Tip: open WindFlow Pro, load the SAME coordinate set + wind data + turbine model from Section 2, run the WAsP Analysis, and copy values from the results summary panel.</div>
+
+  <div class="g4">
+    <div class="fg"><label>Gross AEP (GWh/yr)</label><input type="number" id="wfpGross" step="0.01"></div>
+    <div class="fg"><label>Net AEP (GWh/yr)</label><input type="number" id="wfpNet" step="0.01"></div>
+    <div class="fg"><label>Wake loss (%)</label><input type="number" id="wfpWake" step="0.01"></div>
+    <div class="fg"><label>Capacity factor (%)</label><input type="number" id="wfpCF" step="0.01"></div>
+  </div>
+  <div class="g4" style="margin-top:.6rem">
+    <div class="fg"><label>P50 AEP (GWh/yr)</label><input type="number" id="wfpP50" step="0.01"></div>
+    <div class="fg"><label>P90 AEP (GWh/yr)</label><input type="number" id="wfpP90" step="0.01"></div>
+    <div class="fg"><label>Total uncertainty (%)</label><input type="number" id="wfpUnc" step="0.01"></div>
+    <div class="fg"><label>Run time (s)</label><input type="number" id="wfpRuntime" step="0.1"></div>
+  </div>
+
+  <h3>Per-turbine AEP (optional — enables scatter plot)</h3>
+  <div class="fg">
+    <textarea id="wfpPerWTG" rows="4" placeholder="id,aep_gwh&#10;T-01,3.45&#10;T-02,3.32&#10;... (one row per turbine, comma-separated)"></textarea>
+    <div class="note">Paste WindFlow Pro's per-turbine AEP CSV here. Headers optional — the parser will skip them.</div>
+  </div>
+
+  <div class="fg" style="margin-top:.8rem"><label>Notes / observations</label><textarea id="wfpNotes" rows="2" placeholder="Any warnings, banner messages, or observations from WindFlow Pro's run (e.g. 'RIX > 10% flag', 'GWA-only mode', 'MCP R² low in sector 3')"></textarea></div>
+</section>
+
+<!-- ============ SECTION 5: OPENWIND RESULTS ============ -->
+<section class="card">
+  <h2><span class="num">5</span> Openwind Results</h2>
+  <div class="desc">Enter values from Openwind's standard report export. These are the bankable reference numbers.</div>
+
+  <div class="warn-banner"><span class="ico">⚠</span><div>Openwind is the bankable reference per IEC 61400-15-1. Any WindFlow Pro result diverging by more than 10% from Openwind should not be used for financing or permitting decisions without further investigation.</div></div>
+
+  <div class="g4">
+    <div class="fg"><label>Gross AEP (GWh/yr)</label><input type="number" id="owGross" step="0.01"></div>
+    <div class="fg"><label>Net AEP (GWh/yr)</label><input type="number" id="owNet" step="0.01"></div>
+    <div class="fg"><label>Wake loss (%)</label><input type="number" id="owWake" step="0.01"></div>
+    <div class="fg"><label>Capacity factor (%)</label><input type="number" id="owCF" step="0.01"></div>
+  </div>
+  <div class="g4" style="margin-top:.6rem">
+    <div class="fg"><label>P50 AEP (GWh/yr)</label><input type="number" id="owP50" step="0.01"></div>
+    <div class="fg"><label>P90 AEP (GWh/yr)</label><input type="number" id="owP90" step="0.01"></div>
+    <div class="fg"><label>Total uncertainty (%)</label><input type="number" id="owUnc" step="0.01"></div>
+    <div class="fg"><label>Run time (s)</label><input type="number" id="owRuntime" step="0.1"></div>
+  </div>
+
+  <h3>Per-turbine AEP (optional — enables scatter plot)</h3>
+  <div class="fg">
+    <textarea id="owPerWTG" rows="4" placeholder="id,aep_gwh&#10;T-01,3.58&#10;T-02,3.41&#10;... (must use same WTG IDs as WindFlow Pro column for matching)"></textarea>
+    <div class="note">Paste Openwind's per-turbine AEP table. WTG IDs must match WindFlow Pro's column for row-by-row comparison.</div>
+  </div>
+
+  <div class="fg" style="margin-top:.8rem"><label>Notes / observations</label><textarea id="owNotes" rows="2" placeholder="Any observations from Openwind's run (e.g. 'high RIX flag', 'LES coupling required', 'mast-sector gap')"></textarea></div>
+</section>
+
+<!-- ============ SECTION 6: COMPARISON DASHBOARD ============ -->
+<section class="card">
+  <h2><span class="num">6</span> Comparison Dashboard</h2>
+  <div class="desc">Auto-computed. Deltas use Openwind as reference: Δ% = (WFP − OW) / OW × 100. Wake loss compares absolute percentage-point (pp) difference.</div>
+
+  <div class="kpi-row" id="kpiRow">
+    <div class="kpi-card na" id="kpiNetAEP">
+      <div class="kpi-label">|Δ Net AEP|</div>
+      <div class="kpi-val">—</div>
+      <div class="kpi-flag">Enter both Net AEPs</div>
+      <div class="kpi-sub" id="kpiNetAEPSub"></div>
+    </div>
+    <div class="kpi-card na" id="kpiWake">
+      <div class="kpi-label">|Δ Wake loss|</div>
+      <div class="kpi-val">—</div>
+      <div class="kpi-flag">Enter both wake losses</div>
+      <div class="kpi-sub" id="kpiWakeSub"></div>
+    </div>
+    <div class="kpi-card na" id="kpiCF">
+      <div class="kpi-label">|Δ CF|</div>
+      <div class="kpi-val">—</div>
+      <div class="kpi-flag">Enter both CFs</div>
+      <div class="kpi-sub" id="kpiCFSub"></div>
+    </div>
+    <div class="kpi-card na" id="kpiUnc">
+      <div class="kpi-label">|Δ Uncertainty|</div>
+      <div class="kpi-val">—</div>
+      <div class="kpi-flag">Enter both uncertainties</div>
+      <div class="kpi-sub" id="kpiUncSub"></div>
+    </div>
+  </div>
+
+  <h3>Side-by-side bar chart</h3>
+  <div class="chart-wrap">
+    <div class="chart-title">Net AEP · Gross AEP · Wake loss × 10 · CF — WindFlow Pro vs Openwind</div>
+    <svg id="barChart" viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="chart-legend">
+      <span><span class="swatch" style="background:#00d68f"></span> WindFlow Pro</span>
+      <span><span class="swatch" style="background:#4ab3e8"></span> Openwind</span>
+    </div>
+  </div>
+
+  <h3>Per-turbine AEP scatter</h3>
+  <div class="chart-wrap">
+    <div class="chart-title">Openwind AEP (X) vs WindFlow Pro AEP (Y) — green band = ±10%, red dots = outliers</div>
+    <svg id="scatterChart" viewBox="0 0 600 480" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="chart-legend">
+      <span><span class="swatch" style="background:#22c55e"></span> within ±10%</span>
+      <span><span class="swatch" style="background:#ef4444"></span> outlier (&gt;10%)</span>
+      <span><span class="swatch" style="background:#666"></span> 1:1 reference line</span>
+    </div>
+  </div>
+  <div class="outliers" id="outliers"></div>
+
+  <h3>Methodology parity checklist</h3>
+  <div class="warn-banner" id="parityBanner" style="display:none"></div>
+  <table id="parityTable">
+    <thead><tr><th>Item</th><th>WindFlow Pro</th><th>Openwind</th><th>Parity</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="note" style="margin-top:.6rem">OK = identical · WARN = different method but functionally equivalent · DIFF = different physical model — likely driver of divergence</div>
+</section>
+
+<!-- ============ SECTION 7: VERDICT ============ -->
+<section class="card">
+  <h2><span class="num">7</span> Verdict &amp; Sign-off</h2>
+  <div class="desc">Auto-generated based on the worst (largest) delta across Net AEP, Wake loss, and Uncertainty — adjusted for terrain class.</div>
+
+  <div class="verdict-box" id="verdictBox">
+    <h3 id="verdictTitle">Awaiting inputs</h3>
+    <p id="verdictBody">Fill in results for both tools to generate a verdict.</p>
+    <ul id="verdictBullets"></ul>
+  </div>
+
+  <h3>Recommendation</h3>
+  <div class="fg"><textarea id="rec" rows="4" placeholder="Free-text recommendation for the project (e.g. 'Accept WindFlow Pro for screening only — bankable AEP requires Openwind with mast data and CFD coupling for this escarpment-adjacent site')"></textarea></div>
+
+  <div class="g3" style="margin-top:.8rem">
+    <div class="fg"><label>Analyst sign-off</label><input type="text" id="signOff" placeholder="Name"></div>
+    <div class="fg"><label>Sign-off date</label><input type="date" id="signDate"></div>
+    <div class="fg"><label>Verdict tier</label>
+      <select id="verdictTier">
+        <option>Auto (from deltas)</option>
+        <option>Override — Accept WindFlow Pro as-is</option>
+        <option>Override — Accept with caveats</option>
+        <option>Override — Reject WindFlow Pro for this site</option>
+      </select>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECTION 8: EXPORT ============ -->
+<section class="card">
+  <h2><span class="num">8</span> Export &amp; Persist</h2>
+  <div class="desc">Save the full benchmark as JSON (reloadable here) or CSV (for spreadsheet records). Print produces an A4-ready PDF via your browser's print dialog.</div>
+  <div class="export-row">
+    <button class="btn btn-mint" onclick="exportJSON()">📦 Export JSON (full record)</button>
+    <button class="btn btn-sky" onclick="exportCSV()">📊 Export CSV (summary)</button>
+    <button class="btn btn-ghost" onclick="exportParityCSV()">📋 Export parity CSV</button>
+    <button class="btn btn-ghost" onclick="window.print()">🖨 Print / Save as PDF</button>
+  </div>
+</section>
+
+</div>
+
+<footer>Openwind × WindFlow Pro Benchmark · Methodology per IEC 61400-15-1 · Thresholds per IEA Wind Task 37 · Generated locally — no data leaves this browser.</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============ HELPERS ============ */
+const $ = id => document.getElementById(id);
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+$('benchDate').value = todayISO();
+$('signDate').value = todayISO();
+
+/* ============ FIELD MAP ============ */
+const FIELDS = [
+  // Section 1
+  'projName','siteLat','siteLon','terrainType','siteArea','benchDate','analyst','purpose',
+  // Section 2
+  'wtgModel','ratedMW','rotD','hubH','iecClass','wtgCount','instMW','wtgCoords',
+  'windSource','measH','measPeriod','avail','elec','otherLoss','envLoss',
+  // Section 3 — WFP
+  'wfpWakeModel','wfpWakeComb','wfpTerrainModel','wfpIBL','wfpMCP','wfpTI','wfpVer',
+  // Section 3 — OW
+  'owWakeModel','owWakeComb','owTerrainModel','owIBL','owMCP','owTI','owVer',
+  // Section 4 — WFP results
+  'wfpGross','wfpNet','wfpWake','wfpCF','wfpP50','wfpP90','wfpUnc','wfpRuntime','wfpPerWTG','wfpNotes',
+  // Section 5 — OW results
+  'owGross','owNet','owWake','owCF','owP50','owP90','owUnc','owRuntime','owPerWTG','owNotes',
+  // Section 7
+  'rec','signOff','signDate','verdictTier'
+];
+
+function snapshot(){
+  const s = {};
+  FIELDS.forEach(f => { const el = $(f); if(el) s[f] = el.value; });
+  s._schema = 'openwind-benchmark';
+  s._version = '1.0';
+  s._savedAt = new Date().toISOString();
+  return s;
+}
+function restore(s){
+  FIELDS.forEach(f => { if(s[f] !== undefined && $(f)) $(f).value = s[f]; });
+  recalc();
+}
+
+/* ============ SAVE / LOAD ============ */
+function saveLocal(){
+  try {
+    localStorage.setItem('owBench', JSON.stringify(snapshot()));
+    toast('Saved to browser storage');
+  } catch(e) { toast('Save failed: ' + e.message); }
+}
+function loadLocal(ev){
+  const f = ev.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try { restore(JSON.parse(r.result)); toast('Loaded ' + f.name); }
+    catch(e){ toast('Load failed — invalid JSON'); }
+  };
+  r.readAsText(f);
+}
+function clearAll(){
+  if(!confirm('Clear all fields? This cannot be undone.')) return;
+  FIELDS.forEach(f => { if($(f)) $(f).value = ''; });
+  $('benchDate').value = todayISO();
+  $('signDate').value = todayISO();
+  $('wfpVer').value = '60.1';
+  recalc();
+  toast('Cleared');
+}
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(snapshot(), null, 2)], {type:'application/json'});
+  const nm = ($('projName').value || 'benchmark').replace(/[^\w-]+/g,'_');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${nm}_openwind_vs_windflowpro_${todayISO()}.json`;
+  a.click();
+  toast('JSON exported');
+}
+function exportCSV(){
+  const s = snapshot();
+  const rows = [
+    ['Field','WindFlow Pro','Openwind','Delta','Delta %','Flag'],
+    ['Gross AEP (GWh/yr)', s.wfpGross, s.owGross, deltaAbs(s.wfpGross,s.owGross), deltaPct(s.wfpGross,s.owGross), flagPct(deltaPct(s.wfpGross,s.owGross))],
+    ['Net AEP (GWh/yr)', s.wfpNet, s.owNet, deltaAbs(s.wfpNet,s.owNet), deltaPct(s.wfpNet,s.owNet), flagPct(deltaPct(s.wfpNet,s.owNet))],
+    ['Wake loss (%)', s.wfpWake, s.owWake, deltaAbs(s.wfpWake,s.owWake), '— (pp)', flagPP(deltaAbs(s.wfpWake,s.owWake))],
+    ['Capacity factor (%)', s.wfpCF, s.owCF, deltaAbs(s.wfpCF,s.owCF), deltaPct(s.wfpCF,s.owCF), flagPct(deltaPct(s.wfpCF,s.owCF))],
+    ['P50 AEP (GWh/yr)', s.wfpP50, s.owP50, deltaAbs(s.wfpP50,s.owP50), deltaPct(s.wfpP50,s.owP50), flagPct(deltaPct(s.wfpP50,s.owP50))],
+    ['P90 AEP (GWh/yr)', s.wfpP90, s.owP90, deltaAbs(s.wfpP90,s.owP90), deltaPct(s.wfpP90,s.owP90), flagPct(deltaPct(s.wfpP90,s.owP90))],
+    ['Total uncertainty (%)', s.wfpUnc, s.owUnc, deltaAbs(s.wfpUnc,s.owUnc), '— (pp)', flagPP(deltaAbs(s.wfpUnc,s.owUnc))],
+    [],
+    ['Project', s.projName, '', '', '', ''],
+    ['Site', (s.siteLat||'')+', '+(s.siteLon||''), '', '', '', ''],
+    ['Terrain class', s.terrainType, '', '', '', ''],
+    ['Turbine', s.wtgModel, '', 'Rated MW: '+s.ratedMW, 'D: '+s.rotD+'m', 'HH: '+s.hubH+'m'],
+    ['WTG count', s.wtgCount, '', 'Installed MW: '+s.instMW, '', ''],
+    ['Wind source', s.windSource, '', 'Height: '+s.measH+'m', 'Period: '+s.measPeriod, ''],
+    ['Losses', 'Avail '+s.avail+'%', '', 'Elec '+s.elec+'%', 'Other '+s.otherLoss+'%', 'Env '+s.envLoss+'%'],
+    [],
+    ['WFP wake model', s.wfpWakeModel, s.owWakeModel, '', '', ''],
+    ['WFP wake comb', s.wfpWakeComb, s.owWakeComb, '', '', ''],
+    ['WFP terrain model', s.wfpTerrainModel, s.owTerrainModel, '', '', ''],
+    ['WFP IBL model', s.wfpIBL, s.owIBL, '', '', ''],
+    ['WFP MCP', s.wfpMCP, s.owMCP, '', '', ''],
+    ['WFP ambient TI', s.wfpTI, s.owTI, '', '', ''],
+    ['WFP version', s.wfpVer, s.owVer, '', '', ''],
+    [],
+    ['Analyst', s.analyst, '', 'Date', s.benchDate, ''],
+    ['Sign-off', s.signOff, '', 'Sign-off date', s.signDate, ''],
+    ['Verdict tier', s.verdictTier, '', '', '', ''],
+    ['Recommendation', s.rec, '', '', '', '']
+  ];
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const nm = (s.projName || 'benchmark').replace(/[^\w-]+/g,'_');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${nm}_benchmark_summary_${todayISO()}.csv`;
+  a.click();
+  toast('CSV exported');
+}
+function exportParityCSV(){
+  const items = parityItems();
+  const rows = [['Item','WindFlow Pro','Openwind','Parity','Note']];
+  items.forEach(it => rows.push([it.label, it.wfp, it.ow, it.parity, it.note || '']));
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const nm = ($('projName').value || 'benchmark').replace(/[^\w-]+/g,'_');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${nm}_parity_checklist_${todayISO()}.csv`;
+  a.click();
+  toast('Parity CSV exported');
+}
+
+/* ============ DELTA / FLAG HELPERS ============ */
+function deltaPct(a, b){
+  a = num(a); b = num(b);
+  if(a === null || b === null || b === 0) return null;
+  return (a - b) / Math.abs(b) * 100;
+}
+function deltaAbs(a, b){
+  a = num(a); b = num(b);
+  if(a === null || b === null) return null;
+  return a - b;
+}
+function flagPct(p){
+  if(p === null) return '—';
+  const a = Math.abs(p);
+  if(a < 5) return 'OK';
+  if(a < 10) return 'WARN';
+  return 'BAD';
+}
+function flagPP(pp){
+  if(pp === null) return '—';
+  const a = Math.abs(pp);
+  if(a < 2) return 'OK';
+  if(a < 5) return 'WARN';
+  return 'BAD';
+}
+function tierFromFlag(flag){
+  if(flag === 'OK') return 'ok';
+  if(flag === 'WARN') return 'warn';
+  if(flag === 'BAD') return 'bad';
+  return 'na';
+}
+
+/* ============ KPI RENDERING ============ */
+function renderKPIs(){
+  const s = snapshot();
+  const cases = [
+    { id:'kpiNetAEP', label:'|Δ Net AEP|', sub:'Net AEP GWh/yr',
+      val: deltaPct(s.wfpNet, s.owNet), flag: flagPct(deltaPct(s.wfpNet, s.owNet)),
+      sub_extra: deltaAbs(s.wfpNet, s.owNet) !== null ? `${deltaAbs(s.wfpNet,s.owNet).toFixed(2)} GWh/yr` : '' },
+    { id:'kpiWake', label:'|Δ Wake loss|', sub:'Wake loss pp',
+      val: deltaAbs(s.wfpWake, s.owWake), flag: flagPP(deltaAbs(s.wfpWake, s.owWake)),
+      sub_extra: '' },
+    { id:'kpiCF', label:'|Δ CF|', sub:'Capacity factor pp',
+      val: deltaAbs(s.wfpCF, s.owCF), flag: flagPP(deltaAbs(s.wfpCF, s.owCF)),
+      sub_extra: deltaPct(s.wfpCF, s.owCF) !== null ? `(${deltaPct(s.wfpCF,s.owCF).toFixed(1)}%)` : '' },
+    { id:'kpiUnc', label:'|Δ Uncertainty|', sub:'Uncertainty pp',
+      val: deltaAbs(s.wfpUnc, s.owUnc), flag: flagPP(deltaAbs(s.wfpUnc, s.owUnc)),
+      sub_extra: '' }
+  ];
+  cases.forEach(c => {
+    const card = $(c.id);
+    const val = card.querySelector('.kpi-val');
+    const flag = card.querySelector('.kpi-flag');
+    const sub = $(c.id + 'Sub');
+    card.classList.remove('ok','warn','bad','na');
+    if(c.val === null){
+      card.classList.add('na');
+      val.textContent = '—';
+      flag.textContent = 'Awaiting inputs';
+      sub.textContent = '';
+    } else {
+      card.classList.add(tierFromFlag(c.flag));
+      // For Net AEP show %, for others show pp
+      if(c.id === 'kpiNetAEP'){
+        val.textContent = (c.val >= 0 ? '+' : '') + c.val.toFixed(1) + '%';
+      } else {
+        val.textContent = Math.abs(c.val).toFixed(2) + 'pp';
+      }
+      const flagText = {ok:'WITHIN TOLERANCE', warn:'INVESTIGATE', bad:'SIGNIFICANT DIVERGENCE'};
+      flag.textContent = flagText[tierFromFlag(c.flag)];
+      sub.textContent = c.sub_extra;
+    }
+  });
+}
+
+/* ============ BAR CHART (SVG) ============ */
+function renderBarChart(){
+  const s = snapshot();
+  const svg = $('barChart');
+  svg.innerHTML = '';
+  const W = 720, H = 320, M = {l:50, r:20, t:30, b:50};
+  const cw = W - M.l - M.r, ch = H - M.t - M.b;
+  const groups = [
+    { label:'Net AEP\n(GWh/yr)', wfp: num(s.wfpNet), ow: num(s.owNet) },
+    { label:'Gross AEP\n(GWh/yr)', wfp: num(s.wfpGross), ow: num(s.owGross) },
+    { label:'Wake loss\n(×10 %)', wfp: num(s.wfpWake) !== null ? num(s.wfpWake)*10 : null, ow: num(s.owWake) !== null ? num(s.owWake)*10 : null },
+    { label:'Capacity factor\n(%)', wfp: num(s.wfpCF), ow: num(s.owCF) }
+  ];
+  const vals = groups.flatMap(g => [g.wfp, g.ow]).filter(v => v !== null);
+  const maxV = vals.length ? Math.max(...vals, 1) * 1.15 : 100;
+  const gw = cw / groups.length;
+  const bw = gw * 0.32;
+  const ns = 'http://www.w3.org/2000/svg';
+
+  // Y axis gridlines
+  for(let i=0; i<=5; i++){
+    const y = M.t + ch * (1 - i/5);
+    const v = maxV * i / 5;
+    const ln = document.createElementNS(ns,'line');
+    ln.setAttribute('x1', M.l); ln.setAttribute('x2', W - M.r);
+    ln.setAttribute('y1', y); ln.setAttribute('y2', y);
+    ln.setAttribute('stroke', 'rgba(255,255,255,.05)');
+    svg.appendChild(ln);
+    const txt = document.createElementNS(ns,'text');
+    txt.setAttribute('x', M.l - 8); txt.setAttribute('y', y + 3);
+    txt.setAttribute('text-anchor','end');
+    txt.setAttribute('fill','rgba(255,255,255,.4)');
+    txt.setAttribute('font-size','9');
+    txt.setAttribute('font-family','IBM Plex Mono');
+    txt.textContent = v.toFixed(1);
+    svg.appendChild(txt);
+  }
+
+  // Bars
+  groups.forEach((g, i) => {
+    const cx = M.l + gw * (i + 0.5);
+    // WFP bar (left)
+    if(g.wfp !== null){
+      const h = (g.wfp / maxV) * ch;
+      const r = document.createElementNS(ns,'rect');
+      r.setAttribute('x', cx - bw - 2);
+      r.setAttribute('y', M.t + ch - h);
+      r.setAttribute('width', bw);
+      r.setAttribute('height', h);
+      r.setAttribute('fill', '#00d68f');
+      r.setAttribute('rx', 2);
+      svg.appendChild(r);
+      const lbl = document.createElementNS(ns,'text');
+      lbl.setAttribute('x', cx - bw/2 - 2);
+      lbl.setAttribute('y', M.t + ch - h - 5);
+      lbl.setAttribute('text-anchor','middle');
+      lbl.setAttribute('fill','#00d68f');
+      lbl.setAttribute('font-size','10');
+      lbl.setAttribute('font-family','IBM Plex Mono');
+      lbl.textContent = g.wfp.toFixed(2);
+      svg.appendChild(lbl);
+    }
+    // OW bar (right)
+    if(g.ow !== null){
+      const h = (g.ow / maxV) * ch;
+      const r = document.createElementNS(ns,'rect');
+      r.setAttribute('x', cx + 2);
+      r.setAttribute('y', M.t + ch - h);
+      r.setAttribute('width', bw);
+      r.setAttribute('height', h);
+      r.setAttribute('fill', '#4ab3e8');
+      r.setAttribute('rx', 2);
+      svg.appendChild(r);
+      const lbl = document.createElementNS(ns,'text');
+      lbl.setAttribute('x', cx + bw/2 + 2);
+      lbl.setAttribute('y', M.t + ch - h - 5);
+      lbl.setAttribute('text-anchor','middle');
+      lbl.setAttribute('fill','#4ab3e8');
+      lbl.setAttribute('font-size','10');
+      lbl.setAttribute('font-family','IBM Plex Mono');
+      lbl.textContent = g.ow.toFixed(2);
+      svg.appendChild(lbl);
+    }
+    // X-axis label
+    const xlbls = g.label.split('\n');
+    xlbls.forEach((line, j) => {
+      const xl = document.createElementNS(ns,'text');
+      xl.setAttribute('x', cx);
+      xl.setAttribute('y', H - M.b + 18 + j*12);
+      xl.setAttribute('text-anchor','middle');
+      xl.setAttribute('fill','rgba(255,255,255,.55)');
+      xl.setAttribute('font-size','10');
+      xl.setAttribute('font-family','IBM Plex Mono');
+      xl.textContent = line;
+      svg.appendChild(xl);
+    });
+  });
+
+  // Baseline
+  const bl = document.createElementNS(ns,'line');
+  bl.setAttribute('x1', M.l); bl.setAttribute('x2', W - M.r);
+  bl.setAttribute('y1', M.t + ch); bl.setAttribute('y2', M.t + ch);
+  bl.setAttribute('stroke','rgba(255,255,255,.2)');
+  svg.appendChild(bl);
+}
+
+/* ============ SCATTER CHART (SVG) ============ */
+function parsePerWTG(txt){
+  if(!txt || !txt.trim()) return null;
+  const map = {};
+  const lines = txt.trim().split(/\r?\n/);
+  let skippedHeader = false;
+  for(const ln of lines){
+    const parts = ln.split(/[,;\t]/).map(p => p.trim());
+    if(parts.length < 2) continue;
+    let id = parts[0], val = parseFloat(parts[1]);
+    if(!isFinite(val)) { skippedHeader = true; continue; }
+    map[id] = val;
+  }
+  return Object.keys(map).length ? map : null;
+}
+function renderScatter(){
+  const svg = $('scatterChart');
+  svg.innerHTML = '';
+  const wfpMap = parsePerWTG($('wfpPerWTG').value);
+  const owMap = parsePerWTG($('owPerWTG').value);
+  const out = $('outliers');
+  out.innerHTML = '';
+
+  if(!wfpMap || !owMap){
+    const ns = 'http://www.w3.org/2000/svg';
+    const t = document.createElementNS(ns,'text');
+    t.setAttribute('x', 300); t.setAttribute('y', 240);
+    t.setAttribute('text-anchor','middle');
+    t.setAttribute('fill','rgba(255,255,255,.35)');
+    t.setAttribute('font-size','12');
+    t.setAttribute('font-family','IBM Plex Mono');
+    t.textContent = 'Paste per-turbine AEP for both tools to see scatter';
+    svg.appendChild(t);
+    return;
+  }
+
+  // Match by ID
+  const pairs = [];
+  Object.keys(wfpMap).forEach(id => {
+    if(owMap[id] !== undefined){
+      pairs.push({ id, wfp: wfpMap[id], ow: owMap[id] });
+    }
+  });
+  if(!pairs.length){
+    const ns = 'http://www.w3.org/2000/svg';
+    const t = document.createElementNS(ns,'text');
+    t.setAttribute('x', 300); t.setAttribute('y', 240);
+    t.setAttribute('text-anchor','middle');
+    t.setAttribute('fill','rgba(255,255,255,.35)');
+    t.setAttribute('font-size','12');
+    t.setAttribute('font-family','IBM Plex Mono');
+    t.textContent = 'No matching WTG IDs between the two columns';
+    svg.appendChild(t);
+    return;
+  }
+
+  const W = 600, H = 480, M = {l:55, r:20, t:30, b:55};
+  const cw = W - M.l - M.r, ch = H - M.t - M.b;
+  const maxV = Math.max(...pairs.flatMap(p => [p.wfp, p.ow])) * 1.05;
+  const minV = Math.min(...pairs.flatMap(p => [p.wfp, p.ow])) * 0.95;
+  const span = Math.max(maxV - minV, 0.1);
+  const xScale = v => M.l + ((v - minV) / span) * cw;
+  const yScale = v => M.t + ch - ((v - minV) / span) * ch;
+  const ns = 'http://www.w3.org/2000/svg';
+
+  // Grid
+  for(let i=0; i<=5; i++){
+    const y = M.t + ch * (1 - i/5);
+    const ln = document.createElementNS(ns,'line');
+    ln.setAttribute('x1', M.l); ln.setAttribute('x2', W - M.r);
+    ln.setAttribute('y1', y); ln.setAttribute('y2', y);
+    ln.setAttribute('stroke','rgba(255,255,255,.05)');
+    svg.appendChild(ln);
+    const v = minV + span * i / 5;
+    const t = document.createElementNS(ns,'text');
+    t.setAttribute('x', M.l - 8); t.setAttribute('y', y + 3);
+    t.setAttribute('text-anchor','end'); t.setAttribute('fill','rgba(255,255,255,.4)');
+    t.setAttribute('font-size','9'); t.setAttribute('font-family','IBM Plex Mono');
+    t.textContent = v.toFixed(2);
+    svg.appendChild(t);
+  }
+  for(let i=0; i<=5; i++){
+    const x = M.l + cw * i / 5;
+    const v = minV + span * i / 5;
+    const t = document.createElementNS(ns,'text');
+    t.setAttribute('x', x); t.setAttribute('y', H - M.b + 18);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('fill','rgba(255,255,255,.4)');
+    t.setAttribute('font-size','9'); t.setAttribute('font-family','IBM Plex Mono');
+    t.textContent = v.toFixed(2);
+    svg.appendChild(t);
+  }
+
+  // 1:1 line
+  const ln1 = document.createElementNS(ns,'line');
+  ln1.setAttribute('x1', xScale(minV)); ln1.setAttribute('y1', yScale(minV));
+  ln1.setAttribute('x2', xScale(maxV)); ln1.setAttribute('y2', yScale(maxV));
+  ln1.setAttribute('stroke','rgba(255,255,255,.3)');
+  ln1.setAttribute('stroke-dasharray','4,4');
+  svg.appendChild(ln1);
+
+  // ±10% bounds (WFP = OW * 1.1 and WFP = OW * 0.9)
+  ['1.1', '0.9'].forEach(mult => {
+    const p1 = document.createElementNS(ns,'line');
+    p1.setAttribute('x1', xScale(minV)); p1.setAttribute('y1', yScale(minV * parseFloat(mult)));
+    p1.setAttribute('x2', xScale(maxV)); p1.setAttribute('y2', yScale(maxV * parseFloat(mult)));
+    p1.setAttribute('stroke','rgba(34,197,94,.25)');
+    p1.setAttribute('stroke-dasharray','2,3');
+    svg.appendChild(p1);
+  });
+
+  // Points
+  const outliers = [];
+  pairs.forEach(p => {
+    const deltaPctVal = (p.wfp - p.ow) / p.ow * 100;
+    const isOut = Math.abs(deltaPctVal) > 10;
+    const isWarn = Math.abs(deltaPctVal) > 5;
+    const c = document.createElementNS(ns,'circle');
+    c.setAttribute('cx', xScale(p.ow));
+    c.setAttribute('cy', yScale(p.wfp));
+    c.setAttribute('r', 4);
+    c.setAttribute('fill', isOut ? '#ef4444' : (isWarn ? '#fbbf24' : '#22c55e'));
+    c.setAttribute('opacity', 0.75);
+    c.setAttribute('stroke', isOut ? '#fff' : 'transparent');
+    c.setAttribute('stroke-width', '1');
+    const title = document.createElementNS(ns,'title');
+    title.textContent = `${p.id} · OW=${p.ow.toFixed(2)} · WFP=${p.wfp.toFixed(2)} · Δ=${deltaPctVal.toFixed(1)}%`;
+    c.appendChild(title);
+    svg.appendChild(c);
+    if(isOut) outliers.push({ id:p.id, ow:p.ow, wfp:p.wfp, delta:deltaPctVal });
+  });
+
+  // Axis labels
+  const xL = document.createElementNS(ns,'text');
+  xL.setAttribute('x', M.l + cw/2); xL.setAttribute('y', H - 10);
+  xL.setAttribute('text-anchor','middle'); xL.setAttribute('fill','rgba(255,255,255,.6)');
+  xL.setAttribute('font-size','11'); xL.setAttribute('font-family','IBM Plex Mono');
+  xL.textContent = 'Openwind per-WTG AEP (GWh/yr) →';
+  svg.appendChild(xL);
+  const yL = document.createElementNS(ns,'text');
+  yL.setAttribute('x', 15); yL.setAttribute('y', M.t + ch/2);
+  yL.setAttribute('text-anchor','middle'); yL.setAttribute('fill','rgba(255,255,255,.6)');
+  yL.setAttribute('font-size','11'); yL.setAttribute('font-family','IBM Plex Mono');
+  yL.setAttribute('transform', `rotate(-90 15 ${M.t + ch/2})`);
+  yL.textContent = 'WindFlow Pro per-WTG AEP (GWh/yr) →';
+  svg.appendChild(yL);
+
+  // Outlier table
+  outliers.sort((a,b) => Math.abs(b.delta) - Math.abs(a.delta));
+  const n = pairs.length;
+  const nOut = outliers.length;
+  const nWarn = pairs.filter(p => Math.abs((p.wfp-p.ow)/p.ow*100) > 5 && Math.abs((p.wfp-p.ow)/p.ow*100) <= 10).length;
+  if(nOut > 0 || nWarn > 0){
+    let html = `<div class="chart-title">${n} turbines matched · ${nWarn} within 5–10% · <span style="color:var(--bad)">${nOut} outliers (&gt;10%)</span></div>`;
+    if(outliers.length){
+      html += '<table><thead><tr><th>WTG ID</th><th class="num">Openwind (GWh/yr)</th><th class="num">WindFlow Pro (GWh/yr)</th><th class="num">Δ %</th><th>Flag</th></tr></thead><tbody>';
+      outliers.slice(0, 20).forEach(o => {
+        const cls = Math.abs(o.delta) > 10 ? 'bad' : 'warn';
+        html += `<tr><td>${o.id}</td><td class="num">${o.ow.toFixed(3)}</td><td class="num">${o.wfp.toFixed(3)}</td><td class="num ${cls}">${o.delta>=0?'+':''}${o.delta.toFixed(1)}%</td><td class="${cls}">${Math.abs(o.delta) > 10 ? 'INVESTIGATE' : 'WATCH'}</td></tr>`;
+      });
+      if(outliers.length > 20) html += `<tr><td colspan="5" style="text-align:center;color:var(--text3);font-style:italic">… and ${outliers.length - 20} more — see CSV export for full list</td></tr>`;
+      html += '</tbody></table>';
+    }
+    out.innerHTML = html;
+  } else if(n > 0){
+    out.innerHTML = `<div class="chart-title" style="color:var(--ok)">${n} turbines matched — all within ±10% ✓</div>`;
+  }
+}
+
+/* ============ PARITY CHECKLIST ============ */
+function parityItems(){
+  const s = snapshot();
+  // Define equivalence groups: methods that ARE the same physical model just with different names
+  const equivalent = {
+    wakeModel: [
+      ['Bastankhah-Porté-Agel Gaussian (2016)', 'Bastankhah-Porté-Agel Gaussian'],
+      ['Jensen / PARK', 'Jensen / PARK'],
+      ['Ainslie Eddy-Viscosity', 'Eddy-Viscosity (Ainslie)']
+    ],
+    wakeComb: [
+      ['Energy Balance / RSS (Katic 1986)', 'Sum of squares (Katic 1986)']
+    ]
+  };
+  function comparePair(label, a, b, eqGroups){
+    if(!a || !b) return { label, wfp:a||'—', ow:b||'—', parity:'na', note:'Awaiting inputs' };
+    if(a === b) return { label, wfp:a, ow:b, parity:'ok', note:'Identical' };
+    if(eqGroups){
+      for(const g of eqGroups){
+        if(g.includes(a) && g.includes(b)) return { label, wfp:a, ow:b, parity:'ok', note:'Equivalent naming' };
+      }
+    }
+    // If functionally similar (both linearized JH, both RMP, etc.) — warn
+    return { label, wfp:a, ow:b, parity:'warn', note:'Different implementation — potential divergence driver' };
+  }
+  const items = [
+    comparePair('Wake model', s.wfpWakeModel, s.owWakeModel, equivalent.wakeModel),
+    comparePair('Wake combination', s.wfpWakeComb, s.owWakeComb, equivalent.wakeComb),
+    comparePair('Terrain flow model', s.wfpTerrainModel, s.owTerrainModel),
+    comparePair('IBL model', s.wfpIBL, s.owIBL),
+    comparePair('MCP method', s.wfpMCP, s.owMCP),
+    comparePair('Ambient TI', s.wfpTI ? s.wfpTI + '%' : '—', s.owTI ? s.owTI + '%' : '—'),
+    { label:'Turbine model', wfp:s.wtgModel||'—', ow:s.wtgModel||'—', parity:'ok', note:'Shared input (Section 2)' },
+    { label:'WTG count', wfp:s.wtgCount||'—', ow:s.wtgCount||'—', parity:'ok', note:'Shared input' },
+    { label:'Wind data source', wfp:s.windSource||'—', ow:s.windSource||'—', parity:'ok', note:'Shared input' },
+    { label:'Measurement height', wfp:s.measH||'—', ow:s.measH||'—', parity:'ok', note:'Shared input' },
+    { label:'Availability loss', wfp:s.avail||'—', ow:s.avail||'—', parity:'ok', note:'Shared input' },
+    { label:'Electrical loss', wfp:s.elec||'—', ow:s.elec||'—', parity:'ok', note:'Shared input' }
+  ];
+  // Terrain — flag if WFP is linearized JH but OW is CFD/LES in complex terrain
+  const terrain = s.terrainType;
+  if(terrain && (terrain === 'complex' || terrain === 'escarpment' || terrain === 'forest')){
+    const wfpLin = (s.wfpTerrainModel || '').toLowerCase().includes('jackson-hunt') || (s.wfpTerrainModel || '').toLowerCase().includes('linearized');
+    const owCFD = (s.owTerrainModel || '').toLowerCase().includes('cfd') || (s.owTerrainModel || '').toLowerCase().includes('les');
+    if(wfpLin && owCFD){
+      items.push({ label:'Terrain class vs model', wfp:'Linearized JH on ' + terrain, ow:'CFD/LES on ' + terrain, parity:'bad', note:'Linearized flow inappropriate for complex terrain — major divergence expected' });
+    }
+  }
+  return items;
+}
+function renderParity(){
+  const items = parityItems();
+  const tbody = $('parityTable').querySelector('tbody');
+  tbody.innerHTML = '';
+  let nWarn = 0, nBad = 0;
+  items.forEach(it => {
+    const tr = document.createElement('tr');
+    tr.className = 'parity-row';
+    const flagText = { ok:'✓ OK', warn:'⚠ WARN', bad:'✗ DIFF', na:'— N/A' };
+    tr.innerHTML = `
+      <td>${it.label}</td>
+      <td style="color:var(--mint)">${it.wfp}</td>
+      <td style="color:var(--sky)">${it.ow}</td>
+      <td><span class="status ${it.parity}">${flagText[it.parity]}</span><div style="font-size:.6rem;color:var(--text3);margin-top:.2rem">${it.note||''}</div></td>
+    `;
+    tbody.appendChild(tr);
+    if(it.parity === 'warn') nWarn++;
+    if(it.parity === 'bad') nBad++;
+  });
+  const banner = $('parityBanner');
+  if(nBad > 0){
+    banner.style.display = 'flex';
+    banner.className = 'warn-banner';
+    banner.style.background = 'rgba(239,68,68,.08)';
+    banner.style.borderColor = 'rgba(239,68,68,.3)';
+    banner.style.color = 'var(--bad)';
+    banner.innerHTML = `<span class="ico">⚠</span><div><strong>${nBad} critical method mismatch(es)</strong> — these are the most likely drivers of any AEP divergence. See the table below.</div>`;
+  } else if(nWarn > 0){
+    banner.style.display = 'flex';
+    banner.innerHTML = `<span class="ico">⚠</span><div><strong>${nWarn} method difference(s)</strong> — functionally different implementations. May explain smaller divergences (&lt;5%).</div>`;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+/* ============ VERDICT ============ */
+function renderVerdict(){
+  const s = snapshot();
+  const box = $('verdictBox');
+  box.classList.remove('ok','warn','bad');
+  const netPct = deltaPct(s.wfpNet, s.owNet);
+  const wakePP = deltaAbs(s.wfpWake, s.owWake);
+  const uncPP = deltaAbs(s.wfpUnc, s.owUnc);
+  const cfPP = deltaAbs(s.wfpCF, s.owCF);
+  const p90Pct = deltaPct(s.wfpP90, s.owP90);
+
+  // Worst tier
+  const tiers = [
+    flagPct(netPct),
+    flagPP(wakePP),
+    flagPP(uncPP)
+  ];
+  let worst = 'na';
+  tiers.forEach(t => {
+    if(t === 'BAD') worst = 'bad';
+    else if(t === 'WARN' && worst !== 'bad') worst = 'warn';
+    else if(t === 'OK' && worst === 'na') worst = 'ok';
+  });
+
+  // Override tier
+  if(s.verdictTier && s.verdictTier.startsWith('Override')){
+    if(s.verdictTier.includes('Accept as-is')) worst = 'ok';
+    else if(s.verdictTier.includes('caveats')) worst = 'warn';
+    else if(s.verdictTier.includes('Reject')) worst = 'bad';
+  }
+
+  // Terrain adjustment — escalate one tier for complex terrain
+  const terrain = s.terrainType;
+  if(terrain === 'complex' || terrain === 'escarpment' || terrain === 'forest'){
+    if(worst === 'ok') worst = 'warn';
+    else if(worst === 'warn') worst = 'bad';
+  }
+
+  const titles = {
+    ok: '✓ Tools agree within tolerance',
+    warn: '⚠ Tools diverge — investigate drivers',
+    bad: '✗ Significant divergence — Openwind required for bankable AEP',
+    na: 'Awaiting inputs'
+  };
+  const bodies = {
+    ok: `WindFlow Pro produces results within ±5% of Openwind for this ${terrain || '—'} site. WindFlow Pro is suitable as a screening and pre-feasibility tool for this terrain class. Openwind remains the reference for bankable AEP.`,
+    warn: `WindFlow Pro diverges from Openwind by 5–10% on at least one key metric. Investigate the parity checklist items marked WARN/DIFF. WindFlow Pro results are usable for internal screening only — Openwind required for financing.`,
+    bad: `WindFlow Pro diverges from Openwind by more than 10%. Do NOT use WindFlow Pro results for financing, permitting, or bankable AEP for this site. Treat Openwind results as authoritative.`,
+    na: 'Fill in Net AEP, Wake loss, and Uncertainty for both tools to generate a verdict.'
+  };
+  $('verdictTitle').textContent = titles[worst];
+  $('verdictBody').textContent = bodies[worst];
+  box.classList.add(worst);
+
+  const bullets = [];
+  if(netPct !== null) bullets.push(`Net AEP: WindFlow Pro ${s.wfpNet} GWh/yr vs Openwind ${s.owNet} GWh/yr — Δ ${netPct>=0?'+':''}${netPct.toFixed(2)}%`);
+  if(wakePP !== null) bullets.push(`Wake loss: WFP ${s.wfpWake}% vs OW ${s.owWake}% — Δ ${wakePP>=0?'+':''}${wakePP.toFixed(2)}pp`);
+  if(cfPP !== null) bullets.push(`Capacity factor: WFP ${s.wfpCF}% vs OW ${s.owCF}% — Δ ${cfPP>=0?'+':''}${cfPP.toFixed(2)}pp`);
+  if(uncPP !== null) bullets.push(`Total uncertainty: WFP ${s.wfpUnc}% vs OW ${s.owUnc}% — Δ ${uncPP>=0?'+':''}${uncPP.toFixed(2)}pp`);
+  if(p90Pct !== null) bullets.push(`P90 AEP: WFP ${s.wfpP90} GWh/yr vs OW ${s.owP90} GWh/yr — Δ ${p90Pct>=0?'+':''}${p90Pct.toFixed(2)}%`);
+  if(terrain === 'complex' || terrain === 'escarpment' || terrain === 'forest') bullets.push(`Terrain note: ${terrain} site — verdict escalated one tier per IEC 61400-15-1 guidance for complex flow`);
+  $('verdictBullets').innerHTML = bullets.map(b => `<li>${b}</li>`).join('');
+}
+
+/* ============ MAIN RECALC ============ */
+function recalc(){
+  renderKPIs();
+  renderBarChart();
+  renderScatter();
+  renderParity();
+  renderVerdict();
+}
+
+/* ============ EVENT BINDING ============ */
+FIELDS.forEach(f => {
+  const el = $(f);
+  if(el){
+    el.addEventListener('input', recalc);
+    el.addEventListener('change', recalc);
+  }
+});
+
+/* ============ AUTO-RESTORE FROM LOCALSTORAGE ============ */
+try {
+  const saved = localStorage.getItem('owBench');
+  if(saved){
+    restore(JSON.parse(saved));
+    toast('Restored last session');
+  } else {
+    recalc();
+  }
+} catch(e){
+  recalc();
+}
+
+/* ============ DEMO LOADER (optional) ============ */
+window.loadDemo = function(){
+  $('projName').value = '142WTG_MY210_HH144m (demo)';
+  $('siteLat').value = 24.318;
+  $('siteLon').value = 44.367;
+  $('terrainType').value = 'escarpment';
+  $('siteArea').value = 521;
+  $('benchDate').value = todayISO();
+  $('analyst').value = 'Demo Analyst';
+  $('purpose').value = 'Methodology audit — quantify model divergence';
+  $('wtgModel').value = 'Envision EN-156 (assumed)';
+  $('ratedMW').value = 6.0;
+  $('rotD').value = 180;
+  $('hubH').value = 144;
+  $('iecClass').value = 'IEC Class IIIA';
+  $('wtgCount').value = 142;
+  $('instMW').value = 852;
+  $('windSource').value = 'ERA5 reanalysis';
+  $('measH').value = 144;
+  $('measPeriod').value = '2010-01 to 2023-12';
+  $('avail').value = 95;
+  $('elec').value = 2;
+  $('otherLoss').value = 2;
+  $('envLoss').value = 1.5;
+  // WFP
+  $('wfpWakeModel').value = 'Bastankhah-Porté-Agel Gaussian (2016)';
+  $('wfpWakeComb').value = 'Energy Balance / RSS (Katic 1986)';
+  $('wfpTerrainModel').value = 'Jackson-Hunt orographic (linearized)';
+  $('wfpIBL').value = 'Simplified single-change';
+  $('wfpMCP').value = 'None (no MCP — direct mesoscale)';
+  $('wfpTI').value = 8.0;
+  $('wfpVer').value = '60.1';
+  $('wfpGross').value = 3120.5;
+  $('wfpNet').value = 2754.8;     // ~8% high (bug-fixed WFP would now match better)
+  $('wfpWake').value = 11.7;
+  $('wfpCF').value = 36.9;
+  $('wfpP50').value = 2754.8;
+  $('wfpP90').value = 2412.3;
+  $('wfpUnc').value = 14.2;
+  $('wfpNotes').value = 'Pre-v60.1 default Energy Balance bug would have under-estimated wake loss by ~40% — fixed.';
+  // OW
+  $('owWakeModel').value = 'Eddy-Viscosity (Ainslie)';
+  $('owWakeComb').value = 'Sum of squares (Katic 1986)';
+  $('owTerrainModel').value = 'CFD (Reynolds-averaged Navier-Stokes)';
+  $('owIBL').value = 'Rao-Meyers-Plate (full)';
+  $('owMCP').value = 'WindPRO-style directional MCP';
+  $('owTI').value = 8.0;
+  $('owVer').value = 'Openwind 1.0';
+  $('owGross').value = 3050.2;
+  $('owNet').value = 2641.5;
+  $('owWake').value = 13.4;
+  $('owCF').value = 35.4;
+  $('owP50').value = 2641.5;
+  $('owP90').value = 2335.8;
+  $('owUnc').value = 11.8;
+  $('owNotes').value = 'RANS CFD coupled for escarpment — recommended for this terrain class.';
+  // Demo per-WTG
+  let wfpRows = 'id,aep_gwh\n';
+  let owRows = 'id,aep_gwh\n';
+  for(let i = 1; i <= 12; i++){
+    const id = 'T-' + String(i).padStart(2,'0');
+    const owV = 18 + Math.sin(i)*1.5 + (i*0.05);
+    const wfpV = owV * (1 + (Math.random()*0.12 - 0.04)); // mostly within ±10%, occasional outlier
+    wfpRows += `${id},${wfpV.toFixed(3)}\n`;
+    owRows += `${id},${owV.toFixed(3)}\n`;
+  }
+  $('wfpPerWTG').value = wfpRows;
+  $('owPerWTG').value = owRows;
+  $('rec').value = 'Accept WindFlow Pro for screening only. For bankable AEP at this escarpment-adjacent site, Openwind with RANS CFD coupling and validated mast data is required per IEC 61400-15-1.';
+  recalc();
+  toast('Demo data loaded — replace with real run values');
+};
+</script>
+</body>
+</html>
