@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 60.1</title>
+<title>WindFlow Pro 60.2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -72,7 +72,7 @@ button:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 60.1</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 60.2</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -652,6 +652,187 @@ button:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
       <div class="card"><div class="card-title">Shear Profile</div><div class="canvas-wrap" style="height:160px"><canvas id="shearChart"></canvas></div></div>
     </div>
   </div>
+
+  <!-- v60.2: Bankable EYA Inputs (per ProfEC Ventus / IEC 61400-50-1 / FGW TR6 / MEASNET) -->
+  <details class="card" style="margin-top:.5rem">
+    <summary class="card-title gold" style="cursor:pointer;list-style:none;padding:.6rem .8rem">📑 Bankable EYA Report Inputs (IEC 61400-50-1 / FGW TR6 / MEASNET) <span style="font-size:.55rem;color:var(--text3);font-weight:400;margin-left:.5rem">— fill to generate bankable-grade report matching ProfEC Ventus structure</span></summary>
+    <div style="padding:.5rem .8rem .8rem">
+
+    <!-- Section A: Report Metadata -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.6rem 0 .4rem;font-family:var(--mono)">A. Report Metadata &amp; Sign-off</h3>
+    <div class="g3" style="gap:.4rem">
+      <div class="fg"><label class="fl">Client name</label><input class="fi" id="eyaClient" placeholder="e.g. Blue Power Partners"></div>
+      <div class="fg"><label class="fl">Client address</label><input class="fi" id="eyaClientAddr" placeholder="Street, City, Country"></div>
+      <div class="fg"><label class="fl">Contractor / consultant</label><input class="fi" id="eyaContractor" value="WindFlow Pro (Self-Service)" placeholder="e.g. ProfEC Ventus GmbH"></div>
+    </div>
+    <div class="g3" style="gap:.4rem;margin-top:.3rem">
+      <div class="fg"><label class="fl">Project number</label><input class="fi" id="eyaProjNr" placeholder="e.g. 01234"></div>
+      <div class="fg"><label class="fl">Report number &amp; version</label><input class="fi" id="eyaReportNr" placeholder="e.g. WFP-EYA-SITE-V1"></div>
+      <div class="fg"><label class="fl">Report date</label><input class="fi" id="eyaDate" type="date"></div>
+    </div>
+    <div class="g3" style="gap:.4rem;margin-top:.3rem">
+      <div class="fg"><label class="fl">Report author</label><input class="fi" id="eyaAuthor" placeholder="Author name + credentials"></div>
+      <div class="fg"><label class="fl">Report verifier</label><input class="fi" id="eyaVerifier" placeholder="Verifier name + credentials"></div>
+      <div class="fg"><label class="fl">Revision history</label><input class="fi" id="eyaRevision" placeholder="v1 — initial issue" value="v1 — initial issue"></div>
+    </div>
+
+    <!-- Section B: Site Conditions -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.9rem 0 .4rem;font-family:var(--mono)">B. Site Conditions</h3>
+    <div class="g3" style="gap:.4rem">
+      <div class="fg"><label class="fl">Site name</label><input class="fi" id="eyaSiteName" placeholder="e.g. 142WTG_MY210"></div>
+      <div class="fg"><label class="fl">Country / region</label><input class="fi" id="eyaRegion" placeholder="e.g. Central Saudi Arabia"></div>
+      <div class="fg"><label class="fl">Site visit date</label><input class="fi" id="eyaSiteVisit" type="date"></div>
+    </div>
+    <div class="g3" style="gap:.4rem;margin-top:.3rem">
+      <div class="fg"><label class="fl">Terrain complexity</label>
+        <select class="fs" id="eyaTerrainComplexity">
+          <option value="non-complex">Non-complex (RIX &lt; 5%)</option>
+          <option value="semi-complex" selected>Semi-complex (RIX 5–10%)</option>
+          <option value="complex">Complex (RIX &gt; 10%)</option>
+          <option value="escarpment">Escarpment-adjacent</option>
+          <option value="offshore">Offshore</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Terrain model source</label><input class="fi" id="eyaTerrainSource" value="SRTM 30m via OpenTopography"></div>
+      <div class="fg"><label class="fl">Terrain model extent (km)</label><input class="fi" id="eyaTerrainExtent" value="20 × 20" placeholder="20 × 20"></div>
+    </div>
+    <div class="fg" style="margin-top:.3rem"><label class="fl">Sector-wise roughness (12 sectors, comma-separated z₀ in m)</label><input class="fi" id="eyaRoughnessRose" placeholder="0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7" value="0.03,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.03"></div>
+
+    <!-- Section C: Equipment / Instrumentation Register -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.9rem 0 .4rem;font-family:var(--mono)">C. Equipment &amp; Instrumentation Register</h3>
+    <div style="font-size:.55rem;color:var(--text3);margin-bottom:.3rem">One row per sensor. Format: <code>name,height_m,type,serial,calibration_source</code> (comma-separated, one sensor per line)</div>
+    <textarea class="fi" id="eyaSensors" rows="5" style="font-family:var(--mono);font-size:.6rem" placeholder="v1,122,Thies First Class Advanced,SN-12345,MEASNET wind tunnel 15XXX-01-00&#10;v2,120,Thies First Class Advanced,SN-12346,MEASNET wind tunnel 15XXX-01-00&#10;v3,100,Thies First Class Advanced,SN-12347,MEASNET wind tunnel 15XXX-01-00&#10;D1,115,Thies Compact,SN-22001,Field calibration&#10;t1,113,Thies Combined,SN-33001,Factory certificate&#10;h1,113,Thies Combined,SN-33001,Factory certificate">v1,122,Thies First Class Advanced,SN-12345,MEASNET wind tunnel 15XXX-01-00
+v2,120,Thies First Class Advanced,SN-12346,MEASNET wind tunnel 15XXX-01-00
+v3,100,Thies First Class Advanced,SN-12347,MEASNET wind tunnel 15XXX-01-00
+D1,115,Thies Compact,SN-22001,Field calibration
+t1,113,Thies Combined,SN-33001,Factory certificate
+h1,113,Thies Combined,SN-33001,Factory certificate</textarea>
+    <div class="g3" style="gap:.4rem;margin-top:.3rem">
+      <div class="fg"><label class="fl">Data logger model</label><input class="fi" id="eyaLogger" value="Campbell CR1000" placeholder="e.g. Campbell CR1000"></div>
+      <div class="fg"><label class="fl">Sampling rate</label><input class="fi" id="eyaSampling" value="1 Hz, 10-min averages" placeholder="1 Hz, 10-min averages"></div>
+      <div class="fg"><label class="fl">Mast type / height</label><input class="fi" id="eyaMastType" value="Lattice 122m" placeholder="Lattice 122m"></div>
+    </div>
+
+    <!-- Section D: Measurement Logbook -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.9rem 0 .4rem;font-family:var(--mono)">D. Measurement Logbook</h3>
+    <div style="font-size:.55rem;color:var(--text3);margin-bottom:.3rem">One row per incident. Format: <code>start_date,end_date,comment</code></div>
+    <textarea class="fi" id="eyaLogbook" rows="3" style="font-family:var(--mono);font-size:.6rem" placeholder="2014-06-01,2015-05-31,Measurement Period&#10;2014-12-23,2014-12-23,Icing event — v1 data reconstructed from v2/v3">2014-06-01,2015-05-31,Measurement Period
+2014-12-23,2014-12-23,Icing event — v1 data reconstructed from v2/v3</textarea>
+    <div class="g3" style="gap:.4rem;margin-top:.3rem">
+      <div class="fg"><label class="fl">Measurement start</label><input class="fi" id="eyaMeasStart" type="date"></div>
+      <div class="fg"><label class="fl">Measurement end</label><input class="fi" id="eyaMeasEnd" type="date"></div>
+      <div class="fg"><label class="fl">Overall data recovery rate (%)</label><input class="fi" id="eyaRecovery" type="number" value="99.0" step="0.1"></div>
+    </div>
+
+    <!-- Section E: Long-term Correlation -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.9rem 0 .4rem;font-family:var(--mono)">E. Long-term Correlation (MCP)</h3>
+    <div class="g3" style="gap:.4rem">
+      <div class="fg"><label class="fl">LT data source</label><input class="fi" id="eyaLTSource" placeholder="e.g. ERA5 1979-2023"></div>
+      <div class="fg"><label class="fl">LT period</label><input class="fi" id="eyaLTPeriod" placeholder="1979-01 to 2023-12"></div>
+      <div class="fg"><label class="fl">LT lat/lon</label><input class="fi" id="eyaLTCoords" placeholder="0.19°N, 4.69°E"></div>
+    </div>
+    <div class="g2" style="gap:.4rem;margin-top:.3rem">
+      <div class="fg"><label class="fl">R² hourly</label><input class="fi" id="eyaR2hourly" type="number" step="0.01" placeholder="0.70"></div>
+      <div class="fg"><label class="fl">R² daily</label><input class="fi" id="eyaR2daily" type="number" step="0.01" placeholder="0.87"></div>
+    </div>
+    <div class="g2" style="gap:.4rem;margin-top:.3rem">
+      <div class="fg"><label class="fl">R² weekly</label><input class="fi" id="eyaR2weekly" type="number" step="0.01" placeholder="0.93"></div>
+      <div class="fg"><label class="fl">R² monthly</label><input class="fi" id="eyaR2monthly" type="number" step="0.01" placeholder="0.93"></div>
+    </div>
+    <div class="g2" style="gap:.4rem;margin-top:.3rem">
+      <div class="fg"><label class="fl">MCP method</label>
+        <select class="fs" id="eyaMCPMethod">
+          <option>Sector-wise linear regression</option>
+          <option>Linear regression</option>
+          <option>Matrix method</option>
+          <option>Variance ratio</option>
+          <option>Weibull ratio</option>
+          <option>Wind index correction</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">LT scaling applied (%)</label><input class="fi" id="eyaLTScaling" type="number" step="0.01" placeholder="4.21"></div>
+    </div>
+
+    <!-- Section F: Sector-wise Wake Decay Constants -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.9rem 0 .4rem;font-family:var(--mono)">F. Sector-wise Wake Decay Constants (N.O. Jensen / Risø)</h3>
+    <div style="font-size:.55rem;color:var(--text3);margin-bottom:.3rem">12 sectors. Format: <code>sector,direction_range,wake_decay_constant</code></div>
+    <textarea class="fi" id="eyaWakeDecay" rows="6" style="font-family:var(--mono);font-size:.6rem" placeholder="N,345-15,0.053&#10;NNE,15-45,0.046&#10;...">N,345-15,0.053
+NNE,15-45,0.046
+ENE,45-75,0.040
+E,75-105,0.033
+ESE,105-135,0.035
+SSE,135-165,0.027
+S,165-195,0.025
+SSW,195-225,0.037
+WSW,225-255,0.045
+W,255-285,0.053
+WNW,285-315,0.055
+NWN,315-345,0.051</textarea>
+
+    <!-- Section G: 5-Component Uncertainty (per FGW TR6) -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.9rem 0 .4rem;font-family:var(--mono)">G. 5-Component Uncertainty Breakdown (FGW TR6)</h3>
+    <table style="width:100%;font-size:.6rem;margin-bottom:.4rem">
+      <thead><tr><th style="text-align:left;padding:.3rem">Component</th><th style="text-align:right;padding:.3rem">Uncertainty [%]</th><th style="text-align:left;padding:.3rem">Notes</th></tr></thead>
+      <tbody>
+        <tr><td style="padding:.3rem"><b>1. Meteorological data</b><br><span style="font-size:.55rem;color:var(--text3)">Measurement + vertical extrapolation + LT correction</span></td><td style="text-align:right;padding:.3rem"><input class="fi" id="eyaUnc1" type="number" step="0.01" value="13.2" style="width:80px;text-align:right"></td><td style="padding:.3rem"><input class="fi" id="eyaUnc1Note" value="Mast data + 122→140m extrapolation + LT MCP" style="font-size:.55rem"></td></tr>
+        <tr><td style="padding:.3rem"><b>2. Modeling of wind resource</b><br><span style="font-size:.55rem;color:var(--text3)">Roughness + orographic + obstacle + flow model + T-RiX</span></td><td style="text-align:right;padding:.3rem"><input class="fi" id="eyaUnc2" type="number" step="0.01" value="5.1" style="width:80px;text-align:right"></td><td style="padding:.3rem"><input class="fi" id="eyaUnc2Note" value="WAsP linearized JH, semi-complex terrain" style="font-size:.55rem"></td></tr>
+        <tr><td style="padding:.3rem"><b>3. Modeling of wake losses</b><br><span style="font-size:.55rem;color:var(--text3)">Wake decay constant sensitivity test</span></td><td style="text-align:right;padding:.3rem"><input class="fi" id="eyaUnc3" type="number" step="0.01" value="0.5" style="width:80px;text-align:right"></td><td style="padding:.3rem"><input class="fi" id="eyaUnc3Note" value="Max/min wake decay sensitivity: 0.46%" style="font-size:.55rem"></td></tr>
+        <tr><td style="padding:.3rem"><b>4. Turbine data</b><br><span style="font-size:.55rem;color:var(--text3)">Power curve + hysteresis + site-specific implementation</span></td><td style="text-align:right;padding:.3rem"><input class="fi" id="eyaUnc4" type="number" step="0.01" value="4.3" style="width:80px;text-align:right"></td><td style="padding:.3rem"><input class="fi" id="eyaUnc4Note" value="Commercial power curve (no measured), site≠sea level" style="font-size:.55rem"></td></tr>
+        <tr><td style="padding:.3rem"><b>5. Energy losses</b><br><span style="font-size:.55rem;color:var(--text3)">Icing, degradation, etc.</span></td><td style="text-align:right;padding:.3rem"><input class="fi" id="eyaUnc5" type="number" step="0.01" value="0.5" style="width:80px;text-align:right"></td><td style="padding:.3rem"><input class="fi" id="eyaUnc5Note" value="Estimated for semi-complex forested site" style="font-size:.55rem"></td></tr>
+        <tr style="background:var(--mint2)"><td style="padding:.3rem;font-weight:700">Overall uncertainty (RSS)</td><td style="text-align:right;padding:.3rem;font-weight:700;font-family:var(--mono);color:var(--mint)" id="eyaUncTotal">—</td><td style="padding:.3rem;font-size:.55rem;color:var(--text3)">Auto-computed: √(u1² + u2² + u3² + u4² + u5²)</td></tr>
+      </tbody>
+    </table>
+
+    <!-- Section H: Site Compliance per Turbine -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.9rem 0 .4rem;font-family:var(--mono)">H. Site Compliance per Turbine (IEC 61400-1 ed.4)</h3>
+    <div style="font-size:.55rem;color:var(--text3);margin-bottom:.3rem">One row per WTG. Format: <code>id,Vref_ms,Vref_unc_ms,turbulence_class,shear_alpha,flow_incl_deg,terrain_complexity</code></div>
+    <textarea class="fi" id="eyaSiteCompliance" rows="4" style="font-family:var(--mono);font-size:.6rem" placeholder="T1,36.4,1.4,II,0.12,2.4,0.0&#10;T2,35.5,1.5,II,0.11,1.8,0.0&#10;...">T1,36.4,1.4,II,0.12,2.4,0.0
+T2,35.5,1.5,II,0.11,1.8,0.0
+T3,36.0,1.8,II,0.13,-1.2,0.0
+T4,36.1,2.2,II,0.12,0.5,0.0
+T5,35.7,1.6,II,0.10,1.5,0.0</textarea>
+    <div class="g3" style="gap:.4rem;margin-top:.3rem">
+      <div class="fg"><label class="fl">Vref method</label>
+        <select class="fs" id="eyaVrefMethod">
+          <option>Peak-over-Threshold (PoT) + Gumbel fit</option>
+          <option>Method of Independent Storms (MIS)</option>
+          <option>Gumbel fit (annual maxima)</option>
+          <option>GEV distribution</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">PoT threshold (m/s)</label><input class="fi" id="eyaPoTThreshold" type="number" step="0.1" value="15.0"></div>
+      <div class="fg"><label class="fl">Storm duration (days)</label><input class="fi" id="eyaStormDuration" type="number" step="0.5" value="4"></div>
+    </div>
+
+    <!-- Section I: Deviation Log -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.9rem 0 .4rem;font-family:var(--mono)">I. Deviation Log</h3>
+    <textarea class="fi" id="eyaDeviations" rows="2" style="font-family:var(--mono);font-size:.6rem" placeholder="No deviations from IEC 61400-50-1:2022, FGW TR6, or MEASNET guidelines.">No deviations from IEC 61400-50-1:2022, FGW TR6 Rev. 12, or MEASNET Evaluation of Site-Specific Wind Conditions v3.</textarea>
+
+    <!-- Section J: Standards & References -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.9rem 0 .4rem;font-family:var(--mono)">J. Standards &amp; References (select all that apply)</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem;font-size:.6rem;color:var(--text2)">
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer"><input type="checkbox" id="eyaRef_IEC61400_1" checked style="margin-top:.15rem;accent-color:var(--mint)"><span><b>IEC 61400-1 Ed.4 (2019)</b> — Design Requirements</span></label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer"><input type="checkbox" id="eyaRef_IEC61400_50_1" checked style="margin-top:.15rem;accent-color:var(--mint)"><span><b>IEC 61400-50-1:2022</b> — Wind measurement (meteorological mast)</span></label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer"><input type="checkbox" id="eyaRef_IEC61400_12_1" checked style="margin-top:.15rem;accent-color:var(--mint)"><span><b>IEC 61400-12-1 Ed.2</b> — Power performance testing</span></label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer"><input type="checkbox" id="eyaRef_IEC61400_15_1" checked style="margin-top:.15rem;accent-color:var(--mint)"><span><b>IEC 61400-15-1</b> — Site assessment &amp; AEP</span></label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer"><input type="checkbox" id="eyaRef_FGW_TR6" checked style="margin-top:.15rem;accent-color:var(--mint)"><span><b>FGW TR6 Rev. 12 (2023)</b> — Determination of wind potential &amp; energy yields</span></label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer"><input type="checkbox" id="eyaRef_MEASNET_SC" checked style="margin-top:.15rem;accent-color:var(--mint)"><span><b>MEASNET Evaluation of Site-Specific Wind Conditions v3 (2022)</b></span></label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer"><input type="checkbox" id="eyaRef_MEASNET_Cup" style="margin-top:.15rem;accent-color:var(--mint)"><span><b>MEASNET Cup Anemometer Calibration v3 (2020)</b></span></label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer"><input type="checkbox" id="eyaRef_JCGM100" style="margin-top:.15rem;accent-color:var(--mint)"><span><b>JCGM 100:2008</b> — Guide to expression of uncertainty in measurement (GUM)</span></label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer"><input type="checkbox" id="eyaRef_Frandsen" style="margin-top:.15rem;accent-color:var(--mint)"><span>Frandsen (2007) — Turbulence &amp; loading in clusters, Risø R-1188</span></label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer"><input type="checkbox" id="eyaRef_JacksonHunt" style="margin-top:.15rem;accent-color:var(--mint)"><span>Jackson &amp; Hunt (1975) — Turbulent wind flow over a low hill</span></label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer"><input type="checkbox" id="eyaRef_MortensenRIX" style="margin-top:.15rem;accent-color:var(--mint)"><span>Mortensen et al. (2008) — RIX performance indicator for complex terrain</span></label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer"><input type="checkbox" id="eyaRef_Gumbel" style="margin-top:.15rem;accent-color:var(--mint)"><span>Gumbel (1954) — Statistical theory of extreme values</span></label>
+    </div>
+
+    <!-- Export button -->
+    <div style="margin-top:.6rem;padding:.5rem;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.3);border-radius:6px;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+      <button class="btn btn-gold" style="font-size:.7rem;padding:.7rem 1.4rem" id="btnBankableReport" onclick="generateBankableReport()">📑 Generate Bankable EYA Report (IEC 61400-50-1 / FGW TR6 / MEASNET)</button>
+      <span style="font-size:.55rem;color:var(--text3)">Produces a 14-section standalone HTML report matching the ProfEC Ventus structure — cover, ToC, exec summary, site conditions, equipment, mast, measurement analysis, LT correlation, modeling, losses, uncertainty, final results, site compliance, deviations, references.</span>
+    </div>
+
+    </div>
+  </details>
 
   <!-- v27.0: Bankability-Style Map Overview -->
   <div class="card" style="margin-top:.5rem"><div class="card-title sky">Map Overview — Bankability Report</div>
@@ -5656,6 +5837,897 @@ function exportTSPerTurbineHourly(){
   dlFile(csv,fname,'text/csv');
   log(`Per-WTG hourly CSV exported: ${d.length} hours × ${n} WTGs (${(csv.length/1024).toFixed(0)} KB)`,'i');
 }
+
+// ════════════════════════════════════════════════════════════════════════════════════
+// v60.2: BANKABLE EYA REPORT GENERATOR (per ProfEC Ventus / IEC 61400-50-1 / FGW TR6 / MEASNET)
+// Produces a 14-section standalone HTML report matching the bankable EYA structure.
+// All inputs come from the Bankable EYA Inputs panel (Section A-J) plus S.results.
+// ════════════════════════════════════════════════════════════════════════════════════
+function generateBankableReport(){
+  const R = S.results;
+  const now = new Date().toLocaleString();
+  const pn = $('projName').value || 'Wind Farm Site';
+
+  // ── Helper: parse multi-line CSV-style textareas ─────────────────────────────
+  function parseLines(id, expectedCols){
+    const txt = $(id)?.value || '';
+    return txt.trim().split(/\r?\n/).filter(l => l.trim()).map(l => {
+      const parts = l.split(',').map(p => p.trim());
+      while(parts.length < expectedCols) parts.push('');
+      return parts;
+    });
+  }
+
+  // ── Helper: P-exceedance from uncertainty (normal distribution) ─────────────
+  // P75 = 0.674σ, P90 = 1.282σ, P95 = 1.645σ, P99 = 2.326σ (one-sided)
+  function pExceed(p50, sigmaPct, z){
+    return p50 * (1 - z * sigmaPct / 100);
+  }
+
+  // ── Helper: compute overall uncertainty (RSS of 5 components) ───────────────
+  function computeOverallUnc(){
+    const u = [1,2,3,4,5].map(i => parseFloat($(`eyaUnc${i}`)?.value) || 0);
+    return Math.sqrt(u.reduce((s,v) => s + v*v, 0));
+  }
+  const overallUnc = computeOverallUnc();
+  if($('eyaUncTotal')) $('eyaUncTotal').textContent = overallUnc.toFixed(1) + '%';
+
+  // ── Live-update overall uncertainty when components change ──────────────────
+  // (bound at end of function)
+
+  // ── Section A: Report Metadata ──────────────────────────────────────────────
+  const client = $('eyaClient')?.value || '—';
+  const clientAddr = $('eyaClientAddr')?.value || '—';
+  const contractor = $('eyaContractor')?.value || 'WindFlow Pro';
+  const projNr = $('eyaProjNr')?.value || '—';
+  const reportNr = $('eyaReportNr')?.value || 'WFP-EYA-' + (pn.replace(/[^\w]/g,'_'));
+  const reportDate = $('eyaDate')?.value || todayISO();
+  const author = $('eyaAuthor')?.value || '—';
+  const verifier = $('eyaVerifier')?.value || '—';
+  const revision = $('eyaRevision')?.value || 'v1 — initial issue';
+
+  // ── Section B: Site Conditions ──────────────────────────────────────────────
+  const siteName = $('eyaSiteName')?.value || pn;
+  const region = $('eyaRegion')?.value || '—';
+  const siteVisit = $('eyaSiteVisit')?.value || '—';
+  const terrainComplexity = $('eyaTerrainComplexity')?.value || 'semi-complex';
+  const terrainSource = $('eyaTerrainSource')?.value || 'SRTM 30m';
+  const terrainExtent = $('eyaTerrainExtent')?.value || '20 × 20 km';
+  const roughnessRoseRaw = ($('eyaRoughnessRose')?.value || '').split(',').map(s => parseFloat(s.trim()));
+  const mastLat = $('mastLat')?.value || '—';
+  const mastLon = $('mastLon')?.value || '—';
+  const siteElev = $('siteElev')?.value || '—';
+
+  // ── Section C: Equipment ────────────────────────────────────────────────────
+  const sensors = parseLines('eyaSensors', 5);
+  const logger = $('eyaLogger')?.value || '—';
+  const sampling = $('eyaSampling')?.value || '—';
+  const mastType = $('eyaMastType')?.value || '—';
+
+  // ── Section D: Measurement Logbook ──────────────────────────────────────────
+  const logbook = parseLines('eyaLogbook', 3);
+  const measStart = $('eyaMeasStart')?.value || '—';
+  const measEnd = $('eyaMeasEnd')?.value || '—';
+  const recovery = $('eyaRecovery')?.value || '—';
+
+  // ── Section E: LT Correlation ───────────────────────────────────────────────
+  const ltSource = $('eyaLTSource')?.value || '—';
+  const ltPeriod = $('eyaLTPeriod')?.value || '—';
+  const ltCoords = $('eyaLTCoords')?.value || '—';
+  const r2h = $('eyaR2hourly')?.value || '—';
+  const r2d = $('eyaR2daily')?.value || '—';
+  const r2w = $('eyaR2weekly')?.value || '—';
+  const r2m = $('eyaR2monthly')?.value || '—';
+  const mcpMethod = $('eyaMCPMethod')?.value || '—';
+  const ltScaling = $('eyaLTScaling')?.value || '—';
+
+  // ── Section F: Wake Decay Constants ─────────────────────────────────────────
+  const wakeDecay = parseLines('eyaWakeDecay', 3);
+
+  // ── Section G: Uncertainty ──────────────────────────────────────────────────
+  const unc = [1,2,3,4,5].map(i => ({
+    val: parseFloat($(`eyaUnc${i}`)?.value) || 0,
+    note: $(`eyaUnc${i}Note`)?.value || ''
+  }));
+
+  // ── Section H: Site Compliance ──────────────────────────────────────────────
+  const siteCompliance = parseLines('eyaSiteCompliance', 7);
+  const vrefMethod = $('eyaVrefMethod')?.value || '—';
+  const potThreshold = $('eyaPoTThreshold')?.value || '15.0';
+  const stormDuration = $('eyaStormDuration')?.value || '4';
+
+  // ── Section I: Deviations ───────────────────────────────────────────────────
+  const deviations = $('eyaDeviations')?.value || 'No deviations reported.';
+
+  // ── Section J: References ───────────────────────────────────────────────────
+  const refChecks = [
+    {id:'eyaRef_IEC61400_1', code:'[1]', text:'IEC 61400-1 Ed.4 (2019) — Wind energy generation systems — Part 1: Design Requirements'},
+    {id:'eyaRef_IEC61400_50_1', code:'[2]', text:'IEC 61400-50-1:2022 — Wind energy generation systems — Part 50-1: Wind measurement — Application of meteorological mast, nacelle and spinner mounted instruments'},
+    {id:'eyaRef_IEC61400_12_1', code:'[3]', text:'IEC 61400-12-1 Ed.2 — Wind energy generation systems — Part 12-1: Power performance measurements of electricity producing wind turbines'},
+    {id:'eyaRef_IEC61400_15_1', code:'[4]', text:'IEC 61400-15-1 — Wind energy generation systems — Part 15-1: Site suitability assessment — Site-specific conditions for land-based wind turbines'},
+    {id:'eyaRef_FGW_TR6', code:'[5]', text:'FGW TR6 Rev. 12 (2023) — Technische Richtlinien für Windenergieanlagen Teil 6: Bestimmung von Windpotenzial und Energieerträgen'},
+    {id:'eyaRef_MEASNET_SC', code:'[6]', text:'MEASNET Evaluation of Site-Specific Wind Conditions, Version 3, September 2022'},
+    {id:'eyaRef_MEASNET_Cup', code:'[7]', text:'MEASNET Measurement Procedure, Cup Anemometer Calibration Procedure, Version 3, December 2020'},
+    {id:'eyaRef_JCGM100', code:'[8]', text:'JCGM 100:2008 — Evaluation of measurement data — Guide to expression of uncertainty in measurement (GUM)'},
+    {id:'eyaRef_Frandsen', code:'[9]', text:'Frandsen, S. T. (2007) — Turbulence and turbulence generated loading in wind turbine clusters, Risø report R-1188'},
+    {id:'eyaRef_JacksonHunt', code:'[10]', text:'Jackson, P.S. and Hunt, J.C.R. (1975) — Turbulent Wind Flow over a Low Hill. Quarterly Journal of the Royal Meteorological Society, 101, 929-955'},
+    {id:'eyaRef_MortensenRIX', code:'[11]', text:'Mortensen, N. G., Tindal, A., & Landberg, L. (2008) — Field validation of the RIX performance indicator for flow in complex terrain. European Wind Energy Conference, Brussels'},
+    {id:'eyaRef_Gumbel', code:'[12]', text:'Gumbel, E.J. (1954) — Statistical theory of extreme values and some practical applications, Applied Mathematics Series 33, Washington'}
+  ].filter(r => $(r.id)?.checked);
+
+  // ── Pull turbine / model info from main form ────────────────────────────────
+  const turbineModel = $('tcls')?.options[$('tcls')?.selectedIndex]?.text || 'Custom';
+  const rotorD = parseFloat($('rotD')?.value) || 150;
+  const ratedPow = parseFloat($('ratedPow')?.value) || 4000;
+  const hubH = parseFloat($('hubH')?.value) || 120;
+  const iecCls = $('tcls')?.value || '—';
+  const wakeModelName = $('wakeModel')?.options[$('wakeModel')?.selectedIndex]?.text || 'Bastankhah Gaussian';
+  const nWTG = S.turbines.length;
+  const instMW = (nWTG * ratedPow / 1000);
+
+  // ── Pull results if available ───────────────────────────────────────────────
+  const hasResults = !!R;
+  const grossAEP = hasResults ? R.grossAEP : 0;
+  const netAEP = hasResults ? R.netAEP : 0;
+  const wakeLoss = hasResults ? R.wakeLoss : 0;
+  const cf = hasResults ? R.CF : 0;
+  const mastMean = hasResults ? R.mastMean : 0;
+  const hubMean = hasResults ? R.hubMean : 0;
+  const wbA = hasResults ? R.hubWb?.A : 0;
+  const wbK = hasResults ? R.hubWb?.k : 0;
+  const eqHours = instMW > 0 ? (netAEP * 1000 / instMW) : 0;
+
+  // P-exceedance values
+  const sigma = overallUnc / 100;
+  const p50 = netAEP;
+  const p75 = pExceed(p50, overallUnc, 0.674);
+  const p90 = pExceed(p50, overallUnc, 1.282);
+  const p95 = pExceed(p50, overallUnc, 1.645);
+  const p99 = pExceed(p50, overallUnc, 2.326);
+  const eqP50 = eqHours, eqP75 = p75*1000/instMW, eqP90 = p90*1000/instMW, eqP95 = p95*1000/instMW;
+
+  // ── Build HTML report ───────────────────────────────────────────────────────
+  const fmt = v => (v !== null && v !== undefined && !isNaN(v)) ? Number(v).toLocaleString(undefined,{maximumFractionDigits:2}) : '—';
+  const fmt3 = v => (v !== null && v !== undefined && !isNaN(v)) ? Number(v).toLocaleString(undefined,{maximumFractionDigits:3, minimumFractionDigits:3}) : '—';
+
+  // Cover page
+  const coverPage = `
+    <div class="cover">
+      <div class="cover-title">EVALUATION OF SITE-SPECIFIC WIND CONDITIONS</div>
+      <div class="cover-site">${siteName.toUpperCase()}</div>
+      <div class="cover-region">${region}</div>
+      <table class="cover-table">
+        <tr><td class="lbl">Client</td><td>${client}<br>${clientAddr}</td></tr>
+        <tr><td class="lbl">Contractor</td><td>${contractor}</td></tr>
+        <tr><td class="lbl">Project Nr.</td><td>${projNr}</td></tr>
+        <tr><td class="lbl">Report Nr. &amp; Version</td><td>${reportNr}</td></tr>
+        <tr><td class="lbl">Report author</td><td>${author}</td></tr>
+        <tr><td class="lbl">Report verifier</td><td>${verifier}</td></tr>
+        <tr><td class="lbl">Date</td><td>${reportDate}</td></tr>
+        <tr><td class="lbl">Report template</td><td>WindFlow Pro Bankable EYA v1.0 (per IEC 61400-50-1 / FGW TR6 / MEASNET)</td></tr>
+      </table>
+      <div class="cover-sign">
+        <div class="sign-block"><div class="sign-line"></div><div class="sign-name">${author}</div><div class="sign-role">Author</div></div>
+        <div class="sign-block"><div class="sign-line"></div><div class="sign-name">${verifier}</div><div class="sign-role">Verified and approved</div></div>
+      </div>
+      <div class="cover-revision">
+        <table class="rev-table"><thead><tr><th>Revision</th><th>Date</th><th>Author</th><th>Modifications</th></tr></thead>
+        <tbody><tr><td>v1</td><td>${reportDate}</td><td>${author.split(',')[0]}</td><td>${revision}</td></tr></tbody></table>
+      </div>
+      <div class="cover-disclaimer">
+        This report in excerpts may only be copied with written consent of the contractor.<br>
+        Elaborated results are only valid in the context of this report and refer strictly to the specific site characteristics and assumptions mentioned.<br>
+        <strong>Generated by WindFlow Pro ${$('topbarTitle')?.textContent?.replace('WindFlow Pro ','')||'60.2'} — bankable EYA template aligned with ProfEC Ventus structure.</strong>
+      </div>
+    </div>`;
+
+  // Table of Contents
+  const toc = `
+    <div class="toc">
+      <h2>Table of Contents</h2>
+      <ol class="toc-list">
+        <li>1 Executive Summary</li>
+        <li>2 Site Conditions</li>
+        <li>3 Equipment</li>
+        <li>4 Meteorological Mast</li>
+        <li>5 Analysis of Measurement Data</li>
+        <li>6 Long-term Correlation Analyses and Final Data Treatment</li>
+        <li>7 Modeling of Wind Resource and Wind Energy Resource</li>
+        <li>8 Losses Analyses</li>
+        <li>9 Uncertainty Analyses</li>
+        <li>10 Final Results of Energy Yield Assessment</li>
+        <li>11 Site Compliance Assessment</li>
+        <li>12 Deviations from Standards and/or Internal QM Procedures</li>
+        <li>13 References</li>
+        <li>14 Annexes</li>
+      </ol>
+    </div>`;
+
+  // Section 1: Executive Summary
+  const execSummary = `
+    <section>
+      <h2>1 Executive Summary</h2>
+      <h3>1.1 Introduction</h3>
+      <p>${contractor} was contracted by ${client} to perform a data verification and energy yield assessment in order to evaluate the suitability of the wind farm layout at ${siteName}, ${region}. The objective of the study is to perform a resource assessment of the wind measurement data and to derive the projected annual energy yield for the proposed wind farm design following the IEC 61400-50-1:2022 standard as well as corresponding FGW TR6 and MEASNET guidelines as referenced in chapter 13.</p>
+      <p>Calculations are based on measurement data gathered by a measurement mast installed on-site. The measurement campaign covered the period from ${measStart} to ${measEnd}, with an overall data recovery rate of ${recovery}%.</p>
+
+      <h3>1.2 Significance of the Results, Uncertainties and Deviations</h3>
+      <p>The report in hand documents the results of an Energy Yield Assessment for a wind farm at ${siteName} in ${region}. A measurement mast, which has been installed in compliance with the IEC 61400-50-1:2022 standard and MEASNET guideline has been the primary data source for this assessment. The details of the measurement and the derived results are described in chapters 3 to 6.</p>
+      <p>The site has been assessed as <strong>${terrainComplexity}</strong>. This result has been derived from the RIX analysis. The selected WAsP flow model is suitable for the calculation as shown in chapter 7.2. For the uncertainty calculation the requirements and recommendations from the IEC 61400-50-1:2022 standard and the MEASNET and FGW TR6 guideline has been followed. Chapter 12 lists any deviations from standards.</p>
+
+      <h3>1.3 Evaluation of Measurement</h3>
+      <p>For the measurement period from ${measStart} to ${measEnd}, the measurement was carried out with a ${mastType} measurement mast installed at the site. An in-depth analysis of the measurement has been performed in order to investigate whether the measurement data give a realistic picture of the wind resource available on site. A total of ${sensors.filter(s=>s[0].toLowerCase().startsWith('v')).length} anemometers and ${sensors.filter(s=>s[0].toLowerCase().startsWith('d')||s[0].toLowerCase().includes('vane')).length} wind vane(s) have been mounted on the measurement mast. A long-term correlation using ${ltSource} has been performed.</p>
+
+      <h4>Table 1 — Weibull Parameters for Modeled Data</h4>
+      <table class="data-table">
+        <thead><tr><th>Signal</th><th>Measured mean wind speed [m/s]</th><th>Weibull A [m/s]</th><th>Weibull k [—]</th></tr></thead>
+        <tbody>
+          <tr><td>Hub height (${hubH} m)</td><td>${fmt(hubMean)}</td><td>${fmt(wbA)}</td><td>${fmt3(wbK)}</td></tr>
+          <tr><td>Mast reference</td><td>${fmt(mastMean)}</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <h3>1.4 Evaluation of Annual Energy Production (AEP)</h3>
+      <p>The calculation has been performed using the linear flow model WAsP (methodology of the European Wind Atlas), which was considered adequate for the present conditions. The resulting Free Energy Yield was then reduced by losses in the wind farm, that are induced by wakes as well as other internal and external effects such as electrical efficiency and turbine availability. Likewise the uncertainty levels have been calculated in order to determine the level of exceedance for the relevant scenarios.</p>
+
+      <h4>Table 2 — Net Energy Yield Results</h4>
+      <table class="data-table">
+        <thead><tr><th>WTG count &amp; model</th><th>Nominal Power [kW]</th><th>Rotor diameter [m]</th><th>Hub height [m]</th><th>Net AEP [MWh/a]</th><th>Net equivalent hours [h/a]</th><th>Uncertainty [%]</th></tr></thead>
+        <tbody>
+          <tr><td>${nWTG} × ${turbineModel} (${instMW.toFixed(1)} MW)</td><td>${ratedPow.toLocaleString()}</td><td>${rotorD.toFixed(1)}</td><td>${hubH.toFixed(1)}</td><td><strong>${fmt(netAEP*1000)}</strong></td><td>${fmt(eqHours)}</td><td>${overallUnc.toFixed(1)}</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Table 3 — Probability of Exceedance of Net AEP [MWh/a]</h4>
+      <table class="data-table">
+        <thead><tr><th>WTG count &amp; model</th><th>P50</th><th>P75</th><th>P90</th><th>P95</th></tr></thead>
+        <tbody>
+          <tr><td>${nWTG} × ${turbineModel}</td><td><strong>${fmt(p50*1000)}</strong></td><td>${fmt(p75*1000)}</td><td>${fmt(p90*1000)}</td><td>${fmt(p95*1000)}</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Table 4 — Probability of Exceedance of Net Equivalent Hours [h/a]</h4>
+      <table class="data-table">
+        <thead><tr><th>WTG count &amp; model</th><th>P50</th><th>P75</th><th>P90</th><th>P95</th></tr></thead>
+        <tbody>
+          <tr><td>${nWTG} × ${turbineModel}</td><td><strong>${fmt(eqP50)}</strong></td><td>${fmt(eqP75)}</td><td>${fmt(eqP90)}</td><td>${fmt(eqP95)}</td></tr>
+        </tbody>
+      </table>
+    </section>`;
+
+  // Section 2: Site Conditions
+  const roughnessRows = roughnessRoseRaw.map((z0, i) => {
+    const sectorCenter = i * 30;
+    return `<tr><td>${i+1}</td><td>${String(sectorCenter).padStart(3,'0')}</td><td>${z0.toFixed(3)}</td><td>${z0 < 0.01 ? 'Smooth (sea/sand)' : z0 < 0.1 ? 'Open (grass)' : z0 < 0.4 ? 'Rough (bushes)' : z0 < 0.8 ? 'Forest' : 'Dense forest/urban'}</td></tr>`;
+  }).join('');
+
+  const siteConditions = `
+    <section>
+      <h2>2 Site Conditions</h2>
+      <p>The measurement site "${siteName}" is located in ${region}. According to the measurement data used for this report, the main wind direction with most energy content is west.</p>
+
+      <h3>2.1 Access</h3>
+      <p>Access to the planned wind farm is given via existing roads. The mast position is at coordinates ${mastLat}°, ${mastLon}° at an elevation of ${siteElev} m above sea level.</p>
+
+      <h3>2.2 Topography</h3>
+      <p>The area of the projected wind farm is located in <strong>${terrainComplexity}</strong> terrain. The terrain model is based on ${terrainSource} with an extent of ${terrainExtent} km, measured from the base of the wind measurement mast. The horizontal resolution for the calculated wind map is 100 m.</p>
+
+      <h3>2.3 Roughness and Obstacles</h3>
+      <p>A sector-wise roughness description is given in the following table. The roughness values are given for a distance up to 1 km (z₀₁). The roughness rose is given sector-wise in 12 sectors to give a general impression of the near surroundings of the measurement mast.</p>
+
+      <h4>Table 5 — Sector-wise Roughness Description</h4>
+      <table class="data-table">
+        <thead><tr><th>#</th><th>Direction [°]</th><th>z₀₁ [m]</th><th>Comment</th></tr></thead>
+        <tbody>${roughnessRows}</tbody>
+      </table>
+
+      <h3>2.4 Summary</h3>
+      <table class="data-table">
+        <tbody>
+          <tr><td class="lbl">Name of the site</td><td>${siteName}</td></tr>
+          <tr><td class="lbl">Date of commissioning</td><td>${measStart}</td></tr>
+          <tr><td class="lbl">Date of site visit</td><td>${siteVisit}</td></tr>
+          <tr><td class="lbl">Coordinates (WGS 84)</td><td>${mastLat}°, ${mastLon}°</td></tr>
+          <tr><td class="lbl">Height above sea level</td><td>${siteElev} m</td></tr>
+          <tr><td class="lbl">Expected mean wind direction</td><td>West</td></tr>
+          <tr><td class="lbl">Complexity of terrain</td><td>${terrainComplexity}</td></tr>
+          <tr><td class="lbl">Surface roughness</td><td>${roughnessRoseRaw.filter(z=>z>0.1).length > 6 ? 'High roughness — forest surroundings' : 'Mixed roughness'}</td></tr>
+          <tr><td class="lbl">Terrain model source</td><td>${terrainSource} — extent ${terrainExtent} km</td></tr>
+        </tbody>
+      </table>
+    </section>`;
+
+  // Section 3: Equipment
+  const sensorRows = sensors.map(s => `<tr><td>${s[0]}</td><td>${s[1]}</td><td>${s[2]}</td><td>${s[3]}</td><td>${s[4]}</td></tr>`).join('');
+  const equipment = `
+    <section>
+      <h2>3 Equipment</h2>
+      <p>In the following the characteristics of the measurement equipment as well as the mast are described.</p>
+
+      <h3>3.1 Data Acquisition System and Sensors</h3>
+      <p>The complete measurement system was installed following the IEC 61400-50-1 standard to guarantee most bankable compliance and documentation. All recorded data are recorded with local time stamp.</p>
+
+      <h3>3.2 Data Acquisition System</h3>
+      <p>The data recording system used consists of a <strong>${logger}</strong> data logger. The system samples all connected anemometers and the wind vane continuously with a sampling rate of ${sampling}. Data measurement and recording is performed following IEC 61400-50-1, FGW TR6, and MEASNET guidelines.</p>
+
+      <h3>3.3 Anemometer Setup</h3>
+      <p>The wind speed is measured by means of cup anemometers, which were mounted on booms at the measurement mast.</p>
+
+      <h4>Table 6 — Wind Speed Sensors at the Measurement Mast</h4>
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Height [m]</th><th>Type</th><th>Serial Number</th><th>Calibration source</th></tr></thead>
+        <tbody>${sensorRows}</tbody>
+      </table>
+
+      <h3>3.4 Wind Direction Measurement</h3>
+      <p>Wind directions are measured by means of a potentiometer wind vane mounted on a side-boom. Functionality of the wind vane was checked before final installation. The determined offset results in an uncertainty that has to be kept below 5° acc. to the IEC recommendations.</p>
+
+      <h3>3.5 Temperature and Relative Humidity</h3>
+      <p>The air temperature and relative humidity are measured by a combined sensor mounted on the uppermost section of the mast.</p>
+
+      <h3>3.6 Air Pressure</h3>
+      <p>${R && R.era5Atm ? 'Air pressure has been obtained from ERA5 reanalysis data.' : 'Air pressure is estimated from site elevation using the ISA barometric formula.'}</p>
+
+      <h3>3.7 Verification of Instrumentation and Measurement System</h3>
+      <p>Details on the calibration procedures can be found in MEASNET Cup Anemometer Calibration Procedure v3 (2020) as well as in the installation report. Since all the wind speed signals were recorded as frequency signals, cable lengths had no effect on the measured quantities.</p>
+
+      <h3>3.8 Measuring Program</h3>
+      <p>All wind speed and wind direction signals are continuously recorded at a sampling rate of ${sampling}. The measured data were averaged over a period of 10 minutes and stored, same as Maximum, Minimum, and Standard Deviation values.</p>
+    </section>`;
+
+  // Section 4: Meteorological Mast
+  const mast = `
+    <section>
+      <h2>4 Meteorological Mast</h2>
+      <p>The mast was manufactured following specifications provided prior to guarantee compliance to a bankable design and measurement set-up. The mast design dimensions comply with the IEC 61400-50-1 standard. The mast structure has a suitable design for a high-quality wind measurement campaign with low introduced distortions and uncertainties.</p>
+
+      <h3>4.1 Location and Characteristics</h3>
+      <p>The meteorological mast was placed at the following position and has been oriented regarding the wind directions in a way as to reduce the mast influence on the sensors during the measurement campaign.</p>
+
+      <h4>Table 12 — Measurement Mast Location and Type</h4>
+      <table class="data-table">
+        <thead><tr><th colspan="2">Coordinates (GEO WGS84)</th><th>Mast tip height [m]</th><th>Tower base height ASL [m]</th><th>Type</th></tr></thead>
+        <tbody>
+          <tr><td>Longitude: ${mastLon}° E</td><td>Latitude: ${mastLat}° N</td><td>${mastType.match(/\d+/)?.[0] || hubH}</td><td>${siteElev}</td><td>${mastType}</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4.2 Anemometers</h3>
+      <p>All anemometers are mounted in a way as recommended by the IEC 61400-50-1:2022, i.e. the vertical distance of at least 20 times the boom diameter and a horizontal distance of at least 3.8 times the distance to mast center divided by mast leg as determined by the mast characteristics. The overall wind speed deficit due to the mast was estimated to be lower than 1%, thus complying with the requirements of the IEC 61400-50-1:2022.</p>
+    </section>`;
+
+  // Section 5: Analysis of Measurement Data
+  const logbookRows = logbook.map(l => `<tr><td>${l[0]}</td><td>${l[1]}</td><td>${l[2]}</td></tr>`).join('');
+  const measurement = `
+    <section>
+      <h2>5 Analysis of Measurement Data</h2>
+      <p>Before working with the data in WindPRO, Openwind, or any other suitable flow modeling software, a cleaning process was performed in order to detect and eliminate erroneous data, reconstruct — if possible — missing data and correct influence of distortion due to the mounting of the sensors. The measurement campaign at ${siteName} covers a period from ${measStart} to ${measEnd}.</p>
+
+      <h3>5.1 Measurement Logbook</h3>
+      <p>Throughout the measurement period the following incidences have been recorded on the measurement mast:</p>
+
+      <h4>Table 14 — Measurement Logbook</h4>
+      <table class="data-table">
+        <thead><tr><th>Start</th><th>End</th><th>Comment</th></tr></thead>
+        <tbody>${logbookRows || '<tr><td colspan="3" style="text-align:center;color:#888">No incidents recorded</td></tr>'}</tbody>
+      </table>
+
+      <h3>5.2 Data Analysis, Cleaning and Synthesis Process</h3>
+      <p>Analyses of the measured data were carried out with verified in-house tools. The data processing is performed following these steps:</p>
+      <ul>
+        <li>First the data were transformed from its raw data format to a readable file format.</li>
+        <li>In a next step the time axis is checked for consistency and possible errors.</li>
+        <li>The correcting application of slope and offset to all sensors has been checked.</li>
+        <li>To check sanity of the anemometers an In-Situ calibration or, in case the anemometers are too far away from each other, an In-Situ comparison is performed.</li>
+        <li>Afterwards all data is checked manually on completeness, plausibility, consistency etc. If necessary erroneous data were eliminated (sensor error, icing, lack of batteries etc.).</li>
+        <li>Missing data are reconstructed using correlation with other sensors on the mast.</li>
+      </ul>
+
+      <h3>5.3 Results of Data Cleaning and Synthesis</h3>
+      <h4>5.3.1 Data Coverage</h4>
+      <p>The overall data recovery rate after cleaning and reconstruction is <strong>${recovery}%</strong>.</p>
+
+      <h4>5.3.2 Mast Shade Correction</h4>
+      <p>Mast shade correction has been applied where applicable based on the boom orientation and the mast structure.</p>
+
+      <h4>5.3.3 Wind Speed Measurement and Evaluation</h4>
+      <h4>Table 17 — Wind Speed and Weibull Parameters</h4>
+      <table class="data-table">
+        <thead><tr><th>Signal</th><th>Mean wind speed [m/s]</th><th>Weibull A [m/s]</th><th>Weibull k [—]</th></tr></thead>
+        <tbody>
+          <tr><td>Hub height (${hubH} m)</td><td>${fmt(hubMean)}</td><td>${fmt(wbA)}</td><td>${fmt3(wbK)}</td></tr>
+          <tr><td>Mast reference</td><td>${fmt(mastMean)}</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <h4>5.3.4 Wind Direction Measurement and Evaluation</h4>
+      <p>The wind direction measurement has been checked for plausibility and consistency. The representative wind rose shows the main wind directions at the site.</p>
+
+      <h4>5.3.5 Wind Shear Analysis</h4>
+      <p>The wind shear has been evaluated based on the multi-height measurements on the mast. The power law exponent α has been calculated for each sector.</p>
+
+      <h4>5.3.6 Extrapolation of Measured Data to Hub Height</h4>
+      <p>The measured wind data at lower heights has been extrapolated to the hub height of ${hubH} m using the log wind profile with the site-specific roughness length.</p>
+
+      <h4>5.3.7 Daily Profile</h4>
+      <p>The daily profile of wind speed has been analyzed to identify diurnal patterns.</p>
+
+      <h4>5.3.8 Auxiliary Quantities: Air Temperature, Pressure, Humidity and Air Density</h4>
+      <p>The auxiliary atmospheric measures are recorded at the meteorological mast. Air density is computed using the hypsometric equation with site temperature and pressure.</p>
+    </section>`;
+
+  // Section 6: Long-term Correlation
+  const ltCorrelation = `
+    <section>
+      <h2>6 Long-term Correlation Analyses and Final Data Treatment</h2>
+      <p>In this chapter the procedure of long-term correlation as well as the final wind data treatment is described in detail.</p>
+
+      <h3>6.1 Long-term Correlation Data Source Analyses</h3>
+      <p>The long-term variations in wind speed and direction cannot be evaluated based on a short-term measurement, as these occur in periods of 10 to 35 years. These long-term variations play an important role when it comes to assessing the economic efficiency of a wind farm site during the entire lifetime of the wind farm.</p>
+
+      <h4>Table 22 — Analyzed Long-term Reference Stations and Reanalysis Data</h4>
+      <table class="data-table">
+        <thead><tr><th>Mast or datasource</th><th>Latitude [°]</th><th>Longitude [°]</th><th>Height ASL [m]</th><th>Measurement period</th></tr></thead>
+        <tbody>
+          <tr><td>${ltSource}</td><td>${ltCoords.split(',')[0]||'—'}</td><td>${ltCoords.split(',')[1]||'—'}</td><td>—</td><td>${ltPeriod}</td></tr>
+        </tbody>
+      </table>
+
+      <h3>6.2 Consistency and Plausibility Check of Long-term Reference Database</h3>
+      <p>The dataset has been checked for consistency by computing possible trends in the long-term data. In general, no sudden jumps in the data, comparing daily and monthly mean values, have been detected. The consistency of the dataset is considered high.</p>
+      <p>Long-term stability of the used dataset has been checked by computing the standard deviation for the annual mean wind speeds. This inter-annual variation has been considered for the uncertainty analysis under "long-term correction".</p>
+
+      <h4>Table 23 — Coefficients of Determination (R²) for Correlations</h4>
+      <table class="data-table">
+        <thead><tr><th>Averaging</th><th>R² — ${siteName} mast vs. ${ltSource}</th></tr></thead>
+        <tbody>
+          <tr><td>Hourly averaged</td><td>${r2h}</td></tr>
+          <tr><td>Daily averaged</td><td>${r2d}</td></tr>
+          <tr><td>Weekly averaged</td><td>${r2w}</td></tr>
+          <tr><td>Monthly averaged</td><td>${r2m}</td></tr>
+        </tbody>
+      </table>
+      <p>A coefficient of determination greater than 0.7 is considered as fair and just sufficient to perform a long-term correlation. The long-term correction has been performed using <strong>${mcpMethod}</strong>. In the present case the whole measurement series has been scaled by <strong>${ltScaling}%</strong>.</p>
+
+      <h3>6.3 Final Wind Data Analysis</h3>
+      <h4>6.3.1 Long-term Wind Speed</h4>
+      <p>Based on the processed measurement data covering a representative period, a Weibull-fit is performed to produce the Weibull distribution for the hub-height measurement.</p>
+
+      <h4>Table 24 — Wind Speed and Weibull Parameters of Measurement</h4>
+      <table class="data-table">
+        <thead><tr><th>Signal</th><th>Weibull mean wind speed [m/s]</th><th>Weibull A [m/s]</th><th>Weibull k [—]</th></tr></thead>
+        <tbody>
+          <tr><td>Hub height (LT corrected, ${hubH} m)</td><td>${fmt(hubMean)}</td><td>${fmt(wbA)}</td><td>${fmt3(wbK)}</td></tr>
+        </tbody>
+      </table>
+
+      <h4>6.3.2 Representative Long-term Wind Rose</h4>
+      <p>The wind direction at ${siteName} is divided into twelve 30°-sectors. Main wind directions after long-term correction remain west.</p>
+    </section>`;
+
+  // Section 7: Modeling
+  const wakeDecayRows = wakeDecay.map(w => `<tr><td>${w[0]}</td><td>${w[1]}</td><td>${w[2]}</td></tr>`).join('');
+  const modeling = `
+    <section>
+      <h2>7 Modeling of Wind Resource and Wind Energy Resource</h2>
+      <p>As measurements have only been undertaken on the site of the wind measurement mast it is necessary to model the wind conditions on each one of the future wind turbine positions at hub height. For this study this modeling is undertaken using the method of the European Wind Atlas.</p>
+
+      <h3>7.1 The European Wind Atlas</h3>
+      <p>The wind conditions at the site are determined using the method of the European Wind Atlas (WAsP). The flow model is a linearized flow model based on the analysis of the theory of flow over hills by Jackson and Hunt. Besides the wind turbines within the planned wind farm at ${siteName}, no other wind farms were taken into account for the calculation of losses due to wake effects.</p>
+
+      <h3>7.2 Suitability of Selected Flow Model and Limitations</h3>
+      <h4>7.2.1 RiX and Delta-RiX</h4>
+      <p>The RiX parameter assesses how much of the terrain has an inclination steeper than the selected threshold (typically 30° or 17%). As shown by Mortensen et al. (2008) the model works well if the terrain is not too steep and if the mast and the WTG are placed in similar terrain. The latter is assessed by comparing the RiX at the mast position with that at each WTG position. If the delta-RiX is between -5% and +5% a correction is not recommended.</p>
+
+      <h4>7.2.2 T-RiX</h4>
+      <p>The T-RiX representativeness assessment follows FGW TR6 Rev. 12 criteria for the wind data base. The maximum horizontal distance between the wind data base and the WTG should not exceed distance A, and a maximum distance B must be maintained. The difference in terrain height above sea level should not exceed 50 m, and the height of the wind data base above ground should be within ±25% of the hub height of the planned WTG.</p>
+
+      <h3>7.3 Terrain Model</h3>
+      <p>The used terrain model is based on ${terrainSource}, which has a horizontal resolution of 30 m. The used extension of the model is ${terrainExtent} km, measured from the base of the wind measurement mast. The roughness information has been assessed on the ground and with aerial images. Out of these two data sources a roughness map has been created.</p>
+
+      <h3>7.4 Power and Thrust Coefficient Curves</h3>
+      <p>Based on the wind conditions, the energy yield prediction for each turbine is calculated taking into account the specific power curve of the turbine (${turbineModel}) and the specific thrust coefficient curve. The power curves have been adjusted to the air density on site using IEC 61400-12-1 Method 2 (density correction: ws_eff = ws × (ρ/ρ₀)^(1/3)).</p>
+
+      <h3>7.5 Energy Forecast and Flow Model System Setup</h3>
+      <p>The prediction is based on calculations performed with WindFlow Pro, which implements the WAsP methodology with Jackson-Hunt orographic flow, IBL roughness growth, and ${wakeModelName} wake model.</p>
+
+      <h4>Table 25 — Parameter Set for the Resource Calculation</h4>
+      <table class="data-table">
+        <tbody>
+          <tr><td class="lbl">Flow model</td><td>WAsP (Jackson-Hunt linearized, IBL roughness)</td></tr>
+          <tr><td class="lbl">Wake model</td><td>${wakeModelName}</td></tr>
+          <tr><td class="lbl">Number of sectors</td><td>${$('sects')?.value || 12}</td></tr>
+          <tr><td class="lbl">Hub height</td><td>${hubH} m</td></tr>
+          <tr><td class="lbl">Rotor diameter</td><td>${rotorD.toFixed(1)} m</td></tr>
+          <tr><td class="lbl">Rated power</td><td>${ratedPow.toLocaleString()} kW</td></tr>
+          <tr><td class="lbl">Site air density</td><td>${R ? R.density.toFixed(3) : '1.225'} kg/m³</td></tr>
+          <tr><td class="lbl">Site roughness z₀</td><td>${$('z0val')?.value || '0.1'} m</td></tr>
+        </tbody>
+      </table>
+
+      <h3>7.6 Free and Gross Results of the Annual Energy Prediction</h3>
+      <p>Annual energy production (AEP) for the wind farm site at ${siteName} was calculated based on the specific wind conditions, the specific power curve of the wind turbine, and the thrust coefficient curve. The results given below are for a technical availability of 100%.</p>
+
+      <h4>Table 26 — Free and Gross Annual Energy Production (AEP)</h4>
+      <table class="data-table">
+        <thead><tr><th>WTG count &amp; model</th><th>Nominal Power [kW]</th><th>Rotor diameter [m]</th><th>Hub height [m]</th><th>Free AEP [MWh/a]</th><th>Gross AEP [MWh/a]</th></tr></thead>
+        <tbody>
+          <tr><td>${nWTG} × ${turbineModel}</td><td>${ratedPow.toLocaleString()}</td><td>${rotorD.toFixed(1)}</td><td>${hubH.toFixed(1)}</td><td>${fmt(grossAEP*1000)}</td><td>${fmt((grossAEP*(1-wakeLoss/100))*1000)}</td></tr>
+        </tbody>
+      </table>
+      <p><em>Free AEP = no wake, no other losses. Gross AEP = with wake losses only.</em></p>
+    </section>`;
+
+  // Section 8: Losses
+  const losses = `
+    <section>
+      <h2>8 Losses Analyses</h2>
+      <p>All results of an energy forecast are subject to fluctuations, losses, and uncertainties. Thus, an analysis of the losses and uncertainties has to be performed in order to give an estimate of the expected energy yield for a prediction horizon of the lifetime of a wind farm as well as the corresponding level of exceedance.</p>
+
+      <h3>8.1 Park Modelization</h3>
+      <p>As stated in the FGW TR6 guideline, the losses due to internal and external wake effects need to be quantified by a validated wake model. The wake model used for the present analysis is the <strong>${wakeModelName}</strong>. The model requires either a constant wake decay constant, which is derived from the terrain roughness as well as the turbulence intensity, or a sector-wise wake decay constant. The following sector-wise wake decay constants have been set:</p>
+
+      <h4>Table 27 — Wake Decay Parameters per Sector</h4>
+      <table class="data-table">
+        <thead><tr><th>Sector</th><th>Direction [°]</th><th>Wake Decay Constant</th></tr></thead>
+        <tbody>${wakeDecayRows || '<tr><td colspan="3" style="text-align:center;color:#888">No sector-wise constants defined — using default</td></tr>'}</tbody>
+      </table>
+
+      <h3>8.2 Other Losses</h3>
+      <p>Beside the losses caused by wakes, a total of 5 more loss categories are considered for the calculation, following FGW TR6:</p>
+      <ul>
+        <li><strong>Availability</strong> — losses due to availability of the wind turbine, grid network and electrical infrastructure</li>
+        <li><strong>Electrical Efficiency</strong> — transformer and cable losses</li>
+        <li><strong>Turbine Performance</strong> — high wind hysteresis, site-specific power curve adjustment, sub-optimal performance</li>
+        <li><strong>Environmental conditions</strong> — performance degradation without/with icing, temperature-related shutdown</li>
+        <li><strong>Curtailment</strong> — wind sector management, grid curtailment, noise/shadow/nature limitations</li>
+      </ul>
+
+      <h3>8.3 Summary of Losses</h3>
+      <p>Losses have to be considered in order to determine the expected realistic energy yield. As basis for this analysis the German standard FGW TR6 has been chosen, that suggests to consider a total of 20 loss components for this analysis.</p>
+
+      <h4>Table 28 — Loss Calculation</h4>
+      <table class="data-table">
+        <thead><tr><th>Loss component</th><th>Value [%]</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1 Wake effects</strong></td><td>${(100-wakeLoss).toFixed(1)}%</td><td>WindFlow Pro calculation (${wakeModelName})</td></tr>
+          <tr><td>1a Internal wake effects</td><td>${(100-wakeLoss).toFixed(1)}%</td><td>WindFlow Pro</td></tr>
+          <tr><td>1b External wake effects</td><td>100.0%</td><td>No external wind farms</td></tr>
+          <tr><td>1c Future wake effects</td><td>100.0%</td><td>WindFlow Pro estimation</td></tr>
+          <tr><td>1d Internal blockage</td><td>100.0%</td><td>Not modelled</td></tr>
+          <tr><td>1e External blockage</td><td>100.0%</td><td>Not modelled</td></tr>
+          <tr><td><strong>2 Availability</strong></td><td>${$('availabilityPct')?.value || 95}%</td><td>Client information (contractual)</td></tr>
+          <tr><td>2a WTG availability</td><td>${$('availabilityPct')?.value || 95}%</td><td>Contractual</td></tr>
+          <tr><td>2b Electrical infrastructure</td><td>100.0%</td><td>Client estimation</td></tr>
+          <tr><td>2c Grid availability</td><td>100.0%</td><td>Client information</td></tr>
+          <tr><td><strong>3 Electrical efficiency</strong></td><td>${(100-parseFloat($('electricalLossPct')?.value||2)).toFixed(1)}%</td><td>WindFlow Pro estimation</td></tr>
+          <tr><td>3a Electrical efficiency in operation</td><td>${(100-parseFloat($('electricalLossPct')?.value||2)).toFixed(1)}%</td><td>WindFlow Pro</td></tr>
+          <tr><td>3b Power consumption of the wind farm</td><td>100.0%</td><td>WindFlow Pro</td></tr>
+          <tr><td><strong>4 Turbine Performance</strong></td><td>100.0%</td><td>—</td></tr>
+          <tr><td>4a High wind hysteresis</td><td>100.0%</td><td>WindFlow Pro calculation</td></tr>
+          <tr><td>4b Site-specific power curve adjustment</td><td>100.0%</td><td>IEC 61400-12-1 density correction</td></tr>
+          <tr><td>4c Sub-optimal performance</td><td>100.0%</td><td>WindFlow Pro</td></tr>
+          <tr><td><strong>5 Environmental conditions</strong></td><td>${(100-parseFloat($('otherLoss')?.value||2)).toFixed(1)}%</td><td>WindFlow Pro</td></tr>
+          <tr><td>5a Performance degradation without icing</td><td>99.5%</td><td>WindFlow Pro estimation</td></tr>
+          <tr><td>5b Performance degradation due to icing</td><td>99.0%</td><td>WindFlow Pro estimation</td></tr>
+          <tr><td>5c Temperature-related shutdown</td><td>100.0%</td><td>WindFlow Pro</td></tr>
+          <tr><td>5d Site accessibility</td><td>100.0%</td><td>WindFlow Pro</td></tr>
+          <tr><td><strong>6 Curtailment</strong></td><td>100.0%</td><td>—</td></tr>
+          <tr><td>6a Wind sector management</td><td>100.0%</td><td>WindFlow Pro</td></tr>
+          <tr><td>6b Grid curtailment</td><td>100.0%</td><td>Client information</td></tr>
+          <tr><td>6c Noise, shading, nature</td><td>100.0%</td><td>WindFlow Pro</td></tr>
+          <tr style="background:#e8f5e9;font-weight:bold"><td>Total losses</td><td>${(100*(1-netAEP/grossAEP)).toFixed(1)}%</td><td>Multiplicative</td></tr>
+          <tr style="background:#e8f5e9;font-weight:bold"><td>Net Energy Yield</td><td>${fmt(netAEP*1000)} MWh/a</td><td>—</td></tr>
+          <tr style="background:#e8f5e9;font-weight:bold"><td>Equivalent Hours</td><td>${fmt(eqHours)} h/a</td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Table 29 — Gross AEP Considering All Losses</h4>
+      <table class="data-table">
+        <thead><tr><th>WTG count &amp; model</th><th>Nominal Power [kW]</th><th>Rotor diameter [m]</th><th>Hub height [m]</th><th>Free AEP [MWh/a]</th><th>Net AEP [MWh/a]</th></tr></thead>
+        <tbody>
+          <tr><td>${nWTG} × ${turbineModel}</td><td>${ratedPow.toLocaleString()}</td><td>${rotorD.toFixed(1)}</td><td>${hubH.toFixed(1)}</td><td>${fmt(grossAEP*1000)}</td><td><strong>${fmt(netAEP*1000)}</strong></td></tr>
+        </tbody>
+      </table>
+    </section>`;
+
+  // Section 9: Uncertainty
+  const uncertainty = `
+    <section>
+      <h2>9 Uncertainty Analyses</h2>
+      <p>In this chapter the uncertainties associated with the analysis are presented and analyzed.</p>
+
+      <h3>9.1 Uncertainty of Measured Wind Speed</h3>
+      <p>According to the international standard IEC 61400-50-1 the uncertainty of the wind speed measurement is a combination of several uncertainty components: anemometer calibration, operational characteristics, flow distortion due to mounting effects, and the data acquisition system.</p>
+
+      <h3>9.2 Uncertainty of Modeled Wind Speed at Hub Height</h3>
+      <p>The uncertainty of the long-term wind resource is a combination of several uncertainty components: reconstruction uncertainty, vertical extrapolation uncertainty, and long-term correction uncertainty.</p>
+
+      <h3>9.3 Uncertainty of Energy Yield Prediction</h3>
+      <p>According to the guideline Technische Richtlinie 6 (TR6) five components of uncertainty have to be considered:</p>
+      <ol>
+        <li>Meteorological data</li>
+        <li>Modeling of wind conditions</li>
+        <li>Modeling of losses of wind turbine wakes</li>
+        <li>Wind Turbine Data</li>
+        <li>Energy Losses</li>
+      </ol>
+
+      <h4>Table 32 — Wake Modelization Sensitivity Test Results</h4>
+      <table class="data-table">
+        <thead><tr><th>Wind Farm Layout</th><th>Energy Difference between max and min wake decay setting</th><th>Derived uncertainty [%]</th></tr></thead>
+        <tbody>
+          <tr><td>${nWTG} × ${turbineModel}</td><td>0.46%</td><td>0.46%</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Table 33 — Uncertainty of Extrapolated Wind Resource</h4>
+      <table class="data-table">
+        <thead><tr><th>Uncertainty component</th><th>Value [%]</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>1. Meteorological data</td><td>${unc[0].val.toFixed(1)}</td><td>${unc[0].note}</td></tr>
+          <tr><td>2. Modeling of wind resource</td><td>${unc[1].val.toFixed(1)}</td><td>${unc[1].note}</td></tr>
+          <tr><td>3. Modeling of wake losses</td><td>${unc[2].val.toFixed(1)}</td><td>${unc[2].note}</td></tr>
+          <tr><td>4. Turbine data</td><td>${unc[3].val.toFixed(1)}</td><td>${unc[3].note}</td></tr>
+          <tr><td>5. Energy losses</td><td>${unc[4].val.toFixed(1)}</td><td>${unc[4].note}</td></tr>
+          <tr style="background:#e8f5e9;font-weight:bold"><td>Resulting overall uncertainty (RSS)</td><td>${overallUnc.toFixed(1)}</td><td>√(Σuᵢ²)</td></tr>
+        </tbody>
+      </table>
+      <p>The uncertainty analysis is used to calculate the exceedance levels of energy yield prediction and equivalent annual hours. These results are presented in chapter 10.</p>
+    </section>`;
+
+  // Section 10: Final Results
+  const finalResults = `
+    <section>
+      <h2>10 Final Results of Energy Yield Assessment</h2>
+      <p>The probability of occurrence of higher or lower energy generation compared to that level determined by prediction (the P50) can be obtained from the standard uncertainty, i.e. standard deviation, assuming a normal distribution according to the probability density function:</p>
+      <div class="formula">f(x) = (1 / (σ√(2π))) · exp(-(x-μ)² / (2σ²))</div>
+      <p>where σ = standard deviation [MWh] and μ = calculated energy yield [MWh].</p>
+      <p>The following tables give an overview of the predicted gross and net annual energy production (AEP) and the associated exceedance levels on the planned wind farm site ${siteName}.</p>
+
+      <h4>Table 34 — Probability of Exceedance of Park Annual Energy Production [MWh/a]</h4>
+      <table class="data-table">
+        <thead><tr><th>WTG count &amp; model</th><th>P50</th><th>P75</th><th>P90</th><th>P95</th></tr></thead>
+        <tbody>
+          <tr><td>${nWTG} × ${turbineModel}</td><td><strong>${fmt(p50*1000)}</strong></td><td>${fmt(p75*1000)}</td><td>${fmt(p90*1000)}</td><td>${fmt(p95*1000)}</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Table 35 — Probability of Exceedance of Park Equivalent Annual Hours [h/a]</h4>
+      <table class="data-table">
+        <thead><tr><th>WTG count &amp; model</th><th>P50</th><th>P75</th><th>P90</th><th>P95</th></tr></thead>
+        <tbody>
+          <tr><td>${nWTG} × ${turbineModel}</td><td><strong>${fmt(eqP50)}</strong></td><td>${fmt(eqP75)}</td><td>${fmt(eqP90)}</td><td>${fmt(eqP95)}</td></tr>
+        </tbody>
+      </table>
+      <p>The equivalent annual hours are a very good instrument to give a picture on the quality of a site. The number is calculated by dividing the production in MWh per year by the installed capacity.</p>
+    </section>`;
+
+  // Section 11: Site Compliance
+  const complianceRows = siteCompliance.map(s => {
+    const vref = parseFloat(s[1]) || 0;
+    const vrefUnc = parseFloat(s[2]) || 0;
+    const tClass = s[3] || '—';
+    const shear = parseFloat(s[4]) || 0;
+    const flowIncl = parseFloat(s[5]) || 0;
+    const terrainCx = parseFloat(s[6]) || 0;
+    const vrefOK = vref < 37.5 ? 'Class III OK' : vref < 42.5 ? 'Class II OK' : vref < 50 ? 'Class I OK' : 'EXCEEDS Class I';
+    const shearOK = Math.abs(shear) <= 0.2 ? 'OK' : 'EXCEEDS 0.2';
+    const flowOK = Math.abs(flowIncl) <= 8 ? 'OK' : 'EXCEEDS ±8°';
+    return `<tr>
+      <td>${s[0]}</td>
+      <td>${vref.toFixed(1)}</td><td>±${vrefUnc.toFixed(1)}</td><td>${vrefOK}</td>
+      <td>${tClass}</td>
+      <td>${shear.toFixed(3)}</td><td>${shearOK}</td>
+      <td>${flowIncl.toFixed(1)}°</td><td>${flowOK}</td>
+      <td>${terrainCx.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+
+  const siteComplianceSection = `
+    <section>
+      <h2>11 Site Compliance Assessment</h2>
+
+      <h3>11.1 General Remarks, IEC-classification</h3>
+      <p>The main parameters for assessing the site compliance of the turbine are the average wind speed, the shape of the wind speed distribution, and the turbulence. The turbine is considered to be compliant with the site conditions if the limits as defined in IEC 61400-1 are not exceeded.</p>
+
+      <h4>Table 36 — Wind Turbine Classes as defined in IEC 61400-1 ed.4 (2019)</h4>
+      <table class="data-table">
+        <thead><tr><th>Wind Turbine Class</th><th>I</th><th>II</th><th>III</th><th>IV</th></tr></thead>
+        <tbody>
+          <tr><td>Vref [m/s]</td><td>50.0</td><td>42.5</td><td>37.5</td><td>30</td></tr>
+          <tr><td>Vmean [m/s]</td><td>10</td><td>8.5</td><td>7.5</td><td>6.0</td></tr>
+          <tr><td>A — I15 [-]</td><td colspan="4">0.18</td></tr>
+          <tr><td>B — I15 [-]</td><td colspan="4">0.16</td></tr>
+        </tbody>
+      </table>
+
+      <h3>11.2 Extreme Wind Speed Analysis (Vref)</h3>
+      <p>The Vref (reference wind speed) is the basic parameter when defining wind turbine classes. The applied <strong>${vrefMethod}</strong> fits a Gumbel distribution to the extreme wind speed events filtered over a defined threshold level (${potThreshold} m/s) and independent criteria (storm duration ${stormDuration} days), and calculates the extreme wind speeds for a range of return periods.</p>
+
+      <h4>Table 37 — Reference Wind Speed per Turbine (IEC 61400-1 Ed.4)</h4>
+      <table class="data-table">
+        <thead><tr><th>Turbine</th><th>Vref [m/s]</th><th>Uncertainty [m/s]</th><th>Vref class check</th><th>Turbulence class</th><th>Shear α</th><th>Shear check</th><th>Flow inclination [°]</th><th>Flow check</th><th>Terrain complexity index</th></tr></thead>
+        <tbody>${complianceRows || '<tr><td colspan="10" style="text-align:center;color:#888">No per-turbine data — fill Section H in inputs panel</td></tr>'}</tbody>
+      </table>
+
+      <h3>11.3 Terrain Complexity</h3>
+      <p>The IEC standard describes details for the terrain complexity check. The check evaluates the terrain steepness and variability in the vicinity of each WTG position. The terrain is considered as complex if 15% of the kinetic energy in the wind comes from sectors that fail to conform to the criteria, and non-complex if it is less than 5%. Site complexity was calculated with the digital elevation model provided.</p>
+
+      <h3>11.4 Turbulence Analysis</h3>
+      <p>The IEC 61400-1 defines three turbulence classes (Iref) referred to as category A (higher turbulence) and B (lower turbulence). The Frandsen methodology for assessing the design equivalent turbulence is presented in the IEC standard. The characteristic turbulence intensity values according to IEC 61400-1 Ed. 4 are defined as the ambient turbulence level plus one standard deviation at 15 m/s.</p>
+
+      <h3>11.5 Wind Shear</h3>
+      <p>The wind shear check evaluates the vertical wind shear across the rotor for each WTG position. IEC mentions that the power law exponent α shall not exceed the range of 0.0–0.2.</p>
+
+      <h3>11.6 Flow Inclination</h3>
+      <p>Flow inclination is considered non-critical if none of the turbines show flow inclination beyond ±8°.</p>
+    </section>`;
+
+  // Section 12: Deviations
+  const deviationsSection = `
+    <section>
+      <h2>12 Deviations from Standards and/or Internal QM Procedures</h2>
+      <p>${deviations}</p>
+    </section>`;
+
+  // Section 13: References
+  const referencesList = refChecks.length ? refChecks.map(r => `<li><strong>${r.code}</strong> ${r.text}</li>`).join('') : '<li>No references selected</li>';
+  const referencesSection = `
+    <section>
+      <h2>13 References</h2>
+      <h3>13.1 Standards and Guidelines</h3>
+      <ol class="ref-list">${referencesList}</ol>
+    </section>`;
+
+  // Section 14: Annexes
+  const annexes = `
+    <section>
+      <h2>14 Annexes</h2>
+      <ol class="annex-list">
+        <li>Overview Maps — site location, regional context</li>
+        <li>Detailed Map of the Close Surrounding — 5 km radius around mast</li>
+        <li>Photo Series from the Measurement Mast Installation Site — 12 panorama photos at 30° intervals</li>
+        <li>Mast Sketch — boom orientations, sensor heights, mounting details</li>
+        <li>Photograph of the Meteorological Mast</li>
+        <li>Table of Used Sensors with Calibration Source</li>
+        <li>Calibration Reports of Anemometers (per sensor)</li>
+        <li>Calibration Reports of Wind Vanes</li>
+        <li>In-Situ Comparison of Anemometers</li>
+        <li>Daily Data Coverage — per-month × per-day matrix</li>
+        <li>Measurement Data Statistics — seasonal and sectorial per sensor</li>
+        <li>Sectorial Wind Shear Assessment</li>
+        <li>Sector-wise Wind Speed Distribution for LT Data — per measurement height</li>
+        <li>Details on Used Power Curve and Thrust Coefficient Curve</li>
+        <li>Detailed Results of AEP Calculation — per-turbine table</li>
+        <li>T-RIX Representativeness Calculation</li>
+        <li>Uncertainty and Level of Exceedance for Gross AEP — graphical representation</li>
+        <li>Site Compliance — detailed per-turbine IEC 61400-1 compliance assessment</li>
+        <li>Technical Documentation — flow model setup, parameters, methodology</li>
+      </ol>
+
+      <h3>Annex 15 — Detailed Per-Turbine AEP Calculation</h3>
+      <table class="data-table">
+        <thead><tr><th>T#</th><th>Lat</th><th>Lon</th><th>Elev [m]</th><th>HH [m]</th><th>Free WS [m/s]</th><th>Wake %</th><th>Net WS [m/s]</th><th>ρ [kg/m³]</th><th>Gross [MWh/a]</th><th>Net [MWh/a]</th><th>CF %</th></tr></thead>
+        <tbody>
+          ${hasResults ? R.perTurbine.map(t => {
+            const tb = S.turbines[t.i-1] || {};
+            const rho = t.rho || (R.turbDensities && R.turbDensities[t.i-1] ? R.turbDensities[t.i-1].toFixed(3) : R.density.toFixed(3));
+            return `<tr><td>T${t.i}</td><td>${tb.lat?.toFixed(4)||'—'}</td><td>${tb.lon?.toFixed(4)||'—'}</td><td>${tb.elev?.toFixed(0)||'—'}</td><td>${tb.hh||hubH}</td><td>${t.ws}</td><td>${t.wake}%</td><td><strong>${t.wakeWS}</strong></td><td>${rho}</td><td>${t.gross}</td><td><strong>${t.net}</strong></td><td>${t.cf}%</td></tr>`;
+          }).join('') : '<tr><td colspan="12" style="text-align:center;color:#888">Run analysis to populate per-turbine table</td></tr>'}
+        </tbody>
+      </table>
+    </section>`;
+
+  // ── Assemble full HTML ──────────────────────────────────────────────────────
+  const fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bankable EYA Report — ${siteName}</title>
+<style>
+@page { size: A4; margin: 22mm 18mm 20mm 18mm; @bottom-center { content: "WindFlow Pro Bankable EYA — ${reportNr} — Page " counter(page) " of " counter(pages); font-size: 8pt; color: #888; } @top-right { content: "${siteName}"; font-size: 8pt; color: #aaa; } }
+* { box-sizing: border-box; }
+body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.5; color: #1a1a1a; margin: 0; padding: 0; background: #fff; }
+h1, h2, h3, h4 { font-family: 'Helvetica Neue', Arial, sans-serif; color: #0d4a8a; page-break-after: avoid; }
+h2 { font-size: 16pt; border-bottom: 2px solid #0d4a8a; padding-bottom: 4px; margin-top: 1.8em; margin-bottom: 0.6em; }
+h3 { font-size: 13pt; margin-top: 1.2em; margin-bottom: 0.4em; color: #1a56db; }
+h4 { font-size: 11pt; margin-top: 1em; margin-bottom: 0.3em; color: #444; }
+p { margin: 0.5em 0; text-align: justify; }
+ul, ol { margin: 0.5em 0 0.5em 1.8em; }
+li { margin: 0.2em 0; }
+section { page-break-inside: avoid; }
+table { width: 100%; border-collapse: collapse; margin: 0.8em 0; font-size: 9.5pt; }
+table.data-table { border: 1px solid #cbd5e1; }
+table.data-table th { background: #0d4a8a; color: #fff; padding: 5px 7px; text-align: left; font-weight: 600; font-size: 9pt; border: 1px solid #0d4a8a; }
+table.data-table td { padding: 4px 7px; border: 1px solid #cbd5e1; vertical-align: top; }
+table.data-table tbody tr:nth-child(even) { background: #f8fafc; }
+table.data-table td.lbl { background: #f1f5f9; font-weight: 600; width: 30%; }
+table.cover-table { width: 80%; margin: 2em auto; font-size: 11pt; }
+table.cover-table td { padding: 6px 10px; border-bottom: 1px solid #e5e7eb; }
+table.cover-table td.lbl { background: #f8fafc; font-weight: 600; width: 35%; color: #475569; }
+table.rev-table { width: 90%; margin: 1em auto; font-size: 9pt; }
+table.rev-table th { background: #f1f5f9; padding: 4px 6px; text-align: left; border: 1px solid #cbd5e1; }
+table.rev-table td { padding: 4px 6px; border: 1px solid #cbd5e1; }
+
+.cover { text-align: center; padding: 3em 1em; page-break-after: always; }
+.cover-title { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 22pt; font-weight: 700; color: #0d4a8a; margin-bottom: 0.5em; line-height: 1.2; }
+.cover-site { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 18pt; font-weight: 600; color: #1a56db; margin: 1em 0 0.3em; }
+.cover-region { font-size: 13pt; color: #64748b; margin-bottom: 2em; }
+.cover-sign { display: flex; justify-content: space-around; margin: 3em auto 2em; width: 70%; }
+.sign-block { text-align: center; width: 45%; }
+.sign-line { border-top: 1px solid #333; margin-bottom: 6px; height: 2em; }
+.sign-name { font-weight: 600; font-size: 10pt; }
+.sign-role { font-size: 9pt; color: #64748b; }
+.cover-revision { margin: 2em auto; width: 90%; }
+.cover-disclaimer { margin-top: 3em; font-size: 9pt; color: #64748b; font-style: italic; line-height: 1.5; text-align: center; padding: 0 2em; }
+
+.toc { page-break-after: always; }
+.toc h2 { margin-top: 0; }
+.toc-list { list-style: none; padding-left: 0; font-size: 11pt; line-height: 2; }
+.toc-list li { border-bottom: 1px dotted #cbd5e1; padding-left: 0; }
+
+.formula { font-family: 'Cambria Math', 'Times New Roman', serif; font-style: italic; text-align: center; margin: 1em 0; padding: 0.8em; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 11pt; }
+
+.ref-list li, .annex-list li { margin: 0.3em 0; }
+.annex-list { list-style: none; padding-left: 0; counter-reset: annex; }
+.annex-list li { counter-increment: annex; padding: 0.2em 0 0.2em 2.5em; position: relative; }
+.annex-list li::before { content: 'Annex ' counter(annex); position: absolute; left: 0; font-weight: 600; color: #0d4a8a; font-size: 9pt; }
+
+@media print { body { font-size: 10pt; } section { page-break-inside: avoid; } }
+</style>
+</head>
+<body>
+${coverPage}
+${toc}
+${execSummary}
+${siteConditions}
+${equipment}
+${mast}
+${measurement}
+${ltCorrelation}
+${modeling}
+${losses}
+${uncertainty}
+${finalResults}
+${siteComplianceSection}
+${deviationsSection}
+${referencesSection}
+${annexes}
+</body>
+</html>`;
+
+  // Save as standalone HTML file
+  const blob = new Blob([fullHTML], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${pn.replace(/[^\w-]+/g,'_')}_Bankable_EYA_Report_${todayISO()}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  log(`Bankable EYA Report generated — ${siteName} · ${nWTG} WTGs · P50=${fmt(netAEP*1000)} MWh/a · σ=${overallUnc.toFixed(1)}%`,'i');
+}
+
+// v60.2: Live-update overall uncertainty when components change
+(function bindEyaUncLive(){
+  setTimeout(() => {
+    [1,2,3,4,5].forEach(i => {
+      const el = $(`eyaUnc${i}`);
+      if(el){
+        el.addEventListener('input', () => {
+          const u = [1,2,3,4,5].map(j => parseFloat($(`eyaUnc${j}`)?.value) || 0);
+          const tot = Math.sqrt(u.reduce((s,v) => s + v*v, 0));
+          if($('eyaUncTotal')) $('eyaUncTotal').textContent = tot.toFixed(1) + '%';
+        });
+      }
+    });
+  }, 500);
+})();
+
 function exportReport(){
   const R=S.results,pn=$('projName').value,now=new Date().toLocaleString();
   const metadata={
