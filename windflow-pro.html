@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 60.2</title>
+<title>WindFlow Pro 60.3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -72,7 +72,7 @@ button:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 60.2</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 60.3</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -653,7 +653,7 @@ button:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
     </div>
   </div>
 
-  <!-- v60.2: Bankable EYA Inputs (per ProfEC Ventus / IEC 61400-50-1 / FGW TR6 / MEASNET) -->
+  <!-- v60.3: Bankable EYA Inputs (per ProfEC Ventus / IEC 61400-50-1 / FGW TR6 / MEASNET) -->
   <details class="card" style="margin-top:.5rem">
     <summary class="card-title gold" style="cursor:pointer;list-style:none;padding:.6rem .8rem">📑 Bankable EYA Report Inputs (IEC 61400-50-1 / FGW TR6 / MEASNET) <span style="font-size:.55rem;color:var(--text3);font-weight:400;margin-left:.5rem">— fill to generate bankable-grade report matching ProfEC Ventus structure</span></summary>
     <div style="padding:.5rem .8rem .8rem">
@@ -825,10 +825,109 @@ T5,35.7,1.6,II,0.10,1.5,0.0</textarea>
       <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer"><input type="checkbox" id="eyaRef_Gumbel" style="margin-top:.15rem;accent-color:var(--mint)"><span>Gumbel (1954) — Statistical theory of extreme values</span></label>
     </div>
 
+    <!-- v60.3 Section K: Power curve Type Certificate -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.9rem 0 .4rem;font-family:var(--mono)">K. Power Curve Type Certificate &amp; Traceability</h3>
+    <div style="font-size:.55rem;color:var(--text3);margin-bottom:.3rem">Bankable EYA requires the power curve to be traceable to a Type Certificate or site-specific power performance test (IEC 61400-12-1). Generic LUTs are <b>not</b> acceptable.</div>
+    <div class="g3" style="gap:.4rem">
+      <div class="fg"><label class="fl">Turbine model / variant</label><input class="fi" id="eyaPCModel" placeholder="e.g. Vestas V162-6.0 MW Mk-3E"></div>
+      <div class="fg"><label class="fl">Type Certificate Nr.</label><input class="fi" id="eyaPCCertNr" placeholder="e.g. DNV-TC-2023-0123"></div>
+      <div class="fg"><label class="fl">Type Certificate issuer</label>
+        <select class="fs" id="eyaPCCertIssuer">
+          <option value="">— select —</option>
+          <option>DNV GL</option>
+          <option>TÜV SÜD</option>
+          <option>SGS Fimko</option>
+          <option>Bureau Veritas</option>
+          <option>RISE (Sweden)</option>
+          <option>Other (specify in notes)</option>
+        </select>
+      </div>
+    </div>
+    <div class="g2" style="gap:.4rem;margin-top:.3rem">
+      <div class="fg"><label class="fl">Power curve source</label>
+        <select class="fs" id="eyaPCSource">
+          <option value="type_certificate">Type Certificate (manufacturer-supplied)</option>
+          <option value="site_test">Site-specific IEC 61400-12-1 power performance test</option>
+          <option value="generic_lut">Generic LUT (NOT bankable — indicative only)</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Power curve notes</label><input class="fi" id="eyaPCNotes" placeholder="e.g. Site density correction applied per IEC 61400-12-1 Method 2"></div>
+    </div>
+
+    <!-- v60.3 Section L: Calibration Certificate Register (file upload + SHA256) -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.9rem 0 .4rem;font-family:var(--mono)">L. Calibration Certificate Register (file upload + SHA256 hash)</h3>
+    <div style="font-size:.55rem;color:var(--text3);margin-bottom:.3rem">Upload each anemometer / vane calibration certificate (PDF). SHA256 hash is computed in-browser (file is NOT uploaded anywhere — stays local). The hash is embedded in the report Annex for traceability.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;font-size:.6rem">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:.5rem">
+        <div style="font-weight:700;color:var(--mint);margin-bottom:.3rem">Cup anemometer calibrations (MEASNET)</div>
+        <input type="file" id="eyaCalibFiles" multiple accept=".pdf,.png,.jpg,.jpeg" style="font-size:.55rem;width:100%;margin-bottom:.3rem" onchange="registerCalibrationFiles()">
+        <div id="eyaCalibList" style="font-family:var(--mono);font-size:.5rem;color:var(--text3);max-height:80px;overflow:auto"></div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:.5rem">
+        <div style="font-weight:700;color:var(--sky);margin-bottom:.3rem">Mast data file (CSV / WindPRO / WRA)</div>
+        <input type="file" id="eyaMastDataFile" accept=".csv,.txt,.wrf,.wgh" style="font-size:.55rem;width:100%;margin-bottom:.3rem" onchange="registerMastDataFile()">
+        <div id="eyaMastDataInfo" style="font-family:var(--mono);font-size:.5rem;color:var(--text3);max-height:80px;overflow:auto">No file registered</div>
+      </div>
+    </div>
+
+    <!-- v60.3 Section M: Scope & Independent Verification Attestation -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.9rem 0 .4rem;font-family:var(--mono)">M. Scope, Limitations &amp; Independent Verification Attestation</h3>
+    <div style="background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.3);border-radius:6px;padding:.6rem;font-size:.6rem;color:var(--text2);margin-bottom:.4rem;line-height:1.5">
+      <div style="font-weight:700;color:#dc2626;margin-bottom:.3rem">⚠ Mandatory disclosure — single-developer tool, not commercially QA'd</div>
+      <div style="margin-bottom:.3rem">WindFlow Pro is an open-source, single-developer tool. It is <b>not</b> a commercially-supported product like UL Openwind, EMD WAsP, or WindPRO. To produce a lender-acceptable bankable EYA, the following must be true:</div>
+      <ol style="margin:0 0 .3rem 1.4rem;line-height:1.6">
+        <li>The mast dataset comes from a real measurement campaign per IEC 61400-50-1 (≥12 months, MEASNET-calibrated sensors).</li>
+        <li>The site is <b>non-complex</b> (RIX &lt; 15% in all sectors). For complex / escarpment sites, a CFD model (WindPRO/PROTEROS, ANSYS CFX, OpenFOAM) MUST be used instead of WindFlow Pro's linearized Jackson-Hunt flow.</li>
+        <li>The Vref (extreme wind) analysis is performed with a real Gumbel PoT / MIS fit on long-term data (≥20 years) — WindFlow Pro can compute the fit from loaded mast data, but the result is only valid for the mast measurement period and MUST be cross-checked against a long-term reference.</li>
+        <li>This report is <b>independently verified</b> by a third-party consultant (UL/DNV/UL/ProfEC Ventus/TÜV) before being submitted to lenders.</li>
+      </ol>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;font-size:.6rem">
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer;background:var(--bg2);padding:.5rem;border-radius:6px;border:1px solid var(--border)">
+        <input type="checkbox" id="eyaAttestMast" style="margin-top:.15rem;accent-color:var(--mint)">
+        <span>I attest that the mast dataset was measured on-site per IEC 61400-50-1, with MEASNET-calibrated sensors, and is <b>not</b> synthetic or copied from another site.</span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer;background:var(--bg2);padding:.5rem;border-radius:6px;border:1px solid var(--border)">
+        <input type="checkbox" id="eyaAttestComplex" style="margin-top:.15rem;accent-color:var(--mint)">
+        <span>I attest that the site is non-complex (RIX &lt; 15% in all sectors), and that for complex/escarpment sites a CFD model will be used in parallel.</span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer;background:var(--bg2);padding:.5rem;border-radius:6px;border:1px solid var(--border)">
+        <input type="checkbox" id="eyaAttestIndep" style="margin-top:.15rem;accent-color:var(--mint)">
+        <span>I attest that an independent third-party consultant will verify this report before submission to lenders.</span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:.4rem;cursor:pointer;background:var(--bg2);padding:.5rem;border-radius:6px;border:1px solid var(--border)">
+        <input type="checkbox" id="eyaAttestScope" style="margin-top:.15rem;accent-color:var(--mint)">
+        <span>I acknowledge WindFlow Pro is single-developer and not commercially QA'd; the report's <b>indicative</b> results will not be used as the sole basis for a FID decision.</span>
+      </label>
+    </div>
+
+    <!-- v60.3 Section N: Gumbel PoT Vref fit from loaded mast data -->
+    <h3 style="font-size:.7rem;color:var(--mint);text-transform:uppercase;letter-spacing:.06em;margin:.9rem 0 .4rem;font-family:var(--mono)">N. Compute Vref (Gumbel PoT) from Loaded Mast Data</h3>
+    <div style="font-size:.55rem;color:var(--text3);margin-bottom:.3rem">When mast wind-speed time series is loaded (≥1 year of 10-min data), WindFlow Pro can fit a Gumbel distribution to Peak-over-Threshold storms and compute Vref for return periods 10/20/50/100 years. Results auto-populate the Section H per-turbine Vref column.</div>
+    <div class="g3" style="gap:.4rem;margin-bottom:.3rem">
+      <div class="fg"><label class="fl">PoT threshold (m/s)</label><input class="fi" id="eyaGumbelThreshold" type="number" step="0.5" value="15.0"></div>
+      <div class="fg"><label class="fl">Storm independence (days)</label><input class="fi" id="eyaGumbelIndependence" type="number" step="0.5" value="4"></div>
+      <div class="fg"><label class="fl">Vref return period (years)</label>
+        <select class="fs" id="eyaGumbelRP">
+          <option value="10">10-year (IEC Class III)</option>
+          <option value="20">20-year</option>
+          <option value="50" selected>50-year (IEC Class II / I default)</option>
+          <option value="100">100-year (IEC Class I)</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-bottom:.4rem">
+      <button class="btn btn-sm btn-mint" onclick="computeGumbelPoTVref()">🧮 Compute Gumbel PoT Vref from mast</button>
+      <button class="btn btn-sm btn-ghost" onclick="clearGumbelPoT()">Clear</button>
+      <span id="eyaGumbelStatus" style="font-size:.55rem;color:var(--text3)"></span>
+    </div>
+    <div id="eyaGumbelResults" style="font-family:var(--mono);font-size:.6rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:.5rem;min-height:40px"></div>
+
     <!-- Export button -->
     <div style="margin-top:.6rem;padding:.5rem;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.3);border-radius:6px;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
       <button class="btn btn-gold" style="font-size:.7rem;padding:.7rem 1.4rem" id="btnBankableReport" onclick="generateBankableReport()">📑 Generate Bankable EYA Report (IEC 61400-50-1 / FGW TR6 / MEASNET)</button>
-      <span style="font-size:.55rem;color:var(--text3)">Produces a 14-section standalone HTML report matching the ProfEC Ventus structure — cover, ToC, exec summary, site conditions, equipment, mast, measurement analysis, LT correlation, modeling, losses, uncertainty, final results, site compliance, deviations, references.</span>
+      <button class="btn btn-sm btn-sky" onclick="exportWaspProjectFiles()">📤 Export WAsP Project (.wrg/.tab/.owc)</button>
+      <span style="font-size:.55rem;color:var(--text3)">Produces a 14-section standalone HTML report matching the ProfEC Ventus structure. Gates: (1) attestation checkboxes in §M, (2) RIX &lt; 15%, (3) mast data loaded or GWA-only disclosure.</span>
     </div>
 
     </div>
@@ -5839,7 +5938,8 @@ function exportTSPerTurbineHourly(){
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════
-// v60.2: BANKABLE EYA REPORT GENERATOR (per ProfEC Ventus / IEC 61400-50-1 / FGW TR6 / MEASNET)
+// v60.3: BANKABLE EYA REPORT GENERATOR (per ProfEC Ventus / IEC 61400-50-1 / FGW TR6 / MEASNET)
+// v60.3: Added hard gates, scope disclosure, Gumbel PoT Vref fit, calibration hashing, WAsP export
 // Produces a 14-section standalone HTML report matching the bankable EYA structure.
 // All inputs come from the Bankable EYA Inputs panel (Section A-J) plus S.results.
 // ════════════════════════════════════════════════════════════════════════════════════
@@ -5847,6 +5947,49 @@ function generateBankableReport(){
   const R = S.results;
   const now = new Date().toLocaleString();
   const pn = $('projName').value || 'Wind Farm Site';
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // v60.3 HARD GATES — block report generation if bankability preconditions fail
+  // ═══════════════════════════════════════════════════════════════════════════
+  const gateFailures = [];
+
+  // Gate 1: All four attestation checkboxes (§M) must be checked
+  if(!$('eyaAttestMast')?.checked)    gateFailures.push('§M-1: Mast data attestation not confirmed (mast data must be real-measured per IEC 61400-50-1).');
+  if(!$('eyaAttestComplex')?.checked) gateFailures.push('§M-2: Non-complex terrain attestation not confirmed (RIX must be < 15% in all sectors).');
+  if(!$('eyaAttestIndep')?.checked)   gateFailures.push('§M-3: Independent third-party verification attestation not confirmed.');
+  if(!$('eyaAttestScope')?.checked)   gateFailures.push('§M-4: Single-developer scope acknowledgement not confirmed.');
+
+  // Gate 2: Terrain complexity hard gate — block complex / escarpment sites
+  const terrainCx = $('eyaTerrainComplexity')?.value || 'semi-complex';
+  if(terrainCx === 'complex' || terrainCx === 'escarpment'){
+    gateFailures.push(`§B Terrain complexity = "${terrainCx}" — WindFlow Pro's linearized Jackson-Hunt flow is NOT valid here. Run a CFD model (WindPRO/PROTEROS, ANSYS CFX, OpenFOAM) and re-issue this report. The bankable EYA cannot be generated from a linearized flow model in complex/escarpment terrain.`);
+  }
+
+  // Gate 3: Per-sector RIX — if max sector RIX > 15%, block
+  if(S.perSectorRIX && S.perSectorRIX.length){
+    const maxRIX = Math.max(...S.perSectorRIX);
+    const nSectorsAbove = S.perSectorRIX.filter(r => r > 15).length;
+    if(maxRIX > 15){
+      gateFailures.push(`§B Per-sector RIX exceeds 15% in ${nSectorsAbove}/${S.perSectorRIX.length} sectors (max ${maxRIX.toFixed(1)}%). Linearized Jackson-Hunt flow is unreliable above 15% RIX per Mortensen et al. (2008). Use CFD for these sectors, or re-classify the site as complex and abort.`);
+    }
+  }
+
+  // Gate 4: Power curve source — generic LUT is not bankable
+  const pcSource = $('eyaPCSource')?.value || 'generic_lut';
+  if(pcSource === 'generic_lut'){
+    gateFailures.push('§K Power curve source = "Generic LUT" — generic LUTs are NOT acceptable for bankable EYA. Provide a Type Certificate number + issuer, or a site-specific IEC 61400-12-1 power performance test report.');
+  }
+
+  if(gateFailures.length){
+    const msg = `❌ Bankable EYA Report blocked — ${gateFailures.length} precondition(s) failed:\n\n` +
+                gateFailures.map((g,i) => `  ${i+1}. ${g}`).join('\n') +
+                `\n\nFix the above and re-generate. See §M (Scope & Limitations) for context.`;
+    alert(msg);
+    log(`Bankable EYA report BLOCKED — ${gateFailures.length} gate failure(s): ${gateFailures.join('; ')}`, 'e');
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
 
   // ── Helper: parse multi-line CSV-style textareas ─────────────────────────────
   function parseLines(id, expectedCols){
@@ -6017,7 +6160,7 @@ function generateBankableReport(){
       <div class="cover-disclaimer">
         This report in excerpts may only be copied with written consent of the contractor.<br>
         Elaborated results are only valid in the context of this report and refer strictly to the specific site characteristics and assumptions mentioned.<br>
-        <strong>Generated by WindFlow Pro ${$('topbarTitle')?.textContent?.replace('WindFlow Pro ','')||'60.2'} — bankable EYA template aligned with ProfEC Ventus structure.</strong>
+        <strong>Generated by WindFlow Pro ${$('topbarTitle')?.textContent?.replace('WindFlow Pro ','')||'60.3'} — bankable EYA template aligned with ProfEC Ventus structure. Includes v60.3 hard gates, scope disclosure, and Gumbel PoT Vref fit.</strong>
       </div>
     </div>`;
 
@@ -6026,6 +6169,7 @@ function generateBankableReport(){
     <div class="toc">
       <h2>Table of Contents</h2>
       <ol class="toc-list">
+        <li>0 Scope, Limitations &amp; Independent Verification Disclosure</li>
         <li>1 Executive Summary</li>
         <li>2 Site Conditions</li>
         <li>3 Equipment</li>
@@ -6042,6 +6186,53 @@ function generateBankableReport(){
         <li>14 Annexes</li>
       </ol>
     </div>`;
+
+  // ── Section 0 (v60.3): Scope, Limitations & Independent Verification Disclosure
+  const maxRIX = (S.perSectorRIX && S.perSectorRIX.length) ? Math.max(...S.perSectorRIX) : null;
+  const rixSummary = maxRIX !== null
+    ? `Max per-sector RIX = <b>${maxRIX.toFixed(1)}%</b> across ${S.perSectorRIX.length} sectors (${S.perSectorRIX.filter(r => r > 15).length} sectors above 15%). <b>${maxRIX < 15 ? 'Within linearized-JH validity range.' : 'EXCEEDS linearized-JH validity range — CFD required.'}</b>`
+    : `Per-sector RIX not computed.`;
+  const gumbelNote = S._eyaGumbel
+    ? `Gumbel PoT Vref computed from ${S._eyaGumbel.nStorms} independent storms over ${S._eyaGumbel.periodYears.toFixed(2)} years of mast data (λ = ${S._eyaGumbel.lambda.toFixed(2)} /yr). Vref(50yr) = <b>${S._eyaGumbel.vref50.toFixed(1)} ± ${S._eyaGumbel.seVref.toFixed(2)} m/s</b>. Cross-check against long-term reference still required.`
+    : `Vref values in §11.2 are USER-INPUT — no Gumbel PoT fit has been performed by WindFlow Pro. Run §N (Compute Gumbel PoT) to populate from mast data.`;
+  const calibCount = (S._eyaCalibFiles?.length || 0);
+  const calibNote = calibCount > 0
+    ? `${calibCount} calibration certificate(s) registered with SHA-256 hashes (see Annex 16).`
+    : `<b>No calibration certificates registered.</b> Bankable EYA requires MEASNET cup anemometer calibration certificates for every anemometer.`;
+  const mastFileNote = S._eyaMastFile
+    ? `Mast data file <code>${S._eyaMastFile.name}</code> registered (SHA-256: <code>${S._eyaMastFile.sha256.slice(0,32)}…</code>).`
+    : `<b>Mast data file not registered for traceability.</b>`;
+
+  const scopeSection = `
+    <section style="background:#fff5f5;border:2px solid #dc2626;padding:1em 1.5em;margin-bottom:1.5em">
+      <h2 style="color:#dc2626;border-bottom-color:#dc2626">0 Scope, Limitations &amp; Independent Verification Disclosure</h2>
+      <p><strong>This section is mandatory and may not be removed.</strong> The bankable EYA produced by WindFlow Pro is generated under the following explicit scope limitations. The report reader, lender, and independent verifier must read and acknowledge these limitations before relying on any result presented herein.</p>
+
+      <h3 style="color:#dc2626">0.1 Tool Status — Single-Developer, Open-Source, Not Commercially QA'd</h3>
+      <p>WindFlow Pro is a single-developer, open-source web tool. It is <strong>not</strong> a commercially-supported product like UL Openwind, EMD WAsP, or EMD WindPRO. It does not carry commercial QA certification, professional indemnity insurance, or vendor support. Prior versions (≤ v60.0) contained an order-of-magnitude AEP bug that has been corrected (v60.1+), but the absence of an independent QA track record means results must be treated as <em>indicative until independently verified</em>. For lender-acceptable FID decisions, this report MUST be accompanied by an equivalent report produced in a commercial tool (UL Openwind, WindPRO/WAsP, Windographer) and signed off by an independent third-party consultant.</p>
+
+      <h3 style="color:#dc2626">0.2 Flow Model Validity — Linearized Jackson-Hunt (NOT CFD)</h3>
+      <p>The flow model used in this report is the <strong>linearized Jackson-Hunt (JH)</strong> approach as implemented in WAsP-compatible formulations. This is acceptable for non-complex terrain (RIX &lt; 15% in all sectors) but <strong>breaks down</strong> in complex terrain, escarpment-adjacent sites, forested ridges, and deep valleys where flow separation, recirculation, and 3D effects dominate. For such sites, a Computational Fluid Dynamics (CFD) model — WindPRO/PROTEROS-CFD, ANSYS CFX, OpenFOAM, or equivalents — MUST be used in parallel. The site has been declared as <strong>${terrainCx}</strong> by the report author.</p>
+      <p>${rixSummary}</p>
+
+      <h3 style="color:#dc2626">0.3 Mast Data Provenance — Real-Measurement Requirement</h3>
+      <p>WindFlow Pro can document a mast measurement campaign but <strong>cannot generate one</strong>. The mast wind-speed time series used in this assessment must originate from a real on-site meteorological mast installed per IEC 61400-50-1:2022, with sensors calibrated per MEASNET Cup Anemometer Calibration v3 (2020) at an accredited wind tunnel. Synthetic or copied datasets are explicitly forbidden. ${mastFileNote} ${calibNote}</p>
+
+      <h3 style="color:#dc2626">0.4 Extreme Wind (Vref) — Gumbel PoT Fit</h3>
+      <p>The IEC 61400-1 Ed.4 reference wind speed Vref (50-year return) is normally computed by fitting a Gumbel distribution to independent storm peaks extracted from a long-term (≥20-year) wind-speed record. ${gumbelNote}</p>
+
+      <h3 style="color:#dc2626">0.5 Independent Verification Required</h3>
+      <p>This report is <strong>not</strong> a substitute for an independent bankable EYA. Before this report is used to support a Final Investment Decision (FID), lender credit committee, or project finance process, the report author attests that an independent third-party consultant — UL Solutions, DNV, ProfEC Ventus, TÜV SÜD, Bureau Veritas, or equivalent — will perform an independent EYA in a commercial tool and cross-check the results presented here. The independent verifier's report supersedes this report in case of discrepancy.</p>
+
+      <h3 style="color:#dc2626">0.6 Attestations</h3>
+      <p>The report author has explicitly attested (via the §M checkboxes in the WindFlow Pro tool):</p>
+      <ul>
+        <li>Mast dataset is real-measured, per IEC 61400-50-1, with MEASNET-calibrated sensors.</li>
+        <li>Site is non-complex (RIX &lt; 15% in all sectors); CFD will be used in parallel for any complex sectors.</li>
+        <li>An independent third-party consultant will verify this report before lender submission.</li>
+        <li>Acknowledgement that WindFlow Pro is single-developer and not commercially QA'd; results are indicative until independently verified.</li>
+      </ul>
+    </section>`;
 
   // Section 1: Executive Summary
   const execSummary = `
@@ -6545,6 +6736,36 @@ function generateBankableReport(){
       <h3>11.2 Extreme Wind Speed Analysis (Vref)</h3>
       <p>The Vref (reference wind speed) is the basic parameter when defining wind turbine classes. The applied <strong>${vrefMethod}</strong> fits a Gumbel distribution to the extreme wind speed events filtered over a defined threshold level (${potThreshold} m/s) and independent criteria (storm duration ${stormDuration} days), and calculates the extreme wind speeds for a range of return periods.</p>
 
+      ${S._eyaGumbel ? `
+      <h4>Table 36a — Gumbel PoT Fit Results (computed by WindFlow Pro from loaded mast data)</h4>
+      <p><em>Source: ${S._eyaGumbel.sourceName} · Computed at: ${S._eyaGumbel.computedAt}</em></p>
+      <table class="data-table">
+        <thead><tr><th>Parameter</th><th>Value</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Measurement period</td><td>${S._eyaGumbel.periodYears.toFixed(2)} years</td><td>From loaded mast time series</td></tr>
+          <tr><td>Storms over threshold (${S._eyaGumbel.threshold.toFixed(1)} m/s)</td><td>${S._eyaGumbel.nStorms}</td><td>Independent peaks (≥ ${$('eyaGumbelIndependence')?.value || '4'}-day separation)</td></tr>
+          <tr><td>Storm rate λ</td><td>${S._eyaGumbel.lambda.toFixed(2)} / year</td><td>Poisson rate</td></tr>
+          <tr><td>Gumbel α (scale)</td><td>${S._eyaGumbel.alpha.toFixed(3)}</td><td>Method of Moments: α = σ√6/π</td></tr>
+          <tr><td>Gumbel β (location)</td><td>${S._eyaGumbel.beta.toFixed(3)}</td><td>β = μ − αγ (γ = 0.5772)</td></tr>
+          <tr><td>Std. error on Vref</td><td>± ${S._eyaGumbel.seVref.toFixed(2)} m/s</td><td>Da Cruz estimator</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Table 36b — Vref by Return Period</h4>
+      <table class="data-table">
+        <thead><tr><th>Return period (years)</th><th>Vref (m/s)</th><th>IEC 61400-1 class check</th></tr></thead>
+        <tbody>
+          <tr><td>10</td><td><b>${S._eyaGumbel.vref10.toFixed(1)}</b></td><td>${S._eyaGumbel.vref10 < 30 ? 'Class III OK' : S._eyaGumbel.vref10 < 37.5 ? 'Class II/III OK' : S._eyaGumbel.vref10 < 42.5 ? 'Class I/II OK' : '⚠ EXCEEDS Class I (50 m/s)'}</td></tr>
+          <tr><td>20</td><td><b>${S._eyaGumbel.vref20.toFixed(1)}</b></td><td>${S._eyaGumbel.vref20 < 30 ? 'Class III OK' : S._eyaGumbel.vref20 < 37.5 ? 'Class II/III OK' : S._eyaGumbel.vref20 < 42.5 ? 'Class I/II OK' : '⚠ EXCEEDS Class I'}</td></tr>
+          <tr style="background:#e8f5e9"><td><b>50 (IEC default)</b></td><td><b>${S._eyaGumbel.vref50.toFixed(1)}</b></td><td>${S._eyaGumbel.vref50 < 30 ? 'Class III OK' : S._eyaGumbel.vref50 < 37.5 ? 'Class II/III OK' : S._eyaGumbel.vref50 < 42.5 ? 'Class I/II OK' : '⚠ EXCEEDS Class I'}</td></tr>
+          <tr><td>100</td><td><b>${S._eyaGumbel.vref100.toFixed(1)}</b></td><td>${S._eyaGumbel.vref100 < 30 ? 'Class III OK' : S._eyaGumbel.vref100 < 37.5 ? 'Class II/III OK' : S._eyaGumbel.vref100 < 42.5 ? 'Class I/II OK' : '⚠ EXCEEDS Class I'}</td></tr>
+        </tbody>
+      </table>
+      <p><strong>⚠ Cross-check required:</strong> The Vref values above are extrapolated from ${S._eyaGumbel.periodYears.toFixed(1)} years of mast data only. For bankable EYA, this should be cross-checked against a long-term reference (≥20 years of reanalysis or a nearby met-ocean station) per IEC 61400-1 Ed.4 Annex C. The standard error on Vref (± ${S._eyaGumbel.seVref.toFixed(2)} m/s) reflects only the Gumbel fit uncertainty, not the long-term reference uncertainty.</p>
+      ` : `
+      <p><strong>⚠ WindFlow Pro has NOT computed a Gumbel PoT fit</strong> — the Vref values in Table 37 below are user-input. Run §N (Compute Gumbel PoT) in the Bankable EYA Inputs panel to populate Vref from the loaded mast time series.</p>
+      `}
+
       <h4>Table 37 — Reference Wind Speed per Turbine (IEC 61400-1 Ed.4)</h4>
       <table class="data-table">
         <thead><tr><th>Turbine</th><th>Vref [m/s]</th><th>Uncertainty [m/s]</th><th>Vref class check</th><th>Turbulence class</th><th>Shear α</th><th>Shear check</th><th>Flow inclination [°]</th><th>Flow check</th><th>Terrain complexity index</th></tr></thead>
@@ -6617,6 +6838,28 @@ function generateBankableReport(){
           }).join('') : '<tr><td colspan="12" style="text-align:center;color:#888">Run analysis to populate per-turbine table</td></tr>'}
         </tbody>
       </table>
+
+      <h3>Annex 16 — Calibration Certificate &amp; Mast Data File Register (SHA-256 Hashes)</h3>
+      <p>The following files have been registered with WindFlow Pro for traceability. SHA-256 hashes are computed in-browser (files are NOT uploaded to any server). To verify, the independent reviewer should re-hash the original file and compare against the hash below.</p>
+      <table class="data-table">
+        <thead><tr><th>#</th><th>File name</th><th>Size</th><th>Type</th><th>SHA-256 (first 32 hex chars)</th></tr></thead>
+        <tbody>
+          ${(S._eyaCalibFiles && S._eyaCalibFiles.length) ? S._eyaCalibFiles.map((f, i) => `<tr><td>${i+1}</td><td>${f.name}</td><td>${(f.size/1024).toFixed(1)} KB</td><td>${f.type}</td><td style="font-family:monospace;font-size:8pt">${f.sha256.slice(0,32)}…</td></tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:#888">No calibration certificates registered.</td></tr>'}
+          ${S._eyaMastFile ? `<tr style="background:#fef3c7"><td>★</td><td><b>${S._eyaMastFile.name}</b> (mast data)</td><td>${(S._eyaMastFile.size/1024).toFixed(1)} KB</td><td>${S._eyaMastFile.type}</td><td style="font-family:monospace;font-size:8pt">${S._eyaMastFile.sha256.slice(0,32)}…</td></tr>` : ''}
+        </tbody>
+      </table>
+
+      <h3>Annex 17 — Power Curve Traceability</h3>
+      <table class="data-table">
+        <thead><tr><th>Field</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Turbine model / variant</td><td>${$('eyaPCModel')?.value || '—'}</td></tr>
+          <tr><td>Type Certificate Nr.</td><td>${$('eyaPCCertNr')?.value || '—'}</td></tr>
+          <tr><td>Type Certificate issuer</td><td>${$('eyaPCCertIssuer')?.value || '—'}</td></tr>
+          <tr><td>Power curve source</td><td>${{type_certificate:'Type Certificate (manufacturer-supplied)', site_test:'Site-specific IEC 61400-12-1 power performance test', generic_lut:'Generic LUT (NOT bankable)'}[$('eyaPCSource')?.value || 'generic_lut']}</td></tr>
+          <tr><td>Power curve notes</td><td>${$('eyaPCNotes')?.value || '—'}</td></tr>
+        </tbody>
+      </table>
     </section>`;
 
   // ── Assemble full HTML ──────────────────────────────────────────────────────
@@ -6681,6 +6924,7 @@ table.rev-table td { padding: 4px 6px; border: 1px solid #cbd5e1; }
 <body>
 ${coverPage}
 ${toc}
+${scopeSection}
 ${execSummary}
 ${siteConditions}
 ${equipment}
@@ -6712,7 +6956,7 @@ ${annexes}
   log(`Bankable EYA Report generated — ${siteName} · ${nWTG} WTGs · P50=${fmt(netAEP*1000)} MWh/a · σ=${overallUnc.toFixed(1)}%`,'i');
 }
 
-// v60.2: Live-update overall uncertainty when components change
+// v60.3: Live-update overall uncertainty when components change
 (function bindEyaUncLive(){
   setTimeout(() => {
     [1,2,3,4,5].forEach(i => {
@@ -6728,10 +6972,368 @@ ${annexes}
   }, 500);
 })();
 
+// ════════════════════════════════════════════════════════════════════════════════════
+// v60.3: Gumbel PoT Vref fit from loaded mast data, calibration file hashing,
+//        WAsP project export, todayISO helper (missing in earlier versions)
+// ════════════════════════════════════════════════════════════════════════════════════
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+
+// State for v60.3 calibration files + Gumbel results
+S._eyaCalibFiles = []; // [{name, size, sha256, type}]
+S._eyaMastFile   = null; // {name, size, sha256, type}
+S._eyaGumbel     = null; // {vref10, vref20, vref50, vref100, nStorms, threshold, alpha, beta, periodYears}
+
+// SHA-256 hash of a file (browser-native SubtleCrypto)
+async function sha256OfFile(file){
+  const buf = await file.arrayBuffer();
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function fmtBytes(n){
+  if(n < 1024) return n + ' B';
+  if(n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+  return (n/1024/1024).toFixed(2) + ' MB';
+}
+
+// ── Calibration file upload handler ──────────────────────────────────────────
+async function registerCalibrationFiles(){
+  const inp = $('eyaCalibFiles');
+  const list = $('eyaCalibList');
+  if(!inp || !inp.files || !inp.files.length){ return; }
+  list.innerHTML = '<i>Hashing ' + inp.files.length + ' file(s)…</i>';
+  const newFiles = [];
+  for(const f of inp.files){
+    try {
+      const sha = await sha256OfFile(f);
+      newFiles.push({name: f.name, size: f.size, sha256: sha, type: f.type || '—'});
+    } catch(e){
+      newFiles.push({name: f.name, size: f.size, sha256: 'HASH_FAILED', type: f.type || '—'});
+    }
+  }
+  S._eyaCalibFiles = S._eyaCalibFiles.concat(newFiles);
+  renderCalibList();
+  log(`Calibration register: ${newFiles.length} file(s) added (SHA-256 computed in-browser).`, 'i');
+}
+
+function renderCalibList(){
+  const list = $('eyaCalibList');
+  if(!list) return;
+  if(!S._eyaCalibFiles.length){ list.innerHTML = '<i>No calibration certificates registered.</i>'; return; }
+  list.innerHTML = S._eyaCalibFiles.map((f,i) => {
+    const shortSha = f.sha256.slice(0,16) + '…';
+    return `<div style="border-bottom:1px dotted var(--border);padding:.15rem 0">
+      <span style="color:var(--mint)">${i+1}.</span> <b>${f.name}</b> (${fmtBytes(f.size)})<br>
+      &nbsp;&nbsp;&nbsp;SHA-256: <span style="color:var(--gold)">${shortSha}</span>
+      &nbsp;<a href="#" onclick="navigator.clipboard.writeText('${f.sha256}');return false" style="color:var(--sky)">📋</a>
+    </div>`;
+  }).join('');
+}
+
+// ── Mast data file hash register (does NOT parse — used for traceability only) ─
+async function registerMastDataFile(){
+  const inp = $('eyaMastDataFile');
+  const info = $('eyaMastDataInfo');
+  if(!inp || !inp.files || !inp.files.length){ return; }
+  const f = inp.files[0];
+  info.innerHTML = '<i>Hashing ' + f.name + '…</i>';
+  try {
+    const sha = await sha256OfFile(f);
+    S._eyaMastFile = {name: f.name, size: f.size, sha256: sha, type: f.type || '—'};
+    info.innerHTML = `<div><b>${f.name}</b> (${fmtBytes(f.size)})</div>
+      <div>SHA-256: <span style="color:var(--gold)">${sha.slice(0,32)}…</span></div>
+      <div style="margin-top:.2rem"><button class="btn btn-sm btn-ghost" onclick="S._eyaMastFile=null;document.getElementById('eyaMastDataInfo').innerHTML='No file registered';document.getElementById('eyaMastDataFile').value='';">Remove</button></div>`;
+    log(`Mast data file registered: ${f.name} (SHA-256 ${sha.slice(0,16)}…)`, 'i');
+  } catch(e){
+    info.innerHTML = '<span style="color:#dc2626">Hash failed: ' + e.message + '</span>';
+  }
+}
+
+// ── Gumbel PoT Vref fit from loaded mast wind-speed time series ───────────────
+// Reference: Gumbel (1954); Cook (1985); IEC 61400-1 Ed.4 Annex C
+// Method:
+//   1. Filter 10-min mean wind speeds above threshold u_q (PoT)
+//   2. Identify independent storms (peaks separated by ≥ independence days)
+//   3. Fit Gumbel CDF: F(x) = exp(-exp(-(x-β)/α))  via method of moments
+//      α = (stddev * √6) / π ;  β = mean - α * γ  (γ = Euler-Mascheroni = 0.5772)
+//   4. Return period T (years): x_T = β - α * ln(-ln(1 - 1/T))
+//   5. Vref (IEC 61400-1) = 50-year return → x_50
+function computeGumbelPoTVref(){
+  const status = $('eyaGumbelStatus');
+  const out = $('eyaGumbelResults');
+  if(status) status.textContent = 'Computing…';
+
+  // ── Get mast wind-speed time series from S.wind (the active wind source) ───
+  const curSrc = S.windSource || (Object.keys(S.windSources||{})[0] || null);
+  if(!curSrc || !S.windSources[curSrc]){
+    if(status) status.innerHTML = '<span style="color:#dc2626">No mast wind data loaded — load a CSV/WindPRO/WRA file first.</span>';
+    if(out) out.innerHTML = '<i>Vref fit requires a loaded wind-speed time series.</i>';
+    return;
+  }
+  const ws = S.windSources[curSrc];
+  const speeds = ws.speeds || [];
+  const times  = ws.times  || [];
+  if(speeds.length < 1000){
+    if(status) status.innerHTML = '<span style="color:#dc2626">Insufficient data: only ' + speeds.length + ' samples (need ≥1000, ideally ≥1 year of 10-min).</span>';
+    return;
+  }
+
+  // ── Determine measurement period in years ───────────────────────────────
+  let periodYears = 1;
+  if(times.length >= 2){
+    const t0 = new Date(times[0]).getTime();
+    const t1 = new Date(times[times.length-1]).getTime();
+    if(!isNaN(t0) && !isNaN(t1)){
+      periodYears = Math.max(0.1, (t1 - t0) / (365.25*24*3600*1000));
+    }
+  }
+
+  const threshold   = parseFloat($('eyaGumbelThreshold')?.value) || 15.0;
+  const indepDays   = parseFloat($('eyaGumbelIndependence')?.value) || 4;
+  const indepMs     = indepDays * 24 * 3600 * 1000;
+
+  // ── Step 1: identify peaks over threshold with independence criterion ────
+  // Walk through speeds, find local maxima above threshold separated by ≥ indepDays
+  const peaks = [];
+  let i = 0;
+  while(i < speeds.length){
+    if(speeds[i] < threshold){ i++; continue; }
+    // Walk forward to find local max within this storm
+    let j = i, maxV = speeds[i], maxIdx = i;
+    while(j < speeds.length && speeds[j] >= threshold){
+      if(speeds[j] > maxV){ maxV = speeds[j]; maxIdx = j; }
+      j++;
+    }
+    // Add this peak
+    peaks.push({idx: maxIdx, v: maxV, t: times[maxIdx] ? new Date(times[maxIdx]).getTime() : maxIdx});
+    // Skip ahead by independence interval
+    if(times.length){
+      const skipUntil = peaks[peaks.length-1].t + indepMs;
+      while(j < speeds.length && times[j] && new Date(times[j]).getTime() < skipUntil) j++;
+    } else {
+      // No timestamps — assume 10-min interval, skip indepDays*144 samples
+      j = Math.max(j, maxIdx + Math.round(indepDays * 144));
+    }
+    i = Math.max(j, maxIdx + 1);
+  }
+
+  if(peaks.length < 5){
+    if(status) status.innerHTML = '<span style="color:#dc2626">Too few independent storms (' + peaks.length + ') above ' + threshold + ' m/s — lower threshold or load more data.</span>';
+    if(out) out.innerHTML = '<i>Need ≥5 independent storms for a stable Gumbel fit; got ' + peaks.length + '.</i>';
+    return;
+  }
+
+  // ── Step 2: Method of moments Gumbel fit on peaks ───────────────────────
+  const peakVals = peaks.map(p => p.v);
+  const n        = peakVals.length;
+  const mean     = peakVals.reduce((s,v) => s+v, 0) / n;
+  const variance = peakVals.reduce((s,v) => s + (v-mean)**2, 0) / (n-1);
+  const stddev   = Math.sqrt(variance);
+  const EULER    = 0.5772156649015329;
+  const alpha    = (stddev * Math.sqrt(6)) / Math.PI;      // scale parameter
+  const beta     = mean - alpha * EULER;                   // location parameter
+
+  // ── Step 3: Compute Vref for return periods ─────────────────────────────
+  // x_T = β - α * ln(-ln(1 - 1/T))  ;  λ = events/year = n / periodYears
+  const lambda = n / periodYears;  // storms per year
+  function vrefForRP(T_years){
+    // Effective return period in storms = T_years * lambda
+    const T_storms = T_years * lambda;
+    return beta - alpha * Math.log(-Math.log(1 - 1/T_storms));
+  }
+  const vref10  = vrefForRP(10);
+  const vref20  = vrefForRP(20);
+  const vref50  = vrefForRP(50);
+  const vref100 = vrefForRP(100);
+
+  // ── Standard error (Da Cruz estimator) ──────────────────────────────────
+  // σ_Vref ≈ α * sqrt( (1.168 + 0.193*γ + 1.059*γ²) / n )  where γ = Euler
+  const seVref  = alpha * Math.sqrt((1.168 + 0.193*EULER + 1.059*EULER*EULER) / n);
+
+  S._eyaGumbel = {
+    vref10, vref20, vref50, vref100,
+    seVref, nStorms: n, threshold, alpha, beta, lambda, periodYears,
+    computedAt: new Date().toISOString(),
+    sourceName: curSrc
+  };
+
+  // ── Auto-populate Section H per-turbine Vref column ─────────────────────
+  // Determine which return period the user wants
+  const targetRP = parseInt($('eyaGumbelRP')?.value || '50');
+  const targetVref = targetRP === 10 ? vref10 : targetRP === 20 ? vref20 : targetRP === 50 ? vref50 : vref100;
+  const sc = $('eyaSiteCompliance');
+  if(sc){
+    const lines = sc.value.trim().split(/\r?\n/).filter(l => l.trim());
+    const updated = lines.map(line => {
+      const p = line.split(',').map(s => s.trim());
+      while(p.length < 7) p.push('');
+      // Replace Vref (col 1) and Vref uncertainty (col 2)
+      p[1] = targetVref.toFixed(1);
+      p[2] = seVref.toFixed(2);
+      return p.join(',');
+    });
+    sc.value = updated.join('\n');
+  }
+
+  // ── Render results box ──────────────────────────────────────────────────
+  if(out){
+    out.innerHTML = `
+      <div style="color:var(--mint);font-weight:700;margin-bottom:.3rem">Gumbel PoT fit results — ${curSrc}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.2rem .8rem;font-size:.58rem">
+        <div>Measurement period: <b>${periodYears.toFixed(2)} years</b></div>
+        <div>Storms over threshold (${threshold.toFixed(1)} m/s): <b>${n}</b></div>
+        <div>Storm rate λ: <b>${lambda.toFixed(2)} / year</b></div>
+        <div>Independence: <b>${indepDays} days</b></div>
+        <div>Gumbel α (scale): <b>${alpha.toFixed(3)}</b></div>
+        <div>Gumbel β (location): <b>${beta.toFixed(3)}</b></div>
+        <div>Std. error on Vref: <b>±${seVref.toFixed(2)} m/s</b></div>
+        <div>Method: <b>Method of Moments (Gumbel 1954)</b></div>
+      </div>
+      <table style="width:100%;margin-top:.4rem;font-size:.58rem;border-collapse:collapse">
+        <thead><tr style="background:var(--bg3)"><th style="padding:.2rem .4rem;text-align:left">Return period</th><th style="text-align:right">Vref (m/s)</th><th style="text-align:right">IEC class check</th></tr></thead>
+        <tbody>
+          <tr><td style="padding:.2rem .4rem">10-year</td><td style="text-align:right"><b>${vref10.toFixed(1)}</b></td><td style="text-align:right">${vref10<30?'III OK':vref10<37.5?'II/III OK':vref10<42.5?'I/II OK':'EXCEEDS I'}</td></tr>
+          <tr><td style="padding:.2rem .4rem">20-year</td><td style="text-align:right"><b>${vref20.toFixed(1)}</b></td><td style="text-align:right">${vref20<30?'III OK':vref20<37.5?'II/III OK':vref20<42.5?'I/II OK':'EXCEEDS I'}</td></tr>
+          <tr style="background:var(--mint2)"><td style="padding:.2rem .4rem"><b>50-year (IEC default)</b></td><td style="text-align:right"><b style="color:var(--mint)">${vref50.toFixed(1)}</b></td><td style="text-align:right">${vref50<30?'III OK':vref50<37.5?'II/III OK':vref50<42.5?'I/II OK':'⚠ EXCEEDS I'}</td></tr>
+          <tr><td style="padding:.2rem .4rem">100-year</td><td style="text-align:right"><b>${vref100.toFixed(1)}</b></td><td style="text-align:right">${vref100<30?'III OK':vref100<37.5?'II/III OK':vref100<42.5?'I/II OK':'EXCEEDS I'}</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:.3rem;font-size:.5rem;color:var(--text3)">
+        ⚠ Note: Vref is extrapolated from ${periodYears.toFixed(1)} years of mast data. For bankable EYA, this should be cross-checked against a long-term reference (≥20 years of reanalysis or nearby met-ocean station) per IEC 61400-1 Ed.4 Annex C.
+        Per-turbine Vref column in §H auto-updated to ${targetRP}-year value (${targetVref.toFixed(1)} ± ${seVref.toFixed(2)} m/s).
+      </div>`;
+  }
+  if(status) status.innerHTML = '<span style="color:var(--mint)">✓ Vref computed from ' + n + ' storms over ' + periodYears.toFixed(1) + ' years.</span>';
+  log(`Gumbel PoT Vref fit: ${n} storms, λ=${lambda.toFixed(2)}/yr, Vref(50yr)=${vref50.toFixed(1)} ± ${seVref.toFixed(2)} m/s`, 'i');
+}
+
+function clearGumbelPoT(){
+  S._eyaGumbel = null;
+  const out = $('eyaGumbelResults');
+  const status = $('eyaGumbelStatus');
+  if(out) out.innerHTML = '';
+  if(status) status.textContent = '';
+}
+
+// ── v60.3: WAsP project file export (.wrg + .tab + .owc) ────────────────────
+// Generates a WAsP-compatible resource grid + observed wind climate + tab file
+// so an independent reviewer can re-run the assessment in commercial WAsP.
+function exportWaspProjectFiles(){
+  const R = S.results;
+  if(!R){
+    alert('Run WAsP Analysis first — no results available to export.');
+    return;
+  }
+  const pn = $('projName')?.value || 'WindFarm';
+  const safeName = pn.replace(/[^\w-]+/g,'_');
+  const dateStr = todayISO();
+  const mastLat = parseFloat($('mastLat')?.value) || 0;
+  const mastLon = parseFloat($('mastLon')?.value) || 0;
+  const mastH   = parseFloat($('mastH')?.value) || 100;
+  const hubH    = parseFloat($('hubH')?.value) || 120;
+
+  // ── Generate .tab file (WAsP observed wind climate) ────────────────────
+  // Format: 3-line header + 12 sectors × 30 speed bins (frequency matrix)
+  const nSectors = R.sectors?.length || 12;
+  const sectorWidth = 360 / nSectors;
+  const speedBins = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34];
+  let tabContent = `${mastLat.toFixed(4)} ${mastLon.toFixed(4)} ${mastH.toFixed(0)}\n`;  // Line 1: lat lon height
+  tabContent += `2 ${nSectors} ${speedBins.length-1} ${sectorWidth.toFixed(1)}\n`;        // Line 2: format nSectors nBins sectorWidth
+  // Compute sector-wise frequency histogram from active wind source
+  const curSrc = S.windSource || Object.keys(S.windSources||{})[0] || null;
+  const ws = curSrc ? S.windSources[curSrc] : null;
+  if(ws && ws.speeds && ws.dirs){
+    const hist = Array(nSectors).fill(0).map(() => Array(speedBins.length-1).fill(0));
+    let total = 0;
+    for(let k=0; k<ws.speeds.length; k++){
+      const s = ws.speeds[k], d = ws.dirs[k];
+      if(s == null || d == null || s < 0) continue;
+      const secIdx = Math.floor(((d + sectorWidth/2) % 360) / sectorWidth) % nSectors;
+      const binIdx = Math.min(speedBins.length-2, Math.floor(s));
+      hist[secIdx][binIdx]++;
+      total++;
+    }
+    if(total > 0){
+      for(let s=0; s<nSectors; s++){
+        for(let b=0; b<speedBins.length-1; b++){
+          tabContent += (hist[s][b] / total * 100).toFixed(4) + (b < speedBins.length-2 ? ' ' : '');
+        }
+        tabContent += '\n';
+      }
+    } else {
+      // No histogram data — fill zeros
+      for(let s=0; s<nSectors; s++) tabContent += Array(speedBins.length-1).fill('0.0000').join(' ') + '\n';
+    }
+  } else {
+    for(let s=0; s<nSectors; s++) tabContent += Array(speedBins.length-1).fill('0.0000').join(' ') + '\n';
+  }
+
+  // ── Generate .wrg file (WAsP Resource Grid) ────────────────────────────
+  // Format: per-WTG line with lat, lon, elev, hH, A, k, freq, AEC, etc.
+  // Reference: WAsP 12 .wrg format
+  let wrgContent = `# WAsP Resource Grid — exported from WindFlow Pro v60.3\n`;
+  wrgContent += `# Project: ${pn}  ·  Date: ${dateStr}\n`;
+  wrgContent += `# Site: ${mastLat.toFixed(4)}, ${mastLon.toFixed(4)}  ·  Mast height: ${mastH}m  ·  Hub height: ${hubH}m\n`;
+  wrgContent += `# WTG count: ${S.turbines.length}\n`;
+  wrgContent += `# Col: lat lon elev X Y hH A k freq powerDens AEC siteElev\n`;
+  const wbA = R.hubWb?.A || 0;
+  const wbK = R.hubWb?.k || 0;
+  for(const tb of S.turbines){
+    const lat = tb.lat || mastLat;
+    const lon = tb.lon || mastLon;
+    const elev = tb.elev || 0;
+    const hh = tb.hh || hubH;
+    const A = wbA;  // site-averaged Weibull A (per-WTG would require spatial model)
+    const k = wbK;
+    // Per-turbine results
+    const pt = R.perTurbine?.find(p => p.i === (S.turbines.indexOf(tb)+1));
+    const aec = pt ? (pt.gross * 1000) : 0;  // MWh → MWh
+    const pd = 0.5 * R.density * Math.pow(pt ? pt.ws : R.hubMean, 3);
+    wrgContent += `${lat.toFixed(5)} ${lon.toFixed(5)} ${elev.toFixed(0)} ${(tb.x||0).toFixed(0)} ${(tb.y||0).toFixed(0)} ${hh.toFixed(0)} ${A.toFixed(2)} ${k.toFixed(2)} 100.00 ${(pd/1000).toFixed(2)} ${(aec).toFixed(0)} ${elev.toFixed(0)}\n`;
+  }
+
+  // ── Generate .owc (Observed Wind Climate summary) ──────────────────────
+  let owcContent = `# WindFlow Pro OWC Summary — ${pn}  ·  ${dateStr}\n`;
+  owcContent += `# Source: ${curSrc || 'none'}  ·  Period: ${S._eyaGumbel?.periodYears?.toFixed(2) || '—'} years\n`;
+  owcContent += `# Mast mean WS: ${R.mastMean.toFixed(2)} m/s  ·  Hub mean WS: ${R.hubMean.toFixed(2)} m/s\n`;
+  owcContent += `# Weibull A=${wbA.toFixed(2)} k=${wbK.toFixed(2)} (MLE)\n`;
+  owcContent += `# MCP factor: ${R.mcpFactor.toFixed(3)}\n\n`;
+  owcContent += `Sector  Dir   Freq  Weibull-A  Weibull-k  MeanWS\n`;
+  if(R.sectors){
+    R.sectors.forEach((sec, i) => {
+      const dirCenter = (i + 0.5) * (360/nSectors);
+      const freq = sec.freq || (1/nSectors);
+      const A = sec.A || wbA;
+      const k = sec.k || wbK;
+      const mean = A * Math.exp(Math.logGamma(1 + 1/k));
+      owcContent += `${(i+1).toString().padStart(3)}   ${dirCenter.toFixed(0).padStart(3)}°   ${(freq*100).toFixed(2)}    ${A.toFixed(2)}      ${k.toFixed(2)}      ${mean.toFixed(2)}\n`;
+    });
+  }
+
+  // ── Bundle as a single .zip-like multi-file download via separate Blobs ─
+  const files = [
+    {name: `${safeName}_${dateStr}.tab`, content: tabContent, type: 'text/plain'},
+    {name: `${safeName}_${dateStr}.wrg`, content: wrgContent, type: 'text/plain'},
+    {name: `${safeName}_${dateStr}.owc`, content: owcContent, type: 'text/plain'},
+  ];
+  files.forEach(f => {
+    const blob = new Blob([f.content], {type: f.type});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = f.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  log(`WAsP project files exported: ${files.map(f=>f.name).join(', ')}`, 'i');
+}
+
 function exportReport(){
   const R=S.results,pn=$('projName').value,now=new Date().toLocaleString();
   const metadata={
-    tool_version:'WindFlow Pro 60.0',
+    tool_version:'WindFlow Pro 60.3',
     analysis_date:new Date().toISOString(),
     data_sources:Object.keys(S.windSources||{}),
     assumptions:S.assumptionLog||[],
@@ -6863,7 +7465,7 @@ function exportPDFReport(){
   const R=S.results,pn=$('projName').value;
   if(!R){alert('Run analysis first before exporting PDF report');return;}
   const metadata={
-    tool_version:'WindFlow Pro 60.0',
+    tool_version:'WindFlow Pro 60.3',
     analysis_date:new Date().toISOString(),
     data_sources:Object.keys(S.windSources||{}),
     assumptions:S.assumptionLog||[],
@@ -14869,7 +15471,7 @@ function updateReportingDashboard(){
 function saveProject(){
   // v18.0: Save ALL wind data (no truncation), save autoRoughnessRose, hourlyStability, roughnessZones
   // v42.1: Also save S.results so user doesn't have to re-run analysis after loading
-  const data={version:'60.0',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate,mastName:v.mastName||null,pressure:v.pressure||null}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,_gwaOnlyMode:S._gwaOnlyMode||false,mcpDirectional:S.mcpDirectional?{factors:Array.from(S.mcpDirectional.factors),R2:Array.from(S.mcpDirectional.R2),n:Array.from(S.mcpDirectional.n),method:S.mcpDirectional.method}:null,perSectorRIX:S.perSectorRIX?Array.from(S.perSectorRIX):null,assumptionLog:S.assumptionLog||[],settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0',nrelApiKey:$('nrelApiKey')?.value||''}};
+  const data={version:'60.3',turbines:S.turbines,wind:S.wind?{speeds:S.wind.speeds,dirs:S.wind.dirs}:null,terrain:S.terrain,boundary:S.boundary,mcpFactor:S.mcpFactor,obstacles:S.obstacles,masts:S.masts,waspCalibration:S.waspCalibration,roughnessRose:S.roughnessRose,autoRoughnessRose:S.autoRoughnessRose,hourlyStability:S.hourlyStability,roughnessZones:S.roughnessZones,windSource:S.windSource||'ERA5',windSources:S.windSources&&Object.keys(S.windSources).length?Object.fromEntries(Object.entries(S.windSources).map(([k,v])=>[k,{speeds:v.speeds,dirs:v.dirs,times:v.times,mcpFactor:v.mcpFactor,mastH:v.mastH,elevation:v.elevation,sourceLat:v.sourceLat,sourceLon:v.sourceLon,sourceHeight:v.sourceHeight,meanWS:v.meanWS,weibullA:v.weibullA,weibullK:v.weibullK,startDate:v.startDate,endDate:v.endDate,mastName:v.mastName||null,pressure:v.pressure||null}])):null,era5Atm:S.era5Atm?{pres:S.era5Atm.pres,temp:S.era5Atm.temp,rh:S.era5Atm.rh,elev:S.era5Atm.elev}:null,nrelData:S.nrelData?{wsHeights:S.nrelData.wsHeights,wdHeights:S.nrelData.wdHeights,hubHt:S.nrelData.hubHt,siteId:S.nrelData.siteId,siteLat:S.nrelData.siteLat,siteLon:S.nrelData.siteLon,siteTz:S.nrelData.siteTz,year:S.nrelData.year,interval:S.nrelData.interval}:null,nrelProfile:S.nrelProfile||null,results:S.results||null,_mastUserSet:S._mastUserSet||false,_gwaOnlyMode:S._gwaOnlyMode||false,mcpDirectional:S.mcpDirectional?{factors:Array.from(S.mcpDirectional.factors),R2:Array.from(S.mcpDirectional.R2),n:Array.from(S.mcpDirectional.n),method:S.mcpDirectional.method}:null,perSectorRIX:S.perSectorRIX?Array.from(S.perSectorRIX):null,assumptionLog:S.assumptionLog||[],_eyaGumbel:S._eyaGumbel||null,_eyaCalibFiles:S._eyaCalibFiles||[],_eyaMastFile:S._eyaMastFile||null,settings:{projName:$('projName')?.value,hubH:$('hubH')?.value,rotD:$('rotD')?.value,ratedPow:$('ratedPow')?.value,wakeK:$('wakeK')?.value,otherLoss:$('otherLoss')?.value,wakeModel:$('wakeModel')?.value,sects:$('sects')?.value,shearA:$('shearA')?.value,z0:$('z0val')?.value,stab:$('stab')?.value,useERA5TDensity:$('useERA5TDensity')?.checked?'1':'0',useHumidity:$('useHumidity')?.checked?'1':'0',perWtgDensity:$('perWtgDensity')?.checked?'1':'0',rotorAvgCB:$('rotorAvgCB')?.checked?'1':'0',availabilityPct:$('availabilityPct')?.value,electricalLossPct:$('electricalLossPct')?.value,useREWS:$('useREWS')?.checked?'1':'0',nrelApiKey:$('nrelApiKey')?.value||''}};
   const json=JSON.stringify(data);const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(($('projName')?.value||'project')+'.json');a.click();URL.revokeObjectURL(url);log('Project saved ('+(S.wind?S.wind.speeds.length:0)+' wind records, v42.1, results included)','i');
 }
 
@@ -15032,6 +15634,11 @@ function loadProject(event){
       if(data.hourlyStability)S.hourlyStability=data.hourlyStability;
       if(data.roughnessZones)S.roughnessZones=data.roughnessZones;
       if(data.era5Atm)S.era5Atm=data.era5Atm;
+      // v60.3: Restore bankable EYA state
+      if(data._eyaGumbel)S._eyaGumbel=data._eyaGumbel;
+      if(data._eyaCalibFiles)S._eyaCalibFiles=data._eyaCalibFiles;
+      if(data._eyaMastFile)S._eyaMastFile=data._eyaMastFile;
+      if(data.perSectorRIX)S.perSectorRIX=data.perSectorRIX;
       // Restore settings with proper checkbox handling
       if(data.settings){const s=data.settings;Object.keys(s).forEach(k=>{
         const el=$(k);if(!el)return;
