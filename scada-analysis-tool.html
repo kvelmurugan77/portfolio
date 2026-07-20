@@ -433,7 +433,7 @@ footer{padding:1.5rem 2rem;border-top:1px solid var(--border);text-align:center;
         <div id="scadaFileList" style="margin-top:1rem"></div>
       </div>
       <div>
-        <div class="info-box"><span class="w-icon">ℹ</span><div><strong>Privacy:</strong> Files are parsed locally with <a href="https://www.papaparse.com" target="_blank" style="color:var(--sky)">PapaParse</a> and never leave your browser. There is no server upload — refresh the page and the data is gone.</div></div>
+        <div class="info-box"><span class="w-icon">ℹ</span><div><strong>Privacy &amp; offline:</strong> Files are parsed locally with <a href="https://www.papaparse.com" target="_blank" style="color:var(--sky)">PapaParse</a> in a <strong>Web Worker</strong> (non-blocking) and never leave your browser. <strong>To run fully offline:</strong> download <code style="color:var(--mint);font-family:var(--mono)">scada-analysis-tool.html</code> + <code style="color:var(--mint);font-family:var(--mono)">scada-worker.js</code> from the <a href="https://github.com/kvelmurugan77/portfolio" target="_blank" style="color:var(--sky)">GitHub repo</a>, place them in the same folder, and double-click the HTML — opens in your browser via <code style="color:var(--mint);font-family:var(--mono)">file://</code> with no internet needed (after first load caches PapaParse). Refresh the page after first open if the worker doesn't load.</div></div>
         <div class="fg">
           <label class="fl">Delimiter <span class="help-tip">?<span class="tip-body">Auto-detection tries comma, semicolon, tab, pipe and picks the one with the most consistent column count.</span></span></label>
           <select class="fs" id="pDelimiter" onchange="autoSave()">
@@ -925,7 +925,24 @@ function detectDelimiter(firstLine){
 }
 
 // ════════════════════════════════════════════════════════════
-// SCADA upload handling
+// WEB WORKER for non-blocking CSV parsing
+// ════════════════════════════════════════════════════════════
+
+let scadaWorker = null;
+function getScadaWorker(){
+  if(scadaWorker) return scadaWorker;
+  try {
+    // Try loading the worker file from the same directory as this HTML
+    scadaWorker = new Worker("scada-worker.js");
+    return scadaWorker;
+  } catch(e) {
+    console.warn("Could not load scada-worker.js — falling back to main-thread parsing. UI may be unresponsive for large files.", e);
+    return null;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// SCADA upload handling — WORKER-BASED (non-blocking)
 // ════════════════════════════════════════════════════════════
 
 let scadaUploadedFiles = [];
@@ -963,62 +980,151 @@ function removeScadaFile(idx){
 
 function parseScadaFiles(){
   if(scadaUploadedFiles.length===0) return;
-  $("scadaParseStatus").innerHTML = `<div class="info-box"><span class="w-icon"><span class="spinner"></span></span><div>Parsing ${scadaUploadedFiles.length} file(s)…</div></div>`;
+  const totalFiles = scadaUploadedFiles.length;
+  let filesDone = 0;
   let allRows = [];
   let headers = [];
-  let filesProcessed = 0;
-  let parseInfo = {dayfirstUsed:null, method:"", nTotal:0, nFailed:0};
+  const parseInfo = {dayfirstUsed:null, method:"", nTotal:0, nFailed:0};
 
-  scadaUploadedFiles.forEach((file, idx) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const text = e.target.result;
-      // Detect delimiter
-      let delim = STATE.cfg.delimiter;
-      const firstLine = text.split(/\r?\n/).find(l=>l.trim().length>0) || "";
-      if(delim==="auto"){
-        delim = detectDelimiter(firstLine);
-        if(idx===0) logEvent(`Auto-detected delimiter: ${delim==="\t"?"tab":delim===",?"?delim:JSON.stringify(delim)}`, "info");
-      } else if(delim==="\\t"){
-        delim = "\t";
-      }
-      // Skip header rows if configured
-      const skipHeader = STATE.cfg.headerRow || 0;
-      const skipFooter = STATE.cfg.skipFooter || 0;
-      Papa.parse(text, {
-        delimiter: delim,
-        skipEmptyLines: true,
-        header: false,
-        worker: false,
-        complete: (results) => {
-          const data = results.data;
-          if(data.length <= skipHeader){
-            filesProcessed++;
-            if(filesProcessed===scadaUploadedFiles.length) finalizeParse(allRows, headers, parseInfo);
+  // Show progress UI with bar
+  $("scadaParseStatus").innerHTML = `
+    <div class="info-box" id="parseProgressBar">
+      <span class="w-icon"><span class="spinner"></span></span>
+      <div>
+        <div id="parseProgressMsg">Starting parse of ${totalFiles} file(s)…</div>
+        <div class="progress-track" style="margin-top:.5rem"><div class="progress-fill" id="parseProgressBarFill" style="width:0%"></div></div>
+      </div>
+    </div>`;
+
+  function updateProgress(pct, msg){
+    const fill = $("parseProgressBarFill");
+    const msgEl = $("parseProgressMsg");
+    if(fill) fill.style.width = pct + "%";
+    if(msgEl && msg) msgEl.textContent = msg;
+  }
+
+  // Check if Worker is available
+  const worker = getScadaWorker();
+  if(worker){
+    // WORKER PATH — non-blocking
+    let totalProgress = 0;
+    scadaUploadedFiles.forEach((file, idx) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        // Send the ArrayBuffer to the worker for parsing
+        worker.onmessage = (ev) => {
+          const m = ev.data;
+          if(m.type === "progress"){
+            // m.pct is per-file (0-100); scale to overall progress across files
+            const overallPct = ((filesDone + m.pct/100) / totalFiles) * 100;
+            updateProgress(overallPct, `[${file.name}] ${m.msg}`);
+          } else if(m.type === "done"){
+            if(headers.length === 0) headers = m.headers;
+            allRows = allRows.concat(m.rows);
+            filesDone++;
+            logEvent(`[${file.name}] ${m.msg}`, "success");
+            if(filesDone === totalFiles){
+              updateProgress(100, `Loaded ${allRows.length.toLocaleString()} rows total`);
+              finalizeParse(allRows, headers, parseInfo);
+            }
+          }
+        };
+        worker.postMessage({
+          type: "parse",
+          fileBuffer: e.target.result,
+          fileName: file.name,
+          delimiter: STATE.cfg.delimiter,
+          skipHeader: STATE.cfg.headerRow || 0,
+          skipFooter: STATE.cfg.skipFooter || 0
+        }, [e.target.result]);  // transfer ownership of ArrayBuffer
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  } else {
+    // FALLBACK PATH — main thread (may be slow for large files; warn user)
+    logEvent("Worker unavailable — parsing on main thread. UI may be unresponsive for large files.", "warn");
+    scadaUploadedFiles.forEach((file, idx) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const text = e.target.result;
+        let delim = STATE.cfg.delimiter;
+        const firstLine = text.split(/\r?\n/).find(l=>l.trim().length>0) || "";
+        if(delim==="auto"){
+          delim = detectDelimiter(firstLine);
+        } else if(delim==="\\t"){
+          delim = "\t";
+        }
+        const skipHeader = STATE.cfg.headerRow || 0;
+        const skipFooter = STATE.cfg.skipFooter || 0;
+        // Use Papa if available, else inline
+        if(typeof Papa !== "undefined"){
+          Papa.parse(text, {
+            delimiter: delim,
+            skipEmptyLines: true,
+            header: false,
+            complete: (results) => {
+              const data = results.data;
+              if(data.length <= skipHeader){
+                filesDone++;
+                if(filesDone===totalFiles) finalizeParse(allRows, headers, parseInfo);
+                return;
+              }
+              const fileHeaders = (data[skipHeader] || []).map(h => String(h).trim());
+              if(headers.length===0) headers = fileHeaders;
+              const rows = data.slice(skipHeader+1);
+              if(skipFooter>0) rows.splice(rows.length - skipFooter, skipFooter);
+              rows.forEach(r => {
+                const obj = {};
+                fileHeaders.forEach((h,i)=>{ obj[h] = r[i]; });
+                allRows.push(obj);
+              });
+              filesDone++;
+              updateProgress((filesDone/totalFiles)*100, `Loaded ${allRows.length.toLocaleString()} rows from ${file.name}`);
+              if(filesDone===totalFiles) finalizeParse(allRows, headers, parseInfo);
+            }
+          });
+        } else {
+          // Inline parser fallback (no PapaParse loaded)
+          const lines = text.split(/\r?\n/);
+          const rows = lines.map(line => {
+            const out = []; let field = ""; let inQ = false;
+            for(let i=0;i<line.length;i++){
+              const c = line[i];
+              if(inQ){
+                if(c==='"' && line[i+1]==='"'){ field+='"'; i++; }
+                else if(c==='"') inQ = false;
+                else field += c;
+              } else {
+                if(c==='"') inQ = true;
+                else if(c===delim){ out.push(field); field=""; }
+                else field += c;
+              }
+            }
+            out.push(field);
+            return out;
+          }).filter(r => r.some(v => v !== ""));
+          if(rows.length <= skipHeader){
+            filesDone++;
+            if(filesDone===totalFiles) finalizeParse(allRows, headers, parseInfo);
             return;
           }
-          // Use the row at skipHeader as the header
-          const fileHeaders = (data[skipHeader] || []).map(h => String(h).trim());
+          const fileHeaders = (rows[skipHeader] || []).map(h => String(h).trim());
           if(headers.length===0) headers = fileHeaders;
-          const rows = data.slice(skipHeader+1);
-          if(skipFooter>0) rows.splice(rows.length - skipFooter, skipFooter);
-          rows.forEach(r => {
+          const dataRows = rows.slice(skipHeader+1);
+          if(skipFooter>0) dataRows.splice(dataRows.length - skipFooter, skipFooter);
+          dataRows.forEach(r => {
             const obj = {};
             fileHeaders.forEach((h,i)=>{ obj[h] = r[i]; });
             allRows.push(obj);
           });
-          filesProcessed++;
-          if(filesProcessed===scadaUploadedFiles.length) finalizeParse(allRows, headers, parseInfo);
-        },
-        error: (err) => {
-          filesProcessed++;
-          logEvent(`Failed to parse ${file.name}: ${err.message}`, "error");
-          if(filesProcessed===scadaUploadedFiles.length) finalizeParse(allRows, headers, parseInfo);
+          filesDone++;
+          updateProgress((filesDone/totalFiles)*100, `Loaded ${allRows.length.toLocaleString()} rows from ${file.name}`);
+          if(filesDone===totalFiles) finalizeParse(allRows, headers, parseInfo);
         }
-      });
-    };
-    reader.readAsText(file);
-  });
+      };
+      reader.readAsText(file);
+    });
+  }
 }
 
 function finalizeParse(allRows, headers, parseInfo){
@@ -1122,57 +1228,96 @@ function confirmScadaImport(){
     toast("Required columns not mapped. Please map timestamp, asset, wind speed, power, and status.", "error");
     return;
   }
-  // Parse all rows into structured objects
+  // Parse all rows into structured objects — CHUNKED so UI stays responsive
   const rows = STATE._pendingRows;
   const headers = STATE._pendingHeaders;
   logEvent(`Parsing ${rows.length.toLocaleString()} rows into structured SCADA records…`, "info");
-  const parsed = [];
-  let nFailed = 0;
+
+  // Show progress UI
+  const proceedBtn = Array.from(document.querySelectorAll("button")).find(b=>b.textContent.includes("Confirm"));
+  if(proceedBtn){ proceedBtn.disabled = true; proceedBtn.textContent = "Parsing…"; }
+  $("scadaParseStatus").innerHTML = `
+    <div class="info-box" id="parseProgressBar">
+      <span class="w-icon"><span class="spinner"></span></span>
+      <div>
+        <div id="parseProgressMsg">Parsing ${rows.length.toLocaleString()} rows into structured records…</div>
+        <div class="progress-track" style="margin-top:.5rem"><div class="progress-fill" id="parseProgressBarFill" style="width:0%"></div></div>
+      </div>
+    </div>`;
+
+  // Determine dayfirst mode once
   let dayfirstMode = STATE.cfg.dayFirst;
   if(dayfirstMode === "auto"){
-    // Use the detection result from finalizeParse (re-detect here for safety)
     const sample = rows.slice(0,2000).map(r=>r[cm.timestamp]).filter(x=>x);
     const det = detectDayfirst(sample);
     dayfirstMode = (det.dayfirst === null ? "false" : (det.dayfirst ? "true" : "false"));
   }
-  for(let i=0;i<rows.length;i++){
-    const r = rows[i];
-    const ts = parseTimestamp(r[cm.timestamp], dayfirstMode);
-    if(!ts){ nFailed++; continue; }
-    const asset = String(r[cm.asset] ?? "").trim();
-    if(!asset) continue;
-    const ws = parseFloat(r[cm.windSpeed]);
-    const power = parseFloat(r[cm.power]);
-    const status = r[cm.status] !== undefined && r[cm.status] !== "" ? String(r[cm.status]).trim() : "";
-    const rec = {
-      ts: ts,
-      asset: asset,
-      ws: isNaN(ws) ? null : ws,
-      power: isNaN(power) ? null : power,
-      status: status,
-      possiblePower: cm.possiblePower ? parseFloat(r[cm.possiblePower]) : null,
-      ambientTemp: cm.ambientTemp ? parseFloat(r[cm.ambientTemp]) : null,
-      windDirAbs: cm.windDirAbs ? parseFloat(r[cm.windDirAbs]) : null,
-      nacelleDir: cm.nacelleDir ? parseFloat(r[cm.nacelleDir]) : null,
-      airPressure: cm.airPressure ? parseFloat(r[cm.airPressure]) : null,
-      derateFlag: cm.derateFlag ? r[cm.derateFlag] : null,
-      alarmNo: cm.alarmNo ? r[cm.alarmNo] : null
-    };
-    parsed.push(rec);
+
+  // Chunked processing — yield to UI every CHUNK_SIZE rows
+  const CHUNK_SIZE = 10000;
+  const parsed = [];
+  let nFailed = 0;
+  let idx = 0;
+
+  function processChunk(){
+    const endIdx = Math.min(idx + CHUNK_SIZE, rows.length);
+    for(let i = idx; i < endIdx; i++){
+      const r = rows[i];
+      const ts = parseTimestamp(r[cm.timestamp], dayfirstMode);
+      if(!ts){ nFailed++; continue; }
+      const asset = String(r[cm.asset] ?? "").trim();
+      if(!asset) continue;
+      const ws = parseFloat(r[cm.windSpeed]);
+      const power = parseFloat(r[cm.power]);
+      const status = r[cm.status] !== undefined && r[cm.status] !== "" ? String(r[cm.status]).trim() : "";
+      const rec = {
+        ts: ts,
+        asset: asset,
+        ws: isNaN(ws) ? null : ws,
+        power: isNaN(power) ? null : power,
+        status: status,
+        possiblePower: cm.possiblePower ? parseFloat(r[cm.possiblePower]) : null,
+        ambientTemp: cm.ambientTemp ? parseFloat(r[cm.ambientTemp]) : null,
+        windDirAbs: cm.windDirAbs ? parseFloat(r[cm.windDirAbs]) : null,
+        nacelleDir: cm.nacelleDir ? parseFloat(r[cm.nacelleDir]) : null,
+        airPressure: cm.airPressure ? parseFloat(r[cm.airPressure]) : null,
+        derateFlag: cm.derateFlag ? r[cm.derateFlag] : null,
+        alarmNo: cm.alarmNo ? r[cm.alarmNo] : null
+      };
+      parsed.push(rec);
+    }
+    idx = endIdx;
+    // Update progress
+    const pct = Math.floor(idx / rows.length * 100);
+    const fill = $("parseProgressBarFill");
+    const msgEl = $("parseProgressMsg");
+    if(fill) fill.style.width = pct + "%";
+    if(msgEl) msgEl.textContent = `Parsing ${idx.toLocaleString()} / ${rows.length.toLocaleString()} rows (${pct}%)`;
+    if(idx < rows.length){
+      // Yield to UI, then continue
+      setTimeout(processChunk, 0);
+    } else {
+      finalizeConfirm(parsed, nFailed);
+    }
   }
+  processChunk();
+}
+
+function finalizeConfirm(parsed, nFailed){
   if(nFailed > 0){
     logEvent(`${nFailed.toLocaleString()} rows failed timestamp parse and were dropped.`, "warn");
   }
-  // Deduplicate (asset, timestamp)
+  // Deduplicate (asset, timestamp) — chunked
   const seen = new Set();
   const dedup = [];
   let nDup = 0;
-  parsed.forEach(r => {
+  for(let i = 0; i < parsed.length; i++){
+    const r = parsed[i];
     const k = r.asset + "|" + r.ts.toISOString();
-    if(seen.has(k)){ nDup++; return; }
+    if(seen.has(k)){ nDup++; continue; }
     seen.add(k);
     dedup.push(r);
-  });
+  }
   if(nDup > 0) logEvent(`Dropped ${nDup.toLocaleString()} duplicate (asset,timestamp) rows.`, "info");
   STATE.scada = dedup;
   // Group by turbine
@@ -1184,9 +1329,14 @@ function confirmScadaImport(){
   STATE.turbines = Object.keys(STATE.scadaByTurbine).sort();
   // Sort each turbine's records by time
   STATE.turbines.forEach(t => STATE.scadaByTurbine[t].sort((a,b)=>a.ts - b.ts));
-  // Date range
-  const allTs = dedup.map(r=>r.ts);
-  STATE.dateRange = { start: new Date(Math.min(...allTs)), end: new Date(Math.max(...allTs)) };
+  // Date range — use a loop instead of Math.min(...allTs) to avoid stack overflow on large arrays
+  let minTs = Infinity, maxTs = -Infinity;
+  for(let i = 0; i < dedup.length; i++){
+    const t = dedup[i].ts.getTime();
+    if(t < minTs) minTs = t;
+    if(t > maxTs) maxTs = t;
+  }
+  STATE.dateRange = { start: new Date(minTs), end: new Date(maxTs) };
   // Infer sample interval
   if(STATE.turbines.length > 0){
     const t0Recs = STATE.scadaByTurbine[STATE.turbines[0]];
@@ -1200,8 +1350,9 @@ function confirmScadaImport(){
     }
   }
   logEvent(`Imported ${dedup.length.toLocaleString()} records for ${STATE.turbines.length} turbines. Date range: ${fmtDate(STATE.dateRange.start)} to ${fmtDate(STATE.dateRange.end)}. Sample interval: ${STATE.sampleIntervalMin} min.`, "success");
-  toast(`Imported ${dedup.length.toLocaleString()} records for ${STATE.turbines.length} turbines.`);
-  goStep(2);
+  // Clear progress UI
+  $("scadaParseStatus").innerHTML = `<div class="success-box"><span class="w-icon">✓</span><div>Imported ${dedup.length.toLocaleString()} records for ${STATE.turbines.length} turbines. Continuing to data QA…</div></div>`;
+  setTimeout(() => goStep(2), 300);
 }
 
 // Stub for sample data — implemented in a later script block
@@ -1879,11 +2030,48 @@ function runAvailabilityAnalysis(){
   if(STATE.scada.length === 0){ toast("No SCADA data loaded.", "error"); return; }
   logEvent("Computing per-turbine auto power curves & IEC 61400-26 energy-based availability…", "info");
   const dtHours = STATE.sampleIntervalMin / 60.0;
+
+  // Show progress UI
+  const card = document.querySelector("#step2 .card") || document.querySelector(".step-panel.active .card");
+  let progressEl = null;
+  if(card){
+    progressEl = document.createElement("div");
+    progressEl.className = "info-box";
+    progressEl.id = "availProgressBar";
+    progressEl.innerHTML = `<span class="w-icon"><span class="spinner"></span></span><div><div id="availProgressMsg">Computing availability for ${STATE.turbines.length} turbines…</div><div class="progress-track" style="margin-top:.5rem"><div class="progress-fill" id="availProgressBarFill" style="width:0%"></div></div></div>`;
+    card.appendChild(progressEl);
+  }
+
   const turbineResults = {};
   const autoCurves = {};
   const enrichedByTurbine = {};
-  // Per-turbine computation
-  STATE.turbines.forEach((turbineId, idx) => {
+  const totalTurbines = STATE.turbines.length;
+  let turbineIdx = 0;
+
+  // Process turbines one at a time with setTimeout(0) yields between turbines
+  // (each turbine's loop is fast enough; the inter-turbine yield keeps UI responsive)
+  function processNextTurbine(){
+    if(turbineIdx >= totalTurbines){
+      // All turbines done — finalize
+      STATE.availability = turbineResults;
+      STATE.autoCurves = autoCurves;
+      // Build plant-level enriched SCADA (concatenated)
+      STATE._enrichedScada = [];
+      Object.keys(enrichedByTurbine).forEach(t => {
+        STATE._enrichedScada = STATE._enrichedScada.concat(enrichedByTurbine[t]);
+                      });
+      // Monthly plant availability
+      STATE.monthlyAvail = computeMonthlyAvailability(STATE._enrichedScada);
+      // Build plant power curve (aggregate of all FULL records)
+      STATE.plantCurve = buildAutoCurve(STATE._enrichedScada, STATE.cfg.binWidth, 6);
+      logEvent(`Availability computed. Plant mean energy availability: ${(mean(Object.values(turbineResults).map(r=>r.energyAvailability))*100).toFixed(2)}%`, "success");
+      if(progressEl) progressEl.remove();
+      renderAvailabilityStep();
+      toast("Availability & auto power curves computed.");
+      goStep(3);
+      return;
+    }
+    const turbineId = STATE.turbines[turbineIdx];
     const recs = STATE.scadaByTurbine[turbineId];
     // Build auto curve
     const curve = buildAutoCurve(recs, STATE.cfg.binWidth, 6);
@@ -1893,7 +2081,11 @@ function runAvailabilityAnalysis(){
     let actualTotal = 0, potentialTotal = 0;
     let availRecords = 0, unavailRecords = 0, unknownRecords = 0;
     let actualPowerSum = 0, possiblePowerSum = 0;
-    const enriched = recs.map(r => {
+    // Pre-compute mean wind speed and mean power via single pass
+    let wsSum = 0, wsCount = 0, pSum = 0, pCount = 0;
+    const enriched = new Array(recs.length);
+    for(let i = 0; i < recs.length; i++){
+      const r = recs[i];
       const bucket = classifyStatus(r.status);
       const theoP = theoreticalPower(r.ws, curve);
       const actualE = (r.power !== null && !isNaN(r.power)) ? Math.max(0, r.power) * dtHours : 0;
@@ -1911,16 +2103,20 @@ function runAvailabilityAnalysis(){
         unknownRecords++;
       }
       if(r.possiblePower !== null && !isNaN(r.possiblePower)) possiblePowerSum += r.possiblePower;
-      if(r.power !== null && !isNaN(r.power)) actualPowerSum += r.power;
-      return {...r, _status_bucket: bucket, _potential_power_kw: theoP, _actual_energy_kwh: actualE, _potential_energy_kwh: potentialE};
-    });
+      if(r.power !== null && !isNaN(r.power)){ actualPowerSum += r.power; pSum += r.power; pCount++; }
+      if(r.ws !== null && !isNaN(r.ws)){ wsSum += r.ws; wsCount++; }
+      enriched[i] = Object.assign({}, r, {
+        _status_bucket: bucket,
+        _potential_power_kw: theoP,
+        _actual_energy_kwh: actualE,
+        _potential_energy_kwh: potentialE
+      });
+    }
     enrichedByTurbine[turbineId] = enriched;
     // IEC 61400-26 energy-based availability
     const denom = actualAvailEnergy + potentialUnavailEnergy;
     const energyAvailability = denom > 0 ? 1 - potentialUnavailEnergy / denom : NaN;
-    // Time-based availability (fallback)
     const timeAvailability = (availRecords + unavailRecords) > 0 ? availRecords / (availRecords + unavailRecords) : NaN;
-    // DNV-style "Possible Power" availability (if signal available)
     const possiblePowerAvailability = possiblePowerSum > 0 ? actualPowerSum / possiblePowerSum : NaN;
     turbineResults[turbineId] = {
       records: recs.length,
@@ -1930,27 +2126,21 @@ function runAvailabilityAnalysis(){
       actualTotalMWh: actualTotal / 1000,
       potentialTotalMWh: potentialTotal / 1000,
       energyAvailability, timeAvailability, possiblePowerAvailability,
-      meanWindSpeed: mean(recs.map(r=>r.ws)),
-      meanPower: mean(recs.map(r=>r.power))
+      meanWindSpeed: wsCount > 0 ? wsSum / wsCount : NaN,
+      meanPower: pCount > 0 ? pSum / pCount : NaN
     };
-    if((idx+1) % 5 === 0) logEvent(`  Processed ${idx+1}/${STATE.turbines.length} turbines`, "info");
-  });
-  STATE.availability = turbineResults;
-  STATE.autoCurves = autoCurves;
-  // Build plant-level enriched SCADA (concatenated)
-  STATE._enrichedScada = [];
-  Object.keys(enrichedByTurbine).forEach(t => {
-    STATE._enrichedScada = STATE._enrichedScada.concat(enrichedByTurbine[t]);
-  });
-  // Monthly plant availability
-  STATE.monthlyAvail = computeMonthlyAvailability(STATE._enrichedScada);
-  // Build plant power curve (aggregate of all FULL records)
-  STATE.plantCurve = buildAutoCurve(STATE._enrichedScada, STATE.cfg.binWidth, 6);
-  logEvent(`Availability computed. Plant mean energy availability: ${(mean(Object.values(turbineResults).map(r=>r.energyAvailability))*100).toFixed(2)}%`, "success");
-  // Render
-  renderAvailabilityStep();
-  toast("Availability & auto power curves computed.");
-  goStep(3);
+    turbineIdx++;
+    // Update progress
+    const pct = Math.floor(turbineIdx / totalTurbines * 100);
+    const fill = $("availProgressBarFill");
+    const msgEl = $("availProgressMsg");
+    if(fill) fill.style.width = pct + "%";
+    if(msgEl) msgEl.textContent = `Processed turbine ${turbineIdx} / ${totalTurbines}: ${turbineId}`;
+    if(turbineIdx % 1 === 0) logEvent(`  Processed ${turbineIdx}/${totalTurbines} turbines`, "info");
+    // Yield to UI between turbines
+    setTimeout(processNextTurbine, 0);
+  }
+  processNextTurbine();
 }
 
 function computeMonthlyAvailability(enrichedScada){
