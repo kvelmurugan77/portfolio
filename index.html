@@ -949,6 +949,38 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
       </div>
     </div>
 
+    <!-- SCADA Operational EYA Tool -->
+    <div class="pgrid rv d1" style="margin-top:3rem">
+      <div class="pcard" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2.5rem">
+        <div style="font-size:3rem;margin-bottom:1.2rem">⚡</div>
+        <h3 class="ptitle" style="margin-bottom:.6rem">SCADA Operational EYA Tool</h3>
+        <p class="pdesc" style="text-align:center;max-width:44ch;margin:0 auto 1.8rem">Browser-based <strong style="color:var(--mint)">Operational Energy Yield Assessment</strong> from SCADA data — replicates DNV/UL lender's-engineer OEPR methodology end-to-end, fully client-side. Upload SCADA CSV, run IEC 61400-26 availability, plant power curve + MCP regression, LT gross/net AEP, ISO GUM uncertainty, P50/P75/P90/P95/P99 POE, yaw &amp; wind-speed diagnostics, and gross-to-net waterfall.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:1.2rem;justify-content:center;margin-bottom:1.5rem">
+          <span class="ptag">IEC 61400-26 Avail</span>
+          <span class="ptag">Auto Power Curve</span>
+          <span class="ptag">MCP Regression</span>
+          <span class="ptag">ERA5 (Open-Meteo)</span>
+          <span class="ptag">LT Gross / Net AEP</span>
+          <span class="ptag">RSS Uncertainty</span>
+          <span class="ptag">P50–P99 POE</span>
+          <span class="ptag">Yaw Screening</span>
+        </div>
+        <a class="btn-green" href="./scada-analysis-tool.html" style="font-size:.78rem;padding:.9rem 2.5rem;text-decoration:none">Launch SCADA EYA Tool →</a>
+      </div>
+      <div class="pcard" style="display:flex;flex-direction:column;justify-content:center">
+        <div class="pnum">Key Capabilities</div>
+        <ul style="list-style:none;padding:0">
+          <li style="padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.85rem;color:rgba(255,255,255,.65);font-weight:300;display:flex;gap:.6rem;align-items:flex-start"><span style="color:var(--mint);font-weight:700;flex-shrink:0">▸</span> Robust SCADA ingestion with auto dayfirst/monthfirst timestamp detection — prevents the silent scrambling bug that breaks naive parsers when DD-MM vs MM-DD formats are misdetected</li>
+          <li style="padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.85rem;color:rgba(255,255,255,.65);font-weight:300;display:flex;gap:.6rem;align-items:flex-start"><span style="color:var(--mint);font-weight:700;flex-shrink:0">▸</span> Per-turbine auto power curve (FULL-status binning, cummax monotonic smoothing) and IEC 61400-26 energy-based availability — Avail = 1 − Unavail_E / (Avail_E + Unavail_E)</li>
+          <li style="padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.85rem;color:rgba(255,255,255,.65);font-weight:300;display:flex;gap:.6rem;align-items:flex-start"><span style="color:var(--mint);font-weight:700;flex-shrink:0">▸</span> Plant power curve MCP regression (Eq. 2-6: gross normalisation, 30-day correction, density adjustment Vn = V × (ρ/ρ₀)^(1/3), linear regression Prod_norm = a·WS_ref + b, applied to LT record)</li>
+          <li style="padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.85rem;color:rgba(255,255,255,.65);font-weight:300;display:flex;gap:.6rem;align-items:flex-start"><span style="color:var(--mint);font-weight:700;flex-shrink:0">▸</span> Long-term reference wind speed via free Open-Meteo Archive API (ERA5-equivalent, no API key) — correctly averages wind-speed magnitude at each hour, not the vector mean, preventing the well-known ERA5 vector-averaging underestimation bug</li>
+          <li style="padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.85rem;color:rgba(255,255,255,.65);font-weight:300;display:flex;gap:.6rem;align-items:flex-start"><span style="color:var(--mint);font-weight:700;flex-shrink:0">▸</span> Gross-to-Net loss waterfall (Turbine Avail + BoP + Curtailment + Electrical + Blade Degradation) and optional EYA-vs-OA reconciliation with auto-computed "Unexplained" residual bucket — standard DNV/UL practice</li>
+          <li style="padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.85rem;color:rgba(255,255,255,.65);font-weight:300;display:flex;gap:.6rem;align-items:flex-start"><span style="color:var(--mint);font-weight:700;flex-shrink:0">▸</span> ISO GUM / DNV-RP-0126 RSS uncertainty combination across 9 standard sources (eval + annual), with normal-distribution P50/P75/P90/P95/P99 probability-of-exceedance and NCF</li>
+          <li style="padding:.5rem 0;font-size:.85rem;color:rgba(255,255,255,.65);font-weight:300;display:flex;gap:.6rem;align-items:flex-start"><span style="color:var(--mint);font-weight:700;flex-shrink:0">▸</span> Per-turbine yaw misalignment screening (circular mean + quadratic-peak power-vs-offset) and wind-speed sensor cross-check (median-of-others consensus), with automatic flagging — replicates oepr_yaw_analysis.py + oepr_windspeed_analysis.py</li>
+        </ul>
+      </div>
+    </div>
+
     <!-- WTG Procurement Management Tool -->
     <div class="pgrid rv d1" style="margin-top:3rem">
       <div class="pcard" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2.5rem">

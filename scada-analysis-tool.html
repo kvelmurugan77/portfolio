@@ -1,0 +1,3394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCADA Operational EYA Tool — DNV-Grade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#07111e;--bg2:#0d1e30;--bg3:#132435;--bg4:#1a2f42;
+  --mint:#00d68f;--mint2:rgba(0,214,143,.12);--mint3:rgba(0,214,143,.06);
+  --gold:#f5a623;--gold2:rgba(245,166,35,.12);
+  --red:#e05050;--red2:rgba(224,80,80,.12);
+  --sky:#4ab3e8;--sky2:rgba(74,179,232,.12);
+  --purple:#a78bfa;--purple2:rgba(167,139,250,.12);
+  --orange:#f97316;--orange2:rgba(249,115,22,.12);
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.04);
+  --text:rgba(255,255,255,.88);--text2:rgba(255,255,255,.5);--text3:rgba(255,255,255,.28);
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  --radius:8px;--radius2:4px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);color:var(--text);background:var(--bg);min-height:100vh;font-size:14px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1.5rem;border-bottom:1px solid var(--border);background:var(--bg);flex-wrap:wrap;gap:.5rem;position:sticky;top:0;z-index:50}
+.topbar-brand{display:flex;align-items:center;gap:.8rem}
+.brand-badge{background:var(--mint);color:var(--bg);font-family:var(--mono);font-size:.6rem;font-weight:600;padding:.25rem .6rem;border-radius:2px;letter-spacing:.08em}
+.brand-title{font-size:.82rem;font-weight:600;letter-spacing:.04em;color:var(--text)}
+.brand-sub{font-size:.62rem;color:var(--text3);font-family:var(--mono);margin-top:.1rem}
+.topbar-right{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+a.back-link{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);text-decoration:none;padding:.4rem .8rem;border:1px solid var(--border);border-radius:var(--radius2);transition:all .2s}
+a.back-link:hover{color:var(--mint);border-color:var(--mint)}
+.project-pill{font-size:.58rem;font-family:var(--mono);color:var(--mint);background:var(--mint3);padding:.25rem .6rem;border-radius:10px;border:1px solid rgba(0,214,143,.15);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.project-pill:hover{background:var(--mint2)}
+.stepper{display:flex;align-items:center;padding:.6rem 1.5rem;border-bottom:1px solid var(--border);background:var(--bg2);gap:0;overflow-x:auto}
+.step-item{display:flex;align-items:center;gap:.45rem;padding:.45rem .7rem;cursor:pointer;border-radius:var(--radius2);transition:background .2s;white-space:nowrap;flex-shrink:0}
+.step-item:hover{background:rgba(255,255,255,.04)}
+.step-item.active{background:var(--mint2)}
+.step-item.done .step-num{background:rgba(0,214,143,.2);border-color:var(--mint);color:var(--mint)}
+.step-item.active .step-num{background:var(--mint);border-color:var(--mint);color:var(--bg)}
+.step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;border:1.5px solid var(--border);color:var(--text3);transition:all .25s;flex-shrink:0;font-family:var(--mono)}
+.step-label{font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);transition:color .2s}
+.step-item.active .step-label{color:var(--mint)}
+.step-item.done .step-label{color:var(--text2)}
+.step-connector{width:20px;height:1px;background:var(--border);flex-shrink:0;margin:0 2px}
+.main{max-width:1480px;margin:0 auto;padding:1.2rem 1.5rem 3rem}
+.step-panel{display:none;animation:fadeIn .35s ease}
+.step-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem;margin-bottom:1rem}
+.card-title{font-size:.6rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--text3);margin-bottom:1rem;display:flex;align-items:center;gap:.6rem}
+.card-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.card-title.green{color:var(--mint)}
+.card-title.gold{color:var(--gold)}
+.card-title.sky{color:var(--sky)}
+.card-title.purple{color:var(--purple)}
+.card-title.red{color:var(--red)}
+.card-title.orange{color:var(--orange)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.fg{margin-bottom:.85rem}
+.fl{display:block;font-size:.57rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:.3rem;font-family:var(--mono)}
+.fi,.fs{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);font-family:var(--sans);font-size:.8rem;color:var(--text);padding:.48rem .7rem;outline:none;transition:border-color .2s}
+.fi:focus,.fs:focus{border-color:var(--mint)}
+.fi:read-only{opacity:.6;cursor:default}
+.fi.warn{border-color:var(--gold);background:var(--gold2)}
+.fi.error{border-color:var(--red);background:var(--red2)}
+.fs option{background:var(--bg);color:var(--text)}
+textarea.fi{resize:vertical;min-height:80px;font-size:.78rem;line-height:1.5}
+.form-row{display:flex;gap:.6rem;align-items:end}
+.form-row .fg{flex:1}
+.btn{font-family:var(--sans);font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border:none;padding:.6rem 1.3rem;border-radius:var(--radius2);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:.45rem}
+.btn-primary{background:var(--mint);color:var(--bg)}
+.btn-primary:hover{background:#00f0a0;transform:translateY(-1px)}
+.btn-ghost{background:none;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--mint);color:var(--mint)}
+.btn-danger{background:var(--red2);color:var(--red);border:1px solid rgba(224,80,80,.2)}
+.btn-danger:hover{background:rgba(224,80,80,.2)}
+.btn-gold{background:var(--gold);color:var(--bg)}
+.btn-gold:hover{background:#ffc04a}
+.btn-sky{background:var(--sky);color:var(--bg)}
+.btn-sky:hover{background:#6dc5f0}
+.btn-sm{padding:.35rem .75rem;font-size:.6rem}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:auto;max-height:520px}
+.tbl-wrap::-webkit-scrollbar{width:6px;height:6px}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.tbl-wrap::-webkit-scrollbar-track{background:transparent}
+table.dt{width:100%;border-collapse:collapse;font-size:.72rem;min-width:600px}
+table.dt th{text-align:left;font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:.55rem .7rem;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--bg2);z-index:1;font-family:var(--mono)}
+table.dt td{padding:.48rem .7rem;border-bottom:1px solid var(--border2);color:var(--text2);font-weight:300;vertical-align:top}
+table.dt tr:last-child td{border-bottom:none}
+table.dt tr:hover td{background:rgba(255,255,255,.02)}
+table.dt td.num,table.dt th.num{text-align:right;font-family:var(--mono)}
+table.dt td.act{white-space:nowrap}
+.badge{display:inline-block;font-size:.52rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.2rem .55rem;border-radius:2px;font-family:var(--mono)}
+.badge-mint{background:var(--mint2);color:var(--mint)}
+.badge-gold{background:var(--gold2);color:var(--gold)}
+.badge-red{background:var(--red2);color:var(--red)}
+.badge-sky{background:var(--sky2);color:var(--sky)}
+.badge-purple{background:var(--purple2);color:var(--purple)}
+.badge-orange{background:var(--orange2);color:var(--orange)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-bottom:1.2rem}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:.9rem;text-align:center;transition:transform .2s,border-color .2s}
+.stat-card:hover{transform:translateY(-2px);border-color:var(--mint)}
+.stat-num{font-size:1.55rem;font-weight:700;font-family:var(--mono);line-height:1}
+.stat-label{font-size:.5rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-top:.35rem}
+.stat-sub{font-size:.6rem;color:var(--text3);margin-top:.25rem;font-family:var(--mono)}
+.stat-num.mint{color:var(--mint)}
+.stat-num.gold{color:var(--gold)}
+.stat-num.red{color:var(--red)}
+.stat-num.sky{color:var(--sky)}
+.stat-num.purple{color:var(--purple)}
+.stat-num.orange{color:var(--orange)}
+.empty-state{text-align:center;padding:2.5rem 1rem;color:var(--text3)}
+.empty-state .empty-icon{font-size:2.2rem;opacity:.4;margin-bottom:.8rem}
+.empty-state .empty-text{font-size:.85rem;font-weight:300;margin-bottom:.5rem;color:var(--text2)}
+.empty-state .empty-hint{font-size:.7rem;font-family:var(--mono)}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.8rem;margin-bottom:1.2rem}
+.kpi-card{background:linear-gradient(135deg,var(--bg3) 0%,var(--bg2) 100%);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.2rem;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--mint)}
+.kpi-card.gold::before{background:var(--gold)}
+.kpi-card.red::before{background:var(--red)}
+.kpi-card.sky::before{background:var(--sky)}
+.kpi-card.purple::before{background:var(--purple)}
+.kpi-card.orange::before{background:var(--orange)}
+.kpi-label{font-size:.55rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:.35rem}
+.kpi-value{font-size:1.5rem;font-weight:700;font-family:var(--mono);color:var(--text);line-height:1.1}
+.kpi-value.mint{color:var(--mint)}
+.kpi-value.gold{color:var(--gold)}
+.kpi-value.red{color:var(--red)}
+.kpi-value.sky{color:var(--sky)}
+.kpi-value.purple{color:var(--purple)}
+.kpi-sub{font-size:.6rem;color:var(--text3);margin-top:.3rem;font-family:var(--mono)}
+.chart-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:1rem;height:340px;position:relative}
+.chart-box.tall{height:420px}
+.chart-box.small{height:240px}
+.chart-legend{display:flex;gap:1rem;flex-wrap:wrap;margin-top:.6rem;font-size:.65rem;color:var(--text2)}
+.chart-legend .lg-item{display:flex;align-items:center;gap:.4rem}
+.chart-legend .lg-swatch{width:14px;height:3px;border-radius:2px}
+.alert-row{display:flex;align-items:flex-start;gap:.7rem;padding:.6rem .8rem;border-radius:var(--radius2);background:var(--bg3);border:1px solid var(--border);margin-bottom:.4rem;font-size:.72rem}
+.alert-row .a-icon{flex-shrink:0;font-size:.9rem;line-height:1.2}
+.alert-row.critical{border-left:3px solid var(--red)}
+.alert-row.critical .a-icon{color:var(--red)}
+.alert-row.major{border-left:3px solid var(--gold)}
+.alert-row.major .a-icon{color:var(--gold)}
+.alert-row.minor{border-left:3px solid var(--sky)}
+.alert-row.minor .a-icon{color:var(--sky)}
+.alert-row.info{border-left:3px solid var(--mint)}
+.alert-row.info .a-icon{color:var(--mint)}
+.alert-row .a-body{flex:1}
+.alert-row .a-title{font-size:.72rem;font-weight:600;color:var(--text);margin-bottom:.15rem}
+.alert-row .a-meta{font-size:.6rem;color:var(--text3);font-family:var(--mono)}
+.alert-row .a-action{font-size:.6rem;color:var(--mint);margin-top:.2rem;font-family:var(--mono)}
+.warning-box{background:var(--gold2);border:1px solid rgba(245,166,35,.25);border-radius:var(--radius2);padding:.6rem .8rem;font-size:.72rem;color:var(--gold);margin-bottom:.8rem;display:flex;align-items:flex-start;gap:.5rem}
+.warning-box .w-icon{font-size:1rem;flex-shrink:0}
+.danger-box{background:var(--red2);border:1px solid rgba(224,80,80,.25);border-radius:var(--radius2);padding:.6rem .8rem;font-size:.72rem;color:var(--red);margin-bottom:.8rem;display:flex;align-items:flex-start;gap:.5rem}
+.danger-box .w-icon{font-size:1rem;flex-shrink:0}
+.info-box{background:var(--sky2);border:1px solid rgba(74,179,232,.25);border-radius:var(--radius2);padding:.6rem .8rem;font-size:.72rem;color:var(--sky);margin-bottom:.8rem;display:flex;align-items:flex-start;gap:.5rem}
+.info-box .w-icon{font-size:1rem;flex-shrink:0}
+.success-box{background:var(--mint2);border:1px solid rgba(0,214,143,.25);border-radius:var(--radius2);padding:.6rem .8rem;font-size:.72rem;color:var(--mint);margin-bottom:.8rem;display:flex;align-items:flex-start;gap:.5rem}
+.success-box .w-icon{font-size:1rem;flex-shrink:0}
+.section-divider{display:flex;align-items:center;gap:.7rem;margin:1.4rem 0 .9rem}
+.section-divider .sd-text{font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);font-family:var(--mono)}
+.section-divider::before{content:'';flex:1;height:1px;background:var(--border)}
+.section-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.section-tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--border);margin-bottom:1rem;overflow-x:auto}
+.section-tab{padding:.55rem .9rem;font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;font-family:var(--mono);white-space:nowrap;transition:all .15s}
+.section-tab:hover{color:var(--text)}
+.section-tab.active{color:var(--mint);border-bottom-color:var(--mint)}
+.subpanel{display:none}
+.subpanel.active{display:block}
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:2.5rem 1.5rem;text-align:center;cursor:pointer;transition:all .25s;background:var(--bg3)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--mint);background:var(--mint3)}
+.upload-zone .uz-icon{font-size:2.5rem;opacity:.5;margin-bottom:.7rem}
+.upload-zone .uz-title{font-size:.92rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.upload-zone .uz-sub{font-size:.7rem;color:var(--text3);font-family:var(--mono)}
+.file-chip{display:inline-flex;align-items:center;gap:.5rem;padding:.35rem .7rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);font-size:.7rem;color:var(--text);margin:.2rem}
+.file-chip .fc-size{color:var(--text3);font-family:var(--mono);font-size:.62rem}
+.file-chip .fc-remove{cursor:pointer;color:var(--red);font-weight:700}
+.file-chip .fc-remove:hover{color:var(--text)}
+.log-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius2);padding:.7rem .9rem;font-family:var(--mono);font-size:.68rem;color:var(--text2);max-height:280px;overflow-y:auto;line-height:1.6}
+.log-box .log-line{padding:.1rem 0}
+.log-box .log-line.info{color:var(--sky)}
+.log-box .log-line.warn{color:var(--gold)}
+.log-box .log-line.error{color:var(--red)}
+.log-box .log-line.success{color:var(--mint)}
+.log-box .log-line .log-time{color:var(--text3);margin-right:.5rem}
+.progress-track{background:var(--bg3);height:6px;border-radius:3px;overflow:hidden;margin:.5rem 0}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--mint),var(--sky));border-radius:3px;transition:width .35s ease}
+.tag-list{display:flex;flex-wrap:wrap;gap:.4rem}
+.tag-list .tl-tag{font-size:.58rem;font-weight:600;background:var(--bg3);color:var(--text2);padding:.22rem .55rem;border-radius:2px;border:1px solid var(--border);font-family:var(--mono);letter-spacing:.04em}
+.help-tip{display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--bg3);color:var(--text3);font-size:.55rem;text-align:center;line-height:14px;font-family:var(--mono);font-weight:700;cursor:help;border:1px solid var(--border);margin-left:.3rem;vertical-align:middle;position:relative}
+.help-tip:hover{color:var(--mint);border-color:var(--mint)}
+.help-tip .tip-body{visibility:hidden;opacity:0;position:absolute;left:100%;top:50%;transform:translateY(-50%);background:var(--bg4);color:var(--text2);font-size:.68rem;font-weight:400;line-height:1.5;padding:.55rem .75rem;border-radius:var(--radius2);border:1px solid var(--border);width:260px;z-index:50;font-family:var(--sans);letter-spacing:normal;transition:opacity .2s;pointer-events:none}
+.help-tip:hover .tip-body{visibility:visible;opacity:1}
+.collapsible-h{cursor:pointer;user-select:none;display:flex;align-items:center;gap:.5rem;padding:.55rem .8rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);font-family:var(--mono);margin-bottom:.6rem;transition:all .2s}
+.collapsible-h:hover{color:var(--mint);border-color:var(--mint)}
+.collapsible-h .ch-arrow{transition:transform .2s}
+.collapsible-h.open .ch-arrow{transform:rotate(90deg)}
+.collapsible-body{display:none;padding:0 .2rem}
+.collapsible-body.open{display:block}
+.col-map-row{display:grid;grid-template-columns:180px 1fr 1fr;gap:.6rem;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border2)}
+.col-map-row:last-child{border-bottom:none}
+.col-map-row .cm-label{font-size:.68rem;color:var(--text);font-weight:600}
+.col-map-row .cm-desc{font-size:.6rem;color:var(--text3);font-family:var(--mono)}
+.status-map-row{display:grid;grid-template-columns:80px 1fr 130px;gap:.6rem;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--border2)}
+.status-map-row:last-child{border-bottom:none}
+.status-map-row .sm-code{font-family:var(--mono);font-size:.72rem;color:var(--gold);font-weight:600;text-align:center;padding:.2rem .4rem;background:var(--bg3);border-radius:2px}
+.status-map-row .sm-desc{font-size:.65rem;color:var(--text2)}
+.status-pcode{font-size:.58rem;font-family:var(--mono);font-weight:700;padding:.25rem .5rem;border-radius:2px;text-align:center}
+.status-full{background:var(--mint2);color:var(--mint)}
+.status-partial{background:var(--sky2);color:var(--sky)}
+.status-unavailable{background:var(--red2);color:var(--red)}
+.status-unknown{background:var(--bg3);color:var(--text3)}
+.turbine-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:.8rem;transition:all .2s;cursor:pointer}
+.turbine-card:hover{border-color:var(--mint);transform:translateY(-2px)}
+.turbine-card.flagged{border-color:var(--red);background:rgba(224,80,80,.05)}
+.turbine-card .tc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}
+.turbine-card .tc-id{font-family:var(--mono);font-size:.72rem;color:var(--text);font-weight:600}
+.turbine-card .tc-avail{font-family:var(--mono);font-size:.85rem;font-weight:700}
+.turbine-card .tc-stats{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;font-size:.62rem;color:var(--text3);font-family:var(--mono)}
+footer{padding:1.5rem 2rem;border-top:1px solid var(--border);text-align:center;font-size:.65rem;color:var(--text3);font-family:var(--mono);letter-spacing:.1em}
+.hidden{display:none!important}
+.toast-container{position:fixed;bottom:1.5rem;right:1.5rem;z-index:2000;display:flex;flex-direction:column;gap:.5rem}
+.toast{padding:.6rem 1rem;border-radius:var(--radius2);font-size:.72rem;font-weight:600;animation:toastIn .3s ease;background:var(--bg2);border:1px solid var(--mint);color:var(--mint);display:flex;align-items:center;gap:.5rem;max-width:380px}
+.toast.error{border-color:var(--red);color:var(--red)}
+.toast.warn{border-color:var(--gold);color:var(--gold)}
+.toast.info{border-color:var(--sky);color:var(--sky)}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.method-note{font-size:.62rem;color:var(--text3);font-style:italic;margin-top:.5rem;line-height:1.55;font-family:var(--sans)}
+.ref-row{display:grid;grid-template-columns:1fr 80px 80px;gap:.5rem;align-items:center;padding:.4rem .6rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);margin-bottom:.4rem;font-size:.7rem}
+.ref-row .rr-name{color:var(--text);font-weight:600}
+.ref-row .rr-val{font-family:var(--mono);text-align:right;color:var(--mint)}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--mint);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:900px){
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .main{padding:1rem}
+  .stepper{padding:.5rem 1rem}
+  .step-label{display:none}
+  .col-map-row,.status-map-row{grid-template-columns:1fr}
+  .ref-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-badge">OEYA</span>
+    <div>
+      <div class="brand-title">SCADA Operational EYA Tool</div>
+      <div class="brand-sub">DNV-RP-0126 · IEC 61400-26 · IEC 61400-12-1 · ISO GUM</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="project-pill" id="projectPill" onclick="goStep(0)">No project loaded</span>
+    <button class="btn btn-ghost btn-sm" onclick="saveState()">Save Project</button>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('stateFile').click()">Load</button>
+    <input type="file" id="stateFile" accept=".json" style="display:none" onchange="loadState(event)">
+    <button class="btn btn-ghost btn-sm" onclick="loadSampleData()">Sample Data</button>
+    <a class="back-link" href="./index.html#tools">← Back to Portfolio</a>
+  </div>
+</div>
+
+<!-- STEPPER -->
+<div class="stepper" id="stepper">
+  <div class="step-item active" data-step="0" onclick="goStep(0)"><span class="step-num">▸</span><span class="step-label">Project</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="1" onclick="goStep(1)"><span class="step-num">1</span><span class="step-label">SCADA Import</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="2" onclick="goStep(2)"><span class="step-num">2</span><span class="step-label">Data QA &amp; Status</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="3" onclick="goStep(3)"><span class="step-num">3</span><span class="step-label">Availability</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="4" onclick="goStep(4)"><span class="step-num">4</span><span class="step-label">Power Curves</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="5" onclick="goStep(5)"><span class="step-num">5</span><span class="step-label">LT Correction (MCP)</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="6" onclick="goStep(6)"><span class="step-num">6</span><span class="step-label">EYA &amp; Losses</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="7" onclick="goStep(7)"><span class="step-num">7</span><span class="step-label">Uncertainty &amp; POE</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="8" onclick="goStep(8)"><span class="step-num">8</span><span class="step-label">Diagnostics</span></div>
+  <div class="step-connector"></div>
+  <div class="step-item" data-step="9" onclick="goStep(9)"><span class="step-num">9</span><span class="step-label">Reports</span></div>
+</div>
+
+<div class="main">
+
+<!-- ═══════ STEP 0: PROJECT SETUP ═══════ -->
+<div class="step-panel active" id="step0">
+  <div class="card">
+    <div class="card-title green">Operational EYA Project Setup</div>
+    <p style="font-size:.78rem;color:var(--text2);font-weight:300;line-height:1.7;margin-bottom:1.4rem;max-width:90ch">
+      Configure the wind farm Operational Energy Yield Assessment (OEYA) context. This tool replicates the methodology of a lender/owner's-engineer Operational Energy Production Report (OEPR) — availability per <strong style="color:var(--mint)">IEC 61400-26</strong>, plant power curve &amp; MCP against long-term reference wind speed, LT gross &amp; net energy, RSS uncertainty combination, and probability-of-exceedance (P50/P75/P90/P95/P99) per <strong style="color:var(--mint)">DNV-RP-0126 / ISO GUM</strong>. <strong style="color:var(--gold)">All data stays in your browser</strong> — nothing is uploaded to a server. Outputs are saved as local files (CSV, PNG, JSON, HTML report).
+    </p>
+    <div class="g2">
+      <div>
+        <div class="fg">
+          <label class="fl">Project Name <span style="color:var(--red)">*</span></label>
+          <input type="text" class="fi" id="pName" placeholder="e.g. Blue Cloud Wind Farm — Operational EYA 2019" oninput="autoSave()">
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Project Code</label>
+            <input type="text" class="fi" id="pCode" placeholder="BC-OEYA-2019" oninput="autoSave()">
+          </div>
+          <div class="fg">
+            <label class="fl">Assessment Date</label>
+            <input type="date" class="fi" id="pDate" oninput="autoSave()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Country / Region</label>
+            <input type="text" class="fi" id="pLocation" placeholder="e.g. Tamil Nadu, India" oninput="autoSave()">
+          </div>
+          <div class="fg">
+            <label class="fl">Site Elevation (m)</label>
+            <input type="number" class="fi" id="pElevation" value="0" step="1" oninput="autoSave()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">OEM / Turbine Model</label>
+            <input type="text" class="fi" id="pTurbineModel" placeholder="e.g. Vestas V110-2.0MW" oninput="autoSave()">
+          </div>
+          <div class="fg">
+            <label class="fl">COD Year</label>
+            <input type="number" class="fi" id="pCodYear" placeholder="2015" oninput="autoSave()">
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Rated Capacity per WTG (MW) <span class="help-tip">?<span class="tip-body">Nameplate capacity of a single turbine. Used to compute plant-rated capacity and NCF.</span></span></label>
+            <input type="number" class="fi" id="pRatedMW" value="2.0" step="0.05" oninput="autoSave()">
+          </div>
+          <div class="fg">
+            <label class="fl">Number of WTGs</label>
+            <input type="number" class="fi" id="pNumTurbines" value="6" step="1" oninput="autoSave()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Hub Height (m)</label>
+            <input type="number" class="fi" id="pHubHt" value="80" step="1" oninput="autoSave()">
+          </div>
+          <div class="fg">
+            <label class="fl">Rotor Diameter (m)</label>
+            <input type="number" class="fi" id="pRotorD" value="110" step="1" oninput="autoSave()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">SCADA Sample Interval (min) <span class="help-tip">?<span class="tip-body">10-minute SCADA is standard. The pipeline auto-detects if not specified here.</span></span></label>
+            <input type="number" class="fi" id="pSampleInt" value="10" step="1" oninput="autoSave()">
+          </div>
+          <div class="fg">
+            <label class="fl">Power Curve Bin Width (m/s)</label>
+            <input type="number" class="fi" id="pBinWidth" value="0.5" step="0.1" oninput="autoSave()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label class="fl">Timestamp Format</label>
+            <select class="fs" id="pDayFirst" onchange="autoSave()">
+              <option value="auto">Auto-detect (recommended)</option>
+              <option value="true">Day-first (DD-MM-YYYY)</option>
+              <option value="false">Month-first (MM-DD-YYYY)</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Low-Availability Threshold</label>
+            <input type="number" class="fi" id="pLowAvailThresh" value="0.83" step="0.01" min="0" max="1" oninput="autoSave()">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:.6rem;margin-top:1.2rem;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="goStep(1)">Continue → Upload SCADA</button>
+      <button class="btn btn-ghost" onclick="loadSampleData()">Load Demo Project</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title sky">Methodology — Operational EYA Workflow</div>
+    <div class="g3">
+      <div style="font-size:.72rem;color:var(--text2);line-height:1.65">
+        <div style="color:var(--mint);font-weight:700;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.5rem;font-family:var(--mono)">Stage A — Data QA</div>
+        <p>1. SCADA ingest with timestamp auto-detection (dayfirst vs monthfirst) — prevents the silent scrambling bug that broke earlier SCADA pipelines.</p>
+        <p>2. Per-turbine monthly data-completeness check (IEC 61400-26 data coverage requirement).</p>
+        <p>3. Status code → IEC category mapping (full / partial / unavailable / unknown).</p>
+      </div>
+      <div style="font-size:.72rem;color:var(--text2);line-height:1.65">
+        <div style="color:var(--sky);font-weight:700;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.5rem;font-family:var(--mono)">Stage B — Plant OEYA Core</div>
+        <p>4. Per-turbine auto power curve (clean-status binning, monotonic smoothing).</p>
+        <p>5. IEC 61400-26 energy-based availability: Avail = 1 − Unavail_E / (Avail_E + Unavail_E).</p>
+        <p>6. Plant power curve + MCP regression against LT reference wind speed.</p>
+        <p>7. LT gross AEP, normalized to 30-day months, then back to calendar months.</p>
+      </div>
+      <div style="font-size:.72rem;color:var(--text2);line-height:1.65">
+        <div style="color:var(--gold);font-weight:700;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.5rem;font-family:var(--mono)">Stage C — Uncertainty &amp; POE</div>
+        <p>8. RSS uncertainty combination across 9 standard sources (power measurement, air density, historical representativeness, future wind, wind freq distribution, future availability, curtailment, electrical, blade degradation).</p>
+        <p>9. P50 / P75 / P90 / P95 / P99 via normal distribution z-scores (ISO GUM).</p>
+        <p>10. Gross-to-Net waterfall + optional EYA-vs-OA reconciliation.</p>
+        <p>11. Yaw misalignment &amp; wind-speed sensor cross-check diagnostics.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ STEP 1: SCADA IMPORT & COLUMN MAPPING ═══════ -->
+<div class="step-panel" id="step1">
+  <div class="card">
+    <div class="card-title green">SCADA Data Upload</div>
+    <div class="g2">
+      <div>
+        <div class="upload-zone" id="scadaUploadZone" onclick="document.getElementById('scadaFileInput').click()">
+          <div class="uz-icon">📂</div>
+          <div class="uz-title">Drop SCADA CSV files here or click to select</div>
+          <div class="uz-sub">Multi-file supported · CSV / TXT · 10-min or 1-min native interval</div>
+          <input type="file" id="scadaFileInput" accept=".csv,.txt,.tsv" multiple style="display:none" onchange="handleScadaUpload(event)">
+        </div>
+        <div id="scadaFileList" style="margin-top:1rem"></div>
+      </div>
+      <div>
+        <div class="info-box"><span class="w-icon">ℹ</span><div><strong>Privacy:</strong> Files are parsed locally with <a href="https://www.papaparse.com" target="_blank" style="color:var(--sky)">PapaParse</a> and never leave your browser. There is no server upload — refresh the page and the data is gone.</div></div>
+        <div class="fg">
+          <label class="fl">Delimiter <span class="help-tip">?<span class="tip-body">Auto-detection tries comma, semicolon, tab, pipe and picks the one with the most consistent column count.</span></span></label>
+          <select class="fs" id="pDelimiter" onchange="autoSave()">
+            <option value="auto">Auto-detect</option>
+            <option value=",">Comma (,)</option>
+            <option value=";">Semicolon (;)</option>
+            <option value="\t">Tab</option>
+            <option value="|">Pipe (|)</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Header Row</label>
+          <select class="fs" id="pHeaderRow" onchange="autoSave()">
+            <option value="0">Row 1 (default)</option>
+            <option value="1">Row 2 (skip metadata)</option>
+            <option value="2">Row 3 (skip 2 metadata rows)</option>
+            <option value="3">Row 4 (skip 3 metadata rows)</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Skip Footer Rows</label>
+          <input type="number" class="fi" id="pSkipFooter" value="0" min="0" max="20" oninput="autoSave()">
+        </div>
+      </div>
+    </div>
+    <div id="scadaParseStatus" style="margin-top:1rem"></div>
+  </div>
+
+  <div class="card" id="colMapCard" style="display:none">
+    <div class="card-title sky">Column Mapping — Map your SCADA columns to the OEYA schema</div>
+    <p style="font-size:.72rem;color:var(--text3);margin-bottom:.8rem;font-style:italic">The tool auto-matches by common OEM signal names. Override if needed.</p>
+    <div id="colMapList"></div>
+  </div>
+
+  <div class="card" id="scadaPreviewCard" style="display:none">
+    <div class="card-title">SCADA Data Preview (first 8 rows)</div>
+    <div class="tbl-wrap" style="max-height:280px">
+      <table class="dt" id="scadaPreviewTable"></table>
+    </div>
+    <div style="display:flex;gap:.6rem;margin-top:1rem">
+      <button class="btn btn-primary" onclick="confirmScadaImport()">Confirm &amp; Continue →</button>
+      <button class="btn btn-ghost" onclick="goStep(0)">← Back</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.main -->
+
+<div id="toastContainer" class="toast-container"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// SCADA OPERATIONAL EYA TOOL — DNV-grade browser implementation
+// Replicates oepr_pipeline.py methodology in vanilla JavaScript
+// ════════════════════════════════════════════════════════════
+
+const STATE = {
+  cfg: {
+    projectName:"", projectCode:"", assessmentDate:"", location:"", elevation:0,
+    turbineModel:"", codYear:"", ratedMW:2.0, numTurbines:6, hubHt:80, rotorD:110,
+    sampleInt:10, binWidth:0.5, dayFirst:"auto", lowAvailThresh:0.83,
+    delimiter:"auto", headerRow:0, skipFooter:0
+  },
+  colMap: {
+    timestamp:"", asset:"", windSpeed:"", power:"", possiblePower:"", status:"",
+    derateFlag:"", alarmNo:"", ambientTemp:"", windDirAbs:"", nacelleDir:"", airPressure:""
+  },
+  scada: [],            // parsed rows: [{timestamp:Date, asset, ws, power, ...}]
+  scadaByTurbine: {},   // {turbineId: [rows]}
+  turbines: [],
+  dateRange: {start:null, end:null},
+  sampleIntervalMin: 10,
+  statusCodeMap: {},    // {code: "full"|"partial"|"unavail"|"unknown"}
+  excludedMonths: [],   // ["2019-03", ...]
+  availability: null,
+  monthlyAvail: null,
+  autoCurves: {},       // {turbineId: [{ws, meanPower, n}]}
+  plantCurve: null,
+  powerCurveAnalysis: null,
+  mcp: null,            // {a, b, r2, n, ...}
+  ltReference: null,    // {monthly: [{date, ws, density?}]}
+  ltGrossAEP: null,
+  ltNetAEP: null,
+  uncertainty: null,
+  poe: null,
+  losses: null,
+  yawAnalysis: null,
+  windspeedAnalysis: null,
+  eyaReconciliation: null,
+  log: [],
+  currentStep: 0,
+  charts: {}            // Chart.js instances keyed by canvas id
+};
+
+const DEFAULT_COLMAP_HINTS = {
+  timestamp:  ["timestamp","pctimestamp","time","datetime","date","scadatime"],
+  asset:      ["asset","assetname","turbine","turbine_id","wtg","wtg_id","unit"],
+  windSpeed:  ["amb_windspeed_avg","windspeed","wind_speed","ws","amb_ws","nac_windspeed"],
+  power:      ["grd_prod_pwr_avg","power","active_power","p_avg","grd_prod_pwr"],
+  possiblePower: ["grd_prod_psblepwr_avg","possible_power","psble_pwr","potential_power"],
+  status:     ["sys_stats_trbstat","status","turbine_status","stat","state"],
+  derateFlag: ["grd_prod_pwr_internalderatestat","derate","internalderate","derate_stat"],
+  alarmNo:    ["sys_logs_firstactalalarmno","alarm","alarmno","first_alarm"],
+  ambientTemp:["amb_temp_avg","temp","ambient_temp","amb_temp"],
+  windDirAbs: ["amb_winddir_abs_avg","winddir","wind_dir","wd","amb_wd"],
+  nacelleDir: ["nac_direction_avg","nacelle_dir","nac_dir","nacelle","yaw"],
+  airPressure:["amb_pressure_avg","pressure","air_pressure","press"]
+};
+
+// ════════════════════════════════════════════════════════════
+// Utilities
+// ════════════════════════════════════════════════════════════
+
+function $(id){ return document.getElementById(id); }
+function fmt(n, d=2){ if(n===null||n===undefined||isNaN(n)) return "—"; return Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fmtInt(n){ if(n===null||n===undefined||isNaN(n)) return "—"; return Math.round(n).toLocaleString(); }
+function fmtPct(n, d=1){ if(n===null||n===undefined||isNaN(n)) return "—"; return (n*100).toFixed(d)+"%"; }
+function fmtPctRaw(n, d=1){ if(n===null||n===undefined||isNaN(n)) return "—"; return n.toFixed(d)+"%"; }
+function fmtDate(d){ if(!d) return "—"; return d.toISOString().slice(0,10); }
+function monthKey(d){ return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0"); }
+function monthLabel(k){ const [y,m]=k.split("-"); const ms=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return ms[parseInt(m)-1]+" "+y; }
+function daysInMonth(y,m){ return new Date(Date.UTC(y,m+1,0)).getUTCDate(); }
+
+function toast(msg, type="success"){
+  const el=document.createElement("div");
+  el.className="toast "+type;
+  el.innerHTML=`<span>${type==="error"?"⚠":type==="warn"?"⚠":"✓"}</span><span>${msg}</span>`;
+  $("toastContainer").appendChild(el);
+  setTimeout(()=>{el.style.opacity="0";setTimeout(()=>el.remove(),300);},3500);
+}
+
+function logEvent(msg, type="info"){
+  const time=new Date().toLocaleTimeString();
+  STATE.log.push({time,msg,type});
+  const lb=$("logBox"); if(lb){
+    const line=document.createElement("div");
+    line.className="log-line "+type;
+    line.innerHTML=`<span class="log-time">${time}</span>${msg}`;
+    lb.appendChild(line); lb.scrollTop=lb.scrollHeight;
+  }
+  console.log(`[OEYA ${type}] ${msg}`);
+}
+
+function renderLogBox(containerId){
+  const c=$(containerId); if(!c) return;
+  c.innerHTML='<div class="log-box" id="logBox"></div>';
+  const lb=$("logBox");
+  STATE.log.forEach(e=>{
+    const line=document.createElement("div");
+    line.className="log-line "+e.type;
+    line.innerHTML=`<span class="log-time">${e.time}</span>${e.msg}`;
+    lb.appendChild(line);
+  });
+  lb.scrollTop=lb.scrollHeight;
+}
+
+// ════════════════════════════════════════════════════════════
+// Auto-save / State persistence
+// ════════════════════════════════════════════════════════════
+
+function autoSave(){
+  // Save config from form fields
+  STATE.cfg.projectName=$("pName").value;
+  STATE.cfg.projectCode=$("pCode").value;
+  STATE.cfg.assessmentDate=$("pDate").value;
+  STATE.cfg.location=$("pLocation").value;
+  STATE.cfg.elevation=parseFloat($("pElevation").value)||0;
+  STATE.cfg.turbineModel=$("pTurbineModel").value;
+  STATE.cfg.codYear=parseInt($("pCodYear").value)||"";
+  STATE.cfg.ratedMW=parseFloat($("pRatedMW").value)||2.0;
+  STATE.cfg.numTurbines=parseInt($("pNumTurbines").value)||6;
+  STATE.cfg.hubHt=parseFloat($("pHubHt").value)||80;
+  STATE.cfg.rotorD=parseFloat($("pRotorD").value)||110;
+  STATE.cfg.sampleInt=parseInt($("pSampleInt").value)||10;
+  STATE.cfg.binWidth=parseFloat($("pBinWidth").value)||0.5;
+  STATE.cfg.dayFirst=$("pDayFirst").value;
+  STATE.cfg.lowAvailThresh=parseFloat($("pLowAvailThresh").value)||0.83;
+  STATE.cfg.delimiter=$("pDelimiter").value;
+  STATE.cfg.headerRow=parseInt($("pHeaderRow").value)||0;
+  STATE.cfg.skipFooter=parseInt($("pSkipFooter").value)||0;
+  updateProjectPill();
+  try { localStorage.setItem("oeya_state_cfg", JSON.stringify(STATE.cfg)); } catch(e){}
+}
+
+function loadCfgFromState(){
+  const c=STATE.cfg;
+  if($("pName")) $("pName").value=c.projectName||"";
+  if($("pCode")) $("pCode").value=c.projectCode||"";
+  if($("pDate")) $("pDate").value=c.assessmentDate||"";
+  if($("pLocation")) $("pLocation").value=c.location||"";
+  if($("pElevation")) $("pElevation").value=c.elevation||0;
+  if($("pTurbineModel")) $("pTurbineModel").value=c.turbineModel||"";
+  if($("pCodYear")) $("pCodYear").value=c.codYear||"";
+  if($("pRatedMW")) $("pRatedMW").value=c.ratedMW||2.0;
+  if($("pNumTurbines")) $("pNumTurbines").value=c.numTurbines||6;
+  if($("pHubHt")) $("pHubHt").value=c.hubHt||80;
+  if($("pRotorD")) $("pRotorD").value=c.rotorD||110;
+  if($("pSampleInt")) $("pSampleInt").value=c.sampleInt||10;
+  if($("pBinWidth")) $("pBinWidth").value=c.binWidth||0.5;
+  if($("pDayFirst")) $("pDayFirst").value=c.dayFirst||"auto";
+  if($("pLowAvailThresh")) $("pLowAvailThresh").value=c.lowAvailThresh||0.83;
+  if($("pDelimiter")) $("pDelimiter").value=c.delimiter||"auto";
+  if($("pHeaderRow")) $("pHeaderRow").value=c.headerRow||0;
+  if($("pSkipFooter")) $("pSkipFooter").value=c.skipFooter||0;
+  updateProjectPill();
+}
+
+function updateProjectPill(){
+  $("projectPill").textContent = STATE.cfg.projectName ? STATE.cfg.projectName : "No project loaded";
+}
+
+function saveState(){
+  const exportable = {
+    cfg: STATE.cfg,
+    colMap: STATE.colMap,
+    statusCodeMap: STATE.statusCodeMap,
+    excludedMonths: STATE.excludedMonths,
+    turbines: STATE.turbines,
+    dateRange: STATE.dateRange,
+    sampleIntervalMin: STATE.sampleIntervalMin,
+    availability: STATE.availability,
+    monthlyAvail: STATE.monthlyAvail,
+    autoCurves: STATE.autoCurves,
+    plantCurve: STATE.plantCurve,
+    mcp: STATE.mcp,
+    ltGrossAEP: STATE.ltGrossAEP,
+    ltNetAEP: STATE.ltNetAEP,
+    uncertainty: STATE.uncertainty,
+    poe: STATE.poe,
+    losses: STATE.losses,
+    yawAnalysis: STATE.yawAnalysis,
+    windspeedAnalysis: STATE.windspeedAnalysis,
+    eyaReconciliation: STATE.eyaReconciliation,
+    log: STATE.log
+    // Note: STATE.scada is intentionally omitted — re-import CSV to rerun analyses
+  };
+  const blob = new Blob([JSON.stringify(exportable,null,2)],{type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `oeya_project_${(STATE.cfg.projectName||"untitled").replace(/[^a-z0-9]/gi,"_")}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast("Project state saved (config + computed results).");
+}
+
+function loadState(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const obj = JSON.parse(e.target.result);
+      Object.assign(STATE, obj);
+      loadCfgFromState();
+      renderLogBox("logBoxContainer");
+      toast("Project loaded. Re-import SCADA CSV to rerun analyses.");
+      goStep(0);
+    } catch(err){
+      toast("Failed to load project: "+err.message, "error");
+    }
+  };
+  reader.readAsText(file);
+  event.target.value="";
+}
+
+// ════════════════════════════════════════════════════════════
+// Stepper navigation
+// ════════════════════════════════════════════════════════════
+
+function goStep(n){
+  document.querySelectorAll(".step-panel").forEach(p=>p.classList.remove("active"));
+  $("step"+n).classList.add("active");
+  document.querySelectorAll(".step-item").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".step-item").forEach(s=>{
+    const idx=parseInt(s.dataset.step);
+    if(idx===n) s.classList.add("active");
+    if(idx<n) s.classList.add("done");
+    else s.classList.remove("done");
+  });
+  STATE.currentStep=n;
+  // Render step content as needed
+  if(n===1) renderScadaImportStep();
+  if(n===2) renderDataQAStep();
+  if(n===3) renderAvailabilityStep();
+  if(n===4) renderPowerCurveStep();
+  if(n===5) renderMCPStep();
+  if(n===6) renderEYAStep();
+  if(n===7) renderUncertaintyStep();
+  if(n===8) renderDiagnosticsStep();
+  if(n===9) renderReportsStep();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+// ════════════════════════════════════════════════════════════
+// Statistics & Math helpers
+// ════════════════════════════════════════════════════════════
+
+function mean(arr){
+  const v = arr.filter(x=>x!==null&&x!==undefined&&!isNaN(x));
+  if(v.length===0) return NaN;
+  return v.reduce((s,x)=>s+x,0)/v.length;
+}
+function std(arr){
+  const v = arr.filter(x=>x!==null&&x!==undefined&&!isNaN(x));
+  if(v.length<2) return NaN;
+  const m = mean(v);
+  return Math.sqrt(v.reduce((s,x)=>s+(x-m)*(x-m),0)/(v.length-1));
+}
+function median(arr){
+  const v = arr.filter(x=>x!==null&&x!==undefined&&!isNaN(x)).slice().sort((a,b)=>a-b);
+  if(v.length===0) return NaN;
+  const mid = Math.floor(v.length/2);
+  return v.length%2 ? v[mid] : (v[mid-1]+v[mid])/2;
+}
+function sum(arr){
+  return arr.filter(x=>x!==null&&x!==undefined&&!isNaN(x)).reduce((s,x)=>s+x,0);
+}
+function min(arr){ const v=arr.filter(x=>x!==null&&x!==undefined&&!isNaN(x)); return v.length?Math.min(...v):NaN; }
+function max(arr){ const v=arr.filter(x=>x!==null&&x!==undefined&&!isNaN(x)); return v.length?Math.max(...v):NaN; }
+
+function linearRegression(xArr, yArr){
+  // Returns {a: slope, b: intercept, r2, n}
+  const pairs = [];
+  for(let i=0;i<xArr.length;i++){
+    const x=xArr[i], y=yArr[i];
+    if(x!==null&&x!==undefined&&!isNaN(x)&&y!==null&&y!==undefined&&!isNaN(y)) pairs.push([x,y]);
+  }
+  const n = pairs.length;
+  if(n<2) return {a:NaN,b:NaN,r2:NaN,n};
+  const sx = pairs.reduce((s,p)=>s+p[0],0);
+  const sy = pairs.reduce((s,p)=>s+p[1],0);
+  const sxy = pairs.reduce((s,p)=>s+p[0]*p[1],0);
+  const sxx = pairs.reduce((s,p)=>s+p[0]*p[0],0);
+  const syy = pairs.reduce((s,p)=>s+p[1]*p[1],0);
+  const denom = n*sxx - sx*sx;
+  if(Math.abs(denom) < 1e-12) return {a:0,b:sy/n,r2:0,n};
+  const a = (n*sxy - sx*sy) / denom;
+  const b = (sy - a*sx) / n;
+  const ssRes = pairs.reduce((s,p)=>{const yhat=a*p[0]+b;return s+(p[1]-yhat)*(p[1]-yhat);},0);
+  const ssTot = syy - sy*sy/n;
+  const r2 = ssTot > 1e-12 ? Math.max(0, 1 - ssRes/ssTot) : 0;
+  return {a,b,r2,n};
+}
+
+function normInv(p){
+  // Inverse of standard normal CDF (Acklam's algorithm)
+  if(p<=0) return -Infinity;
+  if(p>=1) return Infinity;
+  const a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00];
+  const b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,6.680131188771972e+01,-1.328068155288572e+01];
+  const c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,-2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00];
+  const d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];
+  const plow=0.02425, phigh=1-plow;
+  let q, r;
+  if(p<plow){
+    q = Math.sqrt(-2*Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  } else if(p<=phigh){
+    q = p - 0.5;
+    r = q*q;
+    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q / (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+  } else {
+    q = Math.sqrt(-2*Math.log(1-p));
+    return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  }
+}
+
+function circularMeanDeg(angles){
+  const valid = angles.filter(a=>a!==null&&a!==undefined&&!isNaN(a));
+  if(valid.length===0) return NaN;
+  let s=0, c=0;
+  valid.forEach(a=>{const r=a*Math.PI/180; s+=Math.sin(r); c+=Math.cos(r);});
+  s/=valid.length; c/=valid.length;
+  let m = Math.atan2(s,c)*180/Math.PI;
+  return ((m%360)+360)%360;
+}
+function circularDiffDeg(a, b){
+  // Shortest signed angular difference a-b wrapped to [-180, 180]
+  if(a===null||a===undefined||b===null||b===undefined||isNaN(a)||isNaN(b)) return NaN;
+  return ((a - b + 180) % 360 + 360) % 360 - 180;
+}
+
+// ISA air density from elevation (m) and temperature (°C)
+function isaAirDensity(elevationM, tempC){
+  const T0 = 288.15; // K
+  const p0 = 101325; // Pa
+  const L = 0.0065;  // K/m
+  const R = 287.058; // J/(kg K)
+  const g = 9.80665;
+  const T = (tempC!==null&&!isNaN(tempC)) ? tempC+273.15 : T0 - L*elevationM;
+  const p = p0 * Math.pow(1 - L*elevationM/T0, g*R/(L*R));
+  return p / (R * T);
+}
+
+// ════════════════════════════════════════════════════════════
+// Timestamp parsing (auto-detect dayfirst vs monthfirst)
+// Replicates oepr_dateutils.detect_dayfirst
+// ════════════════════════════════════════════════════════════
+
+function detectDayfirst(rawTimestamps, sampleSize=2000){
+  let sample = rawTimestamps.filter(x=>x!==null&&x!==undefined&&String(x).trim());
+  if(sample.length > sampleSize){
+    // Random sample
+    const idx = new Set();
+    while(idx.size < sampleSize) idx.add(Math.floor(Math.random()*sample.length));
+    sample = Array.from(idx).map(i=>sample[i]);
+  }
+  const pat = /^\s*(\d{1,4})[/\-.](\d{1,2})[/\-.](\d{1,4})/;
+  let firstGt12=0, secondGt12=0, nParsed=0;
+  sample.forEach(s=>{
+    const m = pat.exec(String(s));
+    if(!m) return;
+    const a=m[1], b=m[2], c=m[3];
+    if(a.length===4) return; // ISO YYYY-MM-DD — unambiguous
+    nParsed++;
+    if(parseInt(a) > 12) firstGt12++;
+    if(parseInt(b) > 12) secondGt12++;
+  });
+  if(nParsed===0) return {dayfirst:null, confidence:"no_date_month_pattern_found"};
+  if(firstGt12>0 && secondGt12>0) return {dayfirst:null, confidence:"inconsistent_mixed_format"};
+  if(firstGt12>0) return {dayfirst:true, confidence:"confident_dayfirst"};
+  if(secondGt12>0) return {dayfirst:false, confidence:"confident_monthfirst"};
+  return {dayfirst:null, confidence:"ambiguous_all_values_le_12"};
+}
+
+function parseTimestamp(rawStr, dayfirstMode){
+  // Returns Date or null
+  if(rawStr===null||rawStr===undefined) return null;
+  const s = String(rawStr).trim();
+  if(!s) return null;
+  // Try ISO first
+  const iso = /^\s*(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/;
+  const isoM = iso.exec(s);
+  if(isoM){
+    const dt = new Date(Date.UTC(+isoM[1], +isoM[2]-1, +isoM[3], +isoM[4]||0, +isoM[5]||0, +isoM[6]||0));
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+  // Determine dayfirst
+  let dayfirst;
+  if(dayfirstMode==="true") dayfirst = true;
+  else if(dayfirstMode==="false") dayfirst = false;
+  else {
+    // Auto-detect from this single value
+    const det = detectDayfirst([s]);
+    dayfirst = det.dayfirst === null ? false : det.dayfirst; // default month-first if ambiguous
+  }
+  // Match patterns like DD/MM/YYYY HH:MM or MM/DD/YYYY HH:MM
+  const m = /^(\d{1,4})[/\-.](\d{1,2})[/\-.](\d{1,4})[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/.exec(s);
+  if(m){
+    let a=+m[1], b=+m[2], c=+m[3];
+    // Detect ISO if first token is 4-digit year
+    let year, month, day;
+    if(String(m[1]).length===4){ year=a; month=b; day=c; }
+    else if(dayfirst){ day=a; month=b; year=c; }
+    else { month=a; day=b; year=c; }
+    if(year<100) year += year<70 ? 2000 : 1900;
+    const dt = new Date(Date.UTC(year, month-1, day, +m[4]||0, +m[5]||0, +m[6]||0));
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+  // Date-only fallback
+  const m2 = /^(\d{1,4})[/\-.](\d{1,2})[/\-.](\d{1,4})$/.exec(s);
+  if(m2){
+    let a=+m2[1], b=+m2[2], c=+m2[3];
+    let year, month, day;
+    if(String(m2[1]).length===4){ year=a; month=b; day=c; }
+    else if(dayfirst){ day=a; month=b; year=c; }
+    else { month=a; day=b; year=c; }
+    if(year<100) year += year<70 ? 2000 : 1900;
+    const dt = new Date(Date.UTC(year, month-1, day));
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+  // Last resort: Date.parse
+  const t = Date.parse(s);
+  return isNaN(t) ? null : new Date(t);
+}
+
+// ════════════════════════════════════════════════════════════
+// CSV delimiter detection
+// ════════════════════════════════════════════════════════════
+
+function detectDelimiter(firstLine){
+  const candidates = [",", "\t", ";", "|", " "];
+  let best = ",", bestCount = -1;
+  candidates.forEach(d=>{
+    const count = firstLine.split(d).length;
+    if(count > bestCount){ bestCount = count; best = d; }
+  });
+  return best;
+}
+
+// ════════════════════════════════════════════════════════════
+// SCADA upload handling
+// ════════════════════════════════════════════════════════════
+
+let scadaUploadedFiles = [];
+
+function handleScadaUpload(event){
+  const files = Array.from(event.target.files);
+  files.forEach(f => scadaUploadedFiles.push(f));
+  renderScadaFileList();
+  if(scadaUploadedFiles.length > 0) parseScadaFiles();
+}
+
+function renderScadaFileList(){
+  const c = $("scadaFileList");
+  if(scadaUploadedFiles.length===0){ c.innerHTML=""; return; }
+  c.innerHTML = scadaUploadedFiles.map((f,i)=>`
+    <div class="file-chip">
+      <span>📄</span>
+      <span>${f.name}</span>
+      <span class="fc-size">${(f.size/1024/1024).toFixed(2)} MB</span>
+      <span class="fc-remove" onclick="removeScadaFile(${i})">✕</span>
+    </div>`).join("");
+}
+
+function removeScadaFile(idx){
+  scadaUploadedFiles.splice(idx,1);
+  renderScadaFileList();
+  if(scadaUploadedFiles.length===0){
+    $("scadaParseStatus").innerHTML="";
+    $("colMapCard").style.display="none";
+    $("scadaPreviewCard").style.display="none";
+  } else {
+    parseScadaFiles();
+  }
+}
+
+function parseScadaFiles(){
+  if(scadaUploadedFiles.length===0) return;
+  $("scadaParseStatus").innerHTML = `<div class="info-box"><span class="w-icon"><span class="spinner"></span></span><div>Parsing ${scadaUploadedFiles.length} file(s)…</div></div>`;
+  let allRows = [];
+  let headers = [];
+  let filesProcessed = 0;
+  let parseInfo = {dayfirstUsed:null, method:"", nTotal:0, nFailed:0};
+
+  scadaUploadedFiles.forEach((file, idx) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const text = e.target.result;
+      // Detect delimiter
+      let delim = STATE.cfg.delimiter;
+      const firstLine = text.split(/\r?\n/).find(l=>l.trim().length>0) || "";
+      if(delim==="auto"){
+        delim = detectDelimiter(firstLine);
+        if(idx===0) logEvent(`Auto-detected delimiter: ${delim==="\t"?"tab":delim===",?"?delim:JSON.stringify(delim)}`, "info");
+      } else if(delim==="\\t"){
+        delim = "\t";
+      }
+      // Skip header rows if configured
+      const skipHeader = STATE.cfg.headerRow || 0;
+      const skipFooter = STATE.cfg.skipFooter || 0;
+      Papa.parse(text, {
+        delimiter: delim,
+        skipEmptyLines: true,
+        header: false,
+        worker: false,
+        complete: (results) => {
+          const data = results.data;
+          if(data.length <= skipHeader){
+            filesProcessed++;
+            if(filesProcessed===scadaUploadedFiles.length) finalizeParse(allRows, headers, parseInfo);
+            return;
+          }
+          // Use the row at skipHeader as the header
+          const fileHeaders = (data[skipHeader] || []).map(h => String(h).trim());
+          if(headers.length===0) headers = fileHeaders;
+          const rows = data.slice(skipHeader+1);
+          if(skipFooter>0) rows.splice(rows.length - skipFooter, skipFooter);
+          rows.forEach(r => {
+            const obj = {};
+            fileHeaders.forEach((h,i)=>{ obj[h] = r[i]; });
+            allRows.push(obj);
+          });
+          filesProcessed++;
+          if(filesProcessed===scadaUploadedFiles.length) finalizeParse(allRows, headers, parseInfo);
+        },
+        error: (err) => {
+          filesProcessed++;
+          logEvent(`Failed to parse ${file.name}: ${err.message}`, "error");
+          if(filesProcessed===scadaUploadedFiles.length) finalizeParse(allRows, headers, parseInfo);
+        }
+      });
+    };
+    reader.readAsText(file);
+  });
+}
+
+function finalizeParse(allRows, headers, parseInfo){
+  logEvent(`Parsed ${allRows.length.toLocaleString()} rows, ${headers.length} columns.`, "success");
+  // Auto-detect column mapping
+  autoMapColumns(headers);
+  // Pre-parse timestamps (sample for dayfirst detection)
+  const tsCol = STATE.colMap.timestamp;
+  if(tsCol){
+    const sampleTs = allRows.slice(0, Math.min(2000, allRows.length)).map(r=>r[tsCol]).filter(x=>x);
+    const det = detectDayfirst(sampleTs);
+    let dayfirst;
+    if(STATE.cfg.dayFirst==="true") dayfirst = true;
+    else if(STATE.cfg.dayFirst==="false") dayfirst = false;
+    else {
+      dayfirst = det.dayfirst===null ? false : det.dayfirst;
+      logEvent(`Timestamp auto-detection: ${det.confidence} → ${dayfirst?"day-first (DD-MM-YYYY)":"month-first (MM-DD-YYYY)"}`, det.dayfirst===null?"warn":"info");
+    }
+    parseInfo.dayfirstUsed = dayfirst;
+    parseInfo.method = STATE.cfg.dayFirst==="auto" ? `auto-detected ${dayfirst?"day-first":"month-first"} (${det.confidence})` : `config override ${STATE.cfg.dayFirst}`;
+  }
+  // Render status
+  $("scadaParseStatus").innerHTML = `
+    <div class="success-box"><span class="w-icon">✓</span><div>
+      <strong>Parsed successfully:</strong> ${allRows.length.toLocaleString()} rows across ${headers.length} columns.<br>
+      <span style="font-size:.65rem;color:var(--text3);font-family:var(--mono)">Timestamp format: ${parseInfo.method}</span>
+    </div></div>`;
+  // Render column mapping
+  renderColumnMapping(headers);
+  $("colMapCard").style.display = "block";
+  // Render preview
+  renderScadaPreview(allRows, headers);
+  $("scadaPreviewCard").style.display = "block";
+  // Store raw rows for confirmScadaImport
+  STATE._pendingRows = allRows;
+  STATE._pendingHeaders = headers;
+}
+
+function autoMapColumns(headers){
+  const lcHeaders = headers.map(h=>String(h).toLowerCase().replace(/[^a-z0-9_]/g,"_"));
+  Object.keys(DEFAULT_COLMAP_HINTS).forEach(key => {
+    const hints = DEFAULT_COLMAP_HINTS[key];
+    // Exact match first
+    let found = "";
+    for(let i=0;i<lcHeaders.length;i++){
+      if(hints.includes(lcHeaders[i])){ found = headers[i]; break; }
+    }
+    // Partial match
+    if(!found){
+      for(let i=0;i<lcHeaders.length;i++){
+        if(hints.some(h => lcHeaders[i].includes(h) || h.includes(lcHeaders[i]))){ found = headers[i]; break; }
+      }
+    }
+    STATE.colMap[key] = found;
+  });
+}
+
+function renderColumnMapping(headers){
+  const fields = [
+    ["timestamp","Timestamp","Date/time column (required)"],
+    ["asset","Asset / Turbine ID","Turbine identifier (required)"],
+    ["windSpeed","Wind Speed (m/s)","Nacelle or free-stream anemometer (required)"],
+    ["power","Active Power (kW)","Grid-side active power output (required)"],
+    ["possiblePower","Possible Power (kW)","OEM-computed theoretical power (optional — DNV preferred for availability)"],
+    ["status","Turbine Status Code","OEM status code (required for IEC 61400-26 availability)"],
+    ["derateFlag","Derate / Curtailment Flag","Power setpoint reduction flag"],
+    ["alarmNo","First Active Alarm No.","For diagnostics (optional)"],
+    ["ambientTemp","Ambient Temperature (°C)","For air density & icing detection (optional)"],
+    ["windDirAbs","Absolute Wind Direction (°)","For yaw analysis (optional)"],
+    ["nacelleDir","Nacelle Direction (°)","For yaw analysis (optional)"],
+    ["airPressure","Air Pressure (hPa or Pa)","For air density (optional — falls back to ISA)"]
+  ];
+  $("colMapList").innerHTML = fields.map(([key,label,desc])=>{
+    const opts = ['<option value="">— Not mapped —</option>']
+      .concat(headers.map(h=>`<option value="${h}" ${STATE.colMap[key]===h?"selected":""}>${h}</option>`))
+      .join("");
+    return `<div class="col-map-row">
+      <div>
+        <div class="cm-label">${label}${["timestamp","asset","windSpeed","power","status"].includes(key)?' <span style="color:var(--red)">*</span>':''}</div>
+        <div class="cm-desc">${desc}</div>
+      </div>
+      <select class="fs" onchange="STATE.colMap['${key}']=this.value;autoSave();">${opts}</select>
+      <div></div>
+    </div>`;
+  }).join("");
+}
+
+function renderScadaPreview(rows, headers){
+  const previewRows = rows.slice(0,8);
+  let html = '<thead><tr>' + headers.map(h=>`<th>${h}</th>`).join("") + '</tr></thead><tbody>';
+  previewRows.forEach(r => {
+    html += '<tr>' + headers.map(h => `<td>${r[h] ?? ""}</td>`).join("") + '</tr>';
+  });
+  html += '</tbody>';
+  $("scadaPreviewTable").innerHTML = html;
+}
+
+function confirmScadaImport(){
+  const cm = STATE.colMap;
+  if(!cm.timestamp || !cm.asset || !cm.windSpeed || !cm.power || !cm.status){
+    toast("Required columns not mapped. Please map timestamp, asset, wind speed, power, and status.", "error");
+    return;
+  }
+  // Parse all rows into structured objects
+  const rows = STATE._pendingRows;
+  const headers = STATE._pendingHeaders;
+  logEvent(`Parsing ${rows.length.toLocaleString()} rows into structured SCADA records…`, "info");
+  const parsed = [];
+  let nFailed = 0;
+  let dayfirstMode = STATE.cfg.dayFirst;
+  if(dayfirstMode === "auto"){
+    // Use the detection result from finalizeParse (re-detect here for safety)
+    const sample = rows.slice(0,2000).map(r=>r[cm.timestamp]).filter(x=>x);
+    const det = detectDayfirst(sample);
+    dayfirstMode = (det.dayfirst === null ? "false" : (det.dayfirst ? "true" : "false"));
+  }
+  for(let i=0;i<rows.length;i++){
+    const r = rows[i];
+    const ts = parseTimestamp(r[cm.timestamp], dayfirstMode);
+    if(!ts){ nFailed++; continue; }
+    const asset = String(r[cm.asset] ?? "").trim();
+    if(!asset) continue;
+    const ws = parseFloat(r[cm.windSpeed]);
+    const power = parseFloat(r[cm.power]);
+    const status = r[cm.status] !== undefined && r[cm.status] !== "" ? String(r[cm.status]).trim() : "";
+    const rec = {
+      ts: ts,
+      asset: asset,
+      ws: isNaN(ws) ? null : ws,
+      power: isNaN(power) ? null : power,
+      status: status,
+      possiblePower: cm.possiblePower ? parseFloat(r[cm.possiblePower]) : null,
+      ambientTemp: cm.ambientTemp ? parseFloat(r[cm.ambientTemp]) : null,
+      windDirAbs: cm.windDirAbs ? parseFloat(r[cm.windDirAbs]) : null,
+      nacelleDir: cm.nacelleDir ? parseFloat(r[cm.nacelleDir]) : null,
+      airPressure: cm.airPressure ? parseFloat(r[cm.airPressure]) : null,
+      derateFlag: cm.derateFlag ? r[cm.derateFlag] : null,
+      alarmNo: cm.alarmNo ? r[cm.alarmNo] : null
+    };
+    parsed.push(rec);
+  }
+  if(nFailed > 0){
+    logEvent(`${nFailed.toLocaleString()} rows failed timestamp parse and were dropped.`, "warn");
+  }
+  // Deduplicate (asset, timestamp)
+  const seen = new Set();
+  const dedup = [];
+  let nDup = 0;
+  parsed.forEach(r => {
+    const k = r.asset + "|" + r.ts.toISOString();
+    if(seen.has(k)){ nDup++; return; }
+    seen.add(k);
+    dedup.push(r);
+  });
+  if(nDup > 0) logEvent(`Dropped ${nDup.toLocaleString()} duplicate (asset,timestamp) rows.`, "info");
+  STATE.scada = dedup;
+  // Group by turbine
+  STATE.scadaByTurbine = {};
+  dedup.forEach(r => {
+    if(!STATE.scadaByTurbine[r.asset]) STATE.scadaByTurbine[r.asset] = [];
+    STATE.scadaByTurbine[r.asset].push(r);
+  });
+  STATE.turbines = Object.keys(STATE.scadaByTurbine).sort();
+  // Sort each turbine's records by time
+  STATE.turbines.forEach(t => STATE.scadaByTurbine[t].sort((a,b)=>a.ts - b.ts));
+  // Date range
+  const allTs = dedup.map(r=>r.ts);
+  STATE.dateRange = { start: new Date(Math.min(...allTs)), end: new Date(Math.max(...allTs)) };
+  // Infer sample interval
+  if(STATE.turbines.length > 0){
+    const t0Recs = STATE.scadaByTurbine[STATE.turbines[0]];
+    if(t0Recs.length > 5){
+      const diffs = [];
+      for(let i=1;i<Math.min(50,t0Recs.length);i++){
+        diffs.push((t0Recs[i].ts - t0Recs[i-1].ts)/60000);
+      }
+      const mode = diffs.sort((a,b)=>a-b)[Math.floor(diffs.length/2)];
+      STATE.sampleIntervalMin = mode || STATE.cfg.sampleInt;
+    }
+  }
+  logEvent(`Imported ${dedup.length.toLocaleString()} records for ${STATE.turbines.length} turbines. Date range: ${fmtDate(STATE.dateRange.start)} to ${fmtDate(STATE.dateRange.end)}. Sample interval: ${STATE.sampleIntervalMin} min.`, "success");
+  toast(`Imported ${dedup.length.toLocaleString()} records for ${STATE.turbines.length} turbines.`);
+  goStep(2);
+}
+
+// Stub for sample data — implemented in a later script block
+function loadSampleData(){
+  if(typeof generateSampleScada === "function") generateSampleScada();
+  else toast("Sample data generator not yet loaded.", "warn");
+}
+
+// Initial load
+window.addEventListener("DOMContentLoaded", () => {
+  try {
+    const saved = localStorage.getItem("oeya_state_cfg");
+    if(saved){
+      Object.assign(STATE.cfg, JSON.parse(saved));
+    }
+  } catch(e){}
+  loadCfgFromState();
+  renderLogBox("logBoxContainer");
+  goStep(0);
+});
+
+</script>
+
+<!-- ═══════ STEP 2: DATA QA & STATUS MAPPING ═══════ -->
+<div class="step-panel" id="step2">
+  <div class="card">
+    <div class="card-title green">Data Completeness &amp; QA</div>
+    <div id="qaSummary"></div>
+    <div class="g2" style="margin-top:1rem">
+      <div>
+        <div class="card-title sky">Per-Turbine Monthly Coverage</div>
+        <div class="tbl-wrap" style="max-height:340px">
+          <table class="dt" id="coverageTable"></table>
+        </div>
+      </div>
+      <div>
+        <div class="card-title sky">Date Range &amp; Turbine List</div>
+        <div id="turbineList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.5rem;max-height:340px;overflow:auto"></div>
+      </div>
+    </div>
+    <div id="qaAlerts" style="margin-top:1rem"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title gold">Status Code → IEC 61400-26 Category Mapping</div>
+    <p style="font-size:.72rem;color:var(--text3);margin-bottom:.8rem;font-style:italic">
+      IEC 61400-26 classifies each SCADA record into four energy-based categories: <span class="badge status-full">FULL</span> (unconstrained normal operation), <span class="badge status-partial">PARTIAL</span> (derated/curtailed but producing), <span class="badge status-unavailable">UNAVAIL</span> (forced or scheduled outage), <span class="badge status-unknown">UNKNOWN</span> (cannot classify). The OEYA energy-based availability uses Possible Power from auto-curve (or OEM signal) for UNAVAIL periods and Actual Power for AVAIL periods.
+    </p>
+    <div class="g2">
+      <div>
+        <div id="statusCodeList" style="max-height:380px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius2);padding:.5rem"></div>
+        <div style="display:flex;gap:.4rem;margin-top:.6rem">
+          <button class="btn btn-ghost btn-sm" onclick="autoClassifyStatusCodes()">Auto-Classify</button>
+          <button class="btn btn-ghost btn-sm" onclick="addCustomStatusCode()">Add Code</button>
+          <button class="btn btn-ghost btn-sm" onclick="resetStatusCodes()">Reset</button>
+        </div>
+      </div>
+      <div>
+        <div class="card-title">Excluded Months</div>
+        <p style="font-size:.68rem;color:var(--text3);margin-bottom:.6rem">Months to drop from the MCP power-curve regression (ice storms, meter errors, commissioning, partial outages). Enter as <code style="color:var(--mint);font-family:var(--mono)">YYYY-MM</code> one per line.</p>
+        <textarea class="fi" id="excludedMonthsInput" style="min-height:120px" placeholder="2019-03&#10;2019-04" oninput="parseExcludedMonths()"></textarea>
+        <div id="excludedMonthsPreview" style="margin-top:.5rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Pipeline Log</div>
+    <div id="logBoxContainer"></div>
+  </div>
+
+  <div style="display:flex;gap:.6rem;margin-top:1rem">
+    <button class="btn btn-primary" onclick="runAvailabilityAnalysis()">Run OEYA Core Analysis →</button>
+    <button class="btn btn-ghost" onclick="goStep(1)">← Back</button>
+  </div>
+</div>
+
+<!-- ═══════ STEP 3: AVAILABILITY (IEC 61400-26) ═══════ -->
+<div class="step-panel" id="step3">
+  <div class="card">
+    <div class="card-title green">IEC 61400-26 Energy-Based Availability</div>
+    <p style="font-size:.78rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;max-width:90ch">
+      For each turbine, an empirical "auto power curve" is built from FULL-status records (clean, unconstrained operation) by binning power output vs wind speed. For every SCADA record, the theoretical ("potential") power is then computed from the auto-curve at the observed wind speed. <strong style="color:var(--mint)">Availability = 1 − Unavailable Energy / (Available Energy + Unavailable Energy)</strong>, where Available Energy is the actual energy in available periods and Unavailable Energy is the theoretical energy lost during unavailable periods. Unknown periods are excluded entirely.
+    </p>
+    <div class="kpi-row" id="availKpis"></div>
+    <div class="g2">
+      <div>
+        <div class="card-title sky">Monthly Plant Availability Trend</div>
+        <div class="chart-box"><canvas id="monthlyAvailChart"></canvas></div>
+      </div>
+      <div>
+        <div class="card-title sky">Per-Turbine Availability Ranking</div>
+        <div class="chart-box"><canvas id="turbineAvailChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Per-Turbine Availability Breakdown</div>
+    <div class="tbl-wrap" style="max-height:480px">
+      <table class="dt" id="availTable"></table>
+    </div>
+    <div style="display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="exportCSV('availability_per_turbine.csv', buildAvailabilityCSV())">Export CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportCSV('monthly_availability.csv', buildMonthlyAvailCSV())">Export Monthly CSV</button>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:.6rem;margin-top:1rem">
+    <button class="btn btn-primary" onclick="goStep(4)">Continue → Power Curves</button>
+    <button class="btn btn-ghost" onclick="goStep(2)">← Back</button>
+  </div>
+</div>
+
+<!-- ═══════ STEP 4: POWER CURVES ═══════ -->
+<div class="step-panel" id="step4">
+  <div class="card">
+    <div class="card-title green">Plant &amp; Per-Turbine Power Curves</div>
+    <p style="font-size:.78rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;max-width:90ch">
+      Plant power curve aggregates all FULL-status records across the fleet, binned at <strong style="color:var(--mint)"><span id="binWidthDisplay">0.5</span> m/s</strong> resolution. Bins with fewer than <strong style="color:var(--mint)">6 samples</strong> are dropped and the curve is enforced monotonically non-decreasing via cumulative-max smoothing (replicates oepr_availability.build_auto_curve). The plant curve feeds the MCP regression in the next step.
+    </p>
+    <div class="g2">
+      <div>
+        <div class="card-title sky">Plant Power Curve</div>
+        <div class="chart-box tall"><canvas id="plantCurveChart"></canvas></div>
+      </div>
+      <div>
+        <div class="card-title sky">Plant Curve Data (binned)</div>
+        <div class="tbl-wrap" style="max-height:420px">
+          <table class="dt" id="plantCurveTable"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title gold">Per-Turbine Auto Power Curves</div>
+    <div class="g2">
+      <div>
+        <label class="fl">Select Turbine</label>
+        <select class="fs" id="turbineCurveSelect" onchange="renderTurbineCurve()"></select>
+      </div>
+      <div style="display:flex;align-items:end;gap:.5rem">
+        <button class="btn btn-ghost btn-sm" onclick="exportTurbineCurveCSV()">Export Current Curve</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportAllTurbineCurvesCSV()">Export All Curves (ZIP)</button>
+      </div>
+    </div>
+    <div class="chart-box tall" style="margin-top:.8rem"><canvas id="turbineCurveChart"></canvas></div>
+    <div class="tbl-wrap" style="margin-top:.8rem;max-height:240px">
+      <table class="dt" id="turbineCurveTable"></table>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:.6rem;margin-top:1rem">
+    <button class="btn btn-primary" onclick="goStep(5)">Continue → Long-Term Correction (MCP)</button>
+    <button class="btn btn-ghost" onclick="goStep(3)">← Back</button>
+  </div>
+</div>
+
+<!-- ═══════ STEP 5: MCP / LONG-TERM CORRECTION ═══════ -->
+<div class="step-panel" id="step5">
+  <div class="card">
+    <div class="card-title green">Long-Term Wind Reference &amp; MCP Regression</div>
+    <p style="font-size:.78rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;max-width:95ch">
+      Measure-Correlate-Predict (MCP) regressions the plant's monthly gross energy (normalised to 30-day months, Eq. 2-3 of the OEPR methodology) against a long-term reference wind speed series over the operational period, then applies the regression to the full LT reference record to predict long-term gross AEP. The standard OEPR convention uses Eq. 5: <code style="color:var(--mint);font-family:var(--mono)">Prod_norm = a × WS_ref + b</code>. Air density adjustment is applied first (Eq. 4: Vn = Vobs × (ρ/ρ₀)^(1/3)) if a density series is supplied.
+    </p>
+    <div class="g2">
+      <div>
+        <div class="card-title sky">Reference Wind Speed Source</div>
+        <div class="fg">
+          <label class="fl">Source</label>
+          <select class="fs" id="refSource" onchange="toggleRefSource()">
+            <option value="openmeteo">Open-Meteo Historical API (free, no API key — recommended)</option>
+            <option value="upload">Upload reference CSV (monthly wind speed + optional density)</option>
+            <option value="manual">Manual monthly values</option>
+            <option value="none">No LT correction (use POR as P50)</option>
+          </select>
+        </div>
+        <div id="refOpenmeteoPanel">
+          <div class="form-row">
+            <div class="fg">
+              <label class="fl">Site Latitude</label>
+              <input type="number" class="fi" id="refLat" step="0.01" placeholder="e.g. 8.78" oninput="autoSave()">
+            </div>
+            <div class="fg">
+              <label class="fl">Site Longitude</label>
+              <input type="number" class="fi" id="refLon" step="0.01" placeholder="e.g. 77.37" oninput="autoSave()">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="fg">
+              <label class="fl">LT Start Year</label>
+              <input type="number" class="fi" id="refStartYear" value="1997" min="1940" max="2025" oninput="autoSave()">
+            </div>
+            <div class="fg">
+              <label class="fl">LT End Year</label>
+              <input type="number" class="fi" id="refEndYear" value="2024" min="1940" max="2025" oninput="autoSave()">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="fg">
+              <label class="fl">Wind Data Height (m)</label>
+              <select class="fs" id="refHeight" onchange="autoSave()">
+                <option value="10">10 m</option>
+                <option value="50">50 m</option>
+                <option value="80" selected>80 m</option>
+                <option value="100">100 m</option>
+                <option value="120">120 m</option>
+                <option value="140">140 m</option>
+                <option value="hub">Hub height (use project value)</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="fl">ERA5 Equivalent Height</label>
+              <select class="fs" id="refModel" onchange="autoSave()">
+                <option value="era5">ERA5 (recommended)</option>
+                <option value="era5_land">ERA5-Land (higher resolution, near-coast only)</option>
+                <option value="cfs">CFSv2 (alternate, broader coverage)</option>
+                <option value="best_match">Best-match model</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-sky btn-sm" onclick="fetchOpenMeteoReference()">Fetch Reference Wind Speed →</button>
+        </div>
+        <div id="refUploadPanel" style="display:none">
+          <div class="upload-zone" onclick="document.getElementById('refFileInput').click()" style="padding:1.5rem">
+            <div class="uz-icon">📋</div>
+            <div class="uz-title">Upload monthly reference CSV</div>
+            <div class="uz-sub">Columns: date (YYYY-MM), wind_speed (m/s), [air_density (kg/m³)]</div>
+          </div>
+          <input type="file" id="refFileInput" accept=".csv,.txt" style="display:none" onchange="handleRefUpload(event)">
+          <div id="refUploadStatus" style="margin-top:.6rem"></div>
+        </div>
+        <div id="refManualPanel" style="display:none">
+          <textarea class="fi" id="refManualInput" placeholder="YYYY-MM,wind_speed&#10;1997-01,7.2&#10;1997-02,7.0&#10;…" style="min-height:160px;font-family:var(--mono);font-size:.7rem" oninput="parseManualRef()"></textarea>
+        </div>
+      </div>
+      <div>
+        <div class="card-title sky">Regression Result</div>
+        <div id="mcpResultPanel">
+          <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">No MCP regression yet</div><div class="empty-hint">Load a reference and run regression</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">MCP Regression Plot — Plant Gross Energy vs Reference Wind Speed</div>
+    <div class="chart-box tall"><canvas id="mcpChart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Long-Term Gross AEP Climatology</div>
+    <div class="g2">
+      <div class="chart-box tall"><canvas id="ltClimatologyChart"></canvas></div>
+      <div class="tbl-wrap" style="max-height:420px">
+        <table class="dt" id="ltClimatologyTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:.6rem;margin-top:1rem">
+    <button class="btn btn-primary" onclick="runMCPAnalysis()">Run MCP &amp; LT AEP →</button>
+    <button class="btn btn-ghost" onclick="goStep(4)">← Back</button>
+  </div>
+</div>
+
+<!-- ═══════ STEP 6: EYA & LOSSES ═══════ -->
+<div class="step-panel" id="step6">
+  <div class="card">
+    <div class="card-title green">Gross → Net Energy Reconciliation &amp; Losses</div>
+    <p style="font-size:.78rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;max-width:95ch">
+      Long-term Gross AEP is bridged to P50 Net AEP via the standard OEPR loss stack: turbine availability, BoP availability, curtailment, electrical, and blade degradation. Each loss is applied multiplicatively in the standard DNV/UL convention. Optionally, a pre-construction EYA-vs-OA reconciliation waterfall can be built with named components; any gap is auto-assigned to an "Unexplained" bucket per DNV practice.
+    </p>
+    <div class="g2">
+      <div>
+        <div class="card-title gold">Future Loss Assumptions (% of gross)</div>
+        <div class="fg"><label class="fl">Future Turbine Availability Loss (%)</label><input type="number" class="fi" id="lossAvail" value="3.4" step="0.1" oninput="autoSave();runEYALosses()"></div>
+        <div class="fg"><label class="fl">Future BoP Availability Loss (%)</label><input type="number" class="fi" id="lossBop" value="0.2" step="0.1" oninput="autoSave();runEYALosses()"></div>
+        <div class="fg"><label class="fl">Future Curtailment Loss (%)</label><input type="number" class="fi" id="lossCurt" value="0.0" step="0.1" oninput="autoSave();runEYALosses()"></div>
+        <div class="fg"><label class="fl">Future Electrical Loss (%)</label><input type="number" class="fi" id="lossElec" value="0.0" step="0.1" oninput="autoSave();runEYALosses()"></div>
+        <div class="fg"><label class="fl">Future Blade Degradation (%)</label><input type="number" class="fi" id="lossBlade" value="0.2" step="0.1" oninput="autoSave();runEYALosses()"></div>
+        <div class="fg"><label class="fl">Historical Electrical Loss (%) <span class="help-tip">?<span class="tip-body">Added back to gross if the meter already nets these out. Leave 0 if SCADA power is gross generation.</span></span></label><input type="number" class="fi" id="histElec" value="0.0" step="0.1" oninput="autoSave();runEYALosses()"></div>
+        <div class="fg"><label class="fl">Historical Curtailment Loss (%)</label><input type="number" class="fi" id="histCurt" value="0.0" step="0.1" oninput="autoSave();runEYALosses()"></div>
+      </div>
+      <div>
+        <div class="card-title sky">Gross → Net Waterfall</div>
+        <div class="chart-box tall"><canvas id="grossNetWaterfall"></canvas></div>
+        <div id="grossNetSummary" style="margin-top:.8rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title purple">EYA vs OA Reconciliation (Optional)</div>
+    <p style="font-size:.72rem;color:var(--text3);margin-bottom:.6rem;font-style:italic">If you have a pre-construction EYA gross AEP, enter it and any known reconciliation components (TIE, availability, electrical, blade degradation, etc.). Any residual gap will be auto-assigned to "Unexplained".</p>
+    <div class="g2">
+      <div>
+        <div class="fg"><label class="fl">Pre-construction EYA Gross AEP (GWh/yr)</label><input type="number" class="fi" id="eyaGross" value="0" step="0.1" oninput="autoSave();runEYALosses()"></div>
+        <div class="fg"><label class="fl">Reconciliation Components (one per line, format: label, delta_GWh)</label>
+          <textarea class="fi" id="eyaComponents" placeholder="TIE (Wind Resource),-4.1&#10;TIE (Losses),-0.8&#10;Availability Losses,+0.5&#10;Electrical Losses,-0.1&#10;Blade Degradation,-0.3" style="min-height:120px;font-family:var(--mono);font-size:.7rem" oninput="autoSave();runEYALosses()"></textarea>
+        </div>
+      </div>
+      <div>
+        <div class="chart-box tall"><canvas id="eyaOAWaterfall"></canvas></div>
+        <div id="eyaOASummary" style="margin-top:.8rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:.6rem;margin-top:1rem">
+    <button class="btn btn-primary" onclick="goStep(7)">Continue → Uncertainty &amp; POE</button>
+    <button class="btn btn-ghost" onclick="goStep(5)">← Back</button>
+  </div>
+</div>
+
+<!-- ═══════ STEP 7: UNCERTAINTY & POE ═══════ -->
+<div class="step-panel" id="step7">
+  <div class="card">
+    <div class="card-title green">Uncertainty Combination (RSS) &amp; Probability of Exceedance</div>
+    <p style="font-size:.78rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;max-width:95ch">
+      Following ISO GUM / DNV-RP-0126, individual uncertainty sources are combined in root-sum-square (RSS): <code style="color:var(--mint);font-family:var(--mono)">U_combined = √(Σ U_i²)</code>. Two periods are reported — <strong>Eval Period</strong> (operational POR uncertainty) and <strong>Annual Period</strong> (long-term, with elevated future wind-resource uncertainty). Probability-of-exceedance (POE) values are computed assuming a normal distribution: <code style="color:var(--mint);font-family:var(--mono)">P_x = P50 × (1 + z_x × U/100)</code> where <code>z_x = −Φ⁻¹(x/100)</code>.
+    </p>
+    <div class="card-title sky">Uncertainty Sources (Editable)</div>
+    <div class="g2">
+      <div>
+        <div id="uncertaintyTable"></div>
+      </div>
+      <div>
+        <div class="card-title gold">Combined Uncertainty</div>
+        <div id="combinedUncertDisplay" style="margin-bottom:1rem"></div>
+        <div class="card-title gold">Probability of Exceedance</div>
+        <div class="tbl-wrap">
+          <table class="dt" id="poeTable"></table>
+        </div>
+        <div class="chart-box tall" style="margin-top:.8rem"><canvas id="poeChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:.6rem;margin-top:1rem">
+    <button class="btn btn-primary" onclick="goStep(8)">Continue → Diagnostics</button>
+    <button class="btn btn-ghost" onclick="goStep(6)">← Back</button>
+    <button class="btn btn-ghost" onclick="exportCSV('uncertainty_table.csv', buildUncertaintyCSV())">Export Uncertainty CSV</button>
+    <button class="btn btn-ghost" onclick="exportCSV('poe_table.csv', buildPOECsv())">Export POE CSV</button>
+  </div>
+</div>
+
+<!-- ═══════ STEP 8: DIAGNOSTICS ═══════ -->
+<div class="step-panel" id="step8">
+  <div class="card">
+    <div class="card-title green">Yaw Misalignment Screening</div>
+    <p style="font-size:.78rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;max-width:95ch">
+      Two complementary checks: <strong style="color:var(--mint)">(1) Static offset</strong> — circular mean of (nacelle_direction − wind_direction) during power-producing operation; a well-aligned turbine should average ~0°. <strong style="color:var(--mint)">(2) Power-vs-offset peak</strong> — bin power by the offset and fit a quadratic to find the peak; if the peak is shifted away from zero, the turbine is consistently misaligned with the wind. The static check drives the automated flag (|mean| &gt; 5°); the peak is provided for engineer review.
+    </p>
+    <div class="g2">
+      <div class="chart-box tall"><canvas id="yawSummaryChart"></canvas></div>
+      <div>
+        <div class="card-title sky">Per-Turbine Yaw Summary</div>
+        <div class="tbl-wrap" style="max-height:420px">
+          <table class="dt" id="yawTable"></table>
+        </div>
+      </div>
+    </div>
+    <div id="yawTurbineSelector" style="margin-top:.8rem"></div>
+    <div class="chart-box tall" style="margin-top:.8rem"><canvas id="yawTurbineChart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title green">Wind Speed Sensor Cross-Check</div>
+    <p style="font-size:.78rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;max-width:95ch">
+      Each turbine's anemometer reading is compared against the concurrent plant-consensus median (all OTHER turbines at the same timestamp). A turbine with |bias| &gt; 0.5 m/s may be miscalibrated or drifting; high scatter (&gt;1.5 m/s) with near-zero bias suggests intermittent noise or icing.
+    </p>
+    <div class="g2">
+      <div class="chart-box tall"><canvas id="wsDeviationChart"></canvas></div>
+      <div>
+        <div class="card-title sky">Per-Turbine Wind Speed Statistics</div>
+        <div class="tbl-wrap" style="max-height:420px">
+          <table class="dt" id="wsTable"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:.6rem;margin-top:1rem">
+    <button class="btn btn-primary" onclick="goStep(9)">Continue → Reports</button>
+    <button class="btn btn-ghost" onclick="goStep(7)">← Back</button>
+    <button class="btn btn-ghost" onclick="runDiagnostics()">Re-run Diagnostics</button>
+  </div>
+</div>
+
+<!-- ═══════ STEP 9: REPORTS & EXPORT ═══════ -->
+<div class="step-panel" id="step9">
+  <div class="card">
+    <div class="card-title green">Operational EYA Report — Export Centre</div>
+    <p style="font-size:.78rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;max-width:95ch">
+      All results computed in the previous steps can be exported as individual CSVs, chart PNGs, or as a single consolidated HTML report (DNV-style narrative format). The HTML report is self-contained — no internet connection required to view it.
+    </p>
+    <div class="g3">
+      <div>
+        <div class="card-title gold">Executive Summary</div>
+        <div id="execSummary"></div>
+      </div>
+      <div>
+        <div class="card-title sky">Data Tables (CSV)</div>
+        <div style="display:flex;flex-direction:column;gap:.4rem">
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV('executive_summary.csv', buildExecSummaryCSV())">Executive Summary</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV('availability_per_turbine.csv', buildAvailabilityCSV())">Per-Turbine Availability</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV('monthly_availability.csv', buildMonthlyAvailCSV())">Monthly Plant Availability</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV('plant_power_curve.csv', buildPlantCurveCSV())">Plant Power Curve</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV('mcp_regression.csv', buildMCPCSV())">MCP Regression Data</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV('lt_climatology.csv', buildLTClimatologyCSV())">LT Gross AEP Climatology</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV('uncertainty_table.csv', buildUncertaintyCSV())">Uncertainty Table</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV('poe_table.csv', buildPOECsv())">Probability of Exceedance</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV('yaw_analysis.csv', buildYawCSV())">Yaw Analysis Summary</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV('windspeed_analysis.csv', buildWSCSV())">Wind Speed Analysis</button>
+        </div>
+      </div>
+      <div>
+        <div class="card-title purple">Reports</div>
+        <div style="display:flex;flex-direction:column;gap:.4rem">
+          <button class="btn btn-primary btn-sm" onclick="downloadHTMLReport()">Download Full HTML Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="saveState()">Save Project (JSON)</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportAllCharts()">Download All Charts (PNG)</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadStateCSV()">Export All Tables (Combined CSV)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Report Preview</div>
+    <div id="reportPreview" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:1.5rem;font-family:var(--sans);font-size:.8rem;line-height:1.7"></div>
+  </div>
+
+  <div style="display:flex;gap:.6rem;margin-top:1rem">
+    <button class="btn btn-primary" onclick="downloadHTMLReport()">Download Final Report</button>
+    <button class="btn btn-ghost" onclick="goStep(0)">← Start Over</button>
+  </div>
+</div>
+
+<!-- ═══════ SCRIPT — RENDER FUNCTIONS & ANALYSIS ═══════ -->
+<script>
+// All remaining functions: render steps, analysis, exports
+// Defined in a separate script block for clarity
+
+// ════════════════════════════════════════════════════════════
+// STEP RENDERERS — Called when user navigates to each step
+// ════════════════════════════════════════════════════════════
+
+function renderScadaImportStep(){
+  // No-op for now — preview/colmap already rendered after upload
+  if(scadaUploadedFiles.length === 0){
+    $("scadaParseStatus").innerHTML = `<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">No SCADA files uploaded yet</div><div class="empty-hint">Upload one or more CSV files above to begin</div></div>`;
+  }
+}
+
+function renderDataQAStep(){
+  if(STATE.scada.length === 0){
+    $("qaSummary").innerHTML = `<div class="warning-box"><span class="w-icon">⚠</span><div>No SCADA data imported. Go back to Step 1 to upload your CSV.</div></div>`;
+    return;
+  }
+  // Compute per-turbine monthly coverage
+  const interval = STATE.sampleIntervalMin || STATE.cfg.sampleInt;
+  const coverage = computeDataCoverage(STATE.scada, interval);
+  // Render summary KPIs
+  const totalRecords = STATE.scada.length;
+  const turbines = STATE.turbines.length;
+  const totalMonths = coverage.length;
+  const flaggedMonths = coverage.filter(c => c.coverage < (STATE.cfg.lowAvailThresh || 0.83)).length;
+  const dateRangeStr = `${fmtDate(STATE.dateRange.start)} → ${fmtDate(STATE.dateRange.end)}`;
+  $("qaSummary").innerHTML = `
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-label">Total Records</div><div class="kpi-value">${totalRecords.toLocaleString()}</div><div class="kpi-sub">${turbines} turbines</div></div>
+      <div class="kpi-card sky"><div class="kpi-label">Date Range</div><div class="kpi-value" style="font-size:.85rem">${dateRangeStr}</div><div class="kpi-sub">${interval}-min interval</div></div>
+      <div class="kpi-card ${flaggedMonths>0?'gold':'mint'}"><div class="kpi-label">Turbine-Months</div><div class="kpi-value">${totalMonths}</div><div class="kpi-sub">${flaggedMonths} low-coverage</div></div>
+      <div class="kpi-card ${flaggedMonths>0?'red':'mint'}"><div class="kpi-label">Coverage Flag</div><div class="kpi-value" style="font-size:1.2rem">${flaggedMonths===0?'OK':'CHECK'}</div><div class="kpi-sub">threshold ${(STATE.cfg.lowAvailThresh||0.83)*100|0}%</div></div>
+    </div>`;
+  // Coverage table
+  let html = '<thead><tr><th>Turbine</th><th>Month</th><th class="num">Expected</th><th class="num">Actual</th><th class="num">Coverage</th><th>Flag</th></tr></thead><tbody>';
+  coverage.sort((a,b)=> a.turbine.localeCompare(b.turbine) || a.month.localeCompare(b.month)).forEach(c=>{
+    const flag = c.coverage < (STATE.cfg.lowAvailThresh||0.83) ? '<span class="badge badge-red">LOW</span>' : '<span class="badge badge-mint">OK</span>';
+    html += `<tr><td>${c.turbine}</td><td>${c.month}</td><td class="num">${c.expectedCount}</td><td class="num">${c.actualCount}</td><td class="num">${(c.coverage*100).toFixed(1)}%</td><td>${flag}</td></tr>`;
+  });
+  html += '</tbody>';
+  $("coverageTable").innerHTML = html;
+  // Turbine list
+  $("turbineList").innerHTML = STATE.turbines.map(t=>{
+    const recs = STATE.scadaByTurbine[t];
+    const firstTs = recs[0].ts, lastTs = recs[recs.length-1].ts;
+    return `<div class="turbine-card"><div class="tc-head"><div class="tc-id">${t}</div></div><div class="tc-stats"><div>Recs: ${recs.length.toLocaleString()}</div><div>From: ${fmtDate(firstTs)}</div><div>To: ${fmtDate(lastTs)}</div><div>${(recs.length*interval/60).toFixed(0)} h logged</div></div></div>`;
+  }).join("");
+  // QA alerts
+  const alerts = [];
+  if(flaggedMonths > 0){
+    alerts.push({cls:"major",icon:"⚠",title:`${flaggedMonths} turbine-month(s) below ${(STATE.cfg.lowAvailThresh||0.83)*100|0}% coverage`,meta:"Possible SCADA logger outage or timestamp parsing issue",action:"If gaps fall mostly on days 13-31, suspect day/month parsing — check timestamp format on Step 0"});
+  }
+  const lowRecTurbines = STATE.turbines.filter(t => STATE.scadaByTurbine[t].length < 100);
+  if(lowRecTurbines.length > 0){
+    alerts.push({cls:"minor",icon:"i",title:`${lowRecTurbines.length} turbine(s) with very few records`,meta:lowRecTurbines.slice(0,5).join(", "),action:"Verify these turbines are operational during the assessment period"});
+  }
+  $("qaAlerts").innerHTML = alerts.map(a=>`<div class="alert-row ${a.cls}"><div class="a-icon">${a.icon}</div><div class="a-body"><div class="a-title">${a.title}</div><div class="a-meta">${a.meta}</div><div class="a-action">→ ${a.action}</div></div></div>`).join("") || '<div class="success-box"><span class="w-icon">✓</span><div>No QA alerts — data looks clean.</div></div>';
+  // Status code list (auto-detect from data)
+  if(Object.keys(STATE.statusCodeMap).length === 0) autoClassifyStatusCodes();
+  renderStatusCodeList();
+  // Excluded months
+  $("excludedMonthsInput").value = STATE.excludedMonths.join("\n");
+  parseExcludedMonths();
+  renderLogBox("logBoxContainer");
+}
+
+function computeDataCoverage(scada, intervalMin){
+  const byKey = {};
+  scada.forEach(r => {
+    const mk = monthKey(r.ts);
+    const k = r.asset + "|" + mk;
+    if(!byKey[k]) byKey[k] = {turbine:r.asset, month:mk, count:0};
+    byKey[k].count++;
+  });
+  const dataStart = STATE.dateRange.start, dataEnd = STATE.dateRange.end;
+  return Object.values(byKey).map(item => {
+    const [y,m] = item.month.split("-").map(Number);
+    const mStart = new Date(Date.UTC(y, m-1, 1));
+    const mEnd = new Date(Date.UTC(y, m, 0, 23, 59, 59));
+    const effStart = new Date(Math.max(mStart.getTime(), dataStart.getTime()));
+    const effEnd = new Date(Math.min(mEnd.getTime(), dataEnd.getTime()));
+    const spanMin = Math.max(0, (effEnd - effStart)/60000);
+    const expected = spanMin / intervalMin;
+    return {turbine:item.turbine, month:item.month, expectedCount: Math.round(expected), actualCount: item.count, coverage: expected > 0 ? item.count/expected : NaN};
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// STATUS CODE CLASSIFICATION
+// ════════════════════════════════════════════════════════════
+
+function autoClassifyStatusCodes(){
+  // Find all unique status codes in the data
+  const codeCounts = {};
+  STATE.scada.forEach(r => {
+    if(r.status === "" || r.status === null || r.status === undefined) return;
+    codeCounts[r.status] = (codeCounts[r.status] || 0) + 1;
+  });
+  // Heuristic classification based on common OEM codes (Vestas/SGRE/Gamesa/GE)
+  // Codes typically: 1=Run/Production, 2=Standby/Ready, 3=Start, 4=Pause, 5-9=Stop, 10+=Fault
+  const newMap = {};
+  Object.keys(codeCounts).forEach(code => {
+    const n = parseInt(code);
+    if(isNaN(n)){
+      // Non-numeric status — try string match
+      const lc = String(code).toLowerCase();
+      if(/run|prod|oper|gener|on[-_]?line/.test(lc)) newMap[code] = "full";
+      else if(/ready|stand|idle|wait|pause/.test(lc)) newMap[code] = "partial";
+      else if(/stop|fault|error|fail|down|offline|maint|serv/.test(lc)) newMap[code] = "unavail";
+      else newMap[code] = "unknown";
+    } else {
+      if(n === 1 || n === 3 || n === 100 || n === 1000) newMap[code] = "full";       // Run/Production/Start
+      else if(n === 2 || n === 4 || n === 6 || n === 200) newMap[code] = "partial";  // Standby/Curtailed/Ready
+      else if(n === 5 || n === 7 || n === 8 || n === 9 || n === 10 || n === 99 || n >= 1000) newMap[code] = "unavail"; // Stop/Fault
+      else newMap[code] = "unknown";
+    }
+  });
+  STATE.statusCodeMap = newMap;
+  logEvent(`Auto-classified ${Object.keys(newMap).length} status codes using OEM heuristics.`, "info");
+  if($("statusCodeList")) renderStatusCodeList();
+}
+
+function renderStatusCodeList(){
+  const codes = Object.keys(STATE.statusCodeMap).sort((a,b)=>{
+    const na=parseInt(a), nb=parseInt(b);
+    if(!isNaN(na) && !isNaN(nb)) return na-nb;
+    return a.localeCompare(b);
+  });
+  // Count occurrences
+  const counts = {};
+  STATE.scada.forEach(r => {
+    if(r.status === "" || r.status === null || r.status === undefined) return;
+    counts[r.status] = (counts[r.status] || 0) + 1;
+  });
+  if(codes.length === 0){
+    $("statusCodeList").innerHTML = '<div class="empty-state" style="padding:1.5rem"><div class="empty-text">No status codes found in data</div><div class="empty-hint">Import SCADA data with a status column first</div></div>';
+    return;
+  }
+  $("statusCodeList").innerHTML = codes.map(code => {
+    const cat = STATE.statusCodeMap[code];
+    const count = counts[code] || 0;
+    const pct = (count / STATE.scada.length * 100).toFixed(1);
+    return `<div class="status-map-row">
+      <div class="sm-code">${code}</div>
+      <div class="sm-desc">${count.toLocaleString()} records (${pct}%)</div>
+      <select class="fs status-pcode status-${cat}" onchange="STATE.statusCodeMap['${code}']=this.value;this.className='fs status-pcode status-'+this.value">
+        <option value="full" ${cat==="full"?"selected":""}>FULL</option>
+        <option value="partial" ${cat==="partial"?"selected":""}>PARTIAL</option>
+        <option value="unavail" ${cat==="unavail"?"selected":""}>UNAVAIL</option>
+        <option value="unknown" ${cat==="unknown"?"selected":""}>UNKNOWN</option>
+      </select>
+    </div>`;
+  }).join("");
+}
+
+function addCustomStatusCode(){
+  const code = prompt("Enter status code to add:");
+  if(!code) return;
+  STATE.statusCodeMap[code] = "unknown";
+  renderStatusCodeList();
+}
+
+function resetStatusCodes(){
+  STATE.statusCodeMap = {};
+  autoClassifyStatusCodes();
+}
+
+function parseExcludedMonths(){
+  const txt = $("excludedMonthsInput").value;
+  const months = txt.split(/\n/).map(s=>s.trim()).filter(s=>/^\d{4}-\d{2}$/.test(s));
+  STATE.excludedMonths = months;
+  $("excludedMonthsPreview").innerHTML = months.length > 0
+    ? `<div class="info-box"><span class="w-icon">i</span><div>${months.length} month(s) excluded: ${months.join(", ")}</div></div>`
+    : '';
+}
+
+// ════════════════════════════════════════════════════════════
+// CORE ANALYSIS — IEC 61400-26 AVAILABILITY + AUTO POWER CURVE
+// Replicates oepr_availability.py
+// ════════════════════════════════════════════════════════════
+
+function classifyStatus(statusCode){
+  if(statusCode === "" || statusCode === null || statusCode === undefined) return "unknown";
+  const cat = STATE.statusCodeMap[statusCode];
+  if(cat === "full" || cat === "partial") return "available";
+  if(cat === "unknown") return "unknown";
+  return "unavailable";
+}
+
+function buildAutoCurve(records, binWidth, minSamples){
+  // records: array of {ws, power, status, ...}
+  // Returns: [{ws: binCenter, meanPower, n}]
+  const binWidth_ = binWidth || STATE.cfg.binWidth || 0.5;
+  const minSamples_ = minSamples || 6;
+  const bins = {};
+  records.forEach(r => {
+    if(r.ws === null || r.power === null || isNaN(r.ws) || isNaN(r.power)) return;
+    if(classifyStatus(r.status) !== "available") return;
+    if(r.power < 0) return; // exclude negative power
+    const binIdx = Math.floor(r.ws / binWidth_);
+    const center = binIdx * binWidth_ + binWidth_ / 2;
+    if(!bins[binIdx]) bins[binIdx] = {ws: center, sumPower: 0, n: 0};
+    bins[binIdx].sumPower += r.power;
+    bins[binIdx].n += 1;
+  });
+  let arr = Object.values(bins).filter(b => b.n >= minSamples_).map(b => ({ws: b.ws, meanPower: b.sumPower/b.n, n: b.n}));
+  arr.sort((a,b)=>a.ws - b.ws);
+  // Enforce monotonic non-decreasing via cummax
+  let runningMax = -Infinity;
+  arr.forEach(b => { if(b.meanPower > runningMax) runningMax = b.meanPower; b.meanPower = runningMax; });
+  return arr;
+}
+
+function theoreticalPower(ws, curve){
+  // Linear interpolation, clamping to endpoints
+  if(!curve || curve.length === 0 || ws === null || isNaN(ws)) return NaN;
+  if(ws <= curve[0].ws) return curve[0].meanPower;
+  if(ws >= curve[curve.length-1].ws) return curve[curve.length-1].meanPower;
+  for(let i=1; i<curve.length; i++){
+    if(ws <= curve[i].ws){
+      const x0 = curve[i-1].ws, x1 = curve[i].ws;
+      const y0 = curve[i-1].meanPower, y1 = curve[i].meanPower;
+      return y0 + (y1-y0) * (ws - x0) / (x1 - x0);
+    }
+  }
+  return curve[curve.length-1].meanPower;
+}
+
+function runAvailabilityAnalysis(){
+  if(STATE.scada.length === 0){ toast("No SCADA data loaded.", "error"); return; }
+  logEvent("Computing per-turbine auto power curves & IEC 61400-26 energy-based availability…", "info");
+  const dtHours = STATE.sampleIntervalMin / 60.0;
+  const turbineResults = {};
+  const autoCurves = {};
+  const enrichedByTurbine = {};
+  // Per-turbine computation
+  STATE.turbines.forEach((turbineId, idx) => {
+    const recs = STATE.scadaByTurbine[turbineId];
+    // Build auto curve
+    const curve = buildAutoCurve(recs, STATE.cfg.binWidth, 6);
+    autoCurves[turbineId] = curve;
+    // Compute potential power for each record
+    let actualAvailEnergy = 0, potentialUnavailEnergy = 0;
+    let actualTotal = 0, potentialTotal = 0;
+    let availRecords = 0, unavailRecords = 0, unknownRecords = 0;
+    let actualPowerSum = 0, possiblePowerSum = 0;
+    const enriched = recs.map(r => {
+      const bucket = classifyStatus(r.status);
+      const theoP = theoreticalPower(r.ws, curve);
+      const actualE = (r.power !== null && !isNaN(r.power)) ? Math.max(0, r.power) * dtHours : 0;
+      const potentialE = isNaN(theoP) ? 0 : Math.max(0, theoP) * dtHours;
+      if(bucket === "available"){
+        actualAvailEnergy += actualE;
+        actualTotal += actualE;
+        potentialTotal += potentialE;
+        availRecords++;
+      } else if(bucket === "unavailable"){
+        potentialUnavailEnergy += potentialE;
+        potentialTotal += potentialE;
+        unavailRecords++;
+      } else {
+        unknownRecords++;
+      }
+      if(r.possiblePower !== null && !isNaN(r.possiblePower)) possiblePowerSum += r.possiblePower;
+      if(r.power !== null && !isNaN(r.power)) actualPowerSum += r.power;
+      return {...r, _status_bucket: bucket, _potential_power_kw: theoP, _actual_energy_kwh: actualE, _potential_energy_kwh: potentialE};
+    });
+    enrichedByTurbine[turbineId] = enriched;
+    // IEC 61400-26 energy-based availability
+    const denom = actualAvailEnergy + potentialUnavailEnergy;
+    const energyAvailability = denom > 0 ? 1 - potentialUnavailEnergy / denom : NaN;
+    // Time-based availability (fallback)
+    const timeAvailability = (availRecords + unavailRecords) > 0 ? availRecords / (availRecords + unavailRecords) : NaN;
+    // DNV-style "Possible Power" availability (if signal available)
+    const possiblePowerAvailability = possiblePowerSum > 0 ? actualPowerSum / possiblePowerSum : NaN;
+    turbineResults[turbineId] = {
+      records: recs.length,
+      availRecords, unavailRecords, unknownRecords,
+      actualAvailEnergyMWh: actualAvailEnergy / 1000,
+      potentialUnavailEnergyMWh: potentialUnavailEnergy / 1000,
+      actualTotalMWh: actualTotal / 1000,
+      potentialTotalMWh: potentialTotal / 1000,
+      energyAvailability, timeAvailability, possiblePowerAvailability,
+      meanWindSpeed: mean(recs.map(r=>r.ws)),
+      meanPower: mean(recs.map(r=>r.power))
+    };
+    if((idx+1) % 5 === 0) logEvent(`  Processed ${idx+1}/${STATE.turbines.length} turbines`, "info");
+  });
+  STATE.availability = turbineResults;
+  STATE.autoCurves = autoCurves;
+  // Build plant-level enriched SCADA (concatenated)
+  STATE._enrichedScada = [];
+  Object.keys(enrichedByTurbine).forEach(t => {
+    STATE._enrichedScada = STATE._enrichedScada.concat(enrichedByTurbine[t]);
+  });
+  // Monthly plant availability
+  STATE.monthlyAvail = computeMonthlyAvailability(STATE._enrichedScada);
+  // Build plant power curve (aggregate of all FULL records)
+  STATE.plantCurve = buildAutoCurve(STATE._enrichedScada, STATE.cfg.binWidth, 6);
+  logEvent(`Availability computed. Plant mean energy availability: ${(mean(Object.values(turbineResults).map(r=>r.energyAvailability))*100).toFixed(2)}%`, "success");
+  // Render
+  renderAvailabilityStep();
+  toast("Availability & auto power curves computed.");
+  goStep(3);
+}
+
+function computeMonthlyAvailability(enrichedScada){
+  const byMonth = {};
+  enrichedScada.forEach(r => {
+    const mk = monthKey(r.ts);
+    if(!byMonth[mk]) byMonth[mk] = {avail: 0, unavail: 0};
+    if(r._status_bucket === "available") byMonth[mk].avail += r._actual_energy_kwh;
+    else if(r._status_bucket === "unavailable") byMonth[mk].unavail += r._potential_energy_kwh;
+  });
+  return Object.keys(byMonth).sort().map(mk => {
+    const v = byMonth[mk];
+    const denom = v.avail + v.unavail;
+    return {month: mk, availEnergyMWh: v.avail/1000, unavailEnergyMWh: v.unavail/1000, availability: denom>0 ? 1 - v.unavail/denom : NaN};
+  });
+}
+
+function renderAvailabilityStep(){
+  if(!STATE.availability){ $("availKpis").innerHTML = '<div class="empty-state"><div class="empty-text">No availability computed yet</div><div class="empty-hint">Click "Run OEYA Core Analysis" on the previous step</div></div>'; return; }
+  const results = STATE.availability;
+  const turbines = Object.keys(results);
+  const meanAvail = mean(turbines.map(t => results[t].energyAvailability));
+  const minAvail = Math.min(...turbines.map(t => results[t].energyAvailability));
+  const maxAvail = Math.max(...turbines.map(t => results[t].energyAvailability));
+  const totalAvailMWh = sum(turbines.map(t => results[t].actualAvailEnergyMWh));
+  const totalUnavailMWh = sum(turbines.map(t => results[t].potentialUnavailEnergyMWh));
+  $("availKpis").innerHTML = `
+    <div class="kpi-card mint"><div class="kpi-label">Plant Mean Availability</div><div class="kpi-value mint">${(meanAvail*100).toFixed(2)}%</div><div class="kpi-sub">IEC 61400-26 energy-based</div></div>
+    <div class="kpi-card gold"><div class="kpi-label">Min / Max Turbine</div><div class="kpi-value gold" style="font-size:1.1rem">${(minAvail*100).toFixed(1)}% / ${(maxAvail*100).toFixed(1)}%</div><div class="kpi-sub">spread across fleet</div></div>
+    <div class="kpi-card sky"><div class="kpi-label">Available Energy</div><div class="kpi-value sky">${(totalAvailMWh/1000).toFixed(2)}</div><div class="kpi-sub">GWh over POR</div></div>
+    <div class="kpi-card red"><div class="kpi-label">Unavailable Energy</div><div class="kpi-value red">${(totalUnavailMWh/1000).toFixed(2)}</div><div class="kpi-sub">GWh lost (potential)</div></div>`;
+  // Monthly availability chart
+  drawLineChart("monthlyAvailChart", {
+    labels: STATE.monthlyAvail.map(m=>m.month),
+    datasets: [{
+      label: "Plant Availability (%)",
+      data: STATE.monthlyAvail.map(m => m.availability*100),
+      borderColor: "#00d68f",
+      backgroundColor: "rgba(0,214,143,.15)",
+      fill: true,
+      pointRadius: 4,
+      borderWidth: 2
+    }],
+    yLabel: "Availability (%)",
+    yMin: 80, yMax: 100
+  });
+  // Per-turbine availability bar chart
+  const sorted = turbines.slice().sort((a,b)=>results[a].energyAvailability - results[b].energyAvailability);
+  drawBarChart("turbineAvailChart", {
+    labels: sorted,
+    datasets: [{
+      label: "Energy Availability (%)",
+      data: sorted.map(t => results[t].energyAvailability*100),
+      backgroundColor: sorted.map(t => results[t].energyAvailability < 0.95 ? "#e05050" : results[t].energyAvailability < 0.97 ? "#f5a623" : "#00d68f"),
+      borderWidth: 0
+    }],
+    yLabel: "Availability (%)",
+    yMin: 80, yMax: 100,
+    horizontal: true
+  });
+  // Per-turbine table
+  let html = '<thead><tr><th>Turbine</th><th class="num">Records</th><th class="num">Avail<br>(h equiv)</th><th class="num">Unavail<br>(h equiv)</th><th class="num">Energy<br>Avail %</th><th class="num">Time<br>Avail %</th><th class="num">Possible-Pwr<br>Avail %</th><th class="num">Mean WS<br>(m/s)</th><th class="num">Mean Power<br>(kW)</th></tr></thead><tbody>';
+  turbines.forEach(t => {
+    const r = results[t];
+    html += `<tr>
+      <td>${t}</td>
+      <td class="num">${r.records.toLocaleString()}</td>
+      <td class="num">${(r.actualAvailEnergyMWh).toFixed(1)}</td>
+      <td class="num">${(r.potentialUnavailEnergyMWh).toFixed(1)}</td>
+      <td class="num"><strong style="color:${r.energyAvailability<0.95?'var(--red)':r.energyAvailability<0.97?'var(--gold)':'var(--mint)'}">${(r.energyAvailability*100).toFixed(2)}%</strong></td>
+      <td class="num">${isNaN(r.timeAvailability)?"—":(r.timeAvailability*100).toFixed(2)}%</td>
+      <td class="num">${isNaN(r.possiblePowerAvailability)?"—":(r.possiblePowerAvailability*100).toFixed(2)}%</td>
+      <td class="num">${r.meanWindSpeed.toFixed(2)}</td>
+      <td class="num">${r.meanPower.toFixed(0)}</td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  $("availTable").innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════
+// STEP 4: POWER CURVES
+// ════════════════════════════════════════════════════════════
+
+function renderPowerCurveStep(){
+  if($("binWidthDisplay")) $("binWidthDisplay").textContent = STATE.cfg.binWidth || 0.5;
+  if(!STATE.plantCurve){
+    $("plantCurveTable").innerHTML = '<thead><tr><th>Run availability analysis first</th></tr></thead>';
+    return;
+  }
+  // Plant curve chart
+  drawScatterLineChart("plantCurveChart", {
+    labels: STATE.plantCurve.map(p=>p.ws),
+    datasets: [
+      {
+        label: "Plant Auto Curve (cummax-smoothed)",
+        data: STATE.plantCurve.map(p=>p.meanPower),
+        borderColor: "#00d68f",
+        backgroundColor: "rgba(0,214,143,.6)",
+        showLine: true,
+        pointRadius: 3,
+        borderWidth: 2
+      },
+      {
+        label: "FULL-status records (scatter)",
+        data: STATE._enrichedScada.filter(r=>r._status_bucket==="available" && r.ws!==null && r.power!==null && r.power>=0).slice(0, 8000).map(r=>({x:r.ws, y:r.power})),
+        borderColor: "rgba(74,179,232,.4)",
+        backgroundColor: "rgba(74,179,232,.2)",
+        showLine: false,
+        pointRadius: 1,
+        type: "scatter"
+      }
+    ],
+    xLabel: "Wind Speed (m/s)",
+    yLabel: "Power (kW)"
+  });
+  // Plant curve table
+  let html = '<thead><tr><th class="num">WS Bin Center (m/s)</th><th class="num">Mean Power (kW)</th><th class="num">Sample Count</th></tr></thead><tbody>';
+  STATE.plantCurve.forEach(p => {
+    html += `<tr><td class="num">${p.ws.toFixed(2)}</td><td class="num">${p.meanPower.toFixed(1)}</td><td class="num">${p.n.toLocaleString()}</td></tr>`;
+  });
+  html += '</tbody>';
+  $("plantCurveTable").innerHTML = html;
+  // Turbine curve selector
+  const sel = $("turbineCurveSelect");
+  sel.innerHTML = STATE.turbines.map(t=>`<option value="${t}">${t}</option>`).join("");
+  if(STATE.turbines.length > 0) renderTurbineCurve();
+}
+
+function renderTurbineCurve(){
+  const t = $("turbineCurveSelect").value;
+  if(!t || !STATE.autoCurves[t]) return;
+  const curve = STATE.autoCurves[t];
+  const recs = STATE.scadaByTurbine[t];
+  // Chart
+  drawScatterLineChart("turbineCurveChart", {
+    labels: curve.map(p=>p.ws),
+    datasets: [
+      {
+        label: `${t} Auto Curve`,
+        data: curve.map(p=>p.meanPower),
+        borderColor: "#f5a623",
+        backgroundColor: "rgba(245,166,35,.6)",
+        showLine: true,
+        pointRadius: 3,
+        borderWidth: 2
+      },
+      {
+        label: "FULL-status records",
+        data: recs.filter(r=>classifyStatus(r.status)==="available" && r.ws!==null && r.power!==null && r.power>=0).slice(0, 5000).map(r=>({x:r.ws, y:r.power})),
+        borderColor: "rgba(167,139,250,.4)",
+        backgroundColor: "rgba(167,139,250,.2)",
+        showLine: false,
+        pointRadius: 1,
+        type: "scatter"
+      }
+    ],
+    xLabel: "Wind Speed (m/s)",
+    yLabel: "Power (kW)"
+  });
+  // Table
+  let html = '<thead><tr><th class="num">WS Bin (m/s)</th><th class="num">Mean Power (kW)</th><th class="num">Samples</th></tr></thead><tbody>';
+  curve.forEach(p => { html += `<tr><td class="num">${p.ws.toFixed(2)}</td><td class="num">${p.meanPower.toFixed(1)}</td><td class="num">${p.n.toLocaleString()}</td></tr>`; });
+  html += '</tbody>';
+  $("turbineCurveTable").innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════
+// STEP 5: MCP / LONG-TERM CORRECTION
+// Replicates oepr_powercurve.py + oepr_era5.py
+// ════════════════════════════════════════════════════════════
+
+function toggleRefSource(){
+  const src = $("refSource").value;
+  $("refOpenmeteoPanel").style.display = src === "openmeteo" ? "block" : "none";
+  $("refUploadPanel").style.display = src === "upload" ? "block" : "none";
+  $("refManualPanel").style.display = src === "manual" ? "block" : "none";
+}
+
+async function fetchOpenMeteoReference(){
+  const lat = parseFloat($("refLat").value);
+  const lon = parseFloat($("refLon").value);
+  const startY = parseInt($("refStartYear").value);
+  const endY = parseInt($("refEndYear").value);
+  let height = $("refHeight").value;
+  if(height === "hub") height = STATE.cfg.hubHt || 80;
+  else height = parseInt(height);
+  if(isNaN(lat) || isNaN(lon)){ toast("Enter valid lat/lon", "error"); return; }
+  if(isNaN(startY) || isNaN(endY) || endY < startY){ toast("Enter valid year range", "error"); return; }
+  logEvent(`Fetching Open-Meteo historical wind speed for ${lat},${lon} at ${height}m, ${startY}-${endY}…`, "info");
+  $("mcpResultPanel").innerHTML = `<div class="info-box"><span class="w-icon"><span class="spinner"></span></span><div>Fetching ERA5-equivalent historical wind data from Open-Meteo API…</div></div>`;
+  try {
+    // Open-Meteo Archive API: free, no key, CORS-enabled
+    // Returns hourly data; we'll aggregate to monthly means (correctly: speed magnitude at each hour, then mean — NOT vector mean)
+    const startDate = `${startY}-01-01`;
+    const endDate = `${endY}-12-31`;
+    const heightParam = height === 10 ? "wind_speed_10m" : `wind_speed_${height}m`;
+    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&hourly=${heightParam},temperature_2m,pressure_msl&timezone=UTC`;
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error("Open-Meteo API returned "+resp.status);
+    const data = await resp.json();
+    if(!data.hourly || !data.hourly.time){ throw new Error("No hourly data in API response"); }
+    // Aggregate to monthly — correct way: take wind speed magnitude at each hour, then average
+    const monthly = {};
+    data.hourly.time.forEach((t, i) => {
+      const ws = data.hourly[heightParam][i];
+      const temp = data.hourly.temperature_2m ? data.hourly.temperature_2m[i] : null;
+      const press = data.hourly.pressure_msl ? data.hourly.pressure_msl[i] : null;
+      if(ws === null || isNaN(ws)) return;
+      const d = new Date(t);
+      const mk = monthKey(d);
+      if(!monthly[mk]) monthly[mk] = {wsSum: 0, wsCount: 0, tempSum: 0, tempCount: 0, pressSum: 0, pressCount: 0};
+      monthly[mk].wsSum += ws; monthly[mk].wsCount++;
+      if(temp !== null && !isNaN(temp)){ monthly[mk].tempSum += temp; monthly[mk].tempCount++; }
+      if(press !== null && !isNaN(press)){ monthly[mk].pressSum += press; monthly[mk].pressCount++; }
+    });
+    const refMonthly = Object.keys(monthly).sort().map(mk => {
+      const v = monthly[mk];
+      const meanTemp = v.tempCount > 0 ? v.tempSum/v.tempCount : null;
+      const meanPress = v.pressCount > 0 ? v.pressSum/v.pressCount : null;
+      // Air density from temperature and pressure
+      let density = null;
+      if(meanTemp !== null && meanPress !== null){
+        const T = meanTemp + 273.15;
+        const p = meanPress * 100; // hPa -> Pa
+        density = p / (287.058 * T);
+      }
+      return {date: mk, ws: v.wsSum/v.wsCount, density: density};
+    });
+    STATE.ltReference = {monthly: refMonthly, source: "Open-Meteo Archive API (ERA5-equivalent)", height: height};
+    logEvent(`Fetched ${refMonthly.length} monthly reference values from Open-Meteo. Mean wind speed: ${mean(refMonthly.map(m=>m.ws)).toFixed(2)} m/s`, "success");
+    toast(`Fetched ${refMonthly.length} months of reference data.`);
+    runMCPAnalysis();
+  } catch(err){
+    logEvent("Open-Meteo fetch failed: "+err.message, "error");
+    toast("Failed to fetch reference data: "+err.message, "error");
+    $("mcpResultPanel").innerHTML = `<div class="danger-box"><span class="w-icon">⚠</span><div>Fetch failed: ${err.message}<br><span style="font-size:.6rem">Try uploading a reference CSV instead, or use the manual entry option.</span></div></div>`;
+  }
+}
+
+function handleRefUpload(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    Papa.parse(e.target.result, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const cols = results.meta.fields;
+        const dateCol = cols.find(c => /date|month|time/i.test(c));
+        const wsCol = cols.find(c => /wind|ws|speed/i.test(c));
+        const densityCol = cols.find(c => /dens/i.test(c));
+        if(!dateCol || !wsCol){ toast("CSV must have date and wind speed columns", "error"); return; }
+        const monthly = results.data.map(r => ({
+          date: String(r[dateCol]).trim().slice(0,7),
+          ws: parseFloat(r[wsCol]),
+          density: densityCol ? parseFloat(r[densityCol]) : null
+        })).filter(r => r.date && /^\d{4}-\d{2}$/.test(r.date) && !isNaN(r.ws));
+        STATE.ltReference = {monthly, source: "Uploaded CSV", height: null};
+        logEvent(`Loaded ${monthly.length} monthly reference records from CSV.`, "success");
+        $("refUploadStatus").innerHTML = `<div class="success-box"><span class="w-icon">✓</span><div>Loaded ${monthly.length} months. Mean WS: ${mean(monthly.map(m=>m.ws)).toFixed(2)} m/s</div></div>`;
+        toast(`Loaded ${monthly.length} reference months.`);
+        runMCPAnalysis();
+      }
+    });
+  };
+  reader.readAsText(file);
+  event.target.value = "";
+}
+
+function parseManualRef(){
+  const txt = $("refManualInput").value;
+  const lines = txt.split(/\n/).map(s=>s.trim()).filter(s=>s && !/^#/.test(s));
+  const monthly = lines.map(line => {
+    const [date, ws, density] = line.split(",").map(s=>s.trim());
+    return {date, ws: parseFloat(ws), density: density ? parseFloat(density) : null};
+  }).filter(r => /^\d{4}-\d{2}$/.test(r.date) && !isNaN(r.ws));
+  STATE.ltReference = {monthly, source: "Manual entry", height: null};
+}
+
+function runMCPAnalysis(){
+  if(!STATE.availability){ toast("Run availability analysis first (Step 3)", "error"); return; }
+  if(!STATE.ltReference || !STATE.ltReference.monthly || STATE.ltReference.monthly.length === 0){
+    // No LT reference — assume POR is P50
+    logEvent("No long-term reference loaded. Using POR as P50 (no MCP).", "warn");
+    STATE.mcp = {a: 0, b: 0, r2: NaN, n: 0, method: "POR as P50 (no LT correction)"};
+    // Compute POR gross AEP
+    const porMonthlyNet = computeMonthlyNetProduction(STATE._enrichedScada);
+    const porAnnualMWh = sum(porMonthlyNet.map(m=>m.energyMWh)) * 12 / porMonthlyNet.length;
+    STATE.ltGrossAEP = {annualGWh: porAnnualMWh/1000, monthly: porMonthlyNet, source: "POR (no LT correction)"};
+    renderMCPResults();
+    toast("MCP skipped — using POR as P50.");
+    return;
+  }
+  // Compute monthly net production (MWh) per month over POR
+  const monthlyNet = computeMonthlyNetProduction(STATE._enrichedScada);
+  // Compute monthly availability (already done)
+  const monthlyAvail = STATE.monthlyAvail;
+  // Apply Eq. 2: gross = net / availability * (1 + elect + curt)
+  const histElec = (parseFloat($("histElec").value) || 0) / 100;
+  const histCurt = (parseFloat($("histCurt").value) || 0) / 100;
+  // Build monthly df: month, netMWh, availability, grossMWh
+  const monthlyDf = monthlyNet.map(m => {
+    const availRow = monthlyAvail.find(a => a.month === m.month);
+    const avail = availRow ? availRow.availability : NaN;
+    return {month: m.month, netMWh: m.energyMWh, availability: avail, grossMWh: (avail && avail > 0) ? m.energyMWh / avail * (1 + histElec + histCurt) : NaN};
+  });
+  // Apply excluded months
+  const excluded = new Set(STATE.excludedMonths);
+  const filteredDf = monthlyDf.filter(r => !excluded.has(r.month) && r.availability >= (STATE.cfg.lowAvailThresh || 0.83));
+  // Eq. 3: normalize to 30-day months
+  filteredDf.forEach(r => {
+    const [y,m] = r.month.split("-").map(Number);
+    const dim = daysInMonth(y, m-1);
+    r.grossNormMWh = r.grossMWh * (30 / dim);
+  });
+  // Density adjustment to reference (Eq. 4): if density available, Vn = V * (rho/rho0)^(1/3)
+  // Here we apply density adjustment to the reference wind speed (standard OEPR convention)
+  const refMonthly = STATE.ltReference.monthly;
+  const refDensity = refMonthly.filter(m => m.density !== null && !isNaN(m.density));
+  const rho0 = refDensity.length > 0 ? mean(refDensity.map(m=>m.density)) : null;
+  const refProcessed = refMonthly.map(m => {
+    let wsAdj = m.ws;
+    if(rho0 !== null && m.density !== null && !isNaN(m.density) && rho0 > 0){
+      wsAdj = m.ws * Math.pow(m.density / rho0, 1/3);
+    }
+    return {date: m.date, ws: wsAdj, wsRaw: m.ws, density: m.density};
+  });
+  // MCP regression (Eq. 5): grossNorm = a * WS_ref + b over common POR
+  const common = filteredDf.filter(r => refProcessed.find(p => p.date === r.month));
+  const xArr = common.map(r => refProcessed.find(p => p.date === r.month).ws);
+  const yArr = common.map(r => r.grossNormMWh);
+  const fit = linearRegression(xArr, yArr);
+  STATE.mcp = {a: fit.a, b: fit.b, r2: fit.r2, n: fit.n, x: xArr, y: yArr, commonMonths: common, method: "Linear regression: grossNorm = a*WS_ref + b"};
+  // Apply regression to LT reference (Eq. 5 -> Eq. 6 denormalize)
+  const ltMonthly = refProcessed.map(p => {
+    const [y,m] = p.date.split("-").map(Number);
+    const dim = daysInMonth(y, m-1);
+    const grossNorm = fit.a * p.ws + fit.b;
+    return {month: p.date, ws: p.ws, grossNormMWh: grossNorm, grossMWh: grossNorm * dim / 30};
+  });
+  // Annualized climatology (Table 8.3/8.4 style)
+  const climatology = {};
+  ltMonthly.forEach(r => {
+    const m = parseInt(r.month.split("-")[1]);
+    if(!climatology[m]) climatology[m] = {sum: 0, count: 0};
+    climatology[m].sum += r.grossMWh;
+    climatology[m].count++;
+  });
+  const monthlyAvg = [];
+  for(let m=1;m<=12;m++){
+    if(climatology[m]){
+      monthlyAvg.push({month: m, label: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m-1], grossMWh: climatology[m].sum/climatology[m].count});
+    }
+  }
+  const annualTotal = sum(monthlyAvg.map(m=>m.grossMWh));
+  STATE.ltGrossAEP = {annualGWh: annualTotal/1000, monthly: ltMonthly, climatology: monthlyAvg, source: STATE.ltReference.source};
+  // MCP sanity checks
+  const warnings = [];
+  if(fit.r2 < 0.5) warnings.push(`r² = ${fit.r2.toFixed(3)} (<0.5) — LT estimate may be unreliable`);
+  if(fit.a <= 0) warnings.push(`slope = ${fit.a.toFixed(1)} (should be positive) — reference may be wrong`);
+  if(fit.a > 0 && fit.a < STATE.cfg.ratedMW * STATE.cfg.numTurbines * 24 * 30 / 3 * 0.02){
+    warnings.push(`slope (${fit.a.toFixed(1)} MWh per m/s) looks implausibly small for a ${STATE.cfg.ratedMW * STATE.cfg.numTurbines} MW plant`);
+  }
+  if(warnings.length > 0){
+    warnings.forEach(w => logEvent("MCP sanity check: "+w, "warn"));
+  } else {
+    logEvent(`MCP regression OK: r²=${fit.r2.toFixed(3)}, slope=${fit.a.toFixed(1)} MWh/(m/s), n=${fit.n}`, "success");
+  }
+  renderMCPResults();
+  toast(`MCP complete. LT Gross AEP: ${(annualTotal/1000).toFixed(2)} GWh/yr`);
+}
+
+function computeMonthlyNetProduction(enrichedScada){
+  const dtHours = STATE.sampleIntervalMin / 60.0;
+  const byMonth = {};
+  enrichedScada.forEach(r => {
+    const mk = monthKey(r.ts);
+    if(!byMonth[mk]) byMonth[mk] = 0;
+    if(r.power !== null && !isNaN(r.power)) byMonth[mk] += Math.max(0, r.power) * dtHours;
+  });
+  return Object.keys(byMonth).sort().map(mk => ({month: mk, energyMWh: byMonth[mk]/1000}));
+}
+
+function renderMCPResults(){
+  const m = STATE.mcp;
+  const lt = STATE.ltGrossAEP;
+  if(!m){ $("mcpResultPanel").innerHTML = '<div class="empty-state"><div class="empty-text">No MCP regression yet</div></div>'; return; }
+  let html = `
+    <div class="kpi-row">
+      <div class="kpi-card sky"><div class="kpi-label">Regression r²</div><div class="kpi-value ${m.r2>=0.7?'mint':m.r2>=0.5?'gold':'red'}">${isNaN(m.r2)?"—":m.r2.toFixed(3)}</div><div class="kpi-sub">${m.n} months</div></div>
+      <div class="kpi-card mint"><div class="kpi-label">Slope (a)</div><div class="kpi-value mint">${fmt(m.a,1)}</div><div class="kpi-sub">MWh per m/s</div></div>
+      <div class="kpi-card purple"><div class="kpi-label">Intercept (b)</div><div class="kpi-value purple">${fmt(m.b,0)}</div><div class="kpi-sub">MWh per 30-day month</div></div>
+      <div class="kpi-card gold"><div class="kpi-label">LT Gross AEP</div><div class="kpi-value gold">${lt.annualGWh.toFixed(2)}</div><div class="kpi-sub">GWh/yr</div></div>
+    </div>
+    <div class="info-box"><span class="w-icon">i</span><div><strong>Method:</strong> ${m.method}<br><strong>Source:</strong> ${lt.source}</div></div>`;
+  if(m.r2 < 0.5 && !isNaN(m.r2)){
+    html += `<div class="warning-box"><span class="w-icon">⚠</span><div><strong>MCP sanity check warning:</strong> r² < 0.5 — LT estimate may be unreliable. Check reference wind speed source, excluded months, and plant power curve scatter.</div></div>`;
+  }
+  $("mcpResultPanel").innerHTML = html;
+  // MCP scatter plot
+  if(m.x && m.y){
+    drawScatterLineChart("mcpChart", {
+      labels: m.x,
+      datasets: [
+        {
+          label: "POR monthly gross energy vs ref wind speed",
+          data: m.x.map((x,i)=>({x, y: m.y[i]})),
+          borderColor: "#4ab3e8",
+          backgroundColor: "rgba(74,179,232,.5)",
+          showLine: false,
+          pointRadius: 5,
+          type: "scatter"
+        },
+        {
+          label: `Regression: y = ${m.a.toFixed(1)}x + ${m.b.toFixed(0)}`,
+          data: m.x.map(x => ({x, y: m.a*x + m.b})),
+          borderColor: "#00d68f",
+          backgroundColor: "rgba(0,214,143,.6)",
+          showLine: true,
+          pointRadius: 0,
+          borderWidth: 2,
+          type: "line"
+        }
+      ],
+      xLabel: "Reference Wind Speed (m/s)",
+      yLabel: "Plant Gross Energy (MWh, 30-day normalized)"
+    });
+  }
+  // LT climatology chart
+  if(lt.climatology){
+    drawBarChart("ltClimatologyChart", {
+      labels: lt.climatology.map(m=>m.label),
+      datasets: [{
+        label: "LT Gross Energy (MWh/month, climatology avg)",
+        data: lt.climatology.map(m=>m.grossMWh),
+        backgroundColor: "#f5a623",
+        borderWidth: 0
+      }],
+      yLabel: "Gross Energy (MWh)"
+    });
+    let html2 = '<thead><tr><th>Month</th><th class="num">LT Gross Energy (MWh)</th><th class="num">% of Annual</th></tr></thead><tbody>';
+    lt.climatology.forEach(m => {
+      html2 += `<tr><td>${m.label}</td><td class="num">${m.grossMWh.toFixed(0)}</td><td class="num">${(m.grossMWh/sum(lt.climatology.map(x=>x.grossMWh))*100).toFixed(1)}%</td></tr>`;
+    });
+    html2 += `<tr style="background:var(--bg3);font-weight:700"><td>Annual Total</td><td class="num">${sum(lt.climatology.map(x=>x.grossMWh)).toFixed(0)}</td><td class="num">100.0%</td></tr>`;
+    html2 += '</tbody>';
+    $("ltClimatologyTable").innerHTML = html2;
+  }
+  // Run losses with the new LT AEP
+  runEYALosses();
+}
+
+// ════════════════════════════════════════════════════════════
+// STEP 6: EYA & LOSSES (Gross-to-Net Waterfall)
+// ════════════════════════════════════════════════════════════
+
+function renderEYAStep(){
+  // Sync form fields from state if available
+  if(STATE.losses){
+    $("lossAvail").value = STATE.losses.futureAvailLoss;
+    $("lossBop").value = STATE.losses.futureBopLoss;
+    $("lossCurt").value = STATE.losses.futureCurtLoss;
+    $("lossElec").value = STATE.losses.futureElecLoss;
+    $("lossBlade").value = STATE.losses.futureBladeLoss;
+    $("histElec").value = STATE.losses.histElec;
+    $("histCurt").value = STATE.losses.histCurt;
+  }
+  if(STATE.eyaReconciliation){
+    $("eyaGross").value = STATE.eyaReconciliation.eyaGross || 0;
+    $("eyaComponents").value = (STATE.eyaReconciliation.components || []).map(c=>`${c.label},${c.delta}`).join("\n");
+  }
+  runEYALosses();
+}
+
+function runEYALosses(){
+  if(!STATE.ltGrossAEP){ $("grossNetSummary").innerHTML = '<div class="warning-box"><span class="w-icon">⚠</span><div>Run MCP first (Step 5) to compute LT Gross AEP.</div></div>'; return; }
+  const ltGross = STATE.ltGrossAEP.annualGWh; // GWh/yr
+  const lossAvail = parseFloat($("lossAvail").value) || 0;
+  const lossBop = parseFloat($("lossBop").value) || 0;
+  const lossCurt = parseFloat($("lossCurt").value) || 0;
+  const lossElec = parseFloat($("lossElec").value) || 0;
+  const lossBlade = parseFloat($("lossBlade").value) || 0;
+  const histElec = parseFloat($("histElec").value) || 0;
+  const histCurt = parseFloat($("histCurt").value) || 0;
+  // Apply losses multiplicatively (standard DNV/UL convention)
+  // Each loss is expressed as % of gross; the residual is multiplied
+  let running = ltGross;
+  const losses = [];
+  // Turbine availability
+  const availGwh = running * (lossAvail/100);
+  running -= availGwh;
+  losses.push({label: "Turbine Availability", value: -availGwh});
+  // BoP availability
+  const bopGwh = running * (lossBop/100);
+  running -= bopGwh;
+  losses.push({label: "BoP Availability", value: -bopGwh});
+  // Curtailment
+  const curtGwh = running * (lossCurt/100);
+  running -= curtGwh;
+  losses.push({label: "Curtailment", value: -curtGwh});
+  // Electrical
+  const elecGwh = running * (lossElec/100);
+  running -= elecGwh;
+  losses.push({label: "Electrical", value: -elecGwh});
+  // Blade degradation
+  const bladeGwh = running * (lossBlade/100);
+  running -= bladeGwh;
+  losses.push({label: "Blade Degradation", value: -bladeGwh});
+  const netP50 = running;
+  STATE.losses = {ltGross, futureAvailLoss: lossAvail, futureBopLoss: lossBop, futureCurtLoss: lossCurt, futureElecLoss: lossElec, futureBladeLoss: lossBlade, histElec, histCurt, netP50, lossBreakdown: losses};
+  STATE.ltNetAEP = netP50;
+  // Render gross-to-net waterfall
+  const labels = ["LT Gross AEP"].concat(losses.map(l=>l.label)).concat(["P50 Net AEP"]);
+  const values = [ltGross].concat(losses.map(l=>l.value)).concat([netP50]);
+  drawWaterfallChart("grossNetWaterfall", labels, values, "#00d68f", "#f5a623");
+  $("grossNetSummary").innerHTML = `
+    <div class="kpi-row" style="margin-bottom:0">
+      <div class="kpi-card mint"><div class="kpi-label">LT Gross AEP</div><div class="kpi-value mint">${ltGross.toFixed(2)}</div><div class="kpi-sub">GWh/yr</div></div>
+      <div class="kpi-card red"><div class="kpi-label">Total Losses</div><div class="kpi-value red">${(ltGross - netP50).toFixed(2)}</div><div class="kpi-sub">GWh/yr (${((ltGross-netP50)/ltGross*100).toFixed(1)}%)</div></div>
+      <div class="kpi-card gold"><div class="kpi-label">P50 Net AEP</div><div class="kpi-value gold">${netP50.toFixed(2)}</div><div class="kpi-sub">GWh/yr</div></div>
+    </div>`;
+  // EYA-vs-OA reconciliation (if values provided)
+  const eyaGross = parseFloat($("eyaGross").value) || 0;
+  if(eyaGross > 0){
+    const compLines = $("eyaComponents").value.split(/\n/).map(s=>s.trim()).filter(s=>s);
+    const components = [];
+    compLines.forEach(line => {
+      const idx = line.lastIndexOf(",");
+      if(idx > 0){
+        const label = line.slice(0, idx).trim();
+        const delta = parseFloat(line.slice(idx+1).trim());
+        if(label && !isNaN(delta)) components.push({label, delta});
+      }
+    });
+    const knownSum = sum(components.map(c=>c.delta));
+    const unexplained = netP50 - eyaGross - knownSum;
+    const allComponents = components.concat([{label: "Unexplained", delta: unexplained}]);
+    STATE.eyaReconciliation = {eyaGross, oaGross: netP50, components: allComponents};
+    const eLabels = ["EYA AEP"].concat(allComponents.map(c=>c.label)).concat(["OA AEP"]);
+    const eValues = [eyaGross].concat(allComponents.map(c=>c.delta)).concat([netP50]);
+    drawWaterfallChart("eyaOAWaterfall", eLabels, eValues, "#a78bfa", "#f5a623");
+    $("eyaOASummary").innerHTML = `
+      <div class="kpi-row" style="margin-bottom:0">
+        <div class="kpi-card purple"><div class="kpi-label">EYA Gross AEP</div><div class="kpi-value purple">${eyaGross.toFixed(2)}</div><div class="kpi-sub">GWh/yr (pre-construction)</div></div>
+        <div class="kpi-card ${Math.abs(unexplained)<0.5?'mint':'gold'}"><div class="kpi-label">Unexplained</div><div class="kpi-value ${Math.abs(unexplained)<0.5?'mint':'gold'}">${unexplained>=0?"+":""}${unexplained.toFixed(2)}</div><div class="kpi-sub">GWh/yr (residual gap)</div></div>
+        <div class="kpi-card mint"><div class="kpi-label">OA AEP</div><div class="kpi-value mint">${netP50.toFixed(2)}</div><div class="kpi-sub">GWh/yr (operational)</div></div>
+      </div>`;
+  } else {
+    STATE.eyaReconciliation = null;
+    if(STATE.charts["eyaOAWaterfall"]) { STATE.charts["eyaOAWaterfall"].destroy(); delete STATE.charts["eyaOAWaterfall"]; }
+    $("eyaOASummary").innerHTML = '<div class="info-box"><span class="w-icon">i</span><div>Enter a pre-construction EYA gross AEP to enable the reconciliation waterfall.</div></div>';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// STEP 7: UNCERTAINTY & POE
+// Replicates oepr_uncertainty.py
+// ════════════════════════════════════════════════════════════
+
+const UNCERTAINTY_SOURCES = [
+  {key: "power_measurement", label: "Power Measurement & Gross Power Adjustment", eval: 1.1, annual: 1.1},
+  {key: "air_density", label: "Air Density Adjustment", eval: 0.5, annual: 0.5},
+  {key: "historical_rep", label: "Representativeness of Historical Period", eval: 1.5, annual: 1.5},
+  {key: "future_wind", label: "Future Wind Resource", eval: 2.0, annual: 6.0},
+  {key: "wind_freq_dist", label: "Wind Speed & Direction Frequency Distribution", eval: 1.0, annual: 1.6},
+  {key: "future_avail", label: "Projected Future Project Availability", eval: 1.1, annual: 2.2},
+  {key: "curtailment", label: "Curtailment Loss", eval: 0.0, annual: 0.0},
+  {key: "electrical", label: "Electrical Loss", eval: 0.0, annual: 0.0},
+  {key: "blade_degradation", label: "Future Blade Degradation Loss", eval: 0.1, annual: 0.1}
+];
+
+function renderUncertaintyStep(){
+  if(!STATE.ltNetAEP){ $("combinedUncertDisplay").innerHTML = '<div class="warning-box"><span class="w-icon">⚠</span><div>Run EYA & Losses (Step 6) first.</div></div>'; return; }
+  if(!STATE.uncertainty){
+    STATE.uncertainty = UNCERTAINTY_SOURCES.map(s => ({...s}));
+  }
+  // Render editable uncertainty table
+  let html = '<table class="dt"><thead><tr><th>Uncertainty Source</th><th class="num">Eval %</th><th class="num">Annual %</th></tr></thead><tbody>';
+  STATE.uncertainty.forEach((s, i) => {
+    html += `<tr><td>${s.label}</td>
+      <td class="num"><input type="number" class="fi" style="width:80px;text-align:right;padding:.25rem .4rem" value="${s.eval}" step="0.1" onchange="STATE.uncertainty[${i}].eval=parseFloat(this.value)||0;runUncertaintyPOE()"></td>
+      <td class="num"><input type="number" class="fi" style="width:80px;text-align:right;padding:.25rem .4rem" value="${s.annual}" step="0.1" onchange="STATE.uncertainty[${i}].annual=parseFloat(this.value)||0;runUncertaintyPOE()"></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  $("uncertaintyTable").innerHTML = html;
+  runUncertaintyPOE();
+}
+
+function runUncertaintyPOE(){
+  if(!STATE.uncertainty) return;
+  const p50Eval = STATE.ltGrossAEP ? STATE.ltGrossAEP.annualGWh : 0; // Eval period (POR) at this stage — simplification: same as LT gross
+  const p50Annual = STATE.ltNetAEP || 0;
+  let combinedEvalSq = 0, combinedAnnualSq = 0;
+  STATE.uncertainty.forEach(s => {
+    combinedEvalSq += Math.pow(s.eval, 2);
+    combinedAnnualSq += Math.pow(s.annual, 2);
+  });
+  const combinedEval = Math.sqrt(combinedEvalSq);
+  const combinedAnnual = Math.sqrt(combinedAnnualSq);
+  STATE.uncertaintyCombined = {eval: combinedEval, annual: combinedAnnual};
+  $("combinedUncertDisplay").innerHTML = `
+    <div class="kpi-row" style="margin-bottom:0">
+      <div class="kpi-card sky"><div class="kpi-label">Combined Eval (POR)</div><div class="kpi-value sky">${combinedEval.toFixed(2)}%</div><div class="kpi-sub">RSS of ${STATE.uncertainty.length} sources</div></div>
+      <div class="kpi-card gold"><div class="kpi-label">Combined Annual (LT)</div><div class="kpi-value gold">${combinedAnnual.toFixed(2)}%</div><div class="kpi-sub">incl. future wind resource</div></div>
+    </div>`;
+  // POE table
+  const poeLevels = [50, 75, 90, 95, 99];
+  const ratedMW = STATE.cfg.ratedMW * STATE.cfg.numTurbines;
+  const hoursPerYear = 8760;
+  let rows = [];
+  poeLevels.forEach(p => {
+    const z = p === 50 ? 0 : -normInv(p/100);
+    const evalEnergy = p50Eval * (1 + z * combinedEval/100);
+    const annualEnergy = p50Annual * (1 + z * combinedAnnual/100);
+    rows.push({
+      poe: "P"+p, z: z.toFixed(3),
+      evalGWh: evalEnergy,
+      evalNcf: evalEnergy*1000 / (ratedMW * hoursPerYear) * 100,
+      annualGWh: annualEnergy,
+      annualNcf: annualEnergy*1000 / (ratedMW * hoursPerYear) * 100
+    });
+  });
+  STATE.poe = rows;
+  let html = '<thead><tr><th>POE</th><th class="num">z</th><th class="num">Eval GWh/yr</th><th class="num">Eval NCF %</th><th class="num">Annual GWh/yr</th><th class="num">Annual NCF %</th></tr></thead><tbody>';
+  rows.forEach(r => {
+    html += `<tr><td><strong>${r.poe}</strong></td><td class="num">${r.z}</td><td class="num">${r.evalGWh.toFixed(2)}</td><td class="num">${r.evalNcf.toFixed(2)}%</td><td class="num">${r.annualGWh.toFixed(2)}</td><td class="num">${r.annualNcf.toFixed(2)}%</td></tr>`;
+  });
+  html += '</tbody>';
+  $("poeTable").innerHTML = html;
+  // POE chart
+  drawBarChart("poeChart", {
+    labels: rows.map(r=>r.poe),
+    datasets: [
+      {label: "Eval Period (GWh/yr)", data: rows.map(r=>r.evalGWh), backgroundColor: "#4ab3e8", borderWidth: 0},
+      {label: "Annual Period (GWh/yr)", data: rows.map(r=>r.annualGWh), backgroundColor: "#00d68f", borderWidth: 0}
+    ],
+    yLabel: "Net Energy (GWh/yr)"
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// STEP 8: DIAGNOSTICS (YAW + WIND SPEED)
+// Replicates oepr_yaw_analysis.py + oepr_windspeed_analysis.py
+// ════════════════════════════════════════════════════════════
+
+function runDiagnostics(){
+  if(STATE.scada.length === 0){ toast("No SCADA data loaded.", "error"); return; }
+  logEvent("Running yaw misalignment screening…", "info");
+  STATE.yawAnalysis = computeYawAnalysis();
+  logEvent(`Yaw screening complete. ${STATE.yawAnalysis.filter(r=>r.flag).length} of ${STATE.yawAnalysis.length} turbines flagged.`, "success");
+  logEvent("Running wind speed sensor cross-check…", "info");
+  STATE.windspeedAnalysis = computeWindspeedAnalysis();
+  logEvent(`Wind speed analysis complete. ${STATE.windspeedAnalysis.filter(r=>r.flag).length} of ${STATE.windspeedAnalysis.length} turbines flagged.`, "success");
+  renderDiagnosticsStep();
+  toast("Diagnostics complete.");
+}
+
+function computeYawAnalysis(){
+  if(!STATE.colMap.windDirAbs || !STATE.colMap.nacelleDir){
+    logEvent("Yaw analysis skipped — wind direction or nacelle direction column not mapped.", "warn");
+    return [];
+  }
+  return STATE.turbines.map(t => {
+    const recs = STATE.scadaByTurbine[t];
+    // Filter: operating (ws >= 4, power > 0)
+    const operating = recs.filter(r => r.ws !== null && r.ws >= 4 && r.power !== null && r.power > 0 && r.windDirAbs !== null && r.nacelleDir !== null && !isNaN(r.windDirAbs) && !isNaN(r.nacelleDir));
+    if(operating.length === 0){
+      return {turbine: t, meanOffset: NaN, stdOffset: NaN, nSamples: 0, flag: false, note: "No valid yaw data"};
+    }
+    const offsets = operating.map(r => circularDiffDeg(r.nacelleDir, r.windDirAbs));
+    // Circular mean
+    const meanOff = circularMeanDeg(offsets);
+    // For std: compute as sqrt of circular variance = sqrt(1 - R) * 180 / pi, where R is mean resultant length
+    let s=0, c=0;
+    offsets.forEach(a => { const r=a*Math.PI/180; s+=Math.sin(r); c+=Math.cos(r); });
+    s/=offsets.length; c/=offsets.length;
+    const R = Math.sqrt(s*s + c*c);
+    const circStd = Math.sqrt(-2*Math.log(Math.max(R, 1e-10))) * 180 / Math.PI;
+    // Power-vs-offset: bin power by offset in [-30, 30] at 2° bins
+    const bins = {};
+    operating.forEach(r => {
+      const off = circularDiffDeg(r.nacelleDir, r.windDirAbs);
+      if(off < -30 || off > 30) return;
+      const binIdx = Math.floor((off + 30) / 2);
+      const center = -30 + binIdx * 2 + 1;
+      if(!bins[binIdx]) bins[binIdx] = {offset: center, sumPower: 0, n: 0};
+      bins[binIdx].sumPower += r.power;
+      bins[binIdx].n++;
+    });
+    const curve = Object.values(bins).filter(b => b.n >= 5).map(b => ({offset: b.offset, meanPower: b.sumPower/b.n, n: b.n}));
+    // Find peak (parabolic fit if enough bins)
+    let peakOffset = NaN;
+    if(curve.length >= 5){
+      const sorted = curve.slice().sort((a,b)=>a.offset - b.offset);
+      const xs = sorted.map(b=>b.offset), ys = sorted.map(b=>b.meanPower);
+      const rawIdx = ys.indexOf(Math.max(...ys));
+      const lo = Math.max(0, rawIdx - 6), hi = Math.min(xs.length, rawIdx + 7);
+      const xFit = xs.slice(lo, hi), yFit = ys.slice(lo, hi);
+      if(xFit.length >= 5){
+        const fit = polyFit(xFit, yFit, 2);
+        if(fit && fit[0] < 0){
+          const vertex = -fit[1] / (2 * fit[0]);
+          if(vertex >= xFit[0] && vertex <= xFit[xFit.length-1]) peakOffset = vertex;
+        }
+      }
+      if(isNaN(peakOffset)) peakOffset = xs[rawIdx];
+    } else if(curve.length > 0){
+      peakOffset = curve.reduce((max, b) => b.meanPower > max.meanPower ? b : max).offset;
+    }
+    return {
+      turbine: t,
+      meanOffset: meanOff > 180 ? meanOff - 360 : meanOff, // signed [-180, 180]
+      stdOffset: circStd,
+      nSamples: operating.length,
+      peakOffset,
+      powerVsOffsetCurve: curve,
+      flag: Math.abs(meanOff > 180 ? meanOff - 360 : meanOff) > 5
+    };
+  });
+}
+
+function polyFit(xs, ys, deg){
+  // Simple least-squares polynomial fit up to deg 2
+  const n = xs.length;
+  if(n < deg+1) return null;
+  // Build normal equations for deg=2: y = a*x^2 + b*x + c
+  if(deg !== 2) return null;
+  let Sx=0, Sx2=0, Sx3=0, Sx4=0, Sy=0, Sxy=0, Sx2y=0;
+  for(let i=0;i<n;i++){
+    const x=xs[i], y=ys[i];
+    Sx += x; Sx2 += x*x; Sx3 += x*x*x; Sx4 += x*x*x*x;
+    Sy += y; Sxy += x*y; Sx2y += x*x*y;
+  }
+  // Solve 3x3 system: [Sx4 Sx3 Sx2] [a]   [Sx2y]
+  //                   [Sx3 Sx2 Sx ] [b] = [Sxy ]
+  //                   [Sx2 Sx  n  ] [c]   [Sy  ]
+  const A = [[Sx4, Sx3, Sx2], [Sx3, Sx2, Sx], [Sx2, Sx, n]];
+  const B = [Sx2y, Sxy, Sy];
+  // Gaussian elimination
+  for(let i=0;i<3;i++){
+    let maxRow = i;
+    for(let k=i+1;k<3;k++) if(Math.abs(A[k][i]) > Math.abs(A[maxRow][i])) maxRow = k;
+    [A[i], A[maxRow]] = [A[maxRow], A[i]];
+    [B[i], B[maxRow]] = [B[maxRow], B[i]];
+    if(Math.abs(A[i][i]) < 1e-12) return null;
+    for(let k=i+1;k<3;k++){
+      const f = A[k][i] / A[i][i];
+      for(let j=i;j<3;j++) A[k][j] -= f * A[i][j];
+      B[k] -= f * B[i];
+    }
+  }
+  const x = [0,0,0];
+  for(let i=2;i>=0;i--){
+    let s = B[i];
+    for(let j=i+1;j<3;j++) s -= A[i][j] * x[j];
+    x[i] = s / A[i][i];
+  }
+  return x; // [a, b, c]
+}
+
+function computeWindspeedAnalysis(){
+  if(!STATE.colMap.windSpeed) return [];
+  // Build wide table: timestamp -> {turbine: ws}
+  const byTs = {};
+  STATE.scada.forEach(r => {
+    if(r.ws === null || isNaN(r.ws)) return;
+    if(!byTs[r.ts.toISOString()]) byTs[r.ts.toISOString()] = {ts: r.ts, turbines: {}};
+    byTs[r.ts.toISOString()].turbines[r.asset] = r.ws;
+  });
+  // For each turbine, compute deviation from median of others
+  const deviations = {};
+  STATE.turbines.forEach(t => deviations[t] = []);
+  Object.values(byTs).forEach(row => {
+    const values = Object.entries(row.turbines);
+    if(values.length < 3) return;
+    values.forEach(([t, ws]) => {
+      const others = values.filter(([t2])=>t2!==t).map(([_, v])=>v);
+      if(others.length === 0) return;
+      const consensus = median(others);
+      deviations[t].push(ws - consensus);
+    });
+  });
+  return STATE.turbines.map(t => {
+    const dev = deviations[t];
+    if(dev.length === 0) return {turbine: t, meanDev: NaN, stdDev: NaN, pctLow: 0, pctHigh: 0, nSamples: 0, flag: false};
+    const m = mean(dev);
+    const s = std(dev);
+    const pctLow = dev.filter(d=>d < -1).length / dev.length * 100;
+    const pctHigh = dev.filter(d=>d > 1).length / dev.length * 100;
+    return {
+      turbine: t,
+      meanDev: m,
+      stdDev: s,
+      pctLow, pctHigh,
+      nSamples: dev.length,
+      flag: Math.abs(m) > 0.5 || s > 1.5
+    };
+  });
+}
+
+function renderDiagnosticsStep(){
+  if(!STATE.yawAnalysis || !STATE.windspeedAnalysis){
+    $("yawTable").innerHTML = '<thead><tr><th>Click "Re-run Diagnostics" to compute</th></tr></thead>';
+    $("wsTable").innerHTML = '';
+    return;
+  }
+  // Yaw summary chart (bar of mean offset per turbine)
+  const yawSorted = STATE.yawAnalysis.slice().sort((a,b)=>Math.abs(b.meanOffset) - Math.abs(a.meanOffset));
+  drawBarChart("yawSummaryChart", {
+    labels: yawSorted.map(r=>r.turbine),
+    datasets: [{
+      label: "Mean Yaw Offset (°)",
+      data: yawSorted.map(r=>r.meanOffset),
+      backgroundColor: yawSorted.map(r => Math.abs(r.meanOffset) > 5 ? "#e05050" : Math.abs(r.meanOffset) > 3 ? "#f5a623" : "#00d68f"),
+      borderWidth: 0
+    }],
+    yLabel: "Mean Yaw Offset (°)",
+    horizontal: true
+  });
+  // Yaw table
+  let html = '<thead><tr><th>Turbine</th><th class="num">Mean Offset (°)</th><th class="num">Std Offset (°)</th><th class="num">Peak Offset (°)</th><th class="num">Samples</th><th>Flag</th></tr></thead><tbody>';
+  yawSorted.forEach(r => {
+    html += `<tr>
+      <td>${r.turbine}</td>
+      <td class="num" style="color:${Math.abs(r.meanOffset)>5?'var(--red)':Math.abs(r.meanOffset)>3?'var(--gold)':'var(--mint)'}">${isNaN(r.meanOffset)?"—":r.meanOffset.toFixed(2)}</td>
+      <td class="num">${isNaN(r.stdOffset)?"—":r.stdOffset.toFixed(2)}</td>
+      <td class="num">${isNaN(r.peakOffset)?"—":r.peakOffset.toFixed(2)}</td>
+      <td class="num">${r.nSamples.toLocaleString()}</td>
+      <td>${r.flag ? '<span class="badge badge-red">FLAG</span>' : '<span class="badge badge-mint">OK</span>'}</td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  $("yawTable").innerHTML = html;
+  // Yaw turbine selector
+  $("yawTurbineSelector").innerHTML = `
+    <label class="fl">Select Turbine for Power-vs-Offset Plot</label>
+    <select class="fs" id="yawTurbineSelect" onchange="renderYawTurbineCurve()">
+      ${yawSorted.map(r=>`<option value="${r.turbine}">${r.turbine}${r.flag?" ⚠":""}</option>`).join("")}
+    </select>`;
+  if(yawSorted.length > 0) renderYawTurbineCurve();
+  // Wind speed deviation chart
+  const wsSorted = STATE.windspeedAnalysis.slice().sort((a,b)=>Math.abs(b.meanDev) - Math.abs(a.meanDev));
+  drawBarChart("wsDeviationChart", {
+    labels: wsSorted.map(r=>r.turbine),
+    datasets: [{
+      label: "Mean WS Deviation (m/s)",
+      data: wsSorted.map(r=>r.meanDev),
+      backgroundColor: wsSorted.map(r => Math.abs(r.meanDev) > 0.5 ? "#e05050" : Math.abs(r.meanDev) > 0.3 ? "#f5a623" : "#00d68f"),
+      borderWidth: 0
+    }],
+    yLabel: "Mean Wind Speed Deviation (m/s)",
+    horizontal: true
+  });
+  // WS table
+  let html2 = '<thead><tr><th>Turbine</th><th class="num">Mean Dev (m/s)</th><th class="num">Std Dev (m/s)</th><th class="num">% Time >1 m/s Low</th><th class="num">% Time >1 m/s High</th><th class="num">Samples</th><th>Flag</th></tr></thead><tbody>';
+  wsSorted.forEach(r => {
+    html2 += `<tr>
+      <td>${r.turbine}</td>
+      <td class="num" style="color:${Math.abs(r.meanDev)>0.5?'var(--red)':Math.abs(r.meanDev)>0.3?'var(--gold)':'var(--mint)'}">${isNaN(r.meanDev)?"—":r.meanDev.toFixed(3)}</td>
+      <td class="num">${isNaN(r.stdDev)?"—":r.stdDev.toFixed(3)}</td>
+      <td class="num">${r.pctLow.toFixed(1)}%</td>
+      <td class="num">${r.pctHigh.toFixed(1)}%</td>
+      <td class="num">${r.nSamples.toLocaleString()}</td>
+      <td>${r.flag ? '<span class="badge badge-red">FLAG</span>' : '<span class="badge badge-mint">OK</span>'}</td>
+    </tr>`;
+  });
+  html2 += '</tbody>';
+  $("wsTable").innerHTML = html2;
+}
+
+function renderYawTurbineCurve(){
+  const t = $("yawTurbineSelect").value;
+  const r = STATE.yawAnalysis.find(x => x.turbine === t);
+  if(!r || !r.powerVsOffsetCurve || r.powerVsOffsetCurve.length === 0){
+    if(STATE.charts["yawTurbineChart"]) { STATE.charts["yawTurbineChart"].destroy(); delete STATE.charts["yawTurbineChart"]; }
+    return;
+  }
+  const curve = r.powerVsOffsetCurve.slice().sort((a,b)=>a.offset - b.offset);
+  drawScatterLineChart("yawTurbineChart", {
+    labels: curve.map(p=>p.offset),
+    datasets: [
+      {
+        label: "Power vs Yaw Offset",
+        data: curve.map(p=>({x: p.offset, y: p.meanPower})),
+        borderColor: "#4ab3e8",
+        backgroundColor: "rgba(74,179,232,.6)",
+        showLine: true,
+        pointRadius: 5,
+        borderWidth: 2
+      }
+    ],
+    xLabel: "Nacelle − Wind Direction Offset (°)",
+    yLabel: "Mean Power (kW)"
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// STEP 9: REPORTS
+// ════════════════════════════════════════════════════════════
+
+function renderReportsStep(){
+  const c = STATE.cfg;
+  const lt = STATE.ltGrossAEP, net = STATE.ltNetAEP, unc = STATE.uncertaintyCombined, poe = STATE.poe;
+  const ratedMW = c.ratedMW * c.numTurbines;
+  $("execSummary").innerHTML = `
+    <div class="kpi-row" style="margin-bottom:0">
+      <div class="kpi-card mint"><div class="kpi-label">LT Gross AEP</div><div class="kpi-value mint">${lt?lt.annualGWh.toFixed(2):'—'}</div><div class="kpi-sub">GWh/yr</div></div>
+      <div class="kpi-card gold"><div class="kpi-label">P50 Net AEP</div><div class="kpi-value gold">${net?net.toFixed(2):'—'}</div><div class="kpi-sub">GWh/yr</div></div>
+      <div class="kpi-card sky"><div class="kpi-label">P90 Net AEP</div><div class="kpi-value sky">${poe?poe.find(p=>p.poe==='P90').annualGWh.toFixed(2):'—'}</div><div class="kpi-sub">GWh/yr</div></div>
+      <div class="kpi-card purple"><div class="kpi-label">P90 NCF</div><div class="kpi-value purple">${poe?(poe.find(p=>p.poe==='P90').annualNcf).toFixed(2):'—'}%</div><div class="kpi-sub">${ratedMW} MW plant</div></div>
+    </div>
+    <div class="info-box" style="margin-top:.8rem"><span class="w-icon">i</span><div>
+      <strong>Project:</strong> ${c.projectName||'—'}<br>
+      <strong>Turbines:</strong> ${c.numTurbines} × ${c.turbineModel||'—'} (${c.ratedMW} MW each, ${ratedMW} MW total)<br>
+      <strong>Combined uncertainty:</strong> ${unc?unc.annual.toFixed(2):'—'}% (annual) / ${unc?unc.eval.toFixed(2):'—'}% (eval)
+    </div></div>`;
+  // Preview
+  $("reportPreview").innerHTML = generateHTMLReportBody();
+}
+
+// ════════════════════════════════════════════════════════════
+// CHART HELPERS — Chart.js wrapper
+// ════════════════════════════════════════════════════════════
+
+const CHART_DEFAULTS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { labels: { color: "rgba(255,255,255,.7)", font: {size: 10, family: "IBM Plex Mono"} } },
+    tooltip: { backgroundColor: "#0d1e30", titleColor: "#00d68f", bodyColor: "#fff", borderColor: "rgba(0,214,143,.3)", borderWidth: 1 }
+  },
+  scales: {
+    x: { ticks: { color: "rgba(255,255,255,.4)", font: {size: 9, family: "IBM Plex Mono"} }, grid: { color: "rgba(255,255,255,.05)" } },
+    y: { ticks: { color: "rgba(255,255,255,.4)", font: {size: 9, family: "IBM Plex Mono"} }, grid: { color: "rgba(255,255,255,.05)" } }
+  }
+};
+
+function destroyChart(id){
+  // First, destroy via our tracked instance
+  if(STATE.charts[id]){
+    try { STATE.charts[id].destroy(); } catch(e) { console.warn("Chart destroy error:", e); }
+    delete STATE.charts[id];
+  }
+  // Fallback: ask Chart.js directly for any chart on this canvas
+  const canvas = document.getElementById(id);
+  if(canvas && window.Chart && typeof Chart.getChart === "function"){
+    try {
+      const existing = Chart.getChart(canvas);
+      if(existing) existing.destroy();
+    } catch(e) {}
+  }
+}
+
+function drawLineChart(canvasId, opts){
+  destroyChart(canvasId);
+  const ctx = $(canvasId);
+  if(!ctx) return;
+  const cfg = JSON.parse(JSON.stringify(CHART_DEFAULTS));
+  cfg.scales.y.title = {display: true, text: opts.yLabel || "", color: "rgba(255,255,255,.5)"};
+  if(opts.yMin !== undefined) cfg.scales.y.min = opts.yMin;
+  if(opts.yMax !== undefined) cfg.scales.y.max = opts.yMax;
+  STATE.charts[canvasId] = new Chart(ctx, {
+    type: "line",
+    data: {labels: opts.labels, datasets: opts.datasets},
+    options: cfg
+  });
+}
+
+function drawBarChart(canvasId, opts){
+  destroyChart(canvasId);
+  const ctx = $(canvasId);
+  if(!ctx) return;
+  const cfg = JSON.parse(JSON.stringify(CHART_DEFAULTS));
+  if(opts.horizontal){
+    cfg.indexAxis = "y";
+    cfg.scales.x.title = {display: true, text: opts.yLabel || "", color: "rgba(255,255,255,.5)"};
+    cfg.scales.y.ticks.font = {size: 9, family: "IBM Plex Mono"};
+  } else {
+    cfg.scales.y.title = {display: true, text: opts.yLabel || "", color: "rgba(255,255,255,.5)"};
+  }
+  if(opts.yMin !== undefined && !opts.horizontal) cfg.scales.y.min = opts.yMin;
+  if(opts.yMax !== undefined && !opts.horizontal) cfg.scales.y.max = opts.yMax;
+  STATE.charts[canvasId] = new Chart(ctx, {
+    type: "bar",
+    data: {labels: opts.labels, datasets: opts.datasets},
+    options: cfg
+  });
+}
+
+function drawScatterLineChart(canvasId, opts){
+  destroyChart(canvasId);
+  const ctx = $(canvasId);
+  if(!ctx) return;
+  const cfg = JSON.parse(JSON.stringify(CHART_DEFAULTS));
+  cfg.scales.x.title = {display: true, text: opts.xLabel || "", color: "rgba(255,255,255,.5)"};
+  cfg.scales.y.title = {display: true, text: opts.yLabel || "", color: "rgba(255,255,255,.5)"};
+  cfg.scales.x.type = "linear";
+  STATE.charts[canvasId] = new Chart(ctx, {
+    type: "line",
+    data: {datasets: opts.datasets},
+    options: cfg
+  });
+}
+
+function drawWaterfallChart(canvasId, labels, values, barColor, connectorColor){
+  destroyChart(canvasId);
+  const ctx = $(canvasId);
+  if(!ctx) return;
+  // Compute cumulative
+  const n = labels.length;
+  const cumulative = [values[0]];
+  for(let i=1;i<n-1;i++) cumulative.push(cumulative[i-1] + values[i]);
+  const endTotal = n >= 2 ? cumulative[n-2] : values[0];
+  cumulative.push(endTotal);
+  // Build floating-bar data as [min, max] pairs (Chart.js v4 native format)
+  const barData = [];
+  for(let i=0;i<n;i++){
+    if(i === 0){
+      barData.push([0, values[0]]);
+    } else if(i === n-1){
+      barData.push([0, endTotal]);
+    } else {
+      const v = values[i];
+      const base = cumulative[i-1];
+      if(v >= 0) barData.push([base, base + v]);
+      else barData.push([base + v, base]);
+    }
+  }
+  const cfg = JSON.parse(JSON.stringify(CHART_DEFAULTS));
+  cfg.scales.y.title = {display: true, text: "Energy (GWh/yr)", color: "rgba(255,255,255,.5)"};
+  cfg.scales.x.title = {display: false};
+  cfg.plugins.tooltip.callbacks = {
+    title: (items) => labels[items[0].dataIndex],
+    label: (item) => {
+      const i = item.dataIndex;
+      if(i === 0) return `Total: ${values[0].toFixed(2)} GWh/yr`;
+      if(i === n-1) return `Total: ${endTotal.toFixed(2)} GWh/yr`;
+      return `Delta: ${values[i]>=0?"+":""}${values[i].toFixed(2)} GWh/yr`;
+    }
+  };
+  STATE.charts[canvasId] = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        data: barData,
+        backgroundColor: labels.map((_,i) => i === 0 || i === n-1 ? barColor : values[i] >= 0 ? "rgba(0,214,143,.6)" : "rgba(224,80,80,.6)"),
+        borderColor: barColor,
+        borderWidth: 1
+      }]
+    },
+    options: cfg
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// EXPORT HELPERS
+// ════════════════════════════════════════════════════════════
+
+function exportCSV(filename, csvText){
+  const blob = new Blob([csvText], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast(`Downloaded ${filename}`);
+}
+
+function buildExecSummaryCSV(){
+  const c = STATE.cfg;
+  const rows = [
+    ["Operational EYA Executive Summary"],
+    ["Generated", new Date().toISOString()],
+    [""],
+    ["Project", c.projectName || ""],
+    ["Project Code", c.projectCode || ""],
+    ["Location", c.location || ""],
+    ["Turbine Model", c.turbineModel || ""],
+    ["Number of Turbines", c.numTurbines],
+    ["Rated Capacity per WTG (MW)", c.ratedMW],
+    ["Plant Rated Capacity (MW)", c.ratedMW * c.numTurbines],
+    ["Hub Height (m)", c.hubHt],
+    ["Rotor Diameter (m)", c.rotorD],
+    ["COD Year", c.codYear],
+    [""],
+    ["SCADA Records", STATE.scada.length],
+    ["Date Range Start", STATE.dateRange.start ? STATE.dateRange.start.toISOString().slice(0,10) : ""],
+    ["Date Range End", STATE.dateRange.end ? STATE.dateRange.end.toISOString().slice(0,10) : ""],
+    ["Sample Interval (min)", STATE.sampleIntervalMin],
+    [""],
+    ["LT Gross AEP (GWh/yr)", STATE.ltGrossAEP ? STATE.ltGrossAEP.annualGWh.toFixed(3) : ""],
+    ["P50 Net AEP (GWh/yr)", STATE.ltNetAEP ? STATE.ltNetAEP.toFixed(3) : ""],
+    ["Combined Eval Uncertainty (%)", STATE.uncertaintyCombined ? STATE.uncertaintyCombined.eval.toFixed(2) : ""],
+    ["Combined Annual Uncertainty (%)", STATE.uncertaintyCombined ? STATE.uncertaintyCombined.annual.toFixed(2) : ""],
+    [""],
+    ["POE", "Eval GWh/yr", "Annual GWh/yr", "Annual NCF %"]
+  ];
+  if(STATE.poe){
+    STATE.poe.forEach(r => rows.push([r.poe, r.evalGWh.toFixed(3), r.annualGWh.toFixed(3), r.annualNcf.toFixed(2)]));
+  }
+  return rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+}
+
+function buildAvailabilityCSV(){
+  if(!STATE.availability) return "";
+  const rows = [["Turbine","Records","Avail Records","Unavail Records","Unknown Records","Actual Avail Energy (MWh)","Potential Unavail Energy (MWh)","Energy Availability (%)","Time Availability (%)","Possible Power Availability (%)","Mean Wind Speed (m/s)","Mean Power (kW)"]];
+  Object.entries(STATE.availability).forEach(([t, r]) => {
+    rows.push([t, r.records, r.availRecords, r.unavailRecords, r.unknownRecords, r.actualAvailEnergyMWh.toFixed(2), r.potentialUnavailEnergyMWh.toFixed(2), (r.energyAvailability*100).toFixed(3), isNaN(r.timeAvailability)?"":(r.timeAvailability*100).toFixed(3), isNaN(r.possiblePowerAvailability)?"":(r.possiblePowerAvailability*100).toFixed(3), r.meanWindSpeed.toFixed(3), r.meanPower.toFixed(2)]);
+  });
+  return rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+}
+
+function buildMonthlyAvailCSV(){
+  if(!STATE.monthlyAvail) return "";
+  const rows = [["Month","Available Energy (MWh)","Unavailable Energy (MWh)","Plant Availability (%)"]];
+  STATE.monthlyAvail.forEach(m => rows.push([m.month, m.availEnergyMWh.toFixed(2), m.unavailEnergyMWh.toFixed(2), (m.availability*100).toFixed(3)]));
+  return rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+}
+
+function buildPlantCurveCSV(){
+  if(!STATE.plantCurve) return "";
+  const rows = [["WS Bin Center (m/s)","Mean Power (kW)","Sample Count"]];
+  STATE.plantCurve.forEach(p => rows.push([p.ws.toFixed(2), p.meanPower.toFixed(2), p.n]));
+  return rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+}
+
+function buildMCPCSV(){
+  if(!STATE.mcp) return "";
+  const rows = [["MCP Regression","",""], ["Slope (a)", STATE.mcp.a.toFixed(4)], ["Intercept (b)", STATE.mcp.b.toFixed(2)], ["r-squared", STATE.mcp.r2.toFixed(4)], ["N months", STATE.mcp.n], ["",""],["Common POR Data","Reference WS (m/s)","Gross Norm Energy (MWh)"]];
+  STATE.mcp.commonMonths.forEach((r,i) => rows.push([r.month, STATE.mcp.x[i].toFixed(3), STATE.mcp.y[i].toFixed(2)]));
+  return rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+}
+
+function buildLTClimatologyCSV(){
+  if(!STATE.ltGrossAEP) return "";
+  const rows = [["Month","LT Gross Energy (MWh)","% of Annual"]];
+  const total = sum(STATE.ltGrossAEP.climatology.map(m=>m.grossMWh));
+  STATE.ltGrossAEP.climatology.forEach(m => rows.push([m.label, m.grossMWh.toFixed(2), (m.grossMWh/total*100).toFixed(2)]));
+  rows.push(["Annual Total", total.toFixed(2), "100.00"]);
+  return rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+}
+
+function buildUncertaintyCSV(){
+  if(!STATE.uncertainty) return "";
+  const rows = [["Uncertainty Source","Eval %","Annual %"]];
+  STATE.uncertainty.forEach(s => rows.push([s.label, s.eval.toFixed(2), s.annual.toFixed(2)]));
+  if(STATE.uncertaintyCombined) rows.push(["Combined All Sources", STATE.uncertaintyCombined.eval.toFixed(2), STATE.uncertaintyCombined.annual.toFixed(2)]);
+  return rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+}
+
+function buildPOECsv(){
+  if(!STATE.poe) return "";
+  const rows = [["Probability of Exceedance","z","Eval GWh/yr","Eval NCF %","Annual GWh/yr","Annual NCF %"]];
+  STATE.poe.forEach(r => rows.push([r.poe, r.z, r.evalGWh.toFixed(3), r.evalNcf.toFixed(2), r.annualGWh.toFixed(3), r.annualNcf.toFixed(2)]));
+  return rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+}
+
+function buildYawCSV(){
+  if(!STATE.yawAnalysis) return "";
+  const rows = [["Turbine","Mean Offset (deg)","Std Offset (deg)","Peak Offset (deg)","Samples","Flag"]];
+  STATE.yawAnalysis.forEach(r => rows.push([r.turbine, isNaN(r.meanOffset)?"":r.meanOffset.toFixed(3), isNaN(r.stdOffset)?"":r.stdOffset.toFixed(3), isNaN(r.peakOffset)?"":r.peakOffset.toFixed(3), r.nSamples, r.flag?"YES":"NO"]));
+  return rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+}
+
+function buildWSCSV(){
+  if(!STATE.windspeedAnalysis) return "";
+  const rows = [["Turbine","Mean Deviation (m/s)","Std Deviation (m/s)","% Time >1 m/s Low","% Time >1 m/s High","Samples","Flag"]];
+  STATE.windspeedAnalysis.forEach(r => rows.push([r.turbine, isNaN(r.meanDev)?"":r.meanDev.toFixed(4), isNaN(r.stdDev)?"":r.stdDev.toFixed(4), r.pctLow.toFixed(2), r.pctHigh.toFixed(2), r.nSamples, r.flag?"YES":"NO"]));
+  return rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+}
+
+function exportTurbineCurveCSV(){
+  const t = $("turbineCurveSelect").value;
+  if(!t || !STATE.autoCurves[t]) return;
+  const rows = [["WS Bin (m/s)","Mean Power (kW)","Samples"]];
+  STATE.autoCurves[t].forEach(p => rows.push([p.ws.toFixed(2), p.meanPower.toFixed(2), p.n]));
+  exportCSV(`power_curve_${t}.csv`, rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n"));
+}
+
+function exportAllTurbineCurvesCSV(){
+  // Just concatenate all into one CSV (no ZIP for simplicity)
+  let out = "Turbine,WS Bin (m/s),Mean Power (kW),Samples\n";
+  Object.entries(STATE.autoCurves).forEach(([t, curve]) => {
+    curve.forEach(p => { out += `"${t}",${p.ws.toFixed(2)},${p.meanPower.toFixed(2)},${p.n}\n`; });
+  });
+  exportCSV("all_turbine_power_curves.csv", out);
+}
+
+function exportAllCharts(){
+  let count = 0;
+  Object.entries(STATE.charts).forEach(([id, chart]) => {
+    const url = chart.toBase64Image();
+    const a = document.createElement("a");
+    a.href = url; a.download = `chart_${id}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    count++;
+  });
+  toast(`Downloaded ${count} chart PNGs.`);
+}
+
+function downloadStateCSV(){
+  let out = "";
+  out += "=== EXECUTIVE SUMMARY ===\n" + buildExecSummaryCSV() + "\n\n";
+  out += "=== AVAILABILITY PER TURBINE ===\n" + buildAvailabilityCSV() + "\n\n";
+  out += "=== MONTHLY AVAILABILITY ===\n" + buildMonthlyAvailCSV() + "\n\n";
+  out += "=== PLANT POWER CURVE ===\n" + buildPlantCurveCSV() + "\n\n";
+  out += "=== MCP REGRESSION ===\n" + buildMCPCSV() + "\n\n";
+  out += "=== LT CLIMATOLOGY ===\n" + buildLTClimatologyCSV() + "\n\n";
+  out += "=== UNCERTAINTY ===\n" + buildUncertaintyCSV() + "\n\n";
+  out += "=== POE ===\n" + buildPOECsv() + "\n\n";
+  out += "=== YAW ANALYSIS ===\n" + buildYawCSV() + "\n\n";
+  out += "=== WIND SPEED ANALYSIS ===\n" + buildWSCSV() + "\n";
+  exportCSV("oeya_all_tables.csv", out);
+}
+
+function generateHTMLReportBody(){
+  const c = STATE.cfg;
+  const lt = STATE.ltGrossAEP, net = STATE.ltNetAEP, unc = STATE.uncertaintyCombined, poe = STATE.poe;
+  const ratedMW = c.ratedMW * c.numTurbines;
+  const avail = STATE.availability;
+  const meanAvail = avail ? mean(Object.values(avail).map(r=>r.energyAvailability)) : NaN;
+  let html = `
+    <h2 style="color:var(--mint);font-size:1.1rem;margin-bottom:.4rem">Operational Energy Yield Assessment — ${c.projectName||'Wind Farm'}</h2>
+    <p style="color:var(--text3);font-size:.7rem;margin-bottom:1rem">Assessment Date: ${c.assessmentDate||new Date().toISOString().slice(0,10)} · Standard: DNV-RP-0126 / IEC 61400-26 / IEC 61400-12-1 / ISO GUM</p>
+    <h3 style="color:var(--gold);font-size:.85rem;margin:.8rem 0 .4rem">1. Executive Summary</h3>
+    <p style="color:var(--text2);font-size:.78rem">This Operational EYA is based on <strong>${STATE.scada.length.toLocaleString()}</strong> SCADA records covering ${STATE.turbines.length} × ${c.turbineModel||'WTG'} turbines (${c.ratedMW} MW each, ${ratedMW} MW plant rated capacity) over the period <strong>${STATE.dateRange.start?fmtDate(STATE.dateRange.start):'—'}</strong> to <strong>${STATE.dateRange.end?fmtDate(STATE.dateRange.end):'—'}</strong> at ${STATE.sampleIntervalMin}-minute resolution.</p>
+    <p style="color:var(--text2);font-size:.78rem;margin-top:.4rem">The assessment follows the OEPR (Operational Energy Production Report) methodology: per-turbine auto power curve construction from FULL-status records, IEC 61400-26 energy-based availability, plant power curve MCP regression against a long-term reference wind speed, LT gross AEP normalised to 30-day months, future loss application, and ISO GUM / DNV-RP-0126 RSS uncertainty combination with normal-distribution probability-of-exceedance.</p>`;
+  if(lt && net && unc && poe){
+    html += `<table style="width:100%;border-collapse:collapse;margin:.6rem 0;font-size:.75rem"><thead><tr style="background:var(--bg3)"><th style="padding:.4rem;text-align:left">Metric</th><th style="padding:.4rem;text-align:right">Value</th></tr></thead><tbody>
+      <tr><td style="padding:.4rem">LT Gross AEP</td><td style="padding:.4rem;text-align:right;color:var(--mint)">${lt.annualGWh.toFixed(2)} GWh/yr</td></tr>
+      <tr><td style="padding:.4rem">P50 Net AEP</td><td style="padding:.4rem;text-align:right;color:var(--gold)">${net.toFixed(2)} GWh/yr</td></tr>
+      <tr><td style="padding:.4rem">Mean Plant Energy Availability</td><td style="padding:.4rem;text-align:right">${(meanAvail*100).toFixed(2)}%</td></tr>
+      <tr><td style="padding:.4rem">Combined Eval-Period Uncertainty</td><td style="padding:.4rem;text-align:right">${unc.eval.toFixed(2)}%</td></tr>
+      <tr><td style="padding:.4rem">Combined Annual Uncertainty</td><td style="padding:.4rem;text-align:right">${unc.annual.toFixed(2)}%</td></tr>
+    </tbody></table>`;
+    html += `<h3 style="color:var(--gold);font-size:.85rem;margin:.8rem 0 .4rem">2. Probability of Exceedance</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.75rem"><thead><tr style="background:var(--bg3)"><th style="padding:.4rem">POE</th><th style="padding:.4rem;text-align:right">Eval GWh/yr</th><th style="padding:.4rem;text-align:right">Annual GWh/yr</th><th style="padding:.4rem;text-align:right">Annual NCF</th></tr></thead><tbody>`;
+    poe.forEach(r => {
+      html += `<tr><td style="padding:.4rem"><strong>${r.poe}</strong></td><td style="padding:.4rem;text-align:right">${r.evalGWh.toFixed(2)}</td><td style="padding:.4rem;text-align:right">${r.annualGWh.toFixed(2)}</td><td style="padding:.4rem;text-align:right">${r.annualNcf.toFixed(2)}%</td></tr>`;
+    });
+    html += '</tbody></table>';
+  }
+  if(STATE.losses){
+    html += `<h3 style="color:var(--gold);font-size:.85rem;margin:.8rem 0 .4rem">3. Gross-to-Net Loss Stack</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.75rem"><thead><tr style="background:var(--bg3)"><th style="padding:.4rem;text-align:left">Loss Component</th><th style="padding:.4rem;text-align:right">GWh/yr</th></tr></thead><tbody>`;
+    html += `<tr><td style="padding:.4rem">LT Gross AEP</td><td style="padding:.4rem;text-align:right;color:var(--mint)">${STATE.losses.ltGross.toFixed(2)}</td></tr>`;
+    STATE.losses.lossBreakdown.forEach(l => {
+      html += `<tr><td style="padding:.4rem">${l.label}</td><td style="padding:.4rem;text-align:right;color:var(--red)">${l.value.toFixed(2)}</td></tr>`;
+    });
+    html += `<tr style="background:var(--bg3);font-weight:700"><td style="padding:.4rem">P50 Net AEP</td><td style="padding:.4rem;text-align:right;color:var(--gold)">${STATE.losses.netP50.toFixed(2)}</td></tr>`;
+    html += '</tbody></table>';
+  }
+  html += `<h3 style="color:var(--gold);font-size:.85rem;margin:.8rem 0 .4rem">4. Methodology Notes</h3>
+    <ul style="color:var(--text2);font-size:.72rem;padding-left:1.4rem;line-height:1.7">
+      <li>Timestamp parsing: auto-detected day-first vs month-first format from the data itself, preventing the silent scrambling bug that breaks naive parsers.</li>
+      <li>Auto power curve: empirical binning of FULL-status records at ${c.binWidth} m/s resolution, with monotonic non-decreasing smoothing via cumulative-max.</li>
+      <li>IEC 61400-26 availability: energy-based, using actual energy during available periods and theoretical (auto-curve) energy during unavailable periods.</li>
+      <li>MCP regression: linear regression of monthly 30-day-normalised gross energy against reference wind speed over the operational POR, then applied to the full LT reference record.</li>
+      <li>Uncertainty combination: RSS across ${STATE.uncertainty?STATE.uncertainty.length:9} sources per ISO GUM / DNV-RP-0126.</li>
+      <li>POE: normal distribution with z-scores from inverse standard normal CDF.</li>
+      <li>All data processed locally in the browser — no server upload.</li>
+    </ul>`;
+  return html;
+}
+
+function downloadHTMLReport(){
+  const body = generateHTMLReportBody();
+  const c = STATE.cfg;
+  const fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Operational EYA Report — ${c.projectName||'Wind Farm'}</title>
+<style>
+body{font-family:Calibri,Arial,sans-serif;margin:40px;color:#222;line-height:1.6;font-size:13px}
+h1{color:#003366;border-bottom:3px solid #003366;padding-bottom:8px;margin-bottom:6px}
+h2{color:#005b99;margin-top:24px;font-size:1.1em;border-bottom:1px solid #ccc;padding-bottom:4px}
+h3{color:#003366;margin-top:18px;font-size:1em}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:.95em}
+th,td{border:1px solid #b8cce4;padding:6px 8px;text-align:left}
+th{background-color:#003366;color:white;font-weight:600}
+tr:nth-child(even){background-color:#f2f7ff}
+.metric{font-size:18px;font-weight:bold;color:#003366}
+.summary-box{background-color:#e6f0ff;padding:14px 18px;border-left:5px solid #003366;margin:14px 0}
+.methodology{font-size:.85em;color:#666;margin-top:24px;border-top:1px solid #ccc;padding-top:10px}
+.kpi{display:inline-block;margin-right:24px;padding:8px 12px;background:#f0f7ff;border-radius:4px;border-left:3px solid #003366}
+.kpi-label{font-size:.7em;color:#666;text-transform:uppercase;letter-spacing:.08em}
+.kpi-value{font-size:1.5em;font-weight:bold;color:#003366}
+ul{padding-left:20px}
+li{margin-bottom:4px}
+</style>
+</head>
+<body>
+<h1>Operational Energy Yield Assessment</h1>
+<p><strong>Project:</strong> ${c.projectName||'—'}<br>
+<strong>Assessment Date:</strong> ${c.assessmentDate||new Date().toISOString().slice(0,10)}<br>
+<strong>Standard:</strong> DNV-RP-0126 / IEC 61400-26 / IEC 61400-12-1 Ed. 2 / ISO GUM<br>
+<strong>Generated by:</strong> SCADA Operational EYA Tool (browser-based, local data)</p>
+<div class="summary-box">
+<h2>Executive Summary</h2>
+${body}
+</div>
+<p class="methodology"><em>This report was generated by the SCADA Operational EYA Tool — a browser-based implementation of the OEPR methodology. All data was processed locally in the user's browser; no SCADA data was transmitted to any server. The methodology replicates DNV/UL lender's-engineer practice for Operational Energy Production Reports.</em></p>
+</body>
+</html>`;
+  const blob = new Blob([fullHTML], {type:"text/html;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `OEYA_Report_${(c.projectName||'Wind_Farm').replace(/[^a-z0-9]/gi,'_')}.html`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast("HTML report downloaded.");
+}
+
+// ════════════════════════════════════════════════════════════
+// SAMPLE DATA GENERATOR — synthetic SCADA for demo
+// ════════════════════════════════════════════════════════════
+
+function generateSampleScada(){
+  logEvent("Generating synthetic SCADA sample data for demo…", "info");
+  const c = STATE.cfg;
+  // Override with reasonable demo values
+  c.projectName = "Demo Wind Farm — Operational EYA";
+  c.projectCode = "DEMO-OEYA-2024";
+  c.location = "Tamil Nadu, India";
+  c.turbineModel = "Vestas V110-2.0MW";
+  c.ratedMW = 2.0;
+  c.numTurbines = 6;
+  c.hubHt = 80;
+  c.rotorD = 110;
+  c.codYear = 2015;
+  c.sampleInt = 10;
+  c.binWidth = 0.5;
+  c.dayFirst = "auto";
+  loadCfgFromState();
+  // Generate 6 months of 10-min data for 6 turbines
+  const turbines = ["WTG01","WTG02","WTG03","WTG04","WTG05","WTG06"];
+  const startDate = new Date(Date.UTC(2019, 0, 1, 0, 0, 0));
+  const endDate = new Date(Date.UTC(2019, 5, 30, 23, 50, 0));
+  const intervalMin = 10;
+  const totalSteps = Math.floor((endDate - startDate) / 60000 / intervalMin);
+  const records = [];
+  // Synthetic power curve: cut-in 3, rated 12, cut-out 25, rated power 2000 kW
+  const powerCurveFunc = (ws) => {
+    if(ws < 3 || ws > 25) return 0;
+    if(ws >= 12) return 2000;
+    return 2000 * Math.pow((ws - 3) / (12 - 3), 3);
+  };
+  // Status codes: 1=Run, 2=Standby, 5=Stop, 99=Fault
+  for(let step = 0; step < totalSteps; step++){
+    const ts = new Date(startDate.getTime() + step * intervalMin * 60000);
+    // Seasonal wind: Jan-Jun (winter/spring) — moderate
+    const monthFactor = 1 + 0.3 * Math.sin((ts.getUTCMonth() / 12) * Math.PI * 2 + Math.PI/3);
+    const diurnalFactor = 1 + 0.15 * Math.sin((ts.getUTCHours() / 24) * Math.PI * 2);
+    const baseWs = 7 * monthFactor * diurnalFactor + 2 * Math.sin(step / 50);
+    turbines.forEach((t, idx) => {
+      // Add per-turbine variation
+      let ws = baseWs + (Math.random() - 0.5) * 1.5;
+      // Inject anemometer bias on WTG03
+      if(t === "WTG03") ws -= 0.6;
+      // Inject yaw misalignment on WTG05
+      const yawOffset = t === "WTG05" ? 8 : (Math.random() - 0.5) * 2;
+      // Random status (95% operating, 2% standby, 3% stop)
+      const rand = Math.random();
+      let status;
+      if(rand < 0.95) status = "1";
+      else if(rand < 0.97) status = "2";
+      else status = "5";
+      // Power output
+      let power = powerCurveFunc(ws);
+      // Add noise
+      power *= 1 + (Math.random() - 0.5) * 0.05;
+      // If status != 1, reduce power
+      if(status === "2") power *= 0.3;
+      if(status === "5") power = 0;
+      // Possible power (what the turbine COULD produce)
+      let possiblePower = powerCurveFunc(ws);
+      records.push({
+        ts: ts,
+        asset: t,
+        ws: Math.max(0, ws),
+        power: Math.max(0, power),
+        possiblePower: Math.max(0, possiblePower),
+        status: status,
+        ambientTemp: 20 + 8 * Math.sin((ts.getUTCMonth() / 12) * Math.PI * 2) + (Math.random() - 0.5) * 2,
+        windDirAbs: (180 + 30 * Math.sin(step / 100) + (Math.random() - 0.5) * 10) % 360,
+        nacelleDir: (180 + 30 * Math.sin(step / 100) + yawOffset + (Math.random() - 0.5) * 10) % 360,
+        airPressure: null,
+        derateFlag: status === "2" ? "1" : "0",
+        alarmNo: status === "5" ? "1001" : ""
+      });
+    });
+  }
+  STATE.scada = records;
+  STATE.scadaByTurbine = {};
+  records.forEach(r => {
+    if(!STATE.scadaByTurbine[r.asset]) STATE.scadaByTurbine[r.asset] = [];
+    STATE.scadaByTurbine[r.asset].push(r);
+  });
+  STATE.turbines = turbines;
+  STATE.dateRange = {start: startDate, end: endDate};
+  STATE.sampleIntervalMin = intervalMin;
+  // Auto-classify status codes
+  STATE.statusCodeMap = {"1":"full","2":"partial","5":"unavail","99":"unavail"};
+  // Column map (already matches our schema since we generated the data directly)
+  STATE.colMap = {
+    timestamp: "PCTimeStamp", asset: "AssetName", windSpeed: "Amb_WindSpeed_Avg",
+    power: "Grd_Prod_Pwr_Avg", possiblePower: "Grd_Prod_PsblePwr_Avg", status: "Sys_Stats_TrbStat",
+    derateFlag: "Grd_Prod_Pwr_InternalDerateStat", alarmNo: "Sys_Logs_FirstActAlarmNo",
+    ambientTemp: "Amb_Temp_Avg", windDirAbs: "Amb_WindDir_Abs_Avg", nacelleDir: "Nac_Direction_Avg",
+    airPressure: ""
+  };
+  logEvent(`Generated ${records.length.toLocaleString()} sample records for ${turbines.length} turbines.`, "success");
+  toast(`Loaded ${records.length.toLocaleString()} demo records.`);
+  goStep(2);
+}
+
+// ════════════════════════════════════════════════════════════
+// Initial setup
+// ════════════════════════════════════════════════════════════
+
+// Re-trigger initial load after script is parsed
+window.addEventListener("DOMContentLoaded", () => {
+  // Restore field values
+  loadCfgFromState();
+  // Initialize reference source dropdown
+  if($("refSource")) toggleRefSource();
+  // Render initial step
+  goStep(0);
+});
+
+console.log("SCADA Operational EYA Tool loaded. State:", STATE);
+
+</script>
+
+</body>
+</html>
