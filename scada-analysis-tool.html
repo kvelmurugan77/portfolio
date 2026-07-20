@@ -433,7 +433,7 @@ footer{padding:1.5rem 2rem;border-top:1px solid var(--border);text-align:center;
         <div id="scadaFileList" style="margin-top:1rem"></div>
       </div>
       <div>
-        <div class="info-box"><span class="w-icon">ℹ</span><div><strong>Privacy &amp; offline:</strong> Files are parsed locally with <a href="https://www.papaparse.com" target="_blank" style="color:var(--sky)">PapaParse</a> in a <strong>Web Worker</strong> (non-blocking) and never leave your browser. <strong>To run fully offline:</strong> download <code style="color:var(--mint);font-family:var(--mono)">scada-analysis-tool.html</code> + <code style="color:var(--mint);font-family:var(--mono)">scada-worker.js</code> from the <a href="https://github.com/kvelmurugan77/portfolio" target="_blank" style="color:var(--sky)">GitHub repo</a>, place them in the same folder, and double-click the HTML — opens in your browser via <code style="color:var(--mint);font-family:var(--mono)">file://</code> with no internet needed (after first load caches PapaParse). Refresh the page after first open if the worker doesn't load.</div></div>
+        <div class="info-box"><span class="w-icon">ℹ</span><div><strong>Privacy &amp; offline:</strong> Files are parsed locally in a <strong>Web Worker</strong> (non-blocking) and never leave your browser. <strong>To run fully offline:</strong> download just <code style="color:var(--mint);font-family:var(--mono)">scada-analysis-tool.html</code> from the <a href="https://github.com/kvelmurugan77/portfolio" target="_blank" style="color:var(--sky)">GitHub repo</a>, then double-click it — opens in your browser via <code style="color:var(--mint);font-family:var(--mono)">file://</code> with no internet needed (the worker is embedded inside the HTML as a Blob URL, and uses an inline CSV parser — no external dependencies).</div></div>
         <div class="fg">
           <label class="fl">Delimiter <span class="help-tip">?<span class="tip-body">Auto-detection tries comma, semicolon, tab, pipe and picks the one with the most consistent column count.</span></span></label>
           <select class="fs" id="pDelimiter" onchange="autoSave()">
@@ -926,17 +926,149 @@ function detectDelimiter(firstLine){
 
 // ════════════════════════════════════════════════════════════
 // WEB WORKER for non-blocking CSV parsing
+// INLINE Blob URL approach — works from file://, https://, and http://
+// No separate .js file needed; no CDN dependency ( PapaParse optional ).
 // ════════════════════════════════════════════════════════════
+
+// The worker source code, embedded as a string. This is converted to a
+// Blob and loaded via URL.createObjectURL() — which works from any origin
+// including file:// (where new Worker('file.js') would be blocked by
+// Chrome's security policy). The worker uses an inline CSV parser (no
+// external dependency), so it works fully offline after the HTML is
+// downloaded once.
+const SCADA_WORKER_SOURCE = `
+// === Inline CSV parser (no PapaParse dependency) ===
+// Handles: quoted fields, embedded commas/newlines/quotes, configurable delimiter.
+function parseCSV(text, delimiter) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+  let i = 0;
+  const len = text.length;
+  while (i < len) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+        inQuotes = false; i++; continue;
+      }
+      field += c; i++; continue;
+    }
+    // Not in quotes
+    if (c === '"') { inQuotes = true; i++; continue; }
+    if (c === delimiter) { row.push(field); field = ""; i++; continue; }
+    if (c === '\\r') { i++; continue; }
+    if (c === '\\n') {
+      row.push(field);
+      rows.push(row);
+      row = []; field = ""; i++; continue;
+    }
+    field += c; i++;
+  }
+  // Last field/row
+  if (field !== "" || row.length > 0) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function autoDetectDelimiter(text) {
+  const firstLine = (text.split(/\\r?\\n/).find(l => l.trim().length > 0) || "");
+  const candidates = [",", "\\t", ";", "|"];
+  let best = ",", bestCount = -1;
+  candidates.forEach(d => {
+    // Count unquoted occurrences
+    let count = 0, inQ = false;
+    for (let i = 0; i < firstLine.length; i++) {
+      const c = firstLine[i];
+      if (c === '"') inQ = !inQ;
+      else if (!inQ && c === d) count++;
+    }
+    if (count > bestCount) { bestCount = count; best = d; }
+  });
+  return best;
+}
+
+self.onmessage = function(e) {
+  const msg = e.data;
+  if (msg.type !== "parse") return;
+  const { fileBuffer, fileName, delimiter, skipHeader, skipFooter } = msg;
+
+  // Decode ArrayBuffer as UTF-8
+  let text;
+  try {
+    text = new TextDecoder("utf-8").decode(fileBuffer);
+  } catch (err) {
+    self.postMessage({ type: "done", rows: [], headers: [], fileName, msg: "Decode failed: " + err.message });
+    return;
+  }
+
+  // Resolve delimiter
+  let delim = delimiter;
+  if (delim === "auto" || !delim) {
+    delim = autoDetectDelimiter(text);
+    self.postMessage({ type: "progress", pct: 10, msg: "Auto-detected delimiter: " + (delim === "\\t" ? "tab" : delim) });
+  } else if (delim === "\\\\t") {
+    delim = "\\t";
+  }
+
+  // Parse rows
+  self.postMessage({ type: "progress", pct: 30, msg: "Parsing rows from " + fileName });
+  let rows;
+  try {
+    rows = parseCSV(text, delim);
+  } catch (err) {
+    self.postMessage({ type: "done", rows: [], headers: [], fileName, msg: "Parse failed: " + err.message });
+    return;
+  }
+  self.postMessage({ type: "progress", pct: 50, msg: "Parsed " + rows.length.toLocaleString() + " rows from " + fileName });
+
+  // Apply skip-header / skip-footer
+  const sh = skipHeader || 0;
+  const sf = skipFooter || 0;
+  if (rows.length <= sh) {
+    self.postMessage({ type: "done", rows: [], headers: [], fileName, msg: "No data after header skip" });
+    return;
+  }
+  const headers = (rows[sh] || []).map(h => String(h).trim());
+  let dataRows = rows.slice(sh + 1);
+  if (sf > 0 && dataRows.length > sf) dataRows = dataRows.slice(0, dataRows.length - sf);
+
+  // Build row objects
+  const objRows = new Array(dataRows.length);
+  for (let i = 0; i < dataRows.length; i++) {
+    const r = dataRows[i];
+    const obj = {};
+    for (let j = 0; j < headers.length; j++) obj[headers[j]] = r[j];
+    objRows[i] = obj;
+    if (i % 20000 === 0 && i > 0) {
+      self.postMessage({ type: "progress", pct: 50 + Math.floor((i / dataRows.length) * 45), msg: "Building row objects: " + i.toLocaleString() + " / " + dataRows.length.toLocaleString() });
+    }
+  }
+
+  self.postMessage({
+    type: "done",
+    rows: objRows,
+    headers: headers,
+    fileName: fileName,
+    msg: "Loaded " + objRows.length.toLocaleString() + " rows from " + fileName
+  });
+};
+`;
 
 let scadaWorker = null;
 function getScadaWorker(){
   if(scadaWorker) return scadaWorker;
+  // Try Blob-URL worker first (works from file://, https://, http://)
   try {
-    // Try loading the worker file from the same directory as this HTML
-    scadaWorker = new Worker("scada-worker.js");
+    const blob = new Blob([SCADA_WORKER_SOURCE], { type: "application/javascript" });
+    const url = URL.createObjectURL(blob);
+    scadaWorker = new Worker(url);
+    // Don't revoke the URL immediately — some browsers need it alive
+    // for the worker to fully initialize. Revoke after 30s as cleanup.
+    setTimeout(() => { try { URL.revokeObjectURL(url); } catch(e) {} }, 30000);
     return scadaWorker;
   } catch(e) {
-    console.warn("Could not load scada-worker.js — falling back to main-thread parsing. UI may be unresponsive for large files.", e);
+    console.warn("Could not create Blob-URL worker — falling back to main-thread parsing. UI may be slower for large files.", e);
     return null;
   }
 }
