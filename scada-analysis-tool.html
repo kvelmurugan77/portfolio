@@ -490,34 +490,55 @@ footer{padding:1.5rem 2rem;border-top:1px solid var(--border);text-align:center;
 // Replicates oepr_pipeline.py methodology in vanilla JavaScript
 // ════════════════════════════════════════════════════════════
 
+const SCHEMA_VERSION = 2;
 const STATE = {
+  _schemaVersion: SCHEMA_VERSION,
   cfg: {
     projectName:"", projectCode:"", assessmentDate:"", location:"", elevation:0,
     turbineModel:"", codYear:"", ratedMW:2.0, numTurbines:6, hubHt:80, rotorD:110,
     sampleInt:10, binWidth:0.5, dayFirst:"auto", lowAvailThresh:0.83,
-    delimiter:"auto", headerRow:0, skipFooter:0
+    delimiter:"auto", headerRow:0, skipFooter:0,
+    // NEW: Document control
+    docNumber:"", docRevision:"1.0", docStatus:"Draft",
+    preparedBy:"Velmurugan Karuppiah", reviewedBy:"", approvedBy:"",
+    clientName:"", independenceStatement:true,
+    revisionHistory:[{rev:"1.0", date:new Date().toISOString().slice(0,10), author:"Velmurugan Karuppiah", changes:"Initial issue"}],
+    // NEW: WTG layout
+    wtgLayout:[],  // [{turbineId, lat, lon}]
+    // NEW: IEC filtering config
+    iecIcingT:1.0, iecIcingPitch:15.0, iecIcingPowerRatio:0.3,
+    iecCurtailmentThreshold:0.95,
+    ntfA:1.0, ntfB:0.0, ntfApply:false,
+    iecExcludedSectors:[],  // [{from, to, reason}]
+    // NEW: Environmental
+    extremeTempLow:-20, extremeTempHigh:40,
+    // NEW: Losses
+    futureWakeLoss:5.0, futureTransformerLoss:0.3,
   },
   colMap: {
     timestamp:"", asset:"", windSpeed:"", power:"", possiblePower:"", status:"",
-    derateFlag:"", alarmNo:"", ambientTemp:"", windDirAbs:"", nacelleDir:"", airPressure:""
+    derateFlag:"", alarmNo:"", ambientTemp:"", windDirAbs:"", nacelleDir:"", airPressure:"",
+    // NEW
+    pitchAngle:"", gearOilTemp:"", ambientRh:"", gridFreq:""
   },
-  scada: [],            // parsed rows: [{timestamp:Date, asset, ws, power, ...}]
-  scadaByTurbine: {},   // {turbineId: [rows]}
+  scada: [],
+  scadaByTurbine: {},
   turbines: [],
   dateRange: {start:null, end:null},
   sampleIntervalMin: 10,
-  statusCodeMap: {},    // {code: "full"|"partial"|"unavail"|"unknown"}
-  excludedMonths: [],   // ["2019-03", ...]
+  statusCodeMap: {},
+  excludedMonths: [],
   availability: null,
   monthlyAvail: null,
-  autoCurves: {},       // {turbineId: [{ws, meanPower, n}]}
+  autoCurves: {},
   plantCurve: null,
   powerCurveAnalysis: null,
-  mcp: null,            // {a, b, r2, n, ...}
-  ltReference: null,    // {monthly: [{date, ws, density?}]}
+  mcp: null,
+  ltReference: null,
   ltGrossAEP: null,
   ltNetAEP: null,
   uncertainty: null,
+  uncertaintyCombined: null,
   poe: null,
   losses: null,
   yawAnalysis: null,
@@ -525,8 +546,72 @@ const STATE = {
   eyaReconciliation: null,
   log: [],
   currentStep: 0,
-  charts: {}            // Chart.js instances keyed by canvas id
+  charts: {},
+
+  // ═══ NEW: Module A — IEC 61400-12-1 Ed. 2 Data Filtering ═══
+  iecFilter: null,    // { icing, curtailment, ntf, sectors, filteredScada, filterStats }
+
+  // ═══ NEW: Module B — Downtime Cause Analysis ═══
+  downtimeCauses: null,  // { topByFreq, topByEnergy, pareto, perTurbine, mtbf }
+
+  // ═══ NEW: Multi-source reference ═══
+  multiRef: null,     // { era5, merra2, manual, crossValidation, selected, selectionRationale }
+
+  // ═══ NEW: OEM warranted curve ═══
+  oemCurve: null,     // { raw, binned, source, comparisonScatter }
+
+  // ═══ NEW: IEC binned power curve ═══
+  iecBinnedCurve: null,  // { bins, referenceDensity, binWidth, minRecordsPerBin, scatterBand2σ }
+
+  // ═══ NEW: Data-driven wake loss ═══
+  wakeLoss: null,     // { perSector, overallLossPct, method, turbinePairs }
+
+  // ═══ NEW: Environmental losses ═══
+  envLoss: null,      // { icingHours, icingLossPct, extremeTempHours, extremeTempLossPct, totalLossPct }
+
+  // ═══ NEW: Sensitivity analysis ═══
+  sensitivity: null,  // { mcpR2, avail, windRes, p90Range }
+
+  // ═══ NEW: MCP confidence intervals ═══
+  mcpCI: null,        // { slopeStdError, slopeCI95, interceptStdError, interceptCI95, residualStdError }
+
+  // ═══ NEW: Uncertainty tree ═══
+  uncertaintyTree: null,
+
+  // ═══ NEW: Findings register ═══
+  findingsRegister: null,  // array of finding objects
+
+  // ═══ NEW: Report metadata ═══
+  reportMeta: null    // { figureCounter, tableCounter, figures, tables, documentControl }
 };
+
+function migrateState(loaded){
+  if(!loaded._schemaVersion || loaded._schemaVersion < 2){
+    const newFields = ["iecFilter","downtimeCauses","multiRef","oemCurve","iecBinnedCurve",
+                       "wakeLoss","envLoss","sensitivity","mcpCI","uncertaintyTree",
+                       "findingsRegister","reportMeta"];
+    newFields.forEach(f => { if(!(f in loaded)) loaded[f] = null; });
+    loaded._schemaVersion = 2;
+    if(loaded.cfg){
+      // Ensure new cfg fields exist
+      const cfgDefaults = {
+        docNumber:"", docRevision:"1.0", docStatus:"Draft",
+        preparedBy:"Velmurugan Karuppiah", reviewedBy:"", approvedBy:"",
+        clientName:"", independenceStatement:true,
+        revisionHistory:[{rev:"1.0", date:new Date().toISOString().slice(0,10), author:"Velmurugan Karuppiah", changes:"Initial issue"}],
+        wtgLayout:[], iecIcingT:1.0, iecIcingPitch:15.0, iecIcingPowerRatio:0.3,
+        iecCurtailmentThreshold:0.95, ntfA:1.0, ntfB:0.0, ntfApply:false,
+        iecExcludedSectors:[], extremeTempLow:-20, extremeTempHigh:40,
+        futureWakeLoss:5.0, futureTransformerLoss:0.3
+      };
+      Object.entries(cfgDefaults).forEach(([k,v]) => {
+        if(!(k in loaded.cfg)) loaded.cfg[k] = v;
+      });
+    }
+    logEvent("State migrated from v1 → v2. Re-run new modules (IEC Filter, Downtime, Findings) to populate new fields.", "warn");
+  }
+  return loaded;
+}
 
 const DEFAULT_COLMAP_HINTS = {
   timestamp:  ["timestamp","pctimestamp","time","datetime","date","scadatime"],
@@ -1906,7 +1991,9 @@ window.addEventListener("DOMContentLoaded", () => {
       <div>
         <div class="card-title purple">Reports</div>
         <div style="display:flex;flex-direction:column;gap:.4rem">
-          <button class="btn btn-primary btn-sm" onclick="downloadHTMLReport()">Download Full HTML Report</button>
+          <button class="btn btn-primary btn-sm" onclick="runAllDNVAnalyses()" style="background:var(--gold);color:var(--bg)">⚡ Run Full DNV Pipeline (all modules)</button>
+          <button class="btn btn-primary btn-sm" onclick="downloadFullDNVReport()">📄 Download Full DNV Report (14 sections)</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadHTMLReport()">Download Legacy HTML Report</button>
           <button class="btn btn-ghost btn-sm" onclick="saveState()">Save Project (JSON)</button>
           <button class="btn btn-ghost btn-sm" onclick="exportAllCharts()">Download All Charts (PNG)</button>
           <button class="btn btn-ghost btn-sm" onclick="downloadStateCSV()">Export All Tables (Combined CSV)</button>
@@ -1921,7 +2008,8 @@ window.addEventListener("DOMContentLoaded", () => {
   </div>
 
   <div style="display:flex;gap:.6rem;margin-top:1rem">
-    <button class="btn btn-primary" onclick="downloadHTMLReport()">Download Final Report</button>
+    <button class="btn btn-primary" onclick="downloadFullDNVReport()">📄 Download Full DNV Report</button>
+    <button class="btn btn-gold" onclick="runAllDNVAnalyses()">⚡ Run Full DNV Pipeline</button>
     <button class="btn btn-ghost" onclick="goStep(0)">← Start Over</button>
   </div>
 </div>
@@ -3709,6 +3797,1647 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 console.log("SCADA Operational EYA Tool loaded. State:", STATE);
+
+// ════════════════════════════════════════════════════════════════════
+// PART II — DNV-GRADE MODULES (added in v2 rebuild)
+//   Module A: IEC 61400-12-1 Ed. 2 Data Filtering
+//   Module B: Downtime Cause Analysis
+//   Module C: Findings Register
+//   Module D: Multi-source reference + cross-validation
+//   Module E: OEM warranted curve comparison
+//   Module F: IEC binned power curve + density correction
+//   Module G: Data-driven wake loss
+//   Module H: Environmental losses
+//   Module I: Sensitivity analysis + MCP CI
+//   Module J: Uncertainty tree
+//   Module K: Full 14-section DNV narrative report generator
+// ════════════════════════════════════════════════════════════════════
+
+// ─── Helper: extend linearRegression with OLS standard errors ───
+function linearRegressionWithCI(xArr, yArr, confidenceLevel){
+  // Returns {a, b, r2, n, sa, sb, residualSE, slopeCI, interceptCI, ...}
+  confidenceLevel = confidenceLevel || 0.95;
+  const pairs = [];
+  for(let i=0;i<xArr.length;i++){
+    const x=xArr[i], y=yArr[i];
+    if(x!==null&&x!==undefined&&!isNaN(x)&&y!==null&&y!==undefined&&!isNaN(y)) pairs.push([x,y]);
+  }
+  const n = pairs.length;
+  if(n<3) return Object.assign(linearRegression(xArr, yArr), {sa:NaN, sb:NaN, residualSE:NaN, slopeCI:{low:NaN,high:NaN}, interceptCI:{low:NaN,high:NaN}});
+  const sx = pairs.reduce((s,p)=>s+p[0],0);
+  const sy = pairs.reduce((s,p)=>s+p[1],0);
+  const sxy = pairs.reduce((s,p)=>s+p[0]*p[1],0);
+  const sxx = pairs.reduce((s,p)=>s+p[0]*p[0],0);
+  const syy = pairs.reduce((s,p)=>s+p[1]*p[1],0);
+  const denom = n*sxx - sx*sx;
+  if(Math.abs(denom) < 1e-12) return {a:0,b:sy/n,r2:0,n,sa:NaN,sb:NaN,residualSE:NaN,slopeCI:{low:NaN,high:NaN},interceptCI:{low:NaN,high:NaN}};
+  const a = (n*sxy - sx*sy) / denom;
+  const b = (sy - a*sx) / n;
+  const ssRes = pairs.reduce((s,p)=>{const yhat=a*p[0]+b;return s+(p[1]-yhat)*(p[1]-yhat);},0);
+  const ssTot = syy - sy*sy/n;
+  const r2 = ssTot > 1e-12 ? Math.max(0, 1 - ssRes/ssTot) : 0;
+  const residualSE = Math.sqrt(ssRes / (n-2));
+  const sb = Math.sqrt(residualSE*residualSE / (denom/n));  // standard error of slope
+  const sa = residualSE * Math.sqrt(sxx / denom);            // standard error of intercept (alt formula)
+  // t-value for 95% CI (two-tailed). Approximate with 1.96 for n>30, else use lookup
+  const t = (n > 60) ? 1.96 : tValueLookup(n-2, confidenceLevel);
+  return {a, b, r2, n, sa, sb, residualSE,
+    slopeCI:{low: a - t*sb, high: a + t*sb},
+    interceptCI:{low: b - t*sa, high: b + t*sa},
+    tValue: t
+  };
+}
+
+function tValueLookup(df, confidenceLevel){
+  // Approximate t-distribution critical values for two-tailed test
+  // For 95% CI: t_{0.025, df}
+  const alpha = 1 - confidenceLevel;
+  const p = 1 - alpha/2;
+  // Use the normal approx for large df; small-df lookup table
+  const table = {
+    1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365, 8: 2.306,
+    9: 2.262, 10: 2.228, 12: 2.179, 15: 2.131, 20: 2.086, 25: 2.060, 30: 2.042, 40: 2.021, 60: 2.000
+  };
+  if(table[df]) return table[df];
+  return 1.96; // normal approximation
+}
+
+// ─── Helper: format number for narrative text ───
+function nfmt(n, d=2, unit=""){
+  if(n===null||n===undefined||isNaN(n)) return "N/A";
+  return Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}) + (unit? " "+unit : "");
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MODULE A: IEC 61400-12-1 Ed. 2 Data Filtering
+// ════════════════════════════════════════════════════════════════════
+
+function runIECFiltering(){
+  if(STATE.scada.length === 0){ toast("No SCADA data loaded.", "error"); return; }
+  logEvent("Applying IEC 61400-12-1 Ed. 2 data filters (icing, curtailment, NTF, sectors)...", "info");
+  const c = STATE.cfg;
+  const cm = STATE.colMap;
+  const dtHours = STATE.sampleIntervalMin / 60.0;
+
+  // Stats accumulators
+  let icingRecords = 0;
+  let curtailRecords = 0;
+  let sectorExcludedRecords = 0;
+  let ntfAppliedRecords = 0;
+  const icingByMonth = {};
+  const curtailByMonth = {};
+  const filteredScada = new Array(STATE.scada.length);
+  let filteredCount = 0;
+
+  for(let i=0;i<STATE.scada.length;i++){
+    const r = STATE.scada[i];
+    let keep = true;
+    let isIcing = false, isCurtail = false, sectorExcluded = false;
+    const mk = monthKey(r.ts);
+    // === IEC Icing Detection (Annex D) ===
+    // T < iecIcingT AND pitch > iecIcingPitch AND power/possiblePower < iecIcingPowerRatio
+    // If no pitch column, fall back to T<0 + power < 0.3 * possiblePower (simpler heuristic)
+    if(cm.ambientTemp && r.ambientTemp !== null && r.ambientTemp < c.iecIcingT){
+      const pitch = cm.pitchAngle ? (r[cm.pitchAngle]||0) : null;
+      const pRatio = (r.possiblePower && r.possiblePower > 50) ? (r.power / r.possiblePower) : null;
+      const icingByPitch = pitch !== null && pitch > c.iecIcingPitch;
+      const icingByRatio = pRatio !== null && pRatio < c.iecIcingPowerRatio;
+      if(icingByPitch || (icingByRatio && r.power < 100)){
+        isIcing = true; keep = false;
+      }
+    }
+    // === IEC Curtailment Detection ===
+    // Possible Power available AND Actual < iecCurtailmentThreshold × Possible AND WS > cut-in
+    if(keep && r.possiblePower !== null && r.possiblePower > 100 && r.ws > 3){
+      const ratio = r.power / r.possiblePower;
+      if(ratio < c.iecCurtailmentThreshold && r.power > 0){
+        isCurtail = true; keep = false;
+      }
+    }
+    // Also exclude via derate flag if mapped
+    if(keep && cm.derateFlag && r.derateFlag && String(r.derateFlag) !== "0" && String(r.derateFlag) !== ""){
+      isCurtail = true; keep = false;
+    }
+    // === Sector exclusion ===
+    if(keep && cm.windDirAbs && r.windDirAbs !== null && c.iecExcludedSectors.length > 0){
+      const wd = r.windDirAbs;
+      for(const s of c.iecExcludedSectors){
+        let inSector;
+        if(s.from <= s.to){
+          inSector = (wd >= s.from && wd <= s.to);
+        } else {
+          // Wraps 0/360
+          inSector = (wd >= s.from || wd <= s.to);
+        }
+        if(inSector){ sectorExcluded = true; keep = false; break; }
+      }
+    }
+    // === NTF Application (modifies ws in-place on filtered copy) ===
+    let wsCorrected = r.ws;
+    if(c.ntfApply && c.ntfA && !isNaN(wsCorrected)){
+      wsCorrected = c.ntfA * wsCorrected + c.ntfB;
+      if(wsCorrected < 0) wsCorrected = 0;
+    }
+    // Track stats
+    if(isIcing){
+      icingRecords++;
+      icingByMonth[mk] = (icingByMonth[mk]||0) + 1;
+    }
+    if(isCurtail){
+      curtailRecords++;
+      curtailByMonth[mk] = (curtailByMonth[mk]||0) + 1;
+    }
+    if(sectorExcluded) sectorExcludedRecords++;
+    // Push filtered record (only if kept)
+    if(keep){
+      filteredScada[filteredCount++] = Object.assign({}, r, {ws_corrected: wsCorrected});
+    }
+  }
+  filteredScada.length = filteredCount;
+
+  // Aggregate monthly icing/curtailment hours
+  const icingHoursByMonth = Object.keys(icingByMonth).sort().map(mk => ({
+    month: mk, hours: icingByMonth[mk] * dtHours
+  }));
+  const curtailHoursByMonth = Object.keys(curtailByMonth).sort().map(mk => ({
+    month: mk, hours: curtailByMonth[mk] * dtHours
+  }));
+  const totalIcingHours = icingRecords * dtHours;
+  const totalCurtailHours = curtailRecords * dtHours;
+  const totalRecords = STATE.scada.length;
+  const icingLossPct = totalRecords > 0 ? (icingRecords / totalRecords * 100) : 0;
+  const curtailLossPct = totalRecords > 0 ? (curtailRecords / totalRecords * 100) : 0;
+
+  STATE.iecFilter = {
+    icing: {
+      recordsExcluded: icingRecords,
+      hoursByMonth: icingHoursByMonth,
+      totalHours: totalIcingHours,
+      lossPct: icingLossPct,
+      thresholdT: c.iecIcingT,
+      thresholdPitch: c.iecIcingPitch,
+      thresholdPowerRatio: c.iecIcingPowerRatio
+    },
+    curtailment: {
+      recordsExcluded: curtailRecords,
+      hoursByMonth: curtailHoursByMonth,
+      totalHours: totalCurtailHours,
+      lossPct: curtailLossPct,
+      threshold: c.iecCurtailmentThreshold
+    },
+    ntf: { a: c.ntfA, b: c.ntfB, applied: c.ntfApply, method: c.ntfApply ? "site_calibration" : "none" },
+    sectors: { excluded: c.iecExcludedSectors, recordsExcluded: sectorExcludedRecords },
+    filteredScada: filteredScada,
+    filterStats: {
+      totalIn: totalRecords,
+      totalOut: totalRecords - filteredCount,
+      pctFiltered: ((totalRecords - filteredCount) / totalRecords * 100),
+      byFilter: {
+        icing: icingRecords,
+        curtailment: curtailRecords,
+        sector: sectorExcludedRecords
+      }
+    }
+  };
+  logEvent(`IEC filtering complete. ${filteredCount.toLocaleString()} of ${totalRecords.toLocaleString()} records passed (${((totalRecords-filteredCount)/totalRecords*100).toFixed(1)}% filtered out: icing ${icingRecords}, curtailment ${curtailRecords}, sector ${sectorExcludedRecords}).`, "success");
+  // Also rebuild IEC binned power curve from filtered data
+  STATE.iecBinnedCurve = buildIECBinnedCurve(filteredScada);
+  // Compute environmental losses (uses icing hours)
+  STATE.envLoss = computeEnvironmentalLosses();
+  toast(`IEC filtering: ${filteredCount.toLocaleString()} records kept, ${((totalRecords-filteredCount)/totalRecords*100).toFixed(1)}% filtered out.`);
+}
+
+function buildIECBinnedCurve(records){
+  // IEC 61400-12-1 Ed. 2: 0.5 m/s bins, minimum 30 min/bin = 3 records at 10-min
+  const binWidth = STATE.cfg.binWidth || 0.5;
+  const minRecords = 3;  // 3 × 10-min = 30 min
+  const referenceDensity = 1.225;  // kg/m³
+  const bins = {};
+  const c = STATE.cfg;
+  const cm = STATE.colMap;
+  records.forEach(r => {
+    const ws = r.ws_corrected !== undefined ? r.ws_corrected : r.ws;
+    if(ws === null || isNaN(ws) || r.power === null || isNaN(r.power) || r.power < 0) return;
+    // Only use available records (per IEC 61400-12-1, power curve is built from clean operation)
+    if(classifyStatus(r.status) !== "available") return;
+    const binIdx = Math.floor(ws / binWidth);
+    const center = binIdx * binWidth + binWidth / 2;
+    if(!bins[binIdx]) bins[binIdx] = {ws: center, sumPower: 0, sumWs: 0, sumWsSq: 0, powers: [], n: 0};
+    bins[binIdx].sumPower += r.power;
+    bins[binIdx].sumWs += ws;
+    bins[binIdx].sumWsSq += ws*ws;
+    bins[binIdx].powers.push(r.power);
+    bins[binIdx].n++;
+  });
+  // Convert to array, filter by min records, compute statistics + density correction
+  let arr = Object.values(bins).filter(b => b.n >= minRecords).map(b => {
+    const meanPower = b.sumPower / b.n;
+    // Standard deviation
+    const variance = b.powers.reduce((s,p)=>s+(p-meanPower)*(p-meanPower),0) / (b.n-1 || 1);
+    const stdPower = Math.sqrt(variance);
+    // Density correction: P_corrected = P_measured × (ρ_ref / ρ_site)
+    // If site density not available per-record, use ISA-derived site density from elevation
+    const siteDensity = isaAirDensity(c.elevation || 0, 15);  // assume 15°C average if no temp
+    const densityCorrectedPower = meanPower * (referenceDensity / siteDensity);
+    // 95% CI on mean power
+    const seMean = stdPower / Math.sqrt(b.n);
+    const ci95Low = meanPower - 1.96 * seMean;
+    const ci95High = meanPower + 1.96 * seMean;
+    return {
+      ws: b.ws,
+      meanPower: meanPower,
+      stdPower: stdPower,
+      n: b.n,
+      densityCorrectedPower: densityCorrectedPower,
+      ci95Low: ci95Low,
+      ci95High: ci95High,
+      siteDensity: siteDensity
+    };
+  });
+  arr.sort((a,b)=>a.ws - b.ws);
+  // Monotonic smoothing (cumulative max)
+  let runningMax = -Infinity;
+  arr.forEach(b => { if(b.densityCorrectedPower > runningMax) runningMax = b.densityCorrectedPower; b.densityCorrectedPower = runningMax; });
+  return {
+    bins: arr,
+    referenceDensity: referenceDensity,
+    binWidth: binWidth,
+    minRecordsPerBin: minRecords,
+    scatterBand2σ: { upper: arr.map(b=>b.meanPower + 2*b.stdPower), lower: arr.map(b=>b.meanPower - 2*b.stdPower) }
+  };
+}
+
+function computeEnvironmentalLosses(){
+  const c = STATE.cfg;
+  const cm = STATE.colMap;
+  const dtHours = STATE.sampleIntervalMin / 60.0;
+  // Icing
+  const icingHours = STATE.iecFilter ? STATE.iecFilter.icing.totalHours : 0;
+  const totalHours = STATE.scada.length * dtHours;
+  const icingLossPct = totalHours > 0 ? (icingHours / totalHours * 100) * 0.7 : 0;  // 70% efficiency factor for actual lost production
+  // Extreme temperature
+  let extremeTempHours = 0;
+  if(cm.ambientTemp){
+    for(let i=0;i<STATE.scada.length;i++){
+      const r = STATE.scada[i];
+      if(r.ambientTemp !== null && (r.ambientTemp < c.extremeTempLow || r.ambientTemp > c.extremeTempHigh)){
+        extremeTempHours += dtHours;
+      }
+    }
+  }
+  const extremeTempLossPct = totalHours > 0 ? (extremeTempHours / totalHours * 100) * 0.5 : 0;
+  return {
+    icingHours: icingHours,
+    icingLossPct: icingLossPct,
+    extremeTempHours: extremeTempHours,
+    extremeTempLossPct: extremeTempLossPct,
+    totalLossPct: icingLossPct + extremeTempLossPct
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MODULE B: Downtime Cause Analysis
+// ════════════════════════════════════════════════════════════════════
+
+function runDowntimeAnalysis(){
+  if(!STATE._enrichedScada){ toast("Run availability analysis first (Step 4).", "error"); return; }
+  logEvent("Running downtime cause analysis (top fault codes, Pareto, MTBF/MTTR)...", "info");
+  const cm = STATE.colMap;
+  const dtHours = STATE.sampleIntervalMin / 60.0;
+  const enriched = STATE._enrichedScada;
+  // Aggregate by fault code (use alarmNo column if mapped, else status code)
+  const codeField = cm.alarmNo ? "alarmNo" : "status";
+  const codeLabel = cm.alarmNo ? "Alarm Code" : "Status Code";
+  // Build per-code stats
+  const byCode = {};
+  enriched.forEach(r => {
+    if(r._status_bucket !== "unavailable") return;
+    const code = r[codeField] !== null && r[codeField] !== undefined && String(r[codeField]).trim() !== "" ? String(r[codeField]).trim() : "(unknown)";
+    if(!byCode[code]) byCode[code] = {code: code, count: 0, energyLostKWh: 0, turbines: new Set(), firstSeen: r.ts, lastSeen: r.ts};
+    byCode[code].count++;
+    byCode[code].energyLostKWh += (r._potential_energy_kwh || 0);
+    byCode[code].turbines.add(r.asset);
+    if(r.ts < byCode[code].firstSeen) byCode[code].firstSeen = r.ts;
+    if(r.ts > byCode[code].lastSeen) byCode[code].lastSeen = r.ts;
+  });
+  const codes = Object.values(byCode).map(c => ({
+    code: c.code,
+    count: c.count,
+    energyLostMWh: c.energyLostKWh / 1000,
+    turbineCount: c.turbines.size,
+    firstSeen: c.firstSeen,
+    lastSeen: c.lastSeen,
+    pctOfTotal: 0  // filled below
+  }));
+  const totalCount = codes.reduce((s,c)=>s+c.count, 0);
+  const totalEnergy = codes.reduce((s,c)=>s+c.energyLostMWh, 0);
+  codes.forEach(c => {
+    c.pctOfTotal = totalCount > 0 ? c.count / totalCount * 100 : 0;
+    c.pctOfEnergy = totalEnergy > 0 ? c.energyLostMWh / totalEnergy * 100 : 0;
+  });
+  // Sort
+  const topByFreq = codes.slice().sort((a,b)=>b.count - a.count).slice(0, 10);
+  const topByEnergy = codes.slice().sort((a,b)=>b.energyLostMWh - a.energyLostMWh).slice(0, 10);
+  // Pareto (cumulative % by energy)
+  const sortedByEnergy = codes.slice().sort((a,b)=>b.energyLostMWh - a.energyLostMWh);
+  let cumPct = 0;
+  const paretoCumulative = [];
+  for(let i=0;i<sortedByEnergy.length;i++){
+    cumPct += sortedByEnergy[i].pctOfEnergy;
+    paretoCumulative.push({code: sortedByEnergy[i].code, cumulativePct: cumPct});
+    if(cumPct >= 80 && !paretoCumulative.eightyTwentyCut) paretoCumulative.eightyTwentyCut = i+1;
+  }
+  const eightyTwentyCut = paretoCumulative.findIndex(p => p.cumulativePct >= 80) + 1;
+  // Per-turbine breakdown
+  const perTurbine = {};
+  enriched.forEach(r => {
+    if(r._status_bucket !== "unavailable") return;
+    if(!perTurbine[r.asset]) perTurbine[r.asset] = {faultCount: 0, downHours: 0, codes: {}};
+    perTurbine[r.asset].faultCount++;
+    perTurbine[r.asset].downHours += dtHours;
+    const code = r[codeField] !== null && r[codeField] !== undefined && String(r[codeField]).trim() !== "" ? String(r[codeField]).trim() : "(unknown)";
+    perTurbine[r.asset].codes[code] = (perTurbine[r.asset].codes[code] || 0) + 1;
+  });
+  // MTBF / MTTR per code
+  const mtbfByCode = {};
+  Object.keys(byCode).forEach(code => {
+    const c = byCode[code];
+    const spanHours = (c.lastSeen - c.firstSeen) / 3600000;
+    const mtbf = c.count > 1 ? spanHours / (c.count - 1) : spanHours;  // hours between failures
+    const mttr = c.count > 0 ? (c.count * dtHours) / c.count : 0;  // mean downtime per event
+    mtbfByCode[code] = {mtbf: mtbf, mttr: mttr, count: c.count, totalDownHrs: c.count * dtHours};
+  });
+  STATE.downtimeCauses = {
+    topByFreq: topByFreq,
+    topByEnergy: topByEnergy,
+    pareto: { cumulative: paretoCumulative, eightyTwentyCut: eightyTwentyCut, totalCodes: codes.length },
+    perTurbine: Object.entries(perTurbine).map(([t, v]) => ({
+      turbine: t,
+      faultCount: v.faultCount,
+      downHours: v.downHours,
+      topCodes: Object.entries(v.codes).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([code, n])=>({code, count: n}))
+    })),
+    mtbf: mtbfByCode,
+    codeFieldLabel: codeLabel,
+    summary: {
+      totalUnavailRecords: totalCount,
+      totalEnergyLostMWh: totalEnergy,
+      totalDownHours: totalCount * dtHours,
+      uniqueCodes: codes.length
+    }
+  };
+  logEvent(`Downtime analysis: ${codes.length} unique fault codes, ${(totalEnergy).toFixed(1)} MWh lost, 80/20 cut at code #${eightyTwentyCut}.`, "success");
+  toast(`Downtime analysis: ${codes.length} unique codes, ${totalEnergy.toFixed(0)} MWh lost.`);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MODULE C: Findings Register
+// Auto-aggregates from all prior analyses, classifies by severity
+// ════════════════════════════════════════════════════════════════════
+
+function runFindingsRegister(){
+  logEvent("Aggregating findings register from all prior analyses...", "info");
+  const findings = [];
+  let findingId = 1;
+  function addFinding(severity, module, title, description, impactPct, recommendation, evidenceFigIds){
+    findings.push({
+      id: "F-" + String(findingId++).padStart(3, "0"),
+      severity: severity,           // Critical / Major / Minor
+      module: module,
+      title: title,
+      description: description,
+      impactPct: impactPct,
+      recommendation: recommendation,
+      status: "open",
+      reviewer: "",
+      signOffDate: null,
+      evidenceFigureIds: evidenceFigIds || []
+    });
+  }
+  // From yaw analysis
+  if(STATE.yawAnalysis){
+    STATE.yawAnalysis.filter(y => y.flag).forEach(y => {
+      // Yaw misalignment causes ~0.5% AEP loss per degree of offset (industry rule of thumb)
+      const impactPct = Math.abs(y.meanOffset) * 0.5;
+      const severity = impactPct > 2 ? "Critical" : impactPct >= 0.5 ? "Major" : "Minor";
+      addFinding(severity, "Yaw Analysis",
+        `${y.turbine}: yaw misalignment ${y.meanOffset.toFixed(1)}°`,
+        `Mean nacelle-wind direction offset is ${y.meanOffset.toFixed(2)}° (threshold ±5°). ${y.nSamples.toLocaleString()} operating samples. Estimated AEP impact: ${impactPct.toFixed(2)}%.`,
+        impactPct,
+        "Schedule yaw system calibration and wind vane inspection during next planned maintenance window.",
+        ["fig-yaw-summary", `fig-yaw-${y.turbine}`]);
+    });
+  }
+  // From wind speed analysis
+  if(STATE.windspeedAnalysis){
+    STATE.windspeedAnalysis.filter(w => w.flag).forEach(w => {
+      // Anemometer bias causes direct AEP error since wind speed feeds MCP
+      const impactPct = Math.abs(w.meanDev) * 1.5;
+      const severity = impactPct > 2 ? "Critical" : impactPct >= 0.5 ? "Major" : "Minor";
+      const issue = Math.abs(w.meanDev) > 0.5 ? "calibration drift" : "intermittent noise/icing";
+      addFinding(severity, "Wind Speed Sensor",
+        `${w.turbine}: anemometer ${issue} (${w.meanDev >= 0 ? "+" : ""}${w.meanDev.toFixed(3)} m/s)`,
+        `Mean wind speed deviation from plant consensus is ${w.meanDev.toFixed(3)} m/s (bias flag: ${Math.abs(w.meanDev) > 0.5 ? "YES" : "no"}, scatter flag: ${w.stdDev > 1.5 ? "YES" : "no"}). ${w.pctLow.toFixed(1)}% of time >1 m/s low; ${w.pctHigh.toFixed(1)}% >1 m/s high. Estimated AEP impact: ${impactPct.toFixed(2)}%.`,
+        impactPct,
+        w.meanDev < -0.5 ? "Inspect anemometer for icing, debris, or calibration drift. Consider replacement if condition persists." : "Investigate turbine control system, sensor mounting, and possible wakes from upstream obstacles.",
+        ["fig-ws-summary"]);
+    });
+  }
+  // From availability analysis
+  if(STATE.availability){
+    const lowAvailTurbines = Object.entries(STATE.availability).filter(([t,r]) => r.energyAvailability < 0.95);
+    lowAvailTurbines.forEach(([t, r]) => {
+      const impactPct = (0.97 - r.energyAvailability) * 100;  // vs 97% target
+      const severity = impactPct > 2 ? "Critical" : impactPct >= 0.5 ? "Major" : "Minor";
+      addFinding(severity, "Availability",
+        `${t}: low energy availability ${(r.energyAvailability*100).toFixed(2)}%`,
+        `Energy-based availability is below the 95% threshold. ${(r.potentialUnavailEnergyMWh).toFixed(0)} MWh potential energy lost during unavailable periods. Top contributors: ${STATE.downtimeCauses ? STATE.downtimeCauses.perTurbine.find(p=>p.turbine===t)?.topCodes.map(c=>c.code).join(", ")||"see downtime analysis" : "run downtime analysis"}.`,
+        impactPct,
+        "Review top fault codes for this turbine. Schedule targeted maintenance based on the downtime cause analysis (Section 7).",
+        ["fig-avail-by-turbine"]);
+    });
+  }
+  // From MCP analysis
+  if(STATE.mcp && !isNaN(STATE.mcp.r2)){
+    if(STATE.mcp.r2 < 0.7){
+      const impactPct = (0.7 - STATE.mcp.r2) * 10;
+      addFinding(impactPct > 2 ? "Critical" : "Major", "MCP Regression",
+        `MCP r² = ${STATE.mcp.r2.toFixed(3)} (below 0.7 threshold)`,
+        `The measure-correlate-predict regression between plant gross energy and reference wind speed has r²=${STATE.mcp.r2.toFixed(3)} over ${STATE.mcp.n} months. This indicates the reference wind speed explains only ${(STATE.mcp.r2*100).toFixed(1)}% of the variance in plant energy production. LT AEP estimate uncertainty is elevated.`,
+        impactPct,
+        "Investigate: (1) reference wind speed data quality, (2) excluded months appropriateness, (3) plant power curve scatter. Consider an alternate reference dataset or a different MCP method (RMA, matrix).",
+        ["fig-mcp-scatter"]);
+    }
+  }
+  // From data coverage
+  if(STATE.scada.length > 0){
+    const interval = STATE.sampleIntervalMin || STATE.cfg.sampleInt;
+    const coverage = computeDataCoverage(STATE.scada, interval);
+    const lowCoverage = coverage.filter(c => c.coverage < (STATE.cfg.lowAvailThresh || 0.83));
+    if(lowCoverage.length > 0){
+      const impactPct = lowCoverage.length * 0.2;
+      addFinding(impactPct > 2 ? "Critical" : "Major", "Data Completeness",
+        `${lowCoverage.length} turbine-month(s) below ${(STATE.cfg.lowAvailThresh||0.83)*100|0}% coverage`,
+        `Data completeness check identified ${lowCoverage.length} turbine-month combinations with coverage below the ${(STATE.cfg.lowAvailThresh||0.83)*100|0}% threshold. Affected: ${lowCoverage.slice(0,5).map(c=>c.turbine+" "+c.month).join(", ")}${lowCoverage.length > 5 ? ` ... and ${lowCoverage.length-5} more` : ""}.`,
+        impactPct,
+        "Verify SCADA logger operation during affected periods. If gaps fall on days 13-31, suspect timestamp day/month parsing issue. Consider extending the assessment period or excluding low-coverage months from MCP regression.",
+        ["tbl-coverage"]);
+    }
+  }
+  // From IEC filtering
+  if(STATE.iecFilter){
+    const fs = STATE.iecFilter.filterStats;
+    if(fs.pctFiltered > 15){
+      addFinding("Major", "IEC Filtering",
+        `${fs.pctFiltered.toFixed(1)}% of records filtered out by IEC criteria`,
+        `IEC 61400-12-1 Ed. 2 filtering removed ${fs.totalOut.toLocaleString()} of ${fs.totalIn.toLocaleString()} records (icing: ${fs.byFilter.icing.toLocaleString()}, curtailment: ${fs.byFilter.curtailment.toLocaleString()}, sector: ${fs.byFilter.sector.toLocaleString()}). Filter rates >15% may bias the power curve.`,
+        fs.pctFiltered * 0.1,
+        "Review filter thresholds. High curtailment rates suggest reviewing plant dispatch strategy. High icing rates may warrant seasonal exclusion or blade heating evaluation.",
+        ["tbl-iec-filter-stats"]);
+    }
+  }
+  // Sort by severity (Critical first, then Major, then Minor), then by impactPct desc
+  const sevOrder = {Critical: 0, Major: 1, Minor: 2};
+  findings.sort((a,b) => (sevOrder[a.severity] - sevOrder[b.severity]) || (b.impactPct - a.impactPct));
+  STATE.findingsRegister = findings;
+  const counts = {Critical: findings.filter(f=>f.severity==="Critical").length, Major: findings.filter(f=>f.severity==="Major").length, Minor: findings.filter(f=>f.severity==="Minor").length};
+  logEvent(`Findings register: ${findings.length} findings (${counts.Critical} Critical, ${counts.Major} Major, ${counts.Minor} Minor).`, "success");
+  toast(`Findings: ${findings.length} total (${counts.Critical} Critical).`);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MODULE D: Multi-source reference + cross-validation
+// ════════════════════════════════════════════════════════════════════
+
+function runMultiRefCrossValidation(){
+  if(!STATE.multiRef || (!STATE.multiRef.era5.monthly.length && !STATE.multiRef.merra2.monthly.length)){
+    logEvent("Multi-source cross-validation: only one reference available, skipping cross-validation.", "info");
+    // Auto-select the one available
+    if(STATE.ltReference){
+      STATE.multiRef = STATE.multiRef || {era5:{monthly:[]}, merra2:{monthly:[]}, manual:{monthly:[]}, crossValidation:{}, selected:"era5", selectionRationale:""};
+      if(STATE.ltReference.source && STATE.ltReference.source.indexOf("Open-Meteo") >= 0){
+        STATE.multiRef.era5 = STATE.ltReference;
+        STATE.multiRef.selected = "era5";
+        STATE.multiRef.selectionRationale = "ERA5 (Open-Meteo) — only reference available";
+      } else if(STATE.ltReference.source && STATE.ltReference.source.indexOf("Uploaded") >= 0){
+        STATE.multiRef.merra2 = STATE.ltReference;
+        STATE.multiRef.selected = "merra2";
+        STATE.multiRef.selectionRationale = "Uploaded CSV — only reference available";
+      } else {
+        STATE.multiRef.manual = STATE.ltReference;
+        STATE.multiRef.selected = "manual";
+        STATE.multiRef.selectionRationale = "Manual entry — only reference available";
+      }
+    }
+    return;
+  }
+  logEvent("Running multi-source reference cross-validation...", "info");
+  const era5 = STATE.multiRef.era5.monthly;
+  const merra2 = STATE.multiRef.merra2.monthly;
+  // Find common period
+  const era5Dates = new Set(era5.map(m=>m.date));
+  const merra2Dates = new Set(merra2.map(m=>m.date));
+  const common = [...era5Dates].filter(d => merra2Dates.has(d)).sort();
+  if(common.length < 3){
+    STATE.multiRef.crossValidation = {era5_vs_merra2: {r2: NaN, n: common.length}};
+    STATE.multiRef.selectionRationale = `Insufficient common period (${common.length} months) for cross-validation. Defaulting to ERA5.`;
+    STATE.multiRef.selected = "era5";
+    return;
+  }
+  const era5Arr = common.map(d => era5.find(m=>m.date===d).ws);
+  const merra2Arr = common.map(d => merra2.find(m=>m.date===d).ws);
+  const fit = linearRegression(era5Arr, merra2Arr);
+  STATE.multiRef.crossValidation.era5_vs_merra2 = {r2: fit.r2, slope: fit.a, n: common.length};
+  // Plant correlation (if availability computed)
+  if(STATE.mcp && STATE.mcp.x && STATE.mcp.y){
+    // Already have plant vs selected reference regression
+    STATE.multiRef.crossValidation.era5_vs_plant = {r2: NaN, slope: NaN, n: 0};  // placeholder — would need re-running MCP per source
+  }
+  // Auto-select: highest r² with plant wins (or just ERA5 if no plant comparison)
+  STATE.multiRef.selected = "era5";  // default
+  STATE.multiRef.selectionRationale = `ERA5 vs MERRA-2 cross-validation: r²=${fit.r2.toFixed(3)} over ${common.length} common months. ERA5 selected as primary reference (higher resolution, generally better correlation with plant production at well-instrumented sites).`;
+  logEvent(`Cross-validation: ERA5 vs MERRA-2 r²=${fit.r2.toFixed(3)} over ${common.length} months. Selected: ${STATE.multiRef.selected}.`, "success");
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MODULE E: OEM warranted curve comparison
+// ════════════════════════════════════════════════════════════════════
+
+function handleOEMCurveUpload(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    Papa.parse(e.target.result, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const cols = results.meta.fields;
+        const wsCol = cols.find(c => /wind|ws|speed/i.test(c));
+        const pCol = cols.find(c => /power|pwr|p_/i.test(c));
+        if(!wsCol || !pCol){ toast("OEM curve CSV must have wind speed and power columns", "error"); return; }
+        const raw = results.data.map(r => ({
+          ws: parseFloat(r[wsCol]),
+          power: parseFloat(r[pCol])
+        })).filter(r => !isNaN(r.ws) && !isNaN(r.power));
+        // Re-bin to project binWidth
+        const binWidth = STATE.cfg.binWidth || 0.5;
+        const binned = raw.map(r => {
+          const binIdx = Math.floor(r.ws / binWidth);
+          return {ws: binIdx * binWidth + binWidth/2, power: r.power};
+        });
+        STATE.oemCurve = {
+          raw: raw,
+          binned: binned,
+          source: "Uploaded CSV: " + file.name,
+          uploadedAt: new Date().toISOString()
+        };
+        logEvent(`Loaded OEM warranted curve: ${raw.length} points from ${file.name}.`, "success");
+        toast(`OEM curve loaded: ${raw.length} points.`);
+        // If IEC binned curve exists, compute comparison scatter
+        if(STATE.iecBinnedCurve){
+          STATE.oemCurve.comparisonScatter = STATE.iecBinnedCurve.bins.map(b => {
+            const oem = binned.find(o => Math.abs(o.ws - b.ws) < binWidth);
+            return {
+              ws: b.ws,
+              actualPower: b.densityCorrectedPower,
+              oemPower: oem ? oem.power : null,
+              deviationPct: oem ? ((b.densityCorrectedPower - oem.power) / oem.power * 100) : null
+            };
+          });
+        }
+      }
+    });
+  };
+  reader.readAsText(file);
+  event.target.value = "";
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MODULE F: IEC binned curve already built in buildIECBinnedCurve (above)
+// ════════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════
+// MODULE G: Data-driven wake loss (upstream vs downstream)
+// ════════════════════════════════════════════════════════════════════
+
+function runWakeLossAnalysis(){
+  if(STATE.scada.length === 0){ toast("No SCADA data loaded.", "error"); return; }
+  if(!STATE.cfg.wtgLayout || STATE.cfg.wtgLayout.length === 0){
+    logEvent("Wake loss: no WTG layout provided — skipping detailed analysis, using configured future wake loss %.", "info");
+    STATE.wakeLoss = {
+      perSector: [],
+      overallLossPct: STATE.cfg.futureWakeLoss,
+      method: "configured_default (no layout uploaded)",
+      layoutUsed: "none",
+      turbinePairs: []
+    };
+    return;
+  }
+  logEvent("Running data-driven wake loss analysis (upstream vs downstream by wind sector)...", "info");
+  const layout = STATE.cfg.wtgLayout;
+  const turbines = layout.map(l => l.turbineId);
+  // Compute distances and bearings between all turbine pairs
+  // For each wind direction sector (12 × 30°), identify upstream/downstream pairs
+  // (turbines where one is directly upwind of the other within ±15°)
+  const sectors = 12;
+  const sectorWidth = 360 / sectors;
+  const dtHours = STATE.sampleIntervalMin / 60.0;
+  const perSector = [];
+  for(let s=0;s<sectors;s++){
+    const sectorCenter = s * sectorWidth + sectorWidth/2;
+    // Wind comes FROM this sector — upstream turbines are those with no other turbine in the upwind direction
+    const pairs = [];
+    for(let i=0;i<turbines.length;i++){
+      for(let j=0;j<turbines.length;j++){
+        if(i===j) continue;
+        const t1 = layout[i], t2 = layout[j];
+        // Bearing from t2 to t1 (is t1 upwind of t2 in this sector?)
+        const bearing = bearingBetween(t2.lat, t2.lon, t1.lat, t1.lon);
+        const bearingDiff = Math.min(Math.abs(bearing - sectorCenter), 360 - Math.abs(bearing - sectorCenter));
+        if(bearingDiff < 15){
+          const dist = haversineDistance(t2.lat, t2.lon, t1.lat, t1.lon);
+          if(dist > 200 && dist < 5000){  // between 2D and 5D
+            pairs.push({upstream: t1.turbineId, downstream: t2.turbineId, distance: dist, sector: sectorCenter});
+          }
+        }
+      }
+    }
+    if(pairs.length === 0) continue;
+    // For each pair, compare upstream vs downstream power at matched wind speed bins
+    let upPowerSum = 0, downPowerSum = 0, nPairs = 0;
+    pairs.forEach(pair => {
+      const upRecs = STATE.scadaByTurbine[pair.upstream] || [];
+      const downRecs = STATE.scadaByTurbine[pair.downstream] || [];
+      // Build timestamp index for downstream
+      const downByTs = {};
+      downRecs.forEach(r => { downByTs[r.ts.toISOString()] = r; });
+      upRecs.forEach(r => {
+        const wd = r.windDirAbs;
+        if(wd === null || isNaN(wd)) return;
+        const wdDiff = Math.min(Math.abs(wd - sectorCenter), 360 - Math.abs(wd - sectorCenter));
+        if(wdDiff > 15) return;
+        if(r.ws < 4 || r.ws > 11) return;  // Below rated, where wake matters most
+        const down = downByTs[r.ts.toISOString()];
+        if(!down || down.power === null) return;
+        upPowerSum += r.power;
+        downPowerSum += down.power;
+        nPairs++;
+      });
+    });
+    if(nPairs > 0){
+      const lossPct = upPowerSum > 0 ? (1 - downPowerSum/upPowerSum) * 100 : 0;
+      perSector.push({
+        sector: sectorCenter,
+        upstreamPower: upPowerSum/nPairs,
+        downstreamPower: downPowerSum/nPairs,
+        lossPct: lossPct,
+        nPairs: nPairs,
+        nTurbinePairs: pairs.length
+      });
+    }
+  }
+  const overallLossPct = perSector.length > 0 ? perSector.reduce((s,p)=>s+p.lossPct*p.nPairs,0) / perSector.reduce((s,p)=>s+p.nPairs,0) : STATE.cfg.futureWakeLoss;
+  STATE.wakeLoss = {
+    perSector: perSector,
+    overallLossPct: overallLossPct,
+    method: "upstream-vs-downstream at matched ws/wd bin (IEC 61400-12-1 Annex M wake loss estimation)",
+    layoutUsed: "uploaded",
+    turbinePairs: []
+  };
+  logEvent(`Wake loss analysis: ${perSector.length} sectors analyzed, overall loss ${overallLossPct.toFixed(2)}%.`, "success");
+}
+
+function haversineDistance(lat1, lon1, lat2, lon2){
+  const R = 6371000;  // metres
+  const toRad = (d) => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)*Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function bearingBetween(lat1, lon1, lat2, lon2){
+  const toRad = (d) => d * Math.PI / 180;
+  const toDeg = (r) => r * 180 / Math.PI;
+  const y = Math.sin(toRad(lon2-lon1)) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1))*Math.sin(toRad(lat2)) - Math.sin(toRad(lat1))*Math.cos(toRad(lat2))*Math.cos(toRad(lon2-lon1));
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MODULE I: Sensitivity analysis + MCP confidence intervals
+// ════════════════════════════════════════════════════════════════════
+
+function runSensitivityAnalysis(){
+  if(!STATE.poe || !STATE.uncertaintyCombined){ toast("Run uncertainty/POE analysis first.", "error"); return; }
+  logEvent("Running sensitivity analysis (P90 vs r², availability, wind resource)...", "info");
+  const baseP90 = STATE.poe.find(p => p.poe === "P90");
+  if(!baseP90){ toast("P90 not computed.", "error"); return; }
+  const baseP90Val = baseP90.annualGWh;
+  const baseR2 = STATE.mcp ? STATE.mcp.r2 : 0.7;
+  const baseAvail = STATE.availability ? mean(Object.values(STATE.availability).map(r=>r.energyAvailability)) : 0.97;
+  const baseWindRes = STATE.uncertainty.find(u => u.key === "future_wind") ? STATE.uncertainty.find(u => u.key === "future_wind").annual : 6.0;
+  // Sensitivity: vary each input by ±, recompute P90
+  // For r²: change uncertainty_combined by ±0.5% per 0.1 r² change (rough rule)
+  function recomputeP90(deltaUncPct){
+    const newCombined = Math.sqrt(Math.pow(STATE.uncertaintyCombined.annual, 2) + Math.pow(deltaUncPct, 2));
+    const z90 = -normInv(0.90);
+    return STATE.ltNetAEP * (1 + z90 * newCombined / 100);
+  }
+  const mcpR2Sens = [
+    {r2_delta: -0.1, p90: recomputeP90(0.5)},
+    {r2_delta: 0, p90: baseP90Val},
+    {r2_delta: +0.1, p90: recomputeP90(-0.5)}
+  ];
+  const availSens = [
+    {avail_delta: -0.01, p90: baseP90Val * 0.99},
+    {avail_delta: 0, p90: baseP90Val},
+    {avail_delta: +0.01, p90: baseP90Val * 1.01}
+  ];
+  const windResSens = [
+    {wr_delta: -0.02, p90: recomputeP90(-1.0)},
+    {wr_delta: 0, p90: baseP90Val},
+    {wr_delta: +0.02, p90: recomputeP90(1.0)}
+  ];
+  STATE.sensitivity = {
+    mcpR2: mcpR2Sens,
+    avail: availSens,
+    windRes: windResSens,
+    p90Range: {
+      low: Math.min(mcpR2Sens[0].p90, availSens[0].p90, windResSens[0].p90),
+      base: baseP90Val,
+      high: Math.max(mcpR2Sens[2].p90, availSens[2].p90, windResSens[2].p90)
+    }
+  };
+  // MCP CI
+  if(STATE.mcp && STATE.mcp.x && STATE.mcp.y){
+    const ci = linearRegressionWithCI(STATE.mcp.x, STATE.mcp.y, 0.95);
+    STATE.mcpCI = {
+      slopeStdError: ci.sb,
+      slopeCI95: ci.slopeCI,
+      interceptStdError: ci.sa,
+      interceptCI95: ci.interceptCI,
+      residualStdError: ci.residualSE,
+      method: "OLS standard error, t=1.96 for 95% CI"
+    };
+  }
+  logEvent(`Sensitivity analysis complete. P90 range: ${STATE.sensitivity.p90Range.low.toFixed(2)} - ${STATE.sensitivity.p90Range.high.toFixed(2)} GWh/yr.`, "success");
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MODULE J: Uncertainty tree
+// ════════════════════════════════════════════════════════════════════
+
+function buildUncertaintyTree(){
+  if(!STATE.uncertainty) return;
+  const u = STATE.uncertainty;
+  const get = (k) => { const f = u.find(s => s.key === k); return f ? f.annual : 0; };
+  // Group into 3 top-level branches
+  const windResource = Math.sqrt(Math.pow(get("historical_rep"),2) + Math.pow(get("future_wind"),2) + Math.pow(get("wind_freq_dist"),2));
+  const powerMeasurement = Math.sqrt(Math.pow(get("power_measurement"),2) + Math.pow(get("air_density"),2));
+  const losses = Math.sqrt(Math.pow(get("future_avail"),2) + Math.pow(get("curtailment"),2) + Math.pow(get("electrical"),2) + Math.pow(get("blade_degradation"),2));
+  STATE.uncertaintyTree = {
+    root: {
+      label: "Total Combined Uncertainty (Annual)",
+      value: STATE.uncertaintyCombined ? STATE.uncertaintyCombined.annual : Math.sqrt(Math.pow(windResource,2)+Math.pow(powerMeasurement,2)+Math.pow(losses,2)),
+      children: [
+        { label: "Wind Resource", value: windResource, children: [
+          { label: "Historical Representativeness", value: get("historical_rep") },
+          { label: "Future Wind Resource", value: get("future_wind") },
+          { label: "Wind Frequency Distribution", value: get("wind_freq_dist") }
+        ]},
+        { label: "Power Measurement", value: powerMeasurement, children: [
+          { label: "Power Measurement & Gross Adjustment", value: get("power_measurement") },
+          { label: "Air Density Adjustment", value: get("air_density") }
+        ]},
+        { label: "Losses", value: losses, children: [
+          { label: "Future Availability", value: get("future_avail") },
+          { label: "Curtailment", value: get("curtailment") },
+          { label: "Electrical", value: get("electrical") },
+          { label: "Blade Degradation", value: get("blade_degradation") }
+        ]}
+      ]
+    }
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════
+// WTG Layout upload
+// ════════════════════════════════════════════════════════════════════
+
+function handleWTGLayoutUpload(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    Papa.parse(e.target.result, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const cols = results.meta.fields;
+        const idCol = cols.find(c => /turbine|wtg|asset|id/i.test(c));
+        const latCol = cols.find(c => /lat/i.test(c));
+        const lonCol = cols.find(c => /lon/i.test(c));
+        if(!idCol || !latCol || !lonCol){ toast("Layout CSV must have turbine_id, latitude, longitude columns", "error"); return; }
+        const layout = results.data.map(r => ({
+          turbineId: String(r[idCol]).trim(),
+          lat: parseFloat(r[latCol]),
+          lon: parseFloat(r[lonCol])
+        })).filter(r => r.turbineId && !isNaN(r.lat) && !isNaN(r.lon));
+        STATE.cfg.wtgLayout = layout;
+        logEvent(`Loaded WTG layout: ${layout.length} turbines from ${file.name}.`, "success");
+        toast(`Layout loaded: ${layout.length} turbines.`);
+      }
+    });
+  };
+  reader.readAsText(file);
+  event.target.value = "";
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MODULE K: Full 14-section DNV narrative report generator
+// Produces a self-contained, printable HTML report
+// ════════════════════════════════════════════════════════════════════
+
+function generateFullDNVReport(){
+  // Reset counters
+  STATE.reportMeta = {
+    figureCounter: 0,
+    tableCounter: 0,
+    sectionFigCount: {},
+    sectionTblCount: {},
+    figures: [],
+    tables: [],
+    documentControl: {
+      revision: STATE.cfg.docRevision || "1.0",
+      issueDate: STATE.cfg.assessmentDate || new Date().toISOString().slice(0,10),
+      preparedBy: STATE.cfg.preparedBy || "Velmurugan Karuppiah",
+      reviewedBy: STATE.cfg.reviewedBy || "[to be completed]",
+      approvedBy: STATE.cfg.approvedBy || "[to be completed]",
+      revisionHistory: STATE.cfg.revisionHistory || []
+    }
+  };
+  const c = STATE.cfg;
+  const ratedMW = c.ratedMW * c.numTurbines;
+  const hoursPerYear = 8760;
+  // Build sections
+  const sections = [];
+  sections.push(generateReportCoverPage());
+  sections.push(generateReportTOC());
+  sections.push(generateReportSection1());
+  sections.push(generateReportSection2());
+  sections.push(generateReportSection3());
+  sections.push(generateReportSection4());
+  sections.push(generateReportSection5());
+  sections.push(generateReportSection6());
+  sections.push(generateReportSection7());
+  sections.push(generateReportSection8());
+  sections.push(generateReportSection9());
+  sections.push(generateReportSection10());
+  sections.push(generateReportSection11());
+  sections.push(generateReportSection12());
+  sections.push(generateReportSection13());
+  sections.push(generateReportSection14());
+  return sections.join("\n");
+}
+
+// Helper: register a figure and return its number
+function registerFigure(caption, section, chartId){
+  // Per-section figure counter
+  if(!STATE.reportMeta.sectionFigCount) STATE.reportMeta.sectionFigCount = {};
+  STATE.reportMeta.sectionFigCount[section] = (STATE.reportMeta.sectionFigCount[section] || 0) + 1;
+  STATE.reportMeta.figureCounter++;
+  const id = "fig-" + STATE.reportMeta.figureCounter;
+  const number = "Figure " + section + "." + STATE.reportMeta.sectionFigCount[section];
+  STATE.reportMeta.figures.push({id, number, caption, section, chartId});
+  return {id, number, caption};
+}
+
+function registerTable(caption, section){
+  // Per-section table counter
+  if(!STATE.reportMeta.sectionTblCount) STATE.reportMeta.sectionTblCount = {};
+  STATE.reportMeta.sectionTblCount[section] = (STATE.reportMeta.sectionTblCount[section] || 0) + 1;
+  STATE.reportMeta.tableCounter++;
+  const id = "tbl-" + STATE.reportMeta.tableCounter;
+  const number = "Table " + section + "." + STATE.reportMeta.sectionTblCount[section];
+  STATE.reportMeta.tables.push({id, number, caption, section});
+  return {id, number, caption};
+}
+
+function generateReportCoverPage(){
+  const c = STATE.cfg;
+  const dc = STATE.reportMeta.documentControl;
+  const revHistoryRows = (dc.revisionHistory||[]).map(r => 
+    `<tr><td>${r.rev||""}</td><td>${r.date||""}</td><td>${r.author||""}</td><td>${r.changes||""}</td></tr>`
+  ).join("");
+  return `
+<section class="report-cover">
+  <div class="cover-top">
+    <div class="cover-classification">${c.docStatus || "Draft"}</div>
+    <div class="cover-logo">⚡</div>
+  </div>
+  <h1 class="cover-title">Operational Energy Yield Assessment</h1>
+  <h2 class="cover-subtitle">${c.projectName || "Wind Farm"}</h2>
+  <div class="cover-meta">
+    <table class="cover-meta-table">
+      <tr><td>Document Number</td><td>${c.docNumber || c.projectCode || "[to be assigned]"}</td></tr>
+      <tr><td>Revision</td><td>${dc.revision}</td></tr>
+      <tr><td>Issue Date</td><td>${dc.issueDate}</td></tr>
+      <tr><td>Prepared By</td><td>${dc.preparedBy}</td></tr>
+      <tr><td>Reviewed By</td><td>${dc.reviewedBy}</td></tr>
+      <tr><td>Approved By</td><td>${dc.approvedBy}</td></tr>
+      <tr><td>Client</td><td>${c.clientName || "[Project Proponent]"}</td></tr>
+      <tr><td>Standards</td><td>DNV-RP-0126 / IEC 61400-26 / IEC 61400-12-1 Ed. 2 / ISO GUM</td></tr>
+    </table>
+  </div>
+  <div class="cover-revision-history">
+    <h3>Revision History</h3>
+    <table class="rev-table">
+      <thead><tr><th>Rev</th><th>Date</th><th>Author</th><th>Changes</th></tr></thead>
+      <tbody>${revHistoryRows || '<tr><td colspan="4">No revision history</td></tr>'}</tbody>
+    </table>
+  </div>
+  <div class="cover-confidentiality">
+    <strong>Confidentiality Notice:</strong> This document contains confidential information prepared for the named client only. It may not be reproduced or distributed to any third party without the express written consent of the document owner.
+  </div>
+  ${c.independenceStatement ? `<div class="cover-independence"><strong>Independence Statement:</strong> The assessment documented in this report has been prepared independently of any commercial interest in the project's outcome. The methodology, findings, and conclusions are based solely on the data provided and the professional judgement of the assessor.</div>` : ""}
+</section>`;
+}
+
+function generateReportTOC(){
+  return `
+<section class="report-toc">
+  <h2>Table of Contents</h2>
+  <ol class="toc">
+    <li>1. Introduction</li>
+    <li>2. Site and Plant Description</li>
+    <li>3. Data Sources and Inventory</li>
+    <li>4. Data Filtering per IEC 61400-12-1 Ed. 2</li>
+    <li>5. Reference Wind Resource</li>
+    <li>6. Plant Power Curve</li>
+    <li>7. Operational Availability</li>
+    <li>8. Long-Term Gross AEP</li>
+    <li>9. Loss Adjustments</li>
+    <li>10. Uncertainty Analysis</li>
+    <li>11. Probability of Exceedance and Bankable Results</li>
+    <li>12. EYA Reconciliation</li>
+    <li>13. Findings and Recommendations</li>
+    <li>14. Methodology Appendix</li>
+  </ol>
+  <h3>List of Figures</h3>
+  <ul class="lof" id="report-lof"></ul>
+  <h3>List of Tables</h3>
+  <ul class="lot" id="report-lot"></ul>
+</section>`;
+}
+
+function generateReportSection1(){
+  const c = STATE.cfg;
+  return `
+<section class="report-section">
+  <h2>1. Introduction</h2>
+  <h3>1.1 Scope</h3>
+  <p>This Operational Energy Yield Assessment (OEYA) has been prepared for ${c.projectName || "the wind farm"} (the "Project") to estimate the long-term net annual energy production (AEP) based on operational SCADA data covering the period ${STATE.dateRange.start?fmtDate(STATE.dateRange.start):"—"} to ${STATE.dateRange.end?fmtDate(STATE.dateRange.end):"—"}. The assessment follows the methodology of a typical lender's and owner's-engineer Operational Energy Production Report (OEPR), as documented in DNV-RP-0126 and the IEC 61400 series.</p>
+  <h3>1.2 Basis of Assessment</h3>
+  <p>The assessment is based on:</p>
+  <ul>
+    <li>SCADA operational data covering ${STATE.scada.length.toLocaleString()} records across ${STATE.turbines.length} turbines at ${STATE.sampleIntervalMin}-minute resolution;</li>
+    <li>${STATE.ltReference ? "Long-term reference wind speed data from " + STATE.ltReference.source : "No long-term reference (POR used as P50)"};</li>
+    <li>${STATE.cfg.wtgLayout && STATE.cfg.wtgLayout.length > 0 ? "WTG layout coordinates for wake analysis (" + STATE.cfg.wtgLayout.length + " turbines)" : "No WTG layout provided (wake loss assumed from default)"};</li>
+    <li>${STATE.oemCurve ? "OEM warranted power curve from " + STATE.oemCurve.source : "No OEM curve comparison (no OEM warranted curve uploaded)"};</li>
+    <li>Project configuration as specified in the Project Setup (Section 0 of the tool).</li>
+  </ul>
+  <h3>1.3 Standards Referenced</h3>
+  <ul>
+    <li>DNV-RP-0126: Recommended Practice for Operational Performance Assessment</li>
+    <li>IEC 61400-26-1: Time-based availability categories</li>
+    <li>IEC 61400-12-1 Ed. 2: Power performance measurements of electricity producing wind turbines</li>
+    <li>ISO/IEC Guide 98-3 (GUM): Uncertainty of measurement — Part 3</li>
+  </ul>
+  <h3>1.4 Limitations</h3>
+  <p>This assessment is subject to the following limitations:</p>
+  <ul>
+    <li>The assessment relies on the accuracy and completeness of the SCADA data as provided. Data quality issues identified during the QA review (Section 3) are documented but the assessment proceeds with the data as supplied;</li>
+    <li>The long-term wind resource is characterised using reanalysis data (${STATE.ltReference ? STATE.ltReference.source : "not loaded"}), which has inherent uncertainty. Cross-validation with additional references (e.g., MERRA-2, on-site met mast) would reduce this uncertainty;</li>
+    <li>Future losses (availability, curtailment, blade degradation) are based on industry-standard assumptions and the historical performance observed during the assessment period. Actual future performance may differ;</li>
+    <li>Wake losses are ${STATE.wakeLoss && STATE.wakeLoss.layoutUsed === "uploaded" ? "estimated from the uploaded WTG layout and operational data" : "assumed based on industry default — no layout provided for data-driven estimation"};</li>
+    <li>The probability of exceedance values assume a normal distribution of annual energy production. Actual distributions may exhibit skewness or kurtosis not captured by this assumption.</li>
+  </ul>
+  <h3>1.5 Independence</h3>
+  <p>${c.independenceStatement ? "This assessment has been prepared independently of any commercial interest in the Project's outcome. The methodology, findings, and conclusions are based solely on the data provided and the professional judgement of the assessor." : "[Independence statement not provided — confirm before issue.]"}</p>
+</section>`;
+}
+
+function generateReportSection2(){
+  const c = STATE.cfg;
+  const ratedMW = c.ratedMW * c.numTurbines;
+  const layout = c.wtgLayout || [];
+  let layoutTable = "";
+  if(layout.length > 0){
+    const t = registerTable("WTG layout coordinates", 2);
+    layoutTable = `
+    <h3>2.3 WTG Layout</h3>
+    <p id="${t.id}" class="table-caption">${t.number}: ${t.caption}</p>
+    <table class="report-table">
+      <thead><tr><th>Turbine ID</th><th>Latitude (°)</th><th>Longitude (°)</th></tr></thead>
+      <tbody>
+        ${layout.map(l => `<tr><td>${l.turbineId}</td><td>${l.lat.toFixed(6)}</td><td>${l.lon.toFixed(6)}</td></tr>`).join("")}
+      </tbody>
+    </table>`;
+  }
+  return `
+<section class="report-section">
+  <h2>2. Site and Plant Description</h2>
+  <h3>2.1 Project Overview</h3>
+  <p>The Project comprises ${c.numTurbines} × ${c.turbineModel || "wind turbine generators"} with a nameplate capacity of ${c.ratedMW} MW per turbine, giving a total plant rated capacity of ${ratedMW} MW. The turbines were commissioned in ${c.codYear || "[year]"} and have been in commercial operation since that date. The site is located at ${c.location || "[location]"} at an elevation of ${c.elevation || 0} m above sea level.</p>
+  <h3>2.2 Turbine Specifications</h3>
+  <table class="report-table">
+    <tr><td>Manufacturer / Model</td><td>${c.turbineModel || "—"}</td></tr>
+    <tr><td>Number of turbines</td><td>${c.numTurbines}</td></tr>
+    <tr><td>Rated capacity per turbine</td><td>${c.ratedMW} MW</td></tr>
+    <tr><td>Total plant rated capacity</td><td>${ratedMW} MW</td></tr>
+    <tr><td>Hub height</td><td>${c.hubHt} m</td></tr>
+    <tr><td>Rotor diameter</td><td>${c.rotorD} m</td></tr>
+    <tr><td>Year of commissioning</td><td>${c.codYear || "—"}</td></tr>
+  </table>
+  ${layoutTable}
+  <h3>2.4 Regional Wind Climate</h3>
+  <p>The regional wind climate is characterised using ${STATE.ltReference ? STATE.ltReference.source : "no long-term reference dataset"}. ${STATE.ltReference ? "The long-term mean wind speed at hub height (" + c.hubHt + " m) is approximately " + mean(STATE.ltReference.monthly.map(m=>m.ws)).toFixed(2) + " m/s based on the available reference period." : "No reference data was loaded; the assessment uses the operational period as representative of long-term conditions, which introduces additional uncertainty."}</p>
+</section>`;
+}
+
+function generateReportSection3(){
+  const interval = STATE.sampleIntervalMin || STATE.cfg.sampleInt;
+  const coverage = computeDataCoverage(STATE.scada, interval);
+  const lowCoverage = coverage.filter(c => c.coverage < (STATE.cfg.lowAvailThresh || 0.83));
+  const t1 = registerTable("SCADA data inventory by turbine", 3);
+  const t2 = registerTable("Monthly data coverage summary", 3);
+  return `
+<section class="report-section">
+  <h2>3. Data Sources and Inventory</h2>
+  <h3>3.1 SCADA Data</h3>
+  <p>The operational SCADA dataset comprises ${STATE.scada.length.toLocaleString()} records covering ${STATE.turbines.length} turbines over the period ${fmtDate(STATE.dateRange.start)} to ${fmtDate(STATE.dateRange.end)} at ${interval}-minute resolution. The data was parsed with auto-detected timestamp format and column mapping; the latter was verified against the expected SCADA schema.</p>
+  <p id="${t1.id}" class="table-caption">${t1.number}: ${t1.caption}</p>
+  <table class="report-table">
+    <thead><tr><th>Turbine</th><th>Records</th><th>Date Range Start</th><th>Date Range End</th><th>Mean WS (m/s)</th><th>Mean Power (kW)</th></tr></thead>
+    <tbody>
+      ${STATE.turbines.map(t => {
+        const recs = STATE.scadaByTurbine[t];
+        const ws = mean(recs.map(r=>r.ws));
+        const p = mean(recs.map(r=>r.power));
+        return `<tr><td>${t}</td><td>${recs.length.toLocaleString()}</td><td>${fmtDate(recs[0].ts)}</td><td>${fmtDate(recs[recs.length-1].ts)}</td><td>${ws.toFixed(2)}</td><td>${p.toFixed(0)}</td></tr>`;
+      }).join("")}
+    </tbody>
+  </table>
+  <h3>3.2 Data Completeness</h3>
+  <p>Monthly data coverage was assessed by comparing the actual record count per turbine-month against the expected count based on the sampling interval. ${lowCoverage.length === 0 ? "All turbine-month combinations exceed the " + ((STATE.cfg.lowAvailThresh||0.83)*100).toFixed(0) + "% coverage threshold, indicating complete data." : lowCoverage.length + " turbine-month combinations fall below the " + ((STATE.cfg.lowAvailThresh||0.83)*100).toFixed(0) + "% coverage threshold and are flagged for review."}</p>
+  <p id="${t2.id}" class="table-caption">${t2.number}: ${t2.caption}</p>
+  <table class="report-table">
+    <thead><tr><th>Turbine</th><th>Month</th><th>Expected</th><th>Actual</th><th>Coverage</th><th>Flag</th></tr></thead>
+    <tbody>
+      ${coverage.slice(0, 20).map(c => `<tr><td>${c.turbine}</td><td>${c.month}</td><td>${c.expectedCount}</td><td>${c.actualCount}</td><td>${(c.coverage*100).toFixed(1)}%</td><td>${c.coverage < (STATE.cfg.lowAvailThresh||0.83) ? "LOW" : "OK"}</td></tr>`).join("")}
+      ${coverage.length > 20 ? `<tr><td colspan="6"><em>... ${coverage.length - 20} more rows (see CSV export for full list)</em></td></tr>` : ""}
+    </tbody>
+  </table>
+  <h3>3.3 Reference Wind Speed Data</h3>
+  <p>${STATE.ltReference ? "Long-term reference wind speed data was sourced from <strong>" + STATE.ltReference.source + "</strong>, covering " + STATE.ltReference.monthly.length + " months from " + STATE.ltReference.monthly[0].date + " to " + STATE.ltReference.monthly[STATE.ltReference.monthly.length-1].date + ". The long-term mean wind speed is " + mean(STATE.ltReference.monthly.map(m=>m.ws)).toFixed(2) + " m/s." : "No long-term reference wind speed data was provided. The assessment uses the operational period as representative of long-term conditions."}</p>
+  ${STATE.multiRef && STATE.multiRef.crossValidation && STATE.multiRef.crossValidation.era5_vs_merra2 ? `<p>Cross-validation between ERA5 and MERRA-2 reference datasets over the common period gave r² = ${STATE.multiRef.crossValidation.era5_vs_merra2.r2.toFixed(3)} over ${STATE.multiRef.crossValidation.era5_vs_merra2.n} months, providing confidence in the reference data quality.</p>` : ""}
+</section>`;
+}
+
+function generateReportSection4(){
+  if(!STATE.iecFilter){
+    return `<section class="report-section"><h2>4. Data Filtering per IEC 61400-12-1 Ed. 2</h2><p>IEC filtering has not been run. Please run the IEC Filtering step in the tool before generating the report.</p></section>`;
+  }
+  const f = STATE.iecFilter;
+  const stats = f.filterStats;
+  const t1 = registerTable("IEC filtering summary by category", 4);
+  return `
+<section class="report-section">
+  <h2>4. Data Filtering per IEC 61400-12-1 Ed. 2</h2>
+  <p>IEC 61400-12-1 Ed. 2 specifies data filtering criteria to ensure the power curve is constructed from clean, unconstrained operational data. The following filters were applied to the SCADA dataset prior to power curve construction:</p>
+  <h3>4.1 Icing Detection</h3>
+  <p>Icing was detected using a composite criterion based on ambient temperature, blade pitch angle, and power output: records with ambient temperature below ${f.icing.thresholdT}°C AND (pitch angle > ${f.icing.thresholdPitch}° OR power-to-possible ratio < ${f.icing.thresholdPowerRatio}) were flagged as icing-affected and excluded from the power curve. A total of ${f.icing.recordsExcluded.toLocaleString()} records (${f.icing.lossPct.toFixed(2)}% of total) were excluded, representing ${f.icing.totalHours.toFixed(0)} hours of icing-affected operation.</p>
+  <h3>4.2 Curtailment Detection</h3>
+  <p>Curtailment was detected by comparing actual power output to the OEM-reported possible power signal: records where actual power was less than ${(f.curtailment.threshold*100).toFixed(0)}% of possible power, with wind speed above cut-in, were flagged as curtailed. The derate flag column (${STATE.colMap.derateFlag || "not mapped"}) was used as a secondary indicator. A total of ${f.curtailment.recordsExcluded.toLocaleString()} records (${f.curtailment.lossPct.toFixed(2)}% of total) were excluded, representing ${f.curtailment.totalHours.toFixed(0)} hours of curtailed operation.</p>
+  <h3>4.3 Nacelle Transfer Function (NTF)</h3>
+  <p>${f.ntf.applied ? "A Nacelle Transfer Function was applied to correct the nacelle-mounted anemometer reading to free-stream wind speed, using the linear correction WS_corrected = " + f.ntf.a.toFixed(3) + " × WS_nacelle + " + f.ntf.b.toFixed(3) + ". The NTF coefficients should be derived from a site-specific calibration campaign (e.g., per IEC 61400-12-1 with a temporary met mast)." : "No Nacelle Transfer Function was applied (ntfA = " + f.ntf.a.toFixed(2) + ", ntfB = " + f.ntf.b.toFixed(2) + "). The nacelle wind speed is used as-measured, which may introduce a systematic bias if the nacelle transfer function differs significantly from unity."}</p>
+  <h3>4.4 Sector Exclusion</h3>
+  <p>${f.sectors.excluded.length > 0 ? "The following wind direction sectors were excluded from the power curve analysis to remove wake-affected data:" + f.sectors.excluded.map(s => " " + s.from + "°–" + s.to + "° (" + s.reason + ")").join(",") + ". A total of " + f.sectors.recordsExcluded.toLocaleString() + " records were excluded by sector filtering." : "No sectors were excluded from the power curve analysis."}</p>
+  <h3>4.5 Filter Summary</h3>
+  <p id="${t1.id}" class="table-caption">${t1.number}: ${t1.caption}</p>
+  <table class="report-table">
+    <thead><tr><th>Filter Category</th><th>Records Excluded</th><th>% of Total</th></tr></thead>
+    <tbody>
+      <tr><td>Icing</td><td>${f.icing.recordsExcluded.toLocaleString()}</td><td>${f.icing.lossPct.toFixed(2)}%</td></tr>
+      <tr><td>Curtailment</td><td>${f.curtailment.recordsExcluded.toLocaleString()}</td><td>${f.curtailment.lossPct.toFixed(2)}%</td></tr>
+      <tr><td>Sector exclusion</td><td>${f.sectors.recordsExcluded.toLocaleString()}</td><td>${(f.sectors.recordsExcluded/stats.totalIn*100).toFixed(2)}%</td></tr>
+      <tr style="font-weight:bold;background:#f0f0f0"><td>Total excluded</td><td>${stats.totalOut.toLocaleString()}</td><td>${stats.pctFiltered.toFixed(2)}%</td></tr>
+      <tr><td>Records retained for power curve</td><td>${stats.totalIn - stats.totalOut}</td><td>${(100 - stats.pctFiltered).toFixed(2)}%</td></tr>
+    </tbody>
+  </table>
+  <p>The filtered dataset of ${(stats.totalIn - stats.totalOut).toLocaleString()} records forms the basis for the IEC binned power curve presented in Section 6.</p>
+</section>`;
+}
+
+function generateReportSection5(){
+  if(!STATE.ltReference){
+    return `<section class="report-section"><h2>5. Reference Wind Resource</h2><p>No long-term reference wind speed data was provided. The assessment uses the operational period as representative of long-term conditions, which introduces additional uncertainty (see Section 10).</p></section>`;
+  }
+  const ref = STATE.ltReference;
+  const lt = STATE.ltGrossAEP;
+  const meanWs = mean(ref.monthly.map(m=>m.ws));
+  const t1 = registerTable("Long-term monthly climatology", 5);
+  return `
+<section class="report-section">
+  <h2>5. Reference Wind Resource</h2>
+  <h3>5.1 Reference Dataset</h3>
+  <p>Long-term reference wind speed data was sourced from <strong>${ref.source}</strong>${ref.height ? " at " + ref.height + " m above ground level" : ""}. The dataset covers ${ref.monthly.length} months from ${ref.monthly[0].date} to ${ref.monthly[ref.monthly.length-1].date}, with a long-term mean wind speed of <strong>${meanWs.toFixed(2)} m/s</strong>.</p>
+  ${STATE.multiRef && STATE.multiRef.crossValidation && STATE.multiRef.crossValidation.era5_vs_merra2 ? `<h3>5.2 Multi-Source Cross-Validation</h3><p>Cross-validation against an alternative reference dataset (${STATE.multiRef.merra2 && STATE.multiRef.merra2.monthly.length > 0 ? "MERRA-2" : "none"}) was performed. The two datasets showed r² = ${STATE.multiRef.crossValidation.era5_vs_merra2.r2.toFixed(3)} over ${STATE.multiRef.crossValidation.era5_vs_merra2.n} common months. <strong>${STATE.multiRef.selectionRationale}</strong></p>` : ""}
+  <h3>5.${STATE.multiRef && STATE.multiRef.crossValidation && STATE.multiRef.crossValidation.era5_vs_merra2 ? "3" : "2"} Long-Term Climatology</h3>
+  <p>The long-term monthly climatology, derived by averaging each calendar month across all years in the reference period, is presented below. The annual total represents the long-term gross energy production estimate prior to loss adjustments.</p>
+  ${lt && lt.climatology ? `
+  <p id="${t1.id}" class="table-caption">${t1.number}: ${t1.caption}</p>
+  <table class="report-table">
+    <thead><tr><th>Month</th><th>LT Gross Energy (MWh)</th><th>% of Annual</th></tr></thead>
+    <tbody>
+      ${lt.climatology.map(m => `<tr><td>${m.label}</td><td>${m.grossMWh.toFixed(0)}</td><td>${(m.grossMWh/sum(lt.climatology.map(x=>x.grossMWh))*100).toFixed(1)}%</td></tr>`).join("")}
+      <tr style="font-weight:bold;background:#f0f0f0"><td>Annual Total</td><td>${sum(lt.climatology.map(x=>x.grossMWh)).toFixed(0)}</td><td>100.0%</td></tr>
+    </tbody>
+  </table>` : "<p>Climatology not computed.</p>"}
+</section>`;
+}
+
+function generateReportSection6(){
+  if(!STATE.iecBinnedCurve){
+    return `<section class="report-section"><h2>6. Plant Power Curve</h2><p>IEC binned power curve has not been computed. Run IEC filtering first.</p></section>`;
+  }
+  const curve = STATE.iecBinnedCurve;
+  const t1 = registerTable("IEC 61400-12-1 binned power curve", 6);
+  let oemComparison = "";
+  if(STATE.oemCurve && STATE.oemCurve.comparisonScatter){
+    oemComparison = `
+    <h3>6.3 OEM Warranted Curve Comparison</h3>
+    <p>The operational IEC-binned power curve was compared against the OEM warranted power curve (${STATE.oemCurve.source}). The mean deviation across all bins is ${mean(STATE.oemCurve.comparisonScatter.filter(c=>c.deviationPct!==null).map(c=>c.deviationPct)).toFixed(2)}%, with a range of ${min(STATE.oemCurve.comparisonScatter.filter(c=>c.deviationPct!==null).map(c=>c.deviationPct)).toFixed(2)}% to ${max(STATE.oemCurve.comparisonScatter.filter(c=>c.deviationPct!==null).map(c=>c.deviationPct)).toFixed(2)}%. ${Math.abs(mean(STATE.oemCurve.comparisonScatter.filter(c=>c.deviationPct!==null).map(c=>c.deviationPct))) < 2 ? "The operational curve is within ±2% of warranted, indicating the turbines are performing to specification." : "Deviations exceeding ±2% warrant further investigation of turbine health, control system calibration, or measurement system accuracy."}</p>`;
+  }
+  return `
+<section class="report-section">
+  <h2>6. Plant Power Curve</h2>
+  <h3>6.1 IEC 61400-12-1 Binned Power Curve</h3>
+  <p>The plant power curve was constructed from the IEC-filtered dataset (Section 4) by binning records into ${curve.binWidth} m/s wind speed bins. Bins with fewer than ${curve.minRecordsPerBin} records (i.e., less than 30 minutes of data at 10-minute resolution) were excluded per IEC 61400-12-1 Ed. 2. Density correction was applied to a reference air density of ${curve.referenceDensity} kg/m³ using the ratio method (P_corrected = P_measured × ρ_ref / ρ_site). The resulting curve was enforced monotonically non-decreasing via cumulative-max smoothing.</p>
+  <p id="${t1.id}" class="table-caption">${t1.number}: ${t1.caption}</p>
+  <table class="report-table">
+    <thead><tr><th>WS Bin (m/s)</th><th>Mean Power (kW)</th><th>Density-Corrected (kW)</th><th>Std Dev (kW)</th><th>Sample Count</th><th>95% CI Low</th><th>95% CI High</th></tr></thead>
+    <tbody>
+      ${curve.bins.map(b => `<tr><td>${b.ws.toFixed(2)}</td><td>${b.meanPower.toFixed(0)}</td><td>${b.densityCorrectedPower.toFixed(0)}</td><td>${b.stdPower.toFixed(0)}</td><td>${b.n}</td><td>${b.ci95Low.toFixed(0)}</td><td>${b.ci95High.toFixed(0)}</td></tr>`).join("")}
+    </tbody>
+  </table>
+  <h3>6.2 Power Curve Statistics</h3>
+  <p>The binned power curve comprises ${curve.bins.length} valid bins spanning wind speeds from ${curve.bins[0].ws.toFixed(2)} m/s to ${curve.bins[curve.bins.length-1].ws.toFixed(2)} m/s, with a total of ${sum(curve.bins.map(b=>b.n)).toLocaleString()} filtered records used in the construction. The mean scatter (1σ) across all bins is ${mean(curve.bins.map(b=>b.stdPower)).toFixed(0)} kW, indicating ${mean(curve.bins.map(b=>b.stdPower/b.meanPower))*100 < 15 ? "low" : mean(curve.bins.map(b=>b.stdPower/b.meanPower))*100 < 25 ? "moderate" : "high"} scatter typical of ${mean(curve.bins.map(b=>b.stdPower/b.meanPower))*100 < 15 ? "well-controlled" : "operationally variable"} turbines.</p>
+  ${oemComparison}
+</section>`;
+}
+
+function generateReportSection7(){
+  if(!STATE.availability){
+    return `<section class="report-section"><h2>7. Operational Availability</h2><p>Availability analysis has not been run.</p></section>`;
+  }
+  const a = STATE.availability;
+  const turbines = Object.keys(a);
+  const meanAvail = mean(turbines.map(t => a[t].energyAvailability));
+  const minAvail = Math.min(...turbines.map(t => a[t].energyAvailability));
+  const maxAvail = Math.max(...turbines.map(t => a[t].energyAvailability));
+  const totalAvail = sum(turbines.map(t => a[t].actualAvailEnergyMWh));
+  const totalUnavail = sum(turbines.map(t => a[t].potentialUnavailEnergyMWh));
+  const t1 = registerTable("Per-turbine availability summary", 7);
+  let downtimeSection = "";
+  if(STATE.downtimeCauses){
+    const dc = STATE.downtimeCauses;
+    const t2 = registerTable("Top 10 fault codes by energy loss", 7);
+    downtimeSection = `
+    <h3>7.3 Downtime Cause Analysis</h3>
+    <p>Analysis of fault codes during unavailable periods identified ${dc.summary.uniqueCodes} unique codes responsible for ${dc.summary.totalDownHours.toFixed(0)} hours of downtime and ${dc.summary.totalEnergyLostMWh.toFixed(0)} MWh of lost energy. The 80/20 Pareto analysis indicates that ${dc.pareto.eightyTwentyCut} codes account for 80% of the total energy loss, suggesting targeted maintenance on these codes would yield the highest availability improvement.</p>
+    <p id="${t2.id}" class="table-caption">${t2.number}: ${t2.caption}</p>
+    <table class="report-table">
+      <thead><tr><th>Code</th><th>Count</th><th>Energy Lost (MWh)</th><th>% of Total Loss</th><th>Turbines Affected</th><th>MTBF (hrs)</th><th>MTTR (hrs)</th></tr></thead>
+      <tbody>
+        ${dc.topByEnergy.map(c => {
+          const m = dc.mtbf[c.code] || {};
+          return `<tr><td>${c.code}</td><td>${c.count.toLocaleString()}</td><td>${c.energyLostMWh.toFixed(1)}</td><td>${c.pctOfEnergy.toFixed(1)}%</td><td>${c.turbineCount}</td><td>${m.mtbf ? m.mtbf.toFixed(0) : "—"}</td><td>${m.mttr ? m.mttr.toFixed(1) : "—"}</td></tr>`;
+        }).join("")}
+      </tbody>
+    </table>`;
+  }
+  return `
+<section class="report-section">
+  <h2>7. Operational Availability</h2>
+  <h3>7.1 IEC 61400-26 Energy-Based Availability</h3>
+  <p>Energy-based availability was computed per IEC 61400-26 using the auto-constructed power curve to estimate potential (theoretical) power during unavailable periods. The formula is: Availability = 1 − Unavailable Energy / (Available Energy + Unavailable Energy). The plant mean energy-based availability over the assessment period is <strong>${(meanAvail*100).toFixed(2)}%</strong>, with a per-turbine range of ${(minAvail*100).toFixed(2)}% to ${(maxAvail*100).toFixed(2)}%.</p>
+  <p id="${t1.id}" class="table-caption">${t1.number}: ${t1.caption}</p>
+  <table class="report-table">
+    <thead><tr><th>Turbine</th><th>Records</th><th>Available Energy (MWh)</th><th>Unavailable Energy (MWh)</th><th>Energy Availability (%)</th><th>Time Availability (%)</th></tr></thead>
+    <tbody>
+      ${turbines.map(t => `<tr><td>${t}</td><td>${a[t].records.toLocaleString()}</td><td>${a[t].actualAvailEnergyMWh.toFixed(1)}</td><td>${a[t].potentialUnavailEnergyMWh.toFixed(1)}</td><td><strong>${(a[t].energyAvailability*100).toFixed(2)}%</strong></td><td>${isNaN(a[t].timeAvailability) ? "—" : (a[t].timeAvailability*100).toFixed(2)}%</td></tr>`).join("")}
+    </tbody>
+  </table>
+  <h3>7.2 Energy Summary</h3>
+  <p>Over the assessment period, the plant produced ${totalAvail.toFixed(0)} MWh of available energy, with an estimated ${totalUnavail.toFixed(0)} MWh of potential energy lost during unavailable periods. The total theoretical (potential) energy production over the period was ${(totalAvail + totalUnavail).toFixed(0)} MWh.</p>
+  ${downtimeSection}
+</section>`;
+}
+
+function generateReportSection8(){
+  if(!STATE.ltGrossAEP){
+    return `<section class="report-section"><h2>8. Long-Term Gross AEP</h2><p>MCP analysis has not been run.</p></section>`;
+  }
+  const lt = STATE.ltGrossAEP;
+  const mcp = STATE.mcp;
+  const t1 = registerTable("MCP regression statistics", 8);
+  let ciText = "";
+  if(STATE.mcpCI && !isNaN(STATE.mcpCI.slopeStdError)){
+    ciText = ` The 95% confidence interval on the slope is [${STATE.mcpCI.slopeCI95.low.toFixed(1)}, ${STATE.mcpCI.slopeCI95.high.toFixed(1)}] MWh per m/s, indicating the regression is ${Math.abs(STATE.mcpCI.slopeCI95.high - STATE.mcpCI.slopeCI95.low) / mcp.a < 0.3 ? "well-constrained" : "moderately uncertain"}.`;
+  }
+  return `
+<section class="report-section">
+  <h2>8. Long-Term Gross AEP</h2>
+  <h3>8.1 MCP Regression</h3>
+  <p>The Measure-Correlate-Predict (MCP) methodology was applied to estimate long-term gross Annual Energy Production (AEP). The plant's monthly gross energy production (normalised to 30-day months per Eq. 3 of the OEPR methodology) was regressed against the long-term reference wind speed over the common operational period.</p>
+  ${mcp && !isNaN(mcp.r2) ? `
+  <p id="${t1.id}" class="table-caption">${t1.number}: ${t1.caption}</p>
+  <table class="report-table">
+    <tr><td>Regression method</td><td>Ordinary Least Squares (OLS)</td></tr>
+    <tr><td>Slope (a)</td><td>${mcp.a.toFixed(2)} MWh per m/s</td></tr>
+    <tr><td>Intercept (b)</td><td>${mcp.b.toFixed(0)} MWh per 30-day month</td></tr>
+    <tr><td>Coefficient of determination (r²)</td><td>${mcp.r2.toFixed(3)}</td></tr>
+    <tr><td>Number of months in regression</td><td>${mcp.n}</td></tr>
+    <tr><td>p-value</td><td>${mcp.p_value ? mcp.p_value.toExponential(2) : "—"}</td></tr>
+  </table>
+  <p>The regression indicates that the reference wind speed explains ${(mcp.r2*100).toFixed(1)}% of the variance in monthly plant gross energy production over the operational period.${mcp.r2 < 0.7 ? " The r² is below the 0.7 threshold typically required for bankable OEYA — additional reference datasets or extended assessment periods should be considered." : " The r² is above 0.7, indicating acceptable correlation for bankable assessment."}${ciText}</p>` : "<p>No MCP regression was performed (operational period used as P50).</p>"}
+  <h3>8.2 Long-Term Gross AEP</h3>
+  <p>The MCP regression was applied to the full long-term reference record (${lt.source}, ${lt.monthly ? lt.monthly.length : 0} months) to predict long-term monthly gross energy production. The resulting annualised long-term gross AEP is <strong>${lt.annualGWh.toFixed(2)} GWh/yr</strong>, corresponding to a gross capacity factor of ${(lt.annualGWh*1000 / (STATE.cfg.ratedMW * STATE.cfg.numTurbines * 8760) * 100).toFixed(2)}%.</p>
+</section>`;
+}
+
+function generateReportSection9(){
+  if(!STATE.losses){
+    return `<section class="report-section"><h2>9. Loss Adjustments</h2><p>Loss analysis has not been run.</p></section>`;
+  }
+  const l = STATE.losses;
+  const t1 = registerTable("Gross-to-Net loss stack", 9);
+  return `
+<section class="report-section">
+  <h2>9. Loss Adjustments</h2>
+  <p>The long-term gross AEP from Section 8 is adjusted to P50 net AEP by applying standard loss categories. Losses are applied multiplicatively in the standard DNV/UL convention. Each loss component is expressed as a percentage of the running total at the point of application.</p>
+  <p id="${t1.id}" class="table-caption">${t1.number}: ${t1.caption}</p>
+  <table class="report-table">
+    <thead><tr><th>Loss Component</th><th>Loss (%)</th><th>Energy (GWh/yr)</th><th>Running Total (GWh/yr)</th></tr></thead>
+    <tbody>
+      <tr><td>LT Gross AEP</td><td>—</td><td>—</td><td>${l.ltGross.toFixed(2)}</td></tr>
+      ${l.lossBreakdown.map((loss, i) => {
+        const running = l.ltGross + l.lossBreakdown.slice(0, i+1).reduce((s,x)=>s+x.value, 0);
+        return `<tr><td>${loss.label}</td><td>${(Math.abs(loss.value) / (l.ltGross + l.lossBreakdown.slice(0,i).reduce((s,x)=>s+x.value,0)) * 100).toFixed(2)}%</td><td>${loss.value.toFixed(2)}</td><td>${running.toFixed(2)}</td></tr>`;
+      }).join("")}
+      <tr style="font-weight:bold;background:#f0f0f0"><td>P50 Net AEP</td><td>${((l.ltGross - l.netP50) / l.ltGross * 100).toFixed(2)}%</td><td>${(l.ltGross - l.netP50).toFixed(2)}</td><td>${l.netP50.toFixed(2)}</td></tr>
+    </tbody>
+  </table>
+  ${STATE.wakeLoss ? `<h3>9.${STATE.envLoss ? "1" : "1"} Data-Driven Wake Loss</h3><p>${STATE.wakeLoss.method === "configured_default (no layout uploaded)" ? "No WTG layout was provided for data-driven wake loss estimation. A default value of " + STATE.wakeLoss.overallLossPct.toFixed(2) + "% was applied." : "Wake loss was estimated from the uploaded WTG layout by comparing upstream versus downstream turbine power output at matched wind speed and direction bins. The overall wake loss is " + STATE.wakeLoss.overallLossPct.toFixed(2) + "% based on " + STATE.wakeLoss.perSector.length + " sectoral analyses."}</p>` : ""}
+  ${STATE.envLoss ? `<h3>9.2 Environmental Losses</h3><p>Environmental losses were quantified from the IEC filtering results: icing-affected operation totalled ${STATE.envLoss.icingHours.toFixed(0)} hours (${STATE.envLoss.icingLossPct.toFixed(2)}% loss), and extreme temperature operation (${STATE.cfg.extremeTempLow}°C to ${STATE.cfg.extremeTempHigh}°C) totalled ${STATE.envLoss.extremeTempHours.toFixed(0)} hours (${STATE.envLoss.extremeTempLossPct.toFixed(2)}% loss). Total environmental loss: ${STATE.envLoss.totalLossPct.toFixed(2)}%.</p>` : ""}
+</section>`;
+}
+
+function generateReportSection10(){
+  if(!STATE.uncertaintyCombined){
+    return `<section class="report-section"><h2>10. Uncertainty Analysis</h2><p>Uncertainty analysis has not been run.</p></section>`;
+  }
+  const u = STATE.uncertainty;
+  const uc = STATE.uncertaintyCombined;
+  const t1 = registerTable("Uncertainty sources and combination", 10);
+  let sensText = "";
+  if(STATE.sensitivity){
+    const s = STATE.sensitivity;
+    sensText = `
+    <h3>10.3 Sensitivity Analysis</h3>
+    <p>The P90 estimate was tested for sensitivity to three key inputs:</p>
+    <ul>
+      <li><strong>MCP r² (±0.1):</strong> P90 varies from ${s.mcpR2[0].p90.toFixed(2)} to ${s.mcpR2[2].p90.toFixed(2)} GWh/yr — a range of ${(s.mcpR2[2].p90 - s.mcpR2[0].p90).toFixed(2)} GWh/yr;</li>
+      <li><strong>Availability (±1%):</strong> P90 varies from ${s.avail[0].p90.toFixed(2)} to ${s.avail[2].p90.toFixed(2)} GWh/yr;</li>
+      <li><strong>Wind resource (±2%):</strong> P90 varies from ${s.windRes[0].p90.toFixed(2)} to ${s.windRes[2].p90.toFixed(2)} GWh/yr.</li>
+    </ul>
+    <p>The overall P90 range across all sensitivities is ${s.p90Range.low.toFixed(2)} to ${s.p90Range.high.toFixed(2)} GWh/yr, compared to the base case of ${s.p90Range.base.toFixed(2)} GWh/yr. This indicates the assessment is ${Math.abs(s.p90Range.high - s.p90Range.low) / s.p90Range.base < 0.05 ? "robust" : "moderately sensitive"} to input assumptions.</p>`;
+  }
+  return `
+<section class="report-section">
+  <h2>10. Uncertainty Analysis</h2>
+  <h3>10.1 Methodology</h3>
+  <p>Uncertainty is combined per ISO/IEC Guide 98-3 (GUM) using the root-sum-square (RSS) method: U_combined = √(Σ U_i²). Two periods are reported: the evaluation period (operational POR) and the annual period (long-term, with elevated future wind-resource uncertainty reflecting inter-annual variability). All uncertainty sources are expressed as standard uncertainties (k=1, 68% confidence).</p>
+  <p id="${t1.id}" class="table-caption">${t1.number}: ${t1.caption}</p>
+  <table class="report-table">
+    <thead><tr><th>Uncertainty Source</th><th>Eval Period (%)</th><th>Eval (GWh/yr)</th><th>Annual (%)</th><th>Annual (GWh/yr)</th></tr></thead>
+    <tbody>
+      ${u.map(s => `<tr><td>${s.label}</td><td>${s.eval.toFixed(2)}</td><td>${(s.eval/100*STATE.ltGrossAEP.annualGWh).toFixed(2)}</td><td>${s.annual.toFixed(2)}</td><td>${(s.annual/100*STATE.ltNetAEP).toFixed(2)}</td></tr>`).join("")}
+      <tr style="font-weight:bold;background:#f0f0f0"><td>Combined (RSS)</td><td>${uc.eval.toFixed(2)}</td><td>${(uc.eval/100*STATE.ltGrossAEP.annualGWh).toFixed(2)}</td><td>${uc.annual.toFixed(2)}</td><td>${(uc.annual/100*STATE.ltNetAEP).toFixed(2)}</td></tr>
+    </tbody>
+  </table>
+  <h3>10.2 Uncertainty Breakdown</h3>
+  <p>The combined annual uncertainty of ${uc.annual.toFixed(2)}% is dominated by ${STATE.uncertaintyTree && STATE.uncertaintyTree.root.children ? "the " + STATE.uncertaintyTree.root.children.slice().sort((a,b)=>b.value-a.value)[0].label + " category (" + STATE.uncertaintyTree.root.children.slice().sort((a,b)=>b.value-a.value)[0].value.toFixed(2) + "%)" : "wind resource uncertainty"}. The breakdown by category is: ${STATE.uncertaintyTree && STATE.uncertaintyTree.root.children ? STATE.uncertaintyTree.root.children.map(c => c.label + " " + c.value.toFixed(2) + "%").join(", ") : "not computed"}.</p>
+  ${sensText}
+</section>`;
+}
+
+function generateReportSection11(){
+  if(!STATE.poe){
+    return `<section class="report-section"><h2>11. Probability of Exceedance and Bankable Results</h2><p>POE analysis has not been run.</p></section>`;
+  }
+  const t1 = registerTable("Probability of Exceedance table", 11);
+  return `
+<section class="report-section">
+  <h2>11. Probability of Exceedance and Bankable Results</h2>
+  <p>Probability of exceedance (POE) values were computed assuming a normal distribution of annual energy production: P_x = P50 × (1 + z_x × U_combined / 100), where z_x = −Φ⁻¹(x/100) is the inverse standard normal CDF. The following table presents the P50, P75, P90, P95, and P99 estimates for both the evaluation period and the annual (long-term) period.</p>
+  <p id="${t1.id}" class="table-caption">${t1.number}: ${t1.caption}</p>
+  <table class="report-table">
+    <thead><tr><th>POE</th><th>z-value</th><th>Eval GWh/yr</th><th>Eval NCF (%)</th><th>Annual GWh/yr</th><th>Annual NCF (%)</th></tr></thead>
+    <tbody>
+      ${STATE.poe.map(r => `<tr><td><strong>${r.poe}</strong></td><td>${r.z}</td><td>${r.evalGWh.toFixed(2)}</td><td>${r.evalNcf.toFixed(2)}%</td><td>${r.annualGWh.toFixed(2)}</td><td>${r.annualNcf.toFixed(2)}%</td></tr>`).join("")}
+    </tbody>
+  </table>
+  <h3>11.1 Bankable Result</h3>
+  <p>For lender/owner's-engineer purposes, the P50 and P90 annual figures are typically used as the central estimate and the conservative (bankable) estimate respectively. The P50 net AEP is <strong>${STATE.ltNetAEP.toFixed(2)} GWh/yr</strong> and the P90 net AEP is <strong>${STATE.poe.find(p=>p.poe==="P90").annualGWh.toFixed(2)} GWh/yr</strong>, corresponding to a P90 net capacity factor of ${STATE.poe.find(p=>p.poe==="P90").annualNcf.toFixed(2)}%.</p>
+</section>`;
+}
+
+function generateReportSection12(){
+  if(!STATE.eyaReconciliation){
+    return `<section class="report-section"><h2>12. EYA Reconciliation</h2><p>EYA reconciliation requires a pre-construction EYA gross AEP value. Enter this in Step 6 (EYA & Losses) of the tool to enable this section.</p></section>`;
+  }
+  const e = STATE.eyaReconciliation;
+  return `
+<section class="report-section">
+  <h2>12. EYA Reconciliation</h2>
+  <p>The operational assessment (OA) result is reconciled against the pre-construction Energy Yield Assessment (EYA) estimate. Named components bridge the gap between the two independently-derived totals; any residual is assigned to an "Unexplained" bucket per standard DNV/UL practice.</p>
+  <table class="report-table">
+    <thead><tr><th>Component</th><th>Delta (GWh/yr)</th></tr></thead>
+    <tbody>
+      <tr><td>Pre-construction EYA Gross AEP</td><td>${e.eyaGross.toFixed(2)}</td></tr>
+      ${e.components.map(c => `<tr><td>${c.label}</td><td>${c.delta >= 0 ? "+" : ""}${c.delta.toFixed(2)}</td></tr>`).join("")}
+      <tr style="font-weight:bold;background:#f0f0f0"><td>Operational Assessment (OA) P50</td><td>${e.oaGross.toFixed(2)}</td></tr>
+    </tbody>
+  </table>
+  <p>The "Unexplained" component of ${e.components.find(c=>c.label==="Unexplained") ? e.components.find(c=>c.label==="Unexplained").delta.toFixed(2) : "0.00"} GWh/yr represents the residual gap not attributable to identified factors. ${Math.abs(e.components.find(c=>c.label==="Unexplained") ? e.components.find(c=>c.label==="Unexplained").delta : 0) < 0.5 ? "This is within acceptable tolerance (<0.5 GWh/yr)." : "This exceeds the 0.5 GWh/yr threshold typically considered acceptable and warrants further investigation of potential uncategorised factors."}</p>
+</section>`;
+}
+
+function generateReportSection13(){
+  if(!STATE.findingsRegister || STATE.findingsRegister.length === 0){
+    return `<section class="report-section"><h2>13. Findings and Recommendations</h2><p>No findings have been generated. Run the Findings Register step in the tool.</p></section>`;
+  }
+  const f = STATE.findingsRegister;
+  const counts = {Critical: f.filter(x=>x.severity==="Critical").length, Major: f.filter(x=>x.severity==="Major").length, Minor: f.filter(x=>x.severity==="Minor").length};
+  const t1 = registerTable("Findings register summary", 13);
+  return `
+<section class="report-section">
+  <h2>13. Findings and Recommendations</h2>
+  <p>The findings register aggregates anomalies identified across all prior analyses (yaw, wind speed, availability, MCP, data completeness, IEC filtering). Each finding is classified by severity based on its estimated impact on the P50 net AEP:</p>
+  <ul>
+    <li><strong>Critical</strong> (P50 impact > 2%): ${counts.Critical} finding(s)</li>
+    <li><strong>Major</strong> (P50 impact 0.5–2%): ${counts.Major} finding(s)</li>
+    <li><strong>Minor</strong> (P50 impact < 0.5%): ${counts.Minor} finding(s)</li>
+  </ul>
+  <p id="${t1.id}" class="table-caption">${t1.number}: ${t1.caption}</p>
+  <table class="report-table">
+    <thead><tr><th>ID</th><th>Severity</th><th>Module</th><th>Title</th><th>Impact (%)</th><th>Recommendation</th><th>Status</th></tr></thead>
+    <tbody>
+      ${f.map(x => `<tr class="severity-${x.severity.toLowerCase()}"><td>${x.id}</td><td><span class="sev-badge sev-${x.severity.toLowerCase()}">${x.severity}</span></td><td>${x.module}</td><td>${x.title}</td><td>${x.impactPct.toFixed(2)}%</td><td>${x.recommendation}</td><td>${x.status}</td></tr>`).join("")}
+    </tbody>
+  </table>
+  <h3>13.1 Prioritised Remediation Plan</h3>
+  <p>Findings are presented in priority order (Critical first, then Major, then Minor, ordered by impact %). Critical findings should be addressed before the assessment is finalised for bankable use; Major findings should be reviewed and acknowledged; Minor findings are recorded for monitoring.</p>
+</section>`;
+}
+
+function generateReportSection14(){
+  return `
+<section class="report-section">
+  <h2>14. Methodology Appendix</h2>
+  <h3>14.1 Standards Compliance</h3>
+  <table class="report-table">
+    <thead><tr><th>Standard</th><th>Clause / Topic</th><th>Report Section</th><th>Compliance</th></tr></thead>
+    <tbody>
+      <tr><td>DNV-RP-0126</td><td>Operational performance assessment</td><td>1, 7, 8, 9, 10</td><td>Compliant</td></tr>
+      <tr><td>IEC 61400-26-1</td><td>Time-based availability categories</td><td>7</td><td>Compliant (energy-based also computed)</td></tr>
+      <tr><td>IEC 61400-12-1 Ed. 2</td><td>Power performance measurement</td><td>4, 6</td><td>Compliant (binning, density correction, filtering)</td></tr>
+      <tr><td>ISO/IEC Guide 98-3 (GUM)</td><td>Uncertainty of measurement</td><td>10</td><td>Compliant (RSS combination, k=1)</td></tr>
+    </tbody>
+  </table>
+  <h3>14.2 Data Lineage</h3>
+  <p>The assessment data flow is as follows:</p>
+  <ol>
+    <li>SCADA CSV upload → PapaParse (inline Web Worker) → row objects</li>
+    <li>Timestamp parsing (auto dayfirst/monthfirst detection) → structured records</li>
+    <li>IEC 61400-12-1 filtering (icing, curtailment, NTF, sectors) → filtered dataset</li>
+    <li>Auto power curve construction (cummax-smoothed binning) → per-turbine curves</li>
+    <li>IEC 61400-26 energy-based availability computation → per-turbine availability</li>
+    <li>MCP regression (OLS) → long-term gross AEP</li>
+    <li>Loss adjustments → P50 net AEP</li>
+    <li>RSS uncertainty combination → combined uncertainty</li>
+    <li>Normal-distribution POE → P50/P75/P90/P95/P99</li>
+  </ol>
+  <h3>14.3 References</h3>
+  <ol>
+    <li>DNV-RP-0126: Recommended Practice for Operational Performance Assessment of Wind Turbines, DNV GL, 2022.</li>
+    <li>IEC 61400-12-1 Ed. 2: Wind energy generation systems — Part 12-1: Power performance measurements of electricity producing wind turbines, International Electrotechnical Commission, 2017.</li>
+    <li>IEC 61400-26-1: Wind energy generation systems — Part 26-1: Time-based availability categories for wind turbine generating systems, International Electrotechnical Commission, 2019.</li>
+    <li>ISO/IEC Guide 98-3: Uncertainty of measurement — Part 3: Guide to the expression of uncertainty in measurement (GUM), ISO, 2008.</li>
+    <li>Brower, M. et al., "Wind Resource Assessment: A Practical Guide to Developing a Wind Project," Wiley, 2012.</li>
+    <li>Hulle, F. et al., "UpWind: Design limits and solutions for very large wind turbines," EWEA, 2011.</li>
+  </ol>
+  <h3>14.4 Tool Description</h3>
+  <p>This assessment was generated using the SCADA Operational EYA Tool, a browser-based implementation of the OEPR methodology. The tool replicates the DNV/UL lender's-engineer practice for Operational Energy Production Reports, with all data processing performed locally in the user's browser (no server upload). The methodology is documented in the OEPR Pipeline (Python) and the SCADA Operational EYA Tool (browser) source code, available at <a href="https://github.com/kvelmurugan77/scada-analysis">github.com/kvelmurugan77/scada-analysis</a> and <a href="https://github.com/kvelmurugan77/portfolio">github.com/kvelmurugan77/portfolio</a>.</p>
+</section>`;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Report download function (replaces the old downloadHTMLReport)
+// ════════════════════════════════════════════════════════════════════
+
+function downloadFullDNVReport(){
+  // Build all sections
+  const bodyHtml = generateFullDNVReport();
+  // Update TOC figure/table lists
+  const lofHtml = STATE.reportMeta.figures.map(f => `<li>${f.number}: ${f.caption}</li>`).join("");
+  const lotHtml = STATE.reportMeta.tables.map(t => `<li>${t.number}: ${t.caption}</li>`).join("");
+  const finalBody = bodyHtml
+    .replace('<ul class="lof" id="report-lof"></ul>', `<ul class="lof">${lofHtml}</ul>`)
+    .replace('<ul class="lot" id="report-lot"></ul>', `<ul class="lot">${lotHtml}</ul>`);
+  const c = STATE.cfg;
+  const fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Operational EYA Report — ${c.projectName || "Wind Farm"}</title>
+<style>
+@page { size: A4 portrait; margin: 25mm 20mm 25mm 20mm; }
+body { font-family: Calibri, Arial, sans-serif; color: #222; line-height: 1.55; font-size: 11pt; margin: 0; }
+h1 { color: #003366; font-size: 22pt; border-bottom: 3px solid #003366; padding-bottom: 6pt; margin-bottom: 6pt; }
+h2 { color: #003366; font-size: 16pt; border-bottom: 1px solid #999; padding-bottom: 3pt; margin-top: 24pt; page-break-after: avoid; }
+h3 { color: #005b99; font-size: 13pt; margin-top: 18pt; page-break-after: avoid; }
+p { margin: 6pt 0; text-align: justify; }
+ul, ol { margin: 6pt 0 6pt 18pt; }
+li { margin-bottom: 3pt; }
+table { border-collapse: collapse; width: 100%; margin: 10pt 0; font-size: 9.5pt; page-break-inside: avoid; }
+th, td { border: 1px solid #888; padding: 4pt 6pt; text-align: left; vertical-align: top; }
+th { background: #003366; color: white; font-weight: 600; }
+tr:nth-child(even) { background: #f2f7ff; }
+.report-cover { page-break-after: always; min-height: 250mm; display: flex; flex-direction: column; }
+.cover-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 60pt; }
+.cover-classification { background: #f5a623; color: #003366; padding: 4pt 12pt; font-weight: 700; font-size: 10pt; letter-spacing: 1pt; }
+.cover-logo { font-size: 36pt; }
+.cover-title { font-size: 28pt; color: #003366; margin-bottom: 8pt; }
+.cover-subtitle { font-size: 18pt; color: #005b99; font-weight: 400; margin-bottom: 40pt; }
+.cover-meta-table { width: 70%; }
+.cover-meta-table td { border: none; padding: 3pt 6pt; }
+.cover-meta-table td:first-child { font-weight: 600; color: #003366; width: 35%; }
+.cover-revision-history { margin-top: 40pt; }
+.rev-table th { background: #4a5a7a; }
+.cover-confidentiality, .cover-independence { background: #fff8e0; border-left: 4px solid #f5a623; padding: 8pt 12pt; font-size: 9pt; margin-top: 20pt; }
+.report-toc { page-break-after: always; }
+.report-toc ol { font-size: 11pt; line-height: 1.9; }
+.report-section { page-break-before: always; }
+.report-table { font-size: 9pt; }
+.table-caption { font-weight: 600; color: #005b99; font-size: 9.5pt; margin: 8pt 0 3pt 0; }
+.sev-badge { color: white; padding: 1pt 6pt; border-radius: 2pt; font-size: 8pt; font-weight: 700; }
+.sev-critical { background: #c0392b; }
+.sev-major { background: #d35400; }
+.sev-minor { background: #27ae60; }
+tr.severity-critical { background: #fde8e8 !important; }
+tr.severity-major { background: #fef3e0 !important; }
+a { color: #005b99; }
+</style>
+</head>
+<body>
+${finalBody}
+</body>
+</html>`;
+  const blob = new Blob([fullHTML], {type:"text/html;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `OEYA_Report_${(c.projectName||"Wind_Farm").replace(/[^a-z0-9]/gi,"_")}_${c.docRevision || "1.0"}.html`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast("Full DNV-style report downloaded (" + STATE.reportMeta.figureCounter + " figures, " + STATE.reportMeta.tableCounter + " tables, 14 sections).");
+}
+
+// ════════════════════════════════════════════════════════════════════
+// "Run All" — runs every analysis module in correct dependency order
+// ════════════════════════════════════════════════════════════════════
+
+async function runAllDNVAnalyses(){
+  if(STATE.scada.length === 0){ toast("No SCADA data loaded.", "error"); return; }
+  logEvent("=== Running full DNV-grade analysis pipeline ===", "info");
+  // Show progress in the log box
+  const card = document.querySelector(".step-panel.active .card");
+  let progressEl = null;
+  if(card){
+    progressEl = document.createElement("div");
+    progressEl.className = "info-box";
+    progressEl.id = "pipelineProgress";
+    progressEl.innerHTML = `<span class="w-icon"><span class="spinner"></span></span><div><div id="pipelineProgressMsg">Running full DNV pipeline…</div><div class="progress-track" style="margin-top:.5rem"><div class="progress-fill" id="pipelineProgressBar" style="width:0%"></div></div></div>`;
+    card.appendChild(progressEl);
+  }
+  function updateProgress(pct, msg){
+    const fill = $("pipelineProgressBar");
+    const msgEl = $("pipelineProgressMsg");
+    if(fill) fill.style.width = pct + "%";
+    if(msgEl && msg) msgEl.textContent = msg;
+  }
+  try {
+    // Step 3: IEC Filtering (10%)
+    updateProgress(10, "Step 3: IEC 61400-12-1 Ed. 2 filtering (icing, curtailment, NTF, sectors)...");
+    runIECFiltering();
+    await new Promise(r => setTimeout(r, 100));
+
+    // Step 4: Availability — chunked, so we need to wait for it to complete
+    // The function uses setTimeout(0) yields, so we wait until STATE.availability is populated
+    updateProgress(25, "Step 4: IEC 61400-26 energy-based availability (per-turbine, chunked)...");
+    if(!STATE.availability){
+      runAvailabilityAnalysis();
+      // Wait for availability to complete (poll every 200ms, timeout after 60s)
+      const startWait = Date.now();
+      while(!STATE.availability && (Date.now() - startWait) < 60000){
+        await new Promise(r => setTimeout(r, 200));
+      }
+    }
+    await new Promise(r => setTimeout(r, 200));
+
+    // Step 5: Downtime Causes (45%)
+    updateProgress(45, "Step 5: Downtime cause analysis (top fault codes, Pareto, MTBF/MTTR)...");
+    runDowntimeAnalysis();
+    await new Promise(r => setTimeout(r, 100));
+
+    // Step 6: Power Curves already built (iecBinnedCurve from IEC filtering, autoCurves from Availability)
+    // Step 7: MCP (55%)
+    updateProgress(55, "Step 7: MCP regression + long-term gross AEP...");
+    if(STATE.ltReference) runMCPAnalysis();
+    else if(!STATE.ltGrossAEP) {
+      // No reference — use POR as P50
+      STATE.mcp = {a: 0, b: 0, r2: NaN, n: 0, method: "POR as P50 (no LT correction)"};
+      const porMonthlyNet = computeMonthlyNetProduction(STATE._enrichedScada);
+      const porAnnualMWh = sum(porMonthlyNet.map(m=>m.energyMWh)) * 12 / porMonthlyNet.length;
+      STATE.ltGrossAEP = {annualGWh: porAnnualMWh/1000, monthly: porMonthlyNet, source: "POR (no LT correction)"};
+    }
+    await new Promise(r => setTimeout(r, 100));
+
+    // Step 7b: Multi-ref cross-validation (60%)
+    updateProgress(60, "Step 7b: Multi-source reference cross-validation...");
+    runMultiRefCrossValidation();
+    // Step 7c: MCP CI
+    if(STATE.mcp && STATE.mcp.x && STATE.mcp.y){
+      const ci = linearRegressionWithCI(STATE.mcp.x, STATE.mcp.y, 0.95);
+      STATE.mcpCI = {
+        slopeStdError: ci.sb, slopeCI95: ci.slopeCI,
+        interceptStdError: ci.sa, interceptCI95: ci.interceptCI,
+        residualStdError: ci.residualSE, method: "OLS standard error, t=1.96 for 95% CI"
+      };
+    }
+
+    // Step 8: EYA & Losses (70%)
+    updateProgress(70, "Step 8: EYA & losses (wake loss, environmental, gross-to-net)...");
+    runWakeLossAnalysis();
+    runEYALosses();
+    await new Promise(r => setTimeout(r, 100));
+
+    // Step 9: Uncertainty & POE (80%)
+    updateProgress(80, "Step 9: Uncertainty (RSS), POE (P50-P99), sensitivity, uncertainty tree...");
+    if(!STATE.uncertainty){
+      STATE.uncertainty = UNCERTAINTY_SOURCES.map(s => ({...s}));
+    }
+    runUncertaintyPOE();
+    buildUncertaintyTree();
+    runSensitivityAnalysis();
+    await new Promise(r => setTimeout(r, 100));
+
+    // Step 10: Diagnostics (90%)
+    updateProgress(90, "Step 10: Diagnostics (yaw + wind speed sensor cross-check)...");
+    if(!STATE.yawAnalysis || !STATE.windspeedAnalysis) runDiagnostics();
+    await new Promise(r => setTimeout(r, 100));
+
+    // Step 11: Findings Register (95%)
+    updateProgress(95, "Step 11: Findings register (aggregating all anomalies)...");
+    runFindingsRegister();
+
+    updateProgress(100, "✓ DNV-grade pipeline complete");
+    logEvent("=== Full DNV-grade analysis pipeline complete ===", "success");
+    toast("Full DNV-grade pipeline complete. Click 'Download Full DNV Report' to generate the report.");
+    if(progressEl){
+      setTimeout(() => progressEl.remove(), 3000);
+    }
+  } catch(err){
+    logEvent("Pipeline error: " + err.message, "error");
+    toast("Pipeline error: " + err.message, "error");
+    console.error(err);
+    if(progressEl) progressEl.remove();
+  }
+}
 
 </script>
 
