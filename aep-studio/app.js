@@ -1386,78 +1386,91 @@
       panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
       document.body.appendChild(panel);
     }
-    const gwaMap = `https://globalwindatlas.info/en/${Number(lat).toFixed(4)}/${Number(lon).toFixed(4)}`;
-    // PowerShell one-liner with required headers (Windows)
-    const ps = `powershell -NoProfile -Command "$u='${libUrl}'; $o=Join-Path $env:USERPROFILE 'Downloads\\gwa_${Number(lat).toFixed(4)}_${Number(lon).toFixed(4)}.lib'; Invoke-WebRequest -Uri $u -Headers @{'X-Requested-With'='XMLHttpRequest';'Referer'='https://globalwindatlas.info/';'User-Agent'='Mozilla/5.0'} -OutFile $o; Write-Host \"Saved: $o\""`;
-    const curlCmd = `curl -L -H "X-Requested-With: XMLHttpRequest" -H "Referer: https://globalwindatlas.info/" -A "Mozilla/5.0" "${libUrl}" -o gwa_site.lib`;
+    const la = Number(lat).toFixed(4);
+    const lo = Number(lon).toFixed(4);
+    const gwaMap = 'https://globalwindatlas.info/en/' + la + '/' + lo;
+    // IMPORTANT: do not put $vars into innerHTML (can break on copy). Build plain strings.
+    const fname = 'gwa_' + la + '_' + lo + '.lib';
+    // PowerShell: use single-quoted URL so & is safe; use ${} only in JS below when assigning .value
+    const psLines = [
+      '$ErrorActionPreference = \'Stop\'',
+      '$url = \'' + libUrl.replace(/'/g, "''") + '\'',
+      '$out = Join-Path $env:USERPROFILE (Join-Path \'Downloads\' \'' + fname + '\')',
+      '$headers = @{',
+      '  \'X-Requested-With\' = \'XMLHttpRequest\'',
+      '  \'Referer\' = \'https://globalwindatlas.info/\'',
+      '  \'User-Agent\' = \'Mozilla/5.0\'',
+      '}',
+      'Invoke-WebRequest -Uri $url -Headers $headers -OutFile $out',
+      'Write-Host ("Saved: " + $out)',
+      'Get-Item $out | Format-List FullName, Length',
+    ].join('\n');
+    const curlCmd = 'curl -L -H "X-Requested-With: XMLHttpRequest" -H "Referer: https://globalwindatlas.info/" -A "Mozilla/5.0" "' +
+      libUrl.replace(/"/g, '\\"') + '" -o "' + fname + '"';
 
-    panel.innerHTML = `
-      <div style="background:#121a2b;border:1px solid #35507a;border-radius:14px;max-width:560px;width:100%;padding:18px;color:#e8eefc;box-shadow:0 12px 40px rgba(0,0,0,.45);max-height:90vh;overflow:auto">
-        <div style="font-weight:700;font-size:1rem;margin-bottom:8px">Get GWA .lib for this site</div>
-        <p style="margin:0 0 10px;color:#9aabcc;font-size:.82rem;line-height:1.45">
-          Opening the GWA API URL in a normal browser tab returns <b>400 Bad Request</b>
-          (the API expects special headers). Do <b>not</b> paste that link in the address bar.
-          ${lastErr ? `<br><span style="color:#f5b942">Last error: ${String(lastErr).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>` : ''}
-        </p>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-          <button type="button" id="gwaAutoDlBtn"
-            style="background:#3d8bfd;color:#fff;border:0;padding:9px 12px;border-radius:9px;font-weight:600;font-size:.82rem;cursor:pointer">
-            1) Auto-download .lib (via proxy)
-          </button>
-          <button type="button" id="gwaUploadBtn"
-            style="background:#1b7a4a;color:#fff;border:0;padding:9px 12px;border-radius:9px;font-weight:600;font-size:.82rem;cursor:pointer">
-            2) Upload .lib file
-          </button>
-          <button type="button" id="gwaUseEra5Btn"
-            style="background:#1c2940;color:#e8eefc;border:1px solid #35507a;padding:9px 12px;border-radius:9px;font-size:.82rem;cursor:pointer">
-            3) Use ERA5 instead
-          </button>
-        </div>
-        <div id="gwaAutoStatus" style="font-size:.78rem;color:#9aabcc;min-height:1.2em;margin-bottom:10px"></div>
-        <details style="margin-bottom:10px">
-          <summary style="cursor:pointer;color:#9ec5ff;font-size:.8rem">Windows PowerShell (always works)</summary>
-          <p style="font-size:.72rem;color:#9aabcc;margin:8px 0">Copy, paste into PowerShell, Enter. Then use <b>Upload .lib file</b> and pick the file from Downloads.</p>
-          <textarea id="gwaPsCmd" readonly style="width:100%;min-height:72px;background:#0e1626;border:1px solid #35507a;color:#e8eefc;border-radius:8px;padding:8px;font-size:.68rem">${ps.replace(/</g,'&lt;')}</textarea>
-          <button type="button" id="gwaCopyPs" style="margin-top:6px;background:#1c2940;color:#e8eefc;border:1px solid #35507a;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:.75rem">Copy PowerShell</button>
-        </details>
-        <details style="margin-bottom:10px">
-          <summary style="cursor:pointer;color:#9ec5ff;font-size:.8rem">curl (Mac/Linux)</summary>
-          <textarea id="gwaCurlCmd" readonly style="width:100%;min-height:52px;background:#0e1626;border:1px solid #35507a;color:#e8eefc;border-radius:8px;padding:8px;font-size:.68rem;margin-top:8px">${curlCmd.replace(/</g,'&lt;')}</textarea>
-          <button type="button" id="gwaCopyCurl" style="margin-top:6px;background:#1c2940;color:#e8eefc;border:1px solid #35507a;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:.75rem">Copy curl</button>
-        </details>
-        <p style="margin:0;color:#9aabcc;font-size:.72rem">Site point: <code>${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)}</code>
-          · <a href="${gwaMap}" target="_blank" rel="noopener" style="color:#9ec5ff">Open GWA map</a>
-        </p>
-        <input type="file" id="gwaLibFile" accept=".lib,.txt,.dat,text/plain" style="display:none"/>
-        <div style="text-align:right;margin-top:12px">
-          <button type="button" id="gwaHelpClose"
-            style="background:transparent;border:1px solid #35507a;color:#9aabcc;padding:7px 12px;border-radius:8px;cursor:pointer">Close</button>
-        </div>
-      </div>`;
+    const errHtml = lastErr
+      ? '<br><span style="color:#f5b942">Last error: ' +
+        String(lastErr).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+        '</span>'
+      : '';
+
+    panel.innerHTML =
+      '<div style="background:#121a2b;border:1px solid #35507a;border-radius:14px;max-width:560px;width:100%;padding:18px;color:#e8eefc;box-shadow:0 12px 40px rgba(0,0,0,.45);max-height:90vh;overflow:auto">' +
+      '<div style="font-weight:700;font-size:1rem;margin-bottom:8px">Get GWA .lib for this site</div>' +
+      '<p style="margin:0 0 10px;color:#9aabcc;font-size:.82rem;line-height:1.45">' +
+      'Do <b>not</b> open the API URL in the browser address bar (returns <b>400 Bad Request</b>).' +
+      errHtml +
+      '</p>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">' +
+      '<button type="button" id="gwaAutoDlBtn" style="background:#3d8bfd;color:#fff;border:0;padding:9px 12px;border-radius:9px;font-weight:600;font-size:.82rem;cursor:pointer">1) Auto-download .lib</button>' +
+      '<button type="button" id="gwaUploadBtn" style="background:#1b7a4a;color:#fff;border:0;padding:9px 12px;border-radius:9px;font-weight:600;font-size:.82rem;cursor:pointer">2) Upload .lib file</button>' +
+      '<button type="button" id="gwaUseEra5Btn" style="background:#1c2940;color:#e8eefc;border:1px solid #35507a;padding:9px 12px;border-radius:9px;font-size:.82rem;cursor:pointer">3) Use ERA5 instead</button>' +
+      '</div>' +
+      '<div id="gwaAutoStatus" style="font-size:.78rem;color:#9aabcc;min-height:1.2em;margin-bottom:10px"></div>' +
+      '<details open style="margin-bottom:10px">' +
+      '<summary style="cursor:pointer;color:#9ec5ff;font-size:.8rem">Windows PowerShell (recommended if auto fails)</summary>' +
+      '<p style="font-size:.72rem;color:#9aabcc;margin:8px 0">Click <b>Copy PowerShell</b>, paste into PowerShell, press Enter. Then click <b>Upload .lib file</b> and choose the file from your Downloads folder.</p>' +
+      '<textarea id="gwaPsCmd" readonly style="width:100%;min-height:120px;background:#0e1626;border:1px solid #35507a;color:#e8eefc;border-radius:8px;padding:8px;font-size:.72rem;font-family:Consolas,monospace"></textarea>' +
+      '<button type="button" id="gwaCopyPs" style="margin-top:6px;background:#1c2940;color:#e8eefc;border:1px solid #35507a;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:.75rem">Copy PowerShell</button>' +
+      '</details>' +
+      '<details style="margin-bottom:10px">' +
+      '<summary style="cursor:pointer;color:#9ec5ff;font-size:.8rem">curl (Mac / Linux / Git Bash)</summary>' +
+      '<textarea id="gwaCurlCmd" readonly style="width:100%;min-height:56px;background:#0e1626;border:1px solid #35507a;color:#e8eefc;border-radius:8px;padding:8px;font-size:.72rem;font-family:Consolas,monospace;margin-top:8px"></textarea>' +
+      '<button type="button" id="gwaCopyCurl" style="margin-top:6px;background:#1c2940;color:#e8eefc;border:1px solid #35507a;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:.75rem">Copy curl</button>' +
+      '</details>' +
+      '<p style="margin:0;color:#9aabcc;font-size:.72rem">Site: <code>' + la + ', ' + lo + '</code> · ' +
+      '<a href="' + gwaMap + '" target="_blank" rel="noopener" style="color:#9ec5ff">Open GWA map</a></p>' +
+      '<input type="file" id="gwaLibFile" accept=".lib,.txt,.dat,text/plain" style="display:none"/>' +
+      '<div style="text-align:right;margin-top:12px">' +
+      '<button type="button" id="gwaHelpClose" style="background:transparent;border:1px solid #35507a;color:#9aabcc;padding:7px 12px;border-radius:8px;cursor:pointer">Close</button>' +
+      '</div></div>';
+
     panel.style.display = 'flex';
 
+    // Set commands via .value so & and $ are never HTML-escaped/corrupted
+    panel.querySelector('#gwaPsCmd').value = psLines;
+    panel.querySelector('#gwaCurlCmd').value = curlCmd;
+
     const close = () => { panel.style.display = 'none'; };
-    const status = () => panel.querySelector('#gwaAutoStatus');
+    const statusEl = () => panel.querySelector('#gwaAutoStatus');
 
     panel.querySelector('#gwaHelpClose').onclick = close;
     panel.onclick = (e) => { if (e.target === panel) close(); };
 
     panel.querySelector('#gwaAutoDlBtn').onclick = async () => {
-      const st = status();
+      const st = statusEl();
       st.style.color = '#9ec5ff';
-      st.textContent = 'Downloading via proxy (may take up to 40s)…';
+      st.textContent = 'Downloading via proxy (up to ~40s)…';
       try {
         const res = await fetchGwaLibText(lat, lon);
-        const fname = `gwa_${Number(lat).toFixed(4)}_${Number(lon).toFixed(4)}.lib`;
         triggerTextDownload(fname, res.text);
         st.style.color = '#3dd68c';
-        st.textContent = `Downloaded ${fname} via ${res.via}. Now parsing into the app…`;
-        await ingestGwaLibText(res.text, { lat, lon, source: 'GWA', fileName: fname });
-        st.textContent = 'GWA loaded into AEP Studio. You can close this panel and run AEP.';
-        addLog('GWA auto-download + ingest OK', 'o');
+        st.textContent = 'Got .lib via ' + res.via + ' — loading into app…';
+        await ingestGwaLibText(res.text, { lat: lat, lon: lon, source: 'GWA', fileName: fname });
+        st.textContent = 'GWA loaded. Close this panel and click Run full AEP.';
       } catch (e) {
         st.style.color = '#ff6b7a';
-        st.textContent = 'Auto-download failed: ' + e.message + ' — use PowerShell box below, then Upload .lib';
+        st.textContent = 'Auto-download failed: ' + e.message + ' — use Copy PowerShell below, then Upload .lib file.';
         addLog('GWA auto-download failed: ' + e.message, 'e');
       }
     };
@@ -1467,16 +1480,15 @@
       const f = e.target.files && e.target.files[0];
       if (!f) return;
       try {
-        status().textContent = 'Parsing ' + f.name + '…';
-        await ingestGwaLibText(await f.text(), { lat, lon, source: 'GWA_FILE', fileName: f.name });
-        status().style.color = '#3dd68c';
-        status().textContent = 'GWA loaded from file. Close panel and run AEP.';
+        statusEl().textContent = 'Parsing ' + f.name + '…';
+        await ingestGwaLibText(await f.text(), { lat: lat, lon: lon, source: 'GWA_FILE', fileName: f.name });
+        statusEl().style.color = '#3dd68c';
+        statusEl().textContent = 'GWA loaded from file.';
         close();
       } catch (err) {
-        status().style.color = '#ff6b7a';
-        status().textContent = 'Parse failed: ' + err.message;
-        addLog('GWA .lib upload failed: ' + err.message, 'e');
-        alert('Could not parse GWA .lib: ' + err.message + '\n\nMake sure the file starts with "GWA4 Generalized Wind Climate" (not an HTML error page).');
+        statusEl().style.color = '#ff6b7a';
+        statusEl().textContent = 'Parse failed: ' + err.message;
+        alert('Could not parse file.\\n\\n' + err.message + '\\n\\nValid GWA files start with: GWA4 Generalized Wind Climate\\n(Do not upload a 400 Bad Request HTML page.)');
       }
     };
 
@@ -1487,15 +1499,20 @@
       try { await downloadERA5(); } catch (e) { addLog('ERA5 failed: ' + e.message, 'e'); }
     };
 
-    const copy = (id, btn) => {
-      const el = panel.querySelector(id);
-      navigator.clipboard.writeText(el.value).then(() => {
-        btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = btn.id.includes('Ps') ? 'Copy PowerShell' : 'Copy curl'; }, 1500);
-      }).catch(() => { el.select(); document.execCommand('copy'); });
-    };
-    panel.querySelector('#gwaCopyPs').onclick = function () { copy('#gwaPsCmd', this); };
-    panel.querySelector('#gwaCopyCurl').onclick = function () { copy('#gwaCurlCmd', this); };
+    function copyArea(sel, btn, resetLabel) {
+      const el = panel.querySelector(sel);
+      const text = el.value;
+      const done = () => { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = resetLabel; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(() => {
+          el.focus(); el.select(); document.execCommand('copy'); done();
+        });
+      } else {
+        el.focus(); el.select(); document.execCommand('copy'); done();
+      }
+    }
+    panel.querySelector('#gwaCopyPs').onclick = function () { copyArea('#gwaPsCmd', this, 'Copy PowerShell'); };
+    panel.querySelector('#gwaCopyCurl').onclick = function () { copyArea('#gwaCurlCmd', this, 'Copy curl'); };
   }
 
   async function ingestGwaLibText(text, meta = {}) {
