@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>WindFlow Pro 60.3</title>
+<title>WindFlow Pro 61.1 (WAsP-class)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -72,7 +72,7 @@ button:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 60.3</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
+  <div class="topbar-brand"><div><div style="display:flex;align-items:center;gap:.5rem"><span class="brand-badge">WINDFLOW PRO</span><span class="brand-title" id="topbarTitle">WindFlow Pro 61.1 (WAsP-class)</span></div><div class="brand-sub">① Site &amp; Turbine → ② Wind Data → ③ MCP &amp; Extrapolation → ④ Terrain → ⑤ WAsP Analysis</div></div></div>
   <div class="topbar-right"><a class="back-link" href="https://kvelmurugan77.github.io/portfolio/">← Portfolio</a><button class="btn btn-sm btn-ghost" onclick="loadDemo('horns')">⚡ Demo</button><button class="btn btn-sm btn-ghost" onclick="loadDemo('envision')">EN-156</button><button class="btn btn-sm btn-sky" onclick="saveProject()">💾 Save</button><label class="btn btn-sm btn-ghost" style="margin:0">📂 Load<input type="file" accept=".json" style="display:none" onchange="loadProject(event)"></label><button class="btn btn-sm btn-danger" onclick="clearAll()">✕ Clear</button></div>
 </div>
 <div class="stepper" id="stepper">
@@ -2549,7 +2549,7 @@ async function downloadTerrainForArea(clat,clon,radKm,ng,ciSel){
 
   // Store for canvas
   S.contoursData=levels.map((lv,li)=>({segs:contours[lv]||[],col:elevCol(lv,minE,maxE),major:li%Math.max(1,Math.round(levels.length/6))===0}));
-  S.terrain={grid,lat0,lat1,lon0,lon1,ny:ng,nx:ng,minE,maxE,meanE,ci,levels};
+  S.terrain={grid,lat0,lat1,lon0,lon1,ny:ng,nx:ng,minE,maxE,meanE,ci,levels,elev:([]).concat.apply([],grid)};
 
   setProg('terrP',95,'Rendering canvas...');
   redrawCanvas();
@@ -7333,7 +7333,7 @@ function exportWaspProjectFiles(){
 function exportReport(){
   const R=S.results,pn=$('projName').value,now=new Date().toLocaleString();
   const metadata={
-    tool_version:'WindFlow Pro 60.3',
+    tool_version:'WindFlow Pro 61.1 (WAsP-class)',
     analysis_date:new Date().toISOString(),
     data_sources:Object.keys(S.windSources||{}),
     assumptions:S.assumptionLog||[],
@@ -7465,7 +7465,7 @@ function exportPDFReport(){
   const R=S.results,pn=$('projName').value;
   if(!R){alert('Run analysis first before exporting PDF report');return;}
   const metadata={
-    tool_version:'WindFlow Pro 60.3',
+    tool_version:'WindFlow Pro 61.1 (WAsP-class)',
     analysis_date:new Date().toISOString(),
     data_sources:Object.keys(S.windSources||{}),
     assumptions:S.assumptionLog||[],
@@ -16654,7 +16654,7 @@ async function downloadSRTMTerrain(){
     setProg('terrP',80,'Computing contours...');
     const contours=marchingSquares(grid,lat0,lat1,lon0,lon1,nrows,ncols,levels);
     S.contoursData=levels.map((lv,li)=>({segs:contours[lv]||[],col:elevCol(lv,minE,maxE),major:li%Math.max(1,Math.round(levels.length/6))===0}));
-    S.terrain={grid,lat0,lat1,lon0,lon1,ny:nrows,nx:ncols,minE,maxE,meanE,ci,levels,source:demType};
+    S.terrain={grid,lat0,lat1,lon0,lon1,ny:nrows,nx:ncols,minE,maxE,meanE,ci,levels,source:demType,elev:([]).concat.apply([],grid)};
     setProg('terrP',95,'Rendering...');
     redrawCanvas();
     setProg('terrP',100,`${demType}: ${ncols}×${nrows} · ${minE.toFixed(0)}–${maxE.toFixed(0)}m`);
@@ -18460,7 +18460,7 @@ async function runWAsPAnalysis(){
            (k.startsWith('WindPRO') || k.startsWith('Windographer') || k.startsWith('CSV') ||
             k.startsWith('WRG') || src.mastName || src.source === 'mast');
   });
-  const hasTerrain = S.terrain && S.terrain.elev && S.terrain.elev.length > 0;
+  const hasTerrain = !!(S.terrain && ((S.terrain.grid && S.terrain.grid.length) || (S.terrain.elev && S.terrain.elev.length) || (S.terrain.elevations && S.terrain.elevations.length) || S.terrain.flat));
   const hasRoughness = S.roughnessRose || S.autoRoughnessRose || S.roughnessZones;
   const hasVE = $('ve1HubWS') && $('ve1HubWS').textContent !== '—';
   // Gate 1: Wind data must be loaded
@@ -18808,7 +18808,7 @@ async function runWAsPAnalysis(){
   runBtn.disabled = false;
 }
 
-function runWAsPFlow() {
+async function runWAsPFlow() {
   if (!S.turbines.length) { alert('Add turbines (grid generator or Demo)'); return; }
   if (!S.wind) { alert('Load wind data (ERA5 tab or Import)'); return; }
 
@@ -19510,4 +19510,5 @@ setTimeout(()=>{
   };
 },100);
 
-</script></body></html>
+</script><script src="wasp_bz_engine_v61.js"></script>
+</body></html>
