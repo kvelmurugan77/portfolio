@@ -1323,6 +1323,114 @@
     return { speeds: speeds.slice(0, N), dirs: dirs.slice(0, N), meanWS, sectors, z0: z0s[rIdx], height: targetHH };
   }
 
+  function showGwaHelpPanel(libUrl, lat, lon, lastErr) {
+    let panel = document.getElementById('gwaHelpPanel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'gwaHelpPanel';
+      panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+      document.body.appendChild(panel);
+    }
+    const gwaMap = `https://globalwindatlas.info/en/${lat.toFixed(4)}/${lon.toFixed(4)}`;
+    panel.innerHTML = `
+      <div style="background:#121a2b;border:1px solid #35507a;border-radius:14px;max-width:520px;width:100%;padding:18px 18px 14px;color:#e8eefc;box-shadow:0 12px 40px rgba(0,0,0,.45)">
+        <div style="font-weight:700;font-size:1rem;margin-bottom:8px">GWA blocked by browser CORS</div>
+        <p style="margin:0 0 10px;color:#9aabcc;font-size:.82rem;line-height:1.4">
+          Global Wind Atlas does not allow websites like GitHub Pages to read its API directly
+          (CORS). This is a browser security rule, not a bug in your layout.
+          ${lastErr ? `<br><span style="color:#f5b942">Last error: ${String(lastErr).replace(/[<>]/g,'')}</span>` : ''}
+        </p>
+        <ol style="margin:0 0 12px 1.1rem;padding:0;color:#c5d0e6;font-size:.82rem;line-height:1.45">
+          <li style="margin-bottom:6px"><b>Recommended:</b> open the GWA <code>.lib</code> link, save the file, then upload it here.</li>
+          <li style="margin-bottom:6px">Or use <b>ERA5</b> for long-term reanalysis (works in browser).</li>
+        </ol>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+          <a id="gwaLibLink" href="${libUrl}" target="_blank" rel="noopener"
+             style="background:#3d8bfd;color:#fff;text-decoration:none;padding:9px 12px;border-radius:9px;font-weight:600;font-size:.82rem">
+            Open / save GWA .lib
+          </a>
+          <a href="${gwaMap}" target="_blank" rel="noopener"
+             style="background:#1c2940;color:#e8eefc;text-decoration:none;padding:9px 12px;border-radius:9px;border:1px solid #35507a;font-size:.82rem">
+            Open GWA map
+          </a>
+          <button type="button" id="gwaUploadBtn"
+            style="background:#1b7a4a;color:#fff;border:0;padding:9px 12px;border-radius:9px;font-weight:600;font-size:.82rem;cursor:pointer">
+            Upload .lib file
+          </button>
+          <button type="button" id="gwaUseEra5Btn"
+            style="background:#1c2940;color:#e8eefc;border:1px solid #35507a;padding:9px 12px;border-radius:9px;font-size:.82rem;cursor:pointer">
+            Use ERA5 instead
+          </button>
+        </div>
+        <input type="file" id="gwaLibFile" accept=".lib,.txt,.dat,text/plain" style="display:none"/>
+        <p style="margin:0;color:#9aabcc;font-size:.72rem;line-height:1.35">
+          Tip: after clicking <b>Open / save GWA .lib</b>, use Save As if the browser shows text.
+          Then click <b>Upload .lib file</b> and select it. Coordinates used:
+          <code>${lat.toFixed(4)}, ${lon.toFixed(4)}</code>
+        </p>
+        <div style="text-align:right;margin-top:12px">
+          <button type="button" id="gwaHelpClose"
+            style="background:transparent;border:1px solid #35507a;color:#9aabcc;padding:7px 12px;border-radius:8px;cursor:pointer">Close</button>
+        </div>
+      </div>`;
+    panel.style.display = 'flex';
+    const close = () => { panel.style.display = 'none'; };
+    panel.querySelector('#gwaHelpClose').onclick = close;
+    panel.addEventListener('click', (e) => { if (e.target === panel) close(); });
+    panel.querySelector('#gwaUploadBtn').onclick = () => panel.querySelector('#gwaLibFile').click();
+    panel.querySelector('#gwaLibFile').onchange = async (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      try {
+        await ingestGwaLibText(await f.text(), { lat, lon, source: 'GWA_FILE', fileName: f.name });
+        close();
+      } catch (err) {
+        addLog('GWA .lib upload failed: ' + err.message, 'e');
+        alert('Could not parse GWA .lib: ' + err.message);
+      }
+    };
+    panel.querySelector('#gwaUseEra5Btn').onclick = async () => {
+      close();
+      $('windSrc').value = 'ERA5';
+      addLog('Switching to ERA5 download…', 'i');
+      try { await downloadERA5(); } catch (e) { addLog('ERA5 failed: ' + e.message, 'e'); }
+    };
+  }
+
+  async function ingestGwaLibText(text, meta = {}) {
+    const hh = +$('hh').value || 140;
+    const z0 = +$('z0').value || 0.03;
+    if (!text || text.length < 50) throw new Error('File too short / empty');
+    if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+      throw new Error('File looks like HTML, not a GWA .lib');
+    }
+    const g = parseGWALib(text, hh, z0);
+    let lat = meta.lat, lon = meta.lon;
+    // Try coordinates embedded in GWA header
+    const m = text.match(/<coordinates>\s*([-\d.]+)\s*,\s*([-\d.]+)/i);
+    if (m) { lon = +m[1]; lat = +m[2]; }
+    if (lat == null || lon == null || !isFinite(lat) || !isFinite(lon)) {
+      const pts = S.boundary.length ? S.boundary : S.turbines;
+      if (pts.length) {
+        const c = centerOf(pts);
+        lat = c.lat; lon = c.lon;
+      }
+    }
+    setWind(g.speeds, g.dirs, {
+      source: meta.source || 'GWA',
+      height: hh,
+      lat, lon,
+    });
+    S.gwaMeta = { meanWS: g.meanWS, sectors: g.sectors, z0: g.z0, fileName: meta.fileName || null };
+    addLog(
+      `GWA climate loaded${meta.fileName ? ' from ' + meta.fileName : ''}: mean ≈ ${g.meanWS.toFixed(2)} m/s @ ${hh} m (z0=${g.z0})`,
+      'o'
+    );
+    setStep('wind', 'done');
+    setProgress(100);
+    return true;
+  }
+
   async function downloadGWA() {
     const pts = S.boundary.length ? S.boundary : S.turbines;
     if (!pts.length) { alert('Set site first'); return; }
@@ -1331,46 +1439,66 @@
     setStep('wind', 'run');
     addLog(`GWA 4.0 .lib @ ${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`, 'i');
     const libUrl = `https://globalwindatlas.info/api/gwa/custom/Lib?lat=${c.lat.toFixed(4)}&long=${c.lon.toFixed(4)}`;
-    const headers = { 'X-Requested-With': 'XMLHttpRequest', 'Accept': '*/*', 'Referer': 'https://globalwindatlas.info/' };
-    const tryUrls = [
-      libUrl,
-      'https://corsproxy.io/?' + encodeURIComponent(libUrl),
-      'https://api.allorigins.win/raw?url=' + encodeURIComponent(libUrl),
+
+    // GitHub Pages cannot call GWA directly (no Access-Control-Allow-Origin).
+    // Try several public CORS proxies; if all fail, show upload panel.
+    const tryList = [
+      { label: 'direct', url: libUrl, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': '*/*', 'Referer': 'https://globalwindatlas.info/' } },
+      { label: 'corsproxy.io', url: 'https://corsproxy.io/?' + encodeURIComponent(libUrl), headers: { 'Accept': '*/*' } },
+      { label: 'allorigins', url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(libUrl), headers: { 'Accept': '*/*' } },
+      { label: 'codetabs', url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(libUrl), headers: { 'Accept': '*/*' } },
     ];
+
     let text = null, err = null;
-    for (const u of tryUrls) {
+    for (const item of tryList) {
       try {
-        const r = await fetch(u, { headers, signal: AbortSignal.timeout(30000) });
+        addLog(`GWA try: ${item.label}…`, 'i');
+        const r = await fetch(item.url, { headers: item.headers, signal: AbortSignal.timeout(35000) });
         if (!r.ok) throw new Error('HTTP ' + r.status);
-        const t = await r.text();
-        if (t && t.length > 50 && !t.startsWith('<!')) { text = t; addLog('GWA fetched via ' + u.slice(0, 48), 'i'); break; }
-        err = 'empty/html response';
-      } catch (e) { err = e.message; addLog('GWA try fail: ' + e.message, 'w'); }
+        let body = await r.text();
+        // some proxies wrap JSON
+        if (body.trim().startsWith('{') && body.includes('"contents"')) {
+          try {
+            const j = JSON.parse(body);
+            if (j.contents) body = j.contents;
+          } catch (_) {}
+        }
+        if (body && body.length > 80 && !body.trim().startsWith('<!DOCTYPE') && !body.trim().startsWith('<html')
+            && (body.includes('Generalized Wind Climate') || body.includes('coordinates') || /\d+\s+\d+\s+\d+/.test(body))) {
+          text = body;
+          addLog('GWA fetched via ' + item.label, 'o');
+          break;
+        }
+        err = item.label + ': unexpected response';
+        addLog('GWA try fail: ' + err, 'w');
+      } catch (e) {
+        err = e.message || String(e);
+        addLog('GWA try fail (' + item.label + '): ' + err, 'w');
+      }
     }
+
     if (!text) {
-      addLog('GWA browser fetch blocked (' + err + '). Upload a .lib file or use ERA5.', 'e');
-      alert('GWA API blocked by browser CORS.\n\nOptions:\n1) Use ERA5 button\n2) Download .lib from globalwindatlas.info and upload as wind file\n3) Run from a local helper that injects GWA');
+      addLog('GWA blocked by browser CORS. Use “Upload .lib” in the help panel, or ERA5.', 'e');
+      showGwaHelpPanel(libUrl, c.lat, c.lon, err);
+      setStep('wind', '');
       return false;
     }
     try {
-      const g = parseGWALib(text, hh, +$('z0').value || 0.03);
-      setWind(g.speeds, g.dirs, { source: 'GWA', height: hh, lat: c.lat, lon: c.lon });
-      S.gwaMeta = { meanWS: g.meanWS, sectors: g.sectors, z0: g.z0 };
-      addLog(`GWA climate mean ≈ ${g.meanWS.toFixed(2)} m/s @ ${hh} m (z0=${g.z0})`, 'o');
-      setProgress(100);
+      await ingestGwaLibText(text, { lat: c.lat, lon: c.lon, source: 'GWA' });
       return true;
     } catch (e) {
       addLog('GWA parse failed: ' + e.message, 'e');
+      showGwaHelpPanel(libUrl, c.lat, c.lon, e.message);
       return false;
     }
   }
 
   function loadWindFile(file) {
-    return file.text().then((text) => {
+    return file.text().then(async (text) => {
       if (file.name.toLowerCase().endsWith('.lib') || text.includes('Generalized Wind Climate') || /^\s*\d+\s+\d+\s+\d+/m.test(text)) {
-        const g = parseGWALib(text, +$('hh').value || 140, +$('z0').value || 0.03);
-        setWind(g.speeds, g.dirs, { source: 'GWA_FILE', height: g.height });
-        S.gwaMeta = { meanWS: g.meanWS, sectors: g.sectors, z0: g.z0 };
+        const pts = S.boundary.length ? S.boundary : S.turbines;
+        const c = pts.length ? centerOf(pts) : { lat: null, lon: null };
+        await ingestGwaLibText(text, { lat: c.lat, lon: c.lon, source: 'GWA_FILE', fileName: file.name });
         return;
       }
       // CSV ws,wd
@@ -1822,6 +1950,21 @@
     $('btnRough').onclick = () => downloadRoughness().catch((e) => addLog(e.message, 'e'));
     $('btnERA5').onclick = () => downloadERA5().catch((e) => addLog(e.message, 'e'));
     $('btnGWA').onclick = () => downloadGWA().catch((e) => addLog(e.message, 'e'));
+    if ($('btnGwaLib') && $('fileGwaLib')) {
+      $('btnGwaLib').onclick = () => $('fileGwaLib').click();
+      $('fileGwaLib').addEventListener('change', async () => {
+        const f = $('fileGwaLib').files && $('fileGwaLib').files[0];
+        if (!f) return;
+        try {
+          const pts = S.boundary.length ? S.boundary : S.turbines;
+          const c = pts.length ? centerOf(pts) : { lat: null, lon: null };
+          await ingestGwaLibText(await f.text(), { lat: c.lat, lon: c.lon, source: 'GWA_FILE', fileName: f.name });
+        } catch (e) {
+          addLog('GWA .lib upload failed: ' + e.message, 'e');
+          alert('Could not parse GWA .lib: ' + e.message);
+        }
+      });
+    }
     $('btnRun').onclick = () => runAEP();
     $('btnExport').onclick = exportResults;
     $('btnDemo').onclick = loadDemo;
@@ -1848,7 +1991,8 @@
       S, downloadTerrain, downloadRoughness, downloadERA5, downloadGWA,
       runAEP, exportResults, applyPreset, generateGrid, currentPC,
       loadDemo, redrawMap, refreshSiteUI, updateLegend,
-      drawElevationLayer, drawRoughnessLayer, drawSpeedLayer, drawWindPointLayer
+      drawElevationLayer, drawRoughnessLayer, drawSpeedLayer, drawWindPointLayer,
+      ingestGwaLibText, showGwaHelpPanel
     };
     // also bind commonly used names
     window.downloadTerrain = downloadTerrain;

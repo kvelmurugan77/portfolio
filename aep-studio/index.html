@@ -217,14 +217,17 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
         <div><label>Data height m</label><input id="dataH" type="number" value="100"/></div>
         <div><label>Sectors</label><select id="nSec"><option>12</option><option selected>16</option></select></div>
       </div>
-      <label>Site / mesoscale CSV (timestamp optional, ws, wd)</label>
-      <div class="drop" id="dropWind">Drop wind CSV or <strong>click</strong>
-        <input type="file" id="fileWind" hidden accept=".csv,.txt,.lib"/>
+      <label>Site / mesoscale CSV or GWA .lib (timestamp optional, ws, wd)</label>
+      <div class="drop" id="dropWind">Drop wind CSV / <strong>GWA .lib</strong> or click
+        <input type="file" id="fileWind" hidden accept=".csv,.txt,.lib,.dat"/>
       </div>
+      <p class="hint" style="margin-top:6px">GWA from the browser is often blocked by CORS. Prefer <b>Upload .lib</b> (from globalwindatlas.info) or ERA5.</p>
       <div class="btn-row">
         <button class="btn btn-ghost" id="btnERA5">Download ERA5</button>
         <button class="btn btn-ghost" id="btnGWA">Download GWA</button>
+        <button class="btn btn-ok" id="btnGwaLib" type="button">Upload GWA .lib</button>
       </div>
+      <input type="file" id="fileGwaLib" hidden accept=".lib,.txt,.dat,text/plain"/>
       <div class="chips" id="windChips"></div>
     </div>
 
