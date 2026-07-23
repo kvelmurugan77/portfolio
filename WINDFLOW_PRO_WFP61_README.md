@@ -137,3 +137,17 @@ On **flat + uniform z₀**, free-stream WS should be essentially identical acros
 ---
 
 *WindFlow Pro 61.1 · WFP61 spectral BZ · E2E 16/16 pass*
+
+
+## Terrain & Roughness status (live-tested)
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Terrain Open-Meteo | **Works** | 20×20 Chennai test: 400/400 pts, elev 1–87 m |
+| Terrain OpenTopo fallback | **Works** | mapzen/srtm30m OK |
+| ESA CCI WMS | **Offline (404)** | App falls back to OSM |
+| OSM Overpass roughness | **Works in browser** | Multi-endpoint fallback added in v61.1 |
+| Roughness rose | **Fixed** | `xs is not defined` bug fixed; fetch distances in metres |
+| Used by spectral BZ | **Yes** | terrain grid + sectorRoughRC |
+
+Not identical to WAsP `.map` digitising: coarser point DEM + OSM landuse z0 lookup vs surveyed contour/roughness maps.

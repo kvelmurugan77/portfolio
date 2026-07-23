@@ -2605,14 +2605,39 @@ async function downloadTerrainBoundary(){
 }
 
 // ── OSM ROUGHNESS ──
+
+// v61.1: Overpass with endpoint fallback (public instances are flaky)
+async function fetchOverpassJSON(query, timeoutMs){
+  timeoutMs = timeoutMs || 30000;
+  const endpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.openstreetmap.ru/cgi/interpreter'
+  ];
+  let lastErr = null;
+  for (let i=0;i<endpoints.length;i++){
+    try{
+      const r = await fetch(endpoints[i], {
+        method:'POST',
+        body:'data='+encodeURIComponent(query),
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        signal: AbortSignal.timeout(timeoutMs)
+      });
+      if(!r.ok){ lastErr = new Error('HTTP '+r.status+' @ '+endpoints[i]); continue; }
+      const d = await r.json();
+      if (i>0) log('Overpass fallback OK via '+endpoints[i],'i');
+      return d;
+    }catch(e){ lastErr = e; log('Overpass endpoint failed: '+endpoints[i]+' — '+e.message,'w'); }
+  }
+  throw lastErr || new Error('All Overpass endpoints failed');
+}
+
 async function downloadRoughness(){
   const T=S.terrain;if(!T){alert('Download terrain first');return;}
   $('roughStat').textContent='Querying OSM Overpass API...';
   const q=`[out:json][timeout:30][bbox:${T.lat0},${T.lon0},${T.lat1},${T.lon1}];(way["landuse"];way["natural"~"wood|water|scrub|grassland|wetland"];relation["landuse"]["type"="multipolygon"];);out geom;`;
   try{
-    const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q)});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const d=await r.json();
+    const d=await fetchOverpassJSON(q, 30000);
     const z0Map={farmland:.03,grass:.03,meadow:.03,grassland:.03,scrub:.05,forest:1.5,wood:1.5,residential:.4,commercial:.4,industrial:.5,water:.0002,wetland:.0002,retail:.3,construction:.1,orchard:.1};
     S.roughnessZones=[];
     const colMap={water:'#3b82f6',forest:'#166534',grass:'#86efac',scrub:'#fef08a',residential:'#fca5a5',farmland:'#fde68a',industrial:'#9ca3af'};
@@ -9555,7 +9580,9 @@ function autoPopulateRoughnessRose(){
     const dirDeg=s*10;
     const dirRad=dirDeg*Math.PI/180;
     // Sample roughness at 3 distances: 0-2km, 2-10km, 10-20km (or fetchDist)
-    const dists=[2, Math.min(10,fetchDist), Math.min(20,fetchDist*2)];
+    // distances in km for geographic offset; store metres in rose.x for IBL
+    const distsKm=[2, Math.min(10,fetchDist), Math.min(20,fetchDist*2)];
+    const dists=distsKm; // used for lat/lon offset below (km)
     const z0s=[];
     const xs=[];
     for(let d=0;d<dists.length;d++){
@@ -9577,7 +9604,7 @@ function autoPopulateRoughnessRose(){
         }
       }
       z0s.push(bestZ0);
-      xs.push(dists[d]);
+      xs.push(distsKm[d]*1000); // metres for IBL/WAsP-style fetch
     }
     rose.push({dir:dirDeg,z0:z0s,x:xs});
   }
@@ -9596,7 +9623,8 @@ function autoPopulateRoughnessRose(){
       nearZ0+=rose[s].z0[0];midZ0+=rose[s].z0[1];farZ0+=rose[s].z0[2];cnt++;
     }
     if(cnt>0){nearZ0/=cnt;midZ0/=cnt;farZ0/=cnt;}
-    S.roughnessRose[i]={z0:[nearZ0,midZ0,farZ0],x:[0,xs[1]||2000,xs[2]||5000]};
+    // v61.1 fix: xs was block-scoped inside sector loop (ReferenceError). Use fetch distances in metres.
+    S.roughnessRose[i]={z0:[nearZ0,midZ0,farZ0],x:[0, Math.min(10,fetchDist)*1000, Math.min(20,fetchDist*2)*1000]};
   }
 
   // Render table
@@ -9757,14 +9785,7 @@ async function extractOSMRoughness() {
   `;
 
   try {
-    const resp = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      body: 'data=' + encodeURIComponent(query),
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    });
-
-    if (!resp.ok) throw new Error(`Overpass API returned ${resp.status}`);
-    const data = await resp.json();
+    const data = await fetchOverpassJSON(query, 30000);
 
     setProg('osm', 50, `Got ${data.elements?.length || 0} OSM elements...`);
 
@@ -16779,9 +16800,8 @@ async function downloadESA_CCI_Auto(){
     S.roughnessZones=[];sectorZ0s.forEach(a=>a.length=0);sampled=0;
     const q=`[out:json][timeout:30][bbox:${T.lat0},${T.lon0},${T.lat1},${T.lon1}];(way["landuse"];way["natural"~"wood|water|scrub|grassland|wetland|heath|sand|bare_rock|beach"];way["leisure"~"park|garden|golf_course"];way["amenity"~"school|university|hospital"];relation["landuse"]["type"="multipolygon"];relation["natural"~"wood|water|scrub|grassland|wetland"]["type"="multipolygon"];);out geom;`;
     try{
-      const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q),signal:AbortSignal.timeout(30000)});
-      if(r.ok){
-        const d=await r.json();
+      const d=await fetchOverpassJSON(q, 30000);
+      if(d && d.elements){
         const z0Map={residential:.4,commercial:.4,industrial:.5,retail:.3,construction:.1,farmland:.03,grass:.03,meadow:.03,grassland:.03,orchard:.1,vineyard:.1,forest:1.5,wood:1.5,scrub:.05,heath:.05,wetland:.0002,water:.0002,sand:.002,bare_rock:.002,beach:.002,park:.1,garden:.1,golf_course:.03,school:.4,university:.4,hospital:.4};
         const colMap={water:'#3b82f6',forest:'#166534',wood:'#166534',grass:'#86efac',meadow:'#86efac',scrub:'#fef08a',residential:'#fca5a5',farmland:'#fde68a',industrial:'#9ca3af',commercial:'#fca5a5',heath:'#fef08a',wetland:'#93c5fd',sand:'#fde68a',bare_rock:'#d4d4d8',beach:'#fde68a',park:'#86efac',garden:'#86efac'};
         (d.elements||[]).forEach(el=>{
@@ -16798,7 +16818,7 @@ async function downloadESA_CCI_Auto(){
           sectorZ0s[si].push(z0);sampled++;
         });
         log(`OSM Overpass: ${sampled} land-use features with enhanced z₀ mapping`,'i');
-      }else{log('OSM Overpass returned HTTP '+r.status,'w');}
+      }else{log('OSM Overpass returned empty elements','w');}
     }catch(e){$('roughStat').textContent='OSM Overpass unavailable — trying extractOSMRoughness fallback...';$('roughStat').style.color='var(--wrn)';log('OSM roughness failed: '+e.message+' — trying extractOSMRoughness fallback','w');if(typeof extractOSMRoughness==='function'){try{await extractOSMRoughness();return;}catch(e2){log('extractOSMRoughness also failed: '+e2.message,'e');}}$('roughStat').textContent='All roughness sources failed — use manual z₀';$('roughStat').style.color='var(--red)';setProg('osm',0,'Failed');return;}
   }
 
@@ -16900,9 +16920,7 @@ async function downloadRoughnessEnhanced(){
   const clat=(T.lat0+T.lat1)/2, clon=(T.lon0+T.lon1)/2;
   const q=`[out:json][timeout:30][bbox:${T.lat0},${T.lon0},${T.lat1},${T.lon1}];(way["landuse"];way["natural"~"wood|water|scrub|grassland|wetland|heath|sand|bare_rock|beach"];way["leisure"~"park|garden|golf_course"];way["amenity"~"school|university|hospital"];relation["landuse"]["type"="multipolygon"];relation["natural"~"wood|water|scrub|grassland|wetland"]["type"="multipolygon"];);out geom;`;
   try{
-    const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q),signal:AbortSignal.timeout(30000)});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const d=await r.json();
+    const d=await fetchOverpassJSON(q, 30000);
     const z0Map={residential:.4,commercial:.4,industrial:.5,retail:.3,construction:.1,farmland:.03,grass:.03,meadow:.03,grassland:.03,orchard:.1,vineyard:.1,forest:1.5,wood:1.5,scrub:.05,heath:.05,wetland:.0002,water:.0002,sand:.002,bare_rock:.002,beach:.002,park:.1,garden:.1,golf_course:.03,railway:.03,school:.4,university:.4,hospital:.4};
     const colMap={water:'#3b82f6',forest:'#166534',wood:'#166534',grass:'#86efac',meadow:'#86efac',scrub:'#fef08a',residential:'#fca5a5',farmland:'#fde68a',industrial:'#9ca3af',commercial:'#fca5a5',heath:'#fef08a',wetland:'#93c5fd',sand:'#fde68a',bare_rock:'#d4d4d8',beach:'#fde68a',park:'#86efac',garden:'#86efac'};
     S.roughnessZones=[];
