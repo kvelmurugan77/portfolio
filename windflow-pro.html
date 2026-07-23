@@ -14706,7 +14706,17 @@ async function downloadGWA(){
   try{
     $('gwaStatus').textContent='Fetching GWA 4.0 Generalized Wind Climate...';
     const libUrl=`https://globalwindatlas.info/api/gwa/custom/Lib?lat=${lat.toFixed(4)}&long=${lon.toFixed(4)}`;
-    const r=await fetch(corsProxy(libUrl),{headers:gwaHeaders});
+    // v61.2: try direct GWA first (API allows server/no-cors-proxy), then proxies
+    let r=null; let libFetchErr=null;
+    const gwaTryUrls=[libUrl, corsProxy(libUrl), 'https://api.allorigins.win/raw?url='+encodeURIComponent(libUrl)];
+    for (const tu of gwaTryUrls){
+      try{
+        const rr=await fetch(tu,{headers:gwaHeaders, signal:AbortSignal.timeout(25000)});
+        if(rr.ok){ r=rr; if(tu!==libUrl) log('GWA fetched via proxy: '+tu.slice(0,60),'i'); break; }
+        libFetchErr='HTTP '+rr.status;
+      }catch(e){ libFetchErr=String(e&&e.message||e); }
+    }
+    if(!r) throw new Error(libFetchErr||'GWA lib fetch failed');
     if(r.ok){
       const libText=await r.text();
       if(libText&&!libText.startsWith('<!')&&libText.length>50){
