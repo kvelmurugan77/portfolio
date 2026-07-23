@@ -185,11 +185,11 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
 
     <div class="card">
       <h2>3 · Terrain &amp; roughness</h2>
-      <p class="hint">Auto-downloads DEM (Open-Meteo / OpenTopo) and land-cover roughness (OSM). Uses retries + slower batching to avoid HTTP 429. Prefer grid 30 for reliability.</p>
+      <p class="hint">Auto-downloads DEM (Open-Meteo / OpenTopo) and land-cover roughness (OSM). Uses paced API calls + cache to reduce HTTP 429. Use grid <b>25–30</b>. If rate-limited, wait 1–2 min or re-use cache (same area). Roughness falls back to z₀ quickly if OSM is busy.</p>
       <div class="row">
         <div><label>Terrain radius km</label><input id="terrR" type="number" value="12"/></div>
         <div><label>Grid size</label>
-          <select id="terrG"><option selected>30</option><option>40</option><option>50</option><option>60</option></select>
+          <select id="terrG"><option selected value="25">25 (fast)</option><option value="30">30</option><option value="40">40</option><option value="50">50 (slow)</option></select>
         </div>
       </div>
       <div class="btn-row">
