@@ -465,40 +465,126 @@
   }
 
   // ─── Terrain download ────────────────────────────────────────────────────
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+  async function fetchJsonWithRetry(url, opts = {}, retries = 5) {
+    let lastErr = null;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const r = await fetch(url, { ...opts, signal: AbortSignal.timeout(opts.timeoutMs || 20000) });
+        if (r.status === 429 || r.status === 503) {
+          const wait = Math.min(12000, 800 * Math.pow(2, attempt) + Math.random() * 400);
+          addLog(`Rate limited (HTTP ${r.status}) — retry in ${(wait / 1000).toFixed(1)}s…`, 'w');
+          await sleep(wait);
+          lastErr = new Error('HTTP ' + r.status);
+          continue;
+        }
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return await r.json();
+      } catch (e) {
+        lastErr = e;
+        if (attempt < retries && /timeout|network|fetch|429|503/i.test(String(e.message || e))) {
+          const wait = Math.min(10000, 600 * Math.pow(2, attempt));
+          await sleep(wait);
+          continue;
+        }
+        throw e;
+      }
+    }
+    throw lastErr || new Error('fetch failed');
+  }
+
   async function fetchElevOpenMeteo(lats, lons) {
-    const CHUNK = 50, elevs = [];
-    for (let c = 0; c < lats.length; c += CHUNK) {
+    // Smaller chunks + delay between batches to avoid Open-Meteo HTTP 429
+    const CHUNK = 20, elevs = [];
+    const nBatch = Math.ceil(lats.length / CHUNK);
+    for (let c = 0, bi = 0; c < lats.length; c += CHUNK, bi++) {
       const la = lats.slice(c, c + CHUNK), lo = lons.slice(c, c + CHUNK);
       const url = `https://api.open-meteo.com/v1/elevation?latitude=${la.join(',')}&longitude=${lo.join(',')}`;
       try {
-        const r = await fetch(url, { signal: AbortSignal.timeout(15000) });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const d = await r.json();
+        const d = await fetchJsonWithRetry(url, { timeoutMs: 20000 }, 6);
         elevs.push(...(d.elevation || la.map(() => null)));
       } catch (e) {
-        addLog('Open-Meteo batch failed: ' + e.message, 'w');
+        addLog(`Open-Meteo batch ${bi + 1}/${nBatch} failed: ${e.message}`, 'w');
         elevs.push(...la.map(() => null));
       }
+      if (c + CHUNK < lats.length) await sleep(350); // pace requests
+      if (bi % 5 === 0) setProgress(5 + Math.round(50 * (bi + 1) / nBatch));
     }
     return elevs;
   }
+
   async function fetchElevOpenTopo(lats, lons, ds = 'mapzen') {
-    const CHUNK = 100, elevs = [];
-    for (let c = 0; c < lats.length; c += CHUNK) {
+    // OpenTopo often blocks browser CORS ("Failed to fetch"). Try direct, then CORS proxies.
+    const CHUNK = 50, elevs = [];
+    const nBatch = Math.ceil(lats.length / CHUNK);
+    for (let c = 0, bi = 0; c < lats.length; c += CHUNK, bi++) {
       const la = lats.slice(c, c + CHUNK), lo = lons.slice(c, c + CHUNK);
       const locs = la.map((a, i) => `${a},${lo[i]}`).join('|');
-      try {
-        const r = await fetch(`https://api.opentopodata.org/v1/${ds}?locations=${locs}`, { signal: AbortSignal.timeout(20000) });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const d = await r.json();
-        (d.results || []).forEach((res) => elevs.push(res.elevation));
-      } catch (e) {
-        addLog('OpenTopo batch failed: ' + e.message, 'w');
+      const base = `https://api.opentopodata.org/v1/${ds}?locations=${locs}`;
+      const urls = [
+        base,
+        'https://corsproxy.io/?' + encodeURIComponent(base),
+        'https://api.allorigins.win/raw?url=' + encodeURIComponent(base),
+      ];
+      let ok = false;
+      let lastErr = null;
+      for (const url of urls) {
+        try {
+          const d = await fetchJsonWithRetry(url, { timeoutMs: 25000 }, 2);
+          const results = d.results || null;
+          if (results && results.length) {
+            results.forEach((res) => elevs.push(res.elevation != null ? res.elevation : null));
+            ok = true;
+            break;
+          }
+          // allorigins may wrap
+          if (d && d.contents) {
+            const inner = typeof d.contents === 'string' ? JSON.parse(d.contents) : d.contents;
+            (inner.results || []).forEach((res) => elevs.push(res.elevation != null ? res.elevation : null));
+            ok = true;
+            break;
+          }
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      if (!ok) {
+        addLog(`OpenTopo batch ${bi + 1}/${nBatch} failed (CORS/rate) — will fill gaps`, 'w');
         elevs.push(...la.map(() => null));
       }
-      if (c + CHUNK < lats.length) await new Promise((r) => setTimeout(r, 1100));
+      if (c + CHUNK < lats.length) await sleep(1200); // OpenTopo ~1 req/s
     }
     return elevs;
+  }
+
+  /** Fill null elevations by nearest-neighbor / bilinear from valid cells */
+  function fillElevationNulls(elevs, ny, nx) {
+    const a = elevs.slice();
+    const valid = a.filter((v) => v != null && isFinite(v));
+    if (!valid.length) return a;
+    const fallback = mean(valid);
+    // multi-pass nearest valid
+    for (let pass = 0; pass < 4; pass++) {
+      let changed = 0;
+      for (let i = 0; i < ny; i++) {
+        for (let j = 0; j < nx; j++) {
+          const k = i * nx + j;
+          if (a[k] != null && isFinite(a[k])) continue;
+          let s = 0, n = 0;
+          for (let di = -2; di <= 2; di++) for (let dj = -2; dj <= 2; dj++) {
+            const ii = i + di, jj = j + dj;
+            if (ii < 0 || jj < 0 || ii >= ny || jj >= nx) continue;
+            const v = a[ii * nx + jj];
+            if (v != null && isFinite(v)) { s += v; n++; }
+          }
+          if (n) { a[k] = s / n; changed++; }
+        }
+      }
+      if (!changed) break;
+    }
+    for (let k = 0; k < a.length; k++) if (a[k] == null || !isFinite(a[k])) a[k] = fallback;
+    return a;
   }
 
   async function downloadTerrain() {
@@ -527,12 +613,24 @@
     let elevs = await fetchElevOpenMeteo(gLats, gLons);
     let valid = elevs.filter((e) => e != null && isFinite(e)).length;
     let source = 'Open-Meteo';
-    if (valid < gLats.length * 0.5) {
-      addLog('Open-Meteo incomplete — trying OpenTopoData', 'w');
-      const e2 = await fetchElevOpenTopo(gLats, gLons, 'mapzen');
-      const v2 = e2.filter((e) => e != null && isFinite(e)).length;
-      if (v2 > valid) { elevs = e2; valid = v2; source = 'OpenTopo/mapzen'; }
+    addLog(`Open-Meteo: ${valid}/${gLats.length} valid points`, valid > 0 ? 'i' : 'w');
+    if (valid < gLats.length * 0.85) {
+      addLog('Filling gaps / trying OpenTopoData fallback…', 'w');
+      try {
+        const e2 = await fetchElevOpenTopo(gLats, gLons, 'mapzen');
+        // merge: prefer Open-Meteo where valid, else OpenTopo
+        for (let i = 0; i < elevs.length; i++) {
+          if ((elevs[i] == null || !isFinite(elevs[i])) && e2[i] != null && isFinite(e2[i])) elevs[i] = e2[i];
+        }
+        const v2 = elevs.filter((e) => e != null && isFinite(e)).length;
+        if (v2 > valid) { valid = v2; source = valid > gLats.length * 0.5 ? 'Open-Meteo+OpenTopo' : 'OpenTopo/mapzen'; }
+      } catch (e) {
+        addLog('OpenTopo fallback skipped: ' + e.message, 'w');
+      }
     }
+    // Never leave nulls as 0 (ocean/false flat) — interpolate gaps
+    elevs = fillElevationNulls(elevs, ng, ng);
+    valid = elevs.filter((e) => e != null && isFinite(e)).length;
     setProgress(70);
     const grid = [];
     for (let i = 0; i < ng; i++) {
@@ -573,23 +671,38 @@
   }
 
   // ─── Roughness ───────────────────────────────────────────────────────────
-  async function fetchOverpassJSON(query, timeoutMs = 20000) {
+  async function fetchOverpassJSON(query, timeoutMs = 45000) {
     const endpoints = [
       'https://overpass-api.de/api/interpreter',
       'https://overpass.kumi.systems/api/interpreter',
+      'https://overpass.openstreetmap.ru/cgi/interpreter',
     ];
     let last = null;
     for (const ep of endpoints) {
-      try {
-        const r = await fetch(ep, {
-          method: 'POST',
-          body: 'data=' + encodeURIComponent(query),
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          signal: AbortSignal.timeout(timeoutMs),
-        });
-        if (!r.ok) { last = new Error('HTTP ' + r.status); continue; }
-        return await r.json();
-      } catch (e) { last = e; addLog('Overpass fail ' + ep + ': ' + e.message, 'w'); }
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          addLog(`OSM Overpass: ${ep.split('/')[2]} (try ${attempt + 1})…`, 'i');
+          const r = await fetch(ep, {
+            method: 'POST',
+            body: 'data=' + encodeURIComponent(query),
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(timeoutMs),
+          });
+          if (r.status === 429 || r.status === 504 || r.status === 503) {
+            last = new Error('HTTP ' + r.status);
+            await sleep(1500 * (attempt + 1));
+            continue;
+          }
+          if (!r.ok) { last = new Error('HTTP ' + r.status); break; }
+          const d = await r.json();
+          if (d && (d.elements || d.remark)) return d;
+          last = new Error('empty Overpass response');
+        } catch (e) {
+          last = e;
+          addLog('Overpass fail ' + ep.split('/')[2] + ': ' + e.message, 'w');
+          await sleep(800);
+        }
+      }
     }
     throw last || new Error('Overpass failed');
   }
@@ -601,10 +714,11 @@
       ? { minLat: S.terrain.lat0, maxLat: S.terrain.lat1, minLon: S.terrain.lon0, maxLon: S.terrain.lon1 }
       : bboxOf(S.boundary.length ? S.boundary : S.turbines);
     addLog('Roughness: querying OSM land use…', 'i');
-    const q = `[out:json][timeout:40][bbox:${b.minLat},${b.minLon},${b.maxLat},${b.maxLon}];(
-      way["landuse"];way["natural"~"wood|water|scrub|grassland|wetland|heath|sand"];
-      way["leisure"~"park|golf_course"];relation["landuse"]["type"="multipolygon"];
-    );out geom;`;
+    // Keep query lighter for reliability; out center instead of full geom when possible
+    const q = `[out:json][timeout:60][bbox:${b.minLat},${b.minLon},${b.maxLat},${b.maxLon}];(
+      way["landuse"];
+      way["natural"~"wood|water|scrub|grassland|wetland|forest"];
+    );out body center;`;
     const z0Map = {
       farmland: .03, grass: .03, meadow: .03, grassland: .03, scrub: .05, heath: .05,
       forest: 1.0, wood: 1.0, residential: .4, commercial: .4, industrial: .5, retail: .3,
@@ -612,16 +726,24 @@
       railway: .05, construction: .1, military: .3, recreation_ground: .03, park: .1,
     };
     try {
-      const d = await fetchOverpassJSON(q, 22000);
+      const d = await fetchOverpassJSON(q, 55000);
       const zones = [];
       (d.elements || []).forEach((el) => {
-        if (!el.geometry || el.geometry.length < 3) return;
         const lu = el.tags?.landuse || el.tags?.natural || el.tags?.leisure || 'other';
         const z0 = z0Map[lu] ?? 0.1;
-        zones.push({
-          lu, z0,
-          pts: el.geometry.map((p) => ({ lat: p.lat, lon: p.lon })),
-        });
+        let pts = null;
+        if (el.geometry && el.geometry.length >= 3) {
+          pts = el.geometry.map((p) => ({ lat: p.lat, lon: p.lon }));
+        } else if (el.center && el.center.lat != null) {
+          // out center response — small square around centroid
+          const d = 0.002;
+          const la = el.center.lat, lo = el.center.lon;
+          pts = [
+            { lat: la - d, lon: lo - d }, { lat: la - d, lon: lo + d },
+            { lat: la + d, lon: lo + d }, { lat: la + d, lon: lo - d },
+          ];
+        } else return;
+        zones.push({ lu, z0, pts });
       });
       // cap extremes
       if (zones.length > 1) {
@@ -740,8 +862,24 @@
         }
         setProgress(10 + 80 * (y - y0 + 1) / (y1 - y0 + 1));
         addLog(`ERA5 year ${y}: +${ws.filter((v)=>v!=null).length} hours`, 'i');
+        if (y < y1) await sleep(400);
       } catch (e) {
-        addLog(`ERA5 ${y} failed: ${e.message}`, 'w');
+        addLog(`ERA5 ${y} failed: ${e.message} — retrying once…`, 'w');
+        try {
+          await sleep(1500);
+          const r2 = await fetch(url, { signal: AbortSignal.timeout(90000) });
+          if (!r2.ok) throw new Error('HTTP ' + r2.status);
+          const d2 = await r2.json();
+          const ws2 = d2.hourly?.[wsV] || [], wd2 = d2.hourly?.[wdV] || [], tm2 = d2.hourly?.time || [];
+          for (let i = 0; i < ws2.length; i++) {
+            if (ws2[i] != null && ws2[i] >= 0 && ws2[i] < 80) {
+              speeds.push(ws2[i]); dirs.push(((wd2[i] || 0) % 360 + 360) % 360); times.push(tm2[i] || '');
+            }
+          }
+          addLog(`ERA5 year ${y} retry OK`, 'o');
+        } catch (e2) {
+          addLog(`ERA5 ${y} failed: ${e2.message}`, 'e');
+        }
       }
     }
     if (speeds.length < 100) { addLog('ERA5 download failed or too short', 'e'); return false; }
