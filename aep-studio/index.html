@@ -46,6 +46,17 @@ textarea{min-height:70px;resize:vertical}
 .chip.on{color:var(--ok);border-color:#2a6b4a}
 #map{height:100%;min-height:420px;background:#0a101c}
 .map-wrap{position:relative;height:55%;min-height:320px}
+.map-toolbar{position:absolute;top:10px;right:10px;z-index:1000;display:flex;flex-direction:column;gap:6px;max-width:200px}
+.map-toolbar .mt-card{background:rgba(15,22,38,.92);border:1px solid var(--line);border-radius:10px;padding:8px 10px;backdrop-filter:blur(6px)}
+.map-toolbar label{display:flex;align-items:center;gap:6px;margin:3px 0;font-size:.72rem;color:var(--text);cursor:pointer}
+.map-toolbar input{width:auto;accent-color:var(--acc)}
+.map-legend{position:absolute;bottom:14px;left:10px;z-index:1000;background:rgba(15,22,38,.92);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.68rem;min-width:140px}
+.map-legend .title{font-weight:700;margin-bottom:4px;color:var(--muted)}
+.map-legend .row{display:flex;align-items:center;gap:6px;margin:2px 0}
+.map-legend .sw{width:14px;height:10px;border-radius:2px;border:1px solid rgba(255,255,255,.15)}
+.map-legend .bar{height:10px;border-radius:3px;margin:4px 0;background:linear-gradient(90deg,#0b3d91,#2ecc71,#f1c40f,#e74c3c)}
+.wtg-label{background:rgba(10,16,28,.85)!important;border:1px solid #2a6b4a!important;color:#e8eefc!important;font-size:10px!important;padding:1px 4px!important;border-radius:4px!important;box-shadow:none!important}
+
 .logs{height:45%;overflow:auto;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.72rem;background:#0a101c;border-top:1px solid var(--line)}
 .log-i{color:#9ec5ff}.log-o{color:var(--ok)}.log-w{color:var(--warn)}.log-e{color:var(--bad)}
 .kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -231,7 +242,26 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
 
   <!-- CENTER: map + logs -->
   <div>
-    <div class="map-wrap"><div id="map"></div></div>
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="map-toolbar">
+        <div class="mt-card">
+          <div style="font-size:.68rem;color:var(--muted);font-weight:700;margin-bottom:4px">MAP LAYERS</div>
+          <label><input type="checkbox" id="lyrBoundary" checked> Boundary</label>
+          <label><input type="checkbox" id="lyrTurbines" checked> Turbines</label>
+          <label><input type="checkbox" id="lyrElev" checked> Elevation / contours</label>
+          <label><input type="checkbox" id="lyrRough" checked> Roughness z₀</label>
+          <label><input type="checkbox" id="lyrSpeed" checked> Hub wind speed</label>
+          <label><input type="checkbox" id="lyrWindPt" checked> Wind data location</label>
+          <label><input type="checkbox" id="lyrLabels"> WTG WS labels</label>
+        </div>
+        <div class="mt-card" id="mapStats" style="font-size:.68rem;color:var(--muted);line-height:1.35">No layers yet</div>
+      </div>
+      <div class="map-legend" id="mapLegend">
+        <div class="title">Legend</div>
+        <div id="legendBody" style="color:var(--muted)">Load terrain / run AEP</div>
+      </div>
+    </div>
     <div class="logs" id="log"></div>
   </div>
 

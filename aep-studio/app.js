@@ -15,7 +15,13 @@
     pc: null,
     results: null,
     map: null,
-    layers: { boundary: null, turbines: null, terr: null },
+    layers: {
+      boundary: null, turbines: null, elev: null, rough: null,
+      speed: null, windPt: null, labels: null, elevControl: null
+    },
+    speedField: null, // per-turbine free WS after AEP
+    windPoint: null,  // {lat,lon,source,height,meanWS}
+
   };
 
   // Expose for WFP61 spectral engine compatibility
@@ -320,26 +326,295 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18, attribution: '© OpenStreetMap',
     }).addTo(S.map);
-    S.layers.turbines = L.layerGroup().addTo(S.map);
+    S.layers.elev = L.layerGroup().addTo(S.map);
+    S.layers.rough = L.layerGroup().addTo(S.map);
     S.layers.boundary = L.layerGroup().addTo(S.map);
+    S.layers.speed = L.layerGroup().addTo(S.map);
+    S.layers.turbines = L.layerGroup().addTo(S.map);
+    S.layers.windPt = L.layerGroup().addTo(S.map);
+    S.layers.labels = L.layerGroup(); // off by default
+    bindLayerToggles();
   }
-  function redrawMap() {
+
+  function bindLayerToggles() {
+    const bind = (id, layer, fit) => {
+      const el = $(id); if (!el) return;
+      el.addEventListener('change', () => {
+        if (el.checked) {
+          if (!S.map.hasLayer(layer)) layer.addTo(S.map);
+        } else if (S.map.hasLayer(layer)) {
+          S.map.removeLayer(layer);
+        }
+        updateLegend();
+      });
+    };
+    bind('lyrBoundary', S.layers.boundary);
+    bind('lyrTurbines', S.layers.turbines);
+    bind('lyrElev', S.layers.elev);
+    bind('lyrRough', S.layers.rough);
+    bind('lyrSpeed', S.layers.speed);
+    bind('lyrWindPt', S.layers.windPt);
+    bind('lyrLabels', S.layers.labels);
+  }
+
+  function elevColor(t) {
+    // t 0..1 blue→cyan→green→yellow→red
+    const stops = [
+      [0.0, [11, 61, 145]],
+      [0.25, [46, 204, 113]],
+      [0.5, [241, 196, 15]],
+      [0.75, [230, 126, 34]],
+      [1.0, [192, 57, 43]],
+    ];
+    t = clamp(t, 0, 1);
+    for (let i = 1; i < stops.length; i++) {
+      if (t <= stops[i][0]) {
+        const t0 = stops[i - 1][0], t1 = stops[i][0];
+        const u = (t - t0) / (t1 - t0 || 1);
+        const c0 = stops[i - 1][1], c1 = stops[i][1];
+        const r = Math.round(c0[0] + (c1[0] - c0[0]) * u);
+        const g = Math.round(c0[1] + (c1[1] - c0[1]) * u);
+        const b = Math.round(c0[2] + (c1[2] - c0[2]) * u);
+        return `rgb(${r},${g},${b})`;
+      }
+    }
+    return 'rgb(192,57,43)';
+  }
+
+  function z0Color(z0) {
+    // water → open → farm → scrub → forest/urban
+    if (z0 < 0.001) return '#1e90ff';
+    if (z0 < 0.02) return '#f4d03f';
+    if (z0 < 0.08) return '#58d68d';
+    if (z0 < 0.3) return '#d4ac0d';
+    if (z0 < 0.8) return '#af601a';
+    return '#1e8449';
+  }
+
+  function wsColor(ws, wmin, wmax) {
+    const t = (ws - wmin) / Math.max(0.2, wmax - wmin);
+    return elevColor(clamp(t, 0, 1)); // reuse ramp
+  }
+
+  function drawElevationLayer() {
+    S.layers.elev.clearLayers();
+    const T = S.terrain;
+    if (!T || !T.grid) return;
+    const { grid, ny, nx, lat0, lat1, lon0, lon1, minE, maxE } = T;
+    const dLat = (lat1 - lat0) / Math.max(1, ny - 1);
+    const dLon = (lon1 - lon0) / Math.max(1, nx - 1);
+    const range = Math.max(1, maxE - minE);
+    // Cell heatmap (skip every other cell if large for performance)
+    const step = ny > 50 ? 2 : 1;
+    for (let i = 0; i < ny - 1; i += step) {
+      for (let j = 0; j < nx - 1; j += step) {
+        const v = grid[i][j];
+        if (v == null || !isFinite(v)) continue;
+        const la0 = lat0 + i * dLat, la1 = lat0 + (i + step) * dLat;
+        const lo0 = lon0 + j * dLon, lo1 = lon0 + (j + step) * dLon;
+        const col = elevColor((v - minE) / range);
+        L.rectangle([[la0, lo0], [la1, lo1]], {
+          stroke: false, fillColor: col, fillOpacity: 0.45,
+          interactive: false,
+        }).addTo(S.layers.elev);
+      }
+    }
+    // Contour-like isolines via simple marching on coarse grid
+    const nLevels = 8;
+    const levels = [];
+    for (let k = 1; k < nLevels; k++) levels.push(minE + (range * k) / nLevels);
+    levels.forEach((lev) => {
+      const segs = [];
+      for (let i = 0; i < ny - 1; i++) {
+        for (let j = 0; j < nx - 1; j++) {
+          const v00 = grid[i][j], v10 = grid[i][j + 1], v01 = grid[i + 1][j], v11 = grid[i + 1][j + 1];
+          if (![v00, v10, v01, v11].every((v) => v != null && isFinite(v))) continue;
+          const corners = [
+            [0, 0, v00], [1, 0, v10], [1, 1, v11], [0, 1, v01],
+          ];
+          const pts = [];
+          for (let e = 0; e < 4; e++) {
+            const [x1, y1, a] = corners[e];
+            const [x2, y2, b] = corners[(e + 1) % 4];
+            if ((a < lev && b >= lev) || (a >= lev && b < lev)) {
+              const t = (lev - a) / ((b - a) || 1e-9);
+              const x = x1 + (x2 - x1) * t;
+              const y = y1 + (y2 - y1) * t;
+              pts.push([lat0 + (i + y) * dLat, lon0 + (j + x) * dLon]);
+            }
+          }
+          if (pts.length >= 2) segs.push(pts.slice(0, 2));
+        }
+      }
+      segs.forEach((pair) => {
+        L.polyline(pair, { color: 'rgba(255,255,255,0.55)', weight: 1.2, opacity: 0.85, interactive: false })
+          .addTo(S.layers.elev);
+      });
+    });
+    // outline domain
+    L.rectangle([[lat0, lon0], [lat1, lon1]], {
+      color: '#5dade2', weight: 1, dashArray: '4 3', fill: false, interactive: false,
+    }).addTo(S.layers.elev);
+  }
+
+  function drawRoughnessLayer() {
+    S.layers.rough.clearLayers();
+    if (!S.roughnessZones || !S.roughnessZones.length) return;
+    S.roughnessZones.forEach((z) => {
+      if (!z.pts || z.pts.length < 3) return;
+      const latlngs = z.pts.map((p) => [p.lat, p.lon]);
+      const col = z0Color(z.z0);
+      L.polygon(latlngs, {
+        color: col, weight: 1, fillColor: col, fillOpacity: 0.28,
+      }).bindTooltip(`${z.lu || 'zone'}<br>z₀ = ${Number(z.z0).toPrecision(3)} m`)
+        .addTo(S.layers.rough);
+    });
+  }
+
+  function drawWindPointLayer() {
+    S.layers.windPt.clearLayers();
+    const wp = S.windPoint || (S.wind && S.wind.lat != null ? {
+      lat: S.wind.lat, lon: S.wind.lon, source: S.wind.source,
+      height: S.wind.height, meanWS: S.wind.meanWS,
+    } : null);
+    if (!wp || wp.lat == null || wp.lon == null || !isFinite(wp.lat) || !isFinite(wp.lon)) return;
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:16px;height:16px;border-radius:50%;background:#f5b942;border:2px solid #fff;box-shadow:0 0 0 3px rgba(245,185,66,.35)"></div>`,
+      iconSize: [16, 16], iconAnchor: [8, 8],
+    });
+    L.marker([wp.lat, wp.lon], { icon, zIndexOffset: 1000 })
+      .bindPopup(
+        `<b>Wind data location</b><br>Source: ${wp.source || '—'}<br>` +
+        `Lat/Lon: ${Number(wp.lat).toFixed(5)}, ${Number(wp.lon).toFixed(5)}<br>` +
+        `Height: ${wp.height != null ? wp.height + ' m' : '—'}<br>` +
+        `Mean WS: ${wp.meanWS != null ? Number(wp.meanWS).toFixed(2) + ' m/s' : '—'}`
+      )
+      .addTo(S.layers.windPt);
+    L.circle([wp.lat, wp.lon], {
+      radius: 400, color: '#f5b942', weight: 1, dashArray: '4 4',
+      fillColor: '#f5b942', fillOpacity: 0.06, interactive: false,
+    }).addTo(S.layers.windPt);
+  }
+
+  function drawSpeedLayer() {
+    S.layers.speed.clearLayers();
+    S.layers.labels.clearLayers();
+    if (!S.speedField || !S.speedField.length || !S.turbines.length) return;
+    const vals = S.speedField.filter((v) => v != null && isFinite(v));
+    if (!vals.length) return;
+    const wmin = Math.min(...vals), wmax = Math.max(...vals);
+    S.turbines.forEach((t, i) => {
+      const ws = S.speedField[i];
+      if (ws == null || !isFinite(ws)) return;
+      const col = wsColor(ws, wmin, wmax);
+      const r = 6 + 10 * ((ws - wmin) / Math.max(0.2, wmax - wmin));
+      L.circleMarker([t.lat, t.lon], {
+        radius: r, color: '#fff', weight: 1, fillColor: col, fillOpacity: 0.85,
+      }).bindTooltip(
+        `<b>T${i + 1}</b><br>Hub WS: <b>${ws.toFixed(2)} m/s</b>` +
+        (t.elev != null ? `<br>Elev: ${Number(t.elev).toFixed(0)} m` : '')
+      ).addTo(S.layers.speed);
+
+      const lab = L.divIcon({
+        className: 'wtg-label',
+        html: `${ws.toFixed(1)}`,
+        iconSize: [28, 14], iconAnchor: [-6, 8],
+      });
+      L.marker([t.lat, t.lon], { icon: lab, interactive: false }).addTo(S.layers.labels);
+    });
+  }
+
+  function updateMapStats() {
+    const el = $('mapStats'); if (!el) return;
+    const bits = [];
+    if (S.terrain) bits.push(`Elev ${S.terrain.minE.toFixed(0)}–${S.terrain.maxE.toFixed(0)} m (${S.terrain.ny}×${S.terrain.nx})`);
+    if (S.roughnessZones?.length) bits.push(`Roughness ${S.roughnessZones.length} zones`);
+    else if (S.roughnessRose) bits.push(`Roughness rose (uniform/default z₀)`);
+    if (S.windPoint || (S.wind && S.wind.lat != null)) {
+      const wp = S.windPoint || S.wind;
+      bits.push(`Wind pt: ${Number(wp.lat).toFixed(3)}, ${Number(wp.lon).toFixed(3)} (${wp.source || ''})`);
+    }
+    if (S.speedField?.length) {
+      const v = S.speedField.filter(isFinite);
+      bits.push(`Hub WS ${Math.min(...v).toFixed(2)}–${Math.max(...v).toFixed(2)} m/s`);
+    }
+    el.innerHTML = bits.length ? bits.map((b) => `• ${b}`).join('<br>') : 'No layers yet — download terrain / run AEP';
+  }
+
+  function updateLegend() {
+    const body = $('legendBody'); if (!body) return;
+    let html = '';
+    if ($('lyrElev')?.checked && S.terrain) {
+      html += `<div class="title">Elevation (m)</div><div class="bar"></div>` +
+        `<div style="display:flex;justify-content:space-between"><span>${S.terrain.minE.toFixed(0)}</span><span>${S.terrain.maxE.toFixed(0)}</span></div>`;
+    }
+    if ($('lyrRough')?.checked) {
+      html += `<div class="title" style="margin-top:6px">Roughness z₀</div>` +
+        [['#1e90ff','water &lt;0.001'],['#f4d03f','open 0.001–0.02'],['#58d68d','farm 0.02–0.08'],
+         ['#d4ac0d','scrub 0.08–0.3'],['#af601a','suburban'],['#1e8449','forest/urban']].map(
+          ([c,l]) => `<div class="row"><span class="sw" style="background:${c}"></span>${l}</div>`
+        ).join('');
+    }
+    if ($('lyrSpeed')?.checked && S.speedField?.length) {
+      const v = S.speedField.filter(isFinite);
+      html += `<div class="title" style="margin-top:6px">Hub wind speed (m/s)</div><div class="bar"></div>` +
+        `<div style="display:flex;justify-content:space-between"><span>${Math.min(...v).toFixed(1)}</span><span>${Math.max(...v).toFixed(1)}</span></div>`;
+    }
+    if ($('lyrWindPt')?.checked && (S.windPoint || (S.wind && S.wind.lat != null))) {
+      html += `<div class="row" style="margin-top:6px"><span class="sw" style="background:#f5b942;border-radius:50%"></span>Wind data location</div>`;
+    }
+    if ($('lyrTurbines')?.checked) {
+      html += `<div class="row" style="margin-top:4px"><span class="sw" style="background:#1b7a4a;border-radius:50%"></span>Turbines</div>`;
+    }
+    body.innerHTML = html || '<span style="color:var(--muted)">Toggle layers above</span>';
+    updateMapStats();
+  }
+
+  function redrawMap(opts = {}) {
+    const fit = opts.fit !== false;
     S.layers.boundary.clearLayers();
     S.layers.turbines.clearLayers();
     if (S.boundary.length >= 3) {
       const latlngs = S.boundary.map((p) => [p.lat, p.lon]);
-      L.polygon(latlngs, { color: '#3d8bfd', weight: 2, fillOpacity: 0.12 }).addTo(S.layers.boundary);
+      L.polygon(latlngs, { color: '#3d8bfd', weight: 2, fillOpacity: 0.08 }).addTo(S.layers.boundary);
     }
     S.turbines.forEach((t, i) => {
+      const elevTxt = t.elev != null ? `<br>Elev: ${Number(t.elev).toFixed(0)} m` : '';
+      const wsTxt = S.speedField && S.speedField[i] != null ? `<br>WS: <b>${Number(S.speedField[i]).toFixed(2)} m/s</b>` : '';
       L.circleMarker([t.lat, t.lon], {
         radius: 5, color: '#3dd68c', weight: 1, fillColor: '#1b7a4a', fillOpacity: 0.9,
-      }).bindTooltip(`T${i + 1}<br>${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}`).addTo(S.layers.turbines);
+      }).bindTooltip(`T${i + 1}<br>${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}${elevTxt}${wsTxt}`)
+        .addTo(S.layers.turbines);
     });
-    const all = S.boundary.concat(S.turbines);
-    if (all.length) {
-      const b = bboxOf(all);
-      S.map.fitBounds([[b.minLat, b.minLon], [b.maxLat, b.maxLon]], { padding: [30, 30] });
+    drawElevationLayer();
+    drawRoughnessLayer();
+    drawWindPointLayer();
+    drawSpeedLayer();
+    // respect checkbox state
+    [['lyrBoundary', S.layers.boundary], ['lyrTurbines', S.layers.turbines],
+     ['lyrElev', S.layers.elev], ['lyrRough', S.layers.rough],
+     ['lyrSpeed', S.layers.speed], ['lyrWindPt', S.layers.windPt],
+     ['lyrLabels', S.layers.labels]].forEach(([id, layer]) => {
+      const on = $(id)?.checked !== false;
+      if (id === 'lyrLabels') {
+        // labels default off
+        const labOn = !!$('lyrLabels')?.checked;
+        if (labOn && !S.map.hasLayer(layer)) layer.addTo(S.map);
+        if (!labOn && S.map.hasLayer(layer)) S.map.removeLayer(layer);
+        return;
+      }
+      if (on && !S.map.hasLayer(layer)) layer.addTo(S.map);
+      if (!on && S.map.hasLayer(layer)) S.map.removeLayer(layer);
+    });
+    if (fit) {
+      const all = S.boundary.concat(S.turbines);
+      if (all.length) {
+        const b = bboxOf(all);
+        S.map.fitBounds([[b.minLat, b.minLon], [b.maxLat, b.maxLon]], { padding: [40, 40] });
+      }
     }
+    updateLegend();
   }
   function refreshSiteUI() {
     const nB = Math.max(0, S.boundary.length - (S.boundary.length > 1 ? 1 : 0));
@@ -657,6 +932,8 @@
       [`Roughness ${S.roughnessZones.length || 0} zones`, S.roughnessZones.length > 0],
     ]);
     setStep('maps', S.roughnessZones.length ? 'done' : 'run');
+    redrawMap({ fit: true });
+    addLog('Map: elevation heatmap + contours drawn', 'i');
     return true;
   }
 
@@ -765,6 +1042,8 @@
       [`z₀ default ${$('z0').value}`, true],
     ]);
     setStep('maps', S.terrain ? 'done' : 'run');
+    redrawMap({ fit: false });
+    addLog(S.roughnessZones.length ? 'Map: roughness polygons drawn' : 'Map: uniform z₀ (no OSM polygons)', 'i');
     return true;
   }
 
@@ -824,14 +1103,24 @@
     };
     S.wind = w;
     S.windSources[w.source] = { ...w, speeds: [...sp], dirs: [...dr], sourceHeight: w.height, mastH: w.height, meanWS: w.meanWS };
+    // Wind data location for map marker
+    if (w.lat != null && w.lon != null && isFinite(w.lat) && isFinite(w.lon)) {
+      S.windPoint = { lat: w.lat, lon: w.lon, source: w.source, height: w.height, meanWS: w.meanWS };
+    } else if (S.turbines.length || S.boundary.length) {
+      const c = centerOf(S.boundary.length ? S.boundary : S.turbines);
+      S.windPoint = { lat: c.lat, lon: c.lon, source: w.source, height: w.height, meanWS: w.meanWS };
+      w.lat = c.lat; w.lon = c.lon;
+    }
     chipBox('windChips', [
       [`${w.source}`, true],
       [`n=${sp.length.toLocaleString()}`, true],
       [`mean ${w.meanWS.toFixed(2)} m/s @ ${w.height} m`, true],
       [`A=${wb.A.toFixed(2)} k=${wb.k.toFixed(2)}`, true],
+      [w.lat != null ? `pt ${Number(w.lat).toFixed(3)}, ${Number(w.lon).toFixed(3)}` : 'pt n/a', w.lat != null],
     ]);
     setStep('wind', 'done');
     addLog(`Wind ${w.source}: ${sp.length} samples, mean ${w.meanWS.toFixed(2)} m/s @ ${w.height} m`, 'o');
+    redrawMap({ fit: false });
     return w;
   }
 
@@ -1322,6 +1611,10 @@
       $('btnExport').disabled = false;
       setStep('aep', 'done');
       setProgress(100);
+      // Speed map from free-stream hub WS
+      S.speedField = perTurbine.map((t) => t.freeWS);
+      redrawMap({ fit: false });
+      addLog('Map: hub-height wind speed layer updated at each WTG', 'i');
       addLog(`AEP complete: Gross ${gross.toFixed(2)} · Net ${net.toFixed(2)} GWh/y · CF ${CF.toFixed(1)}% · Wake ${wakeLoss.toFixed(1)}%`, 'o');
       addLog('INDICATIVE only — not bankable without site mast validation', 'w');
     } catch (e) {
@@ -1468,7 +1761,8 @@
     window.AEPStudio = {
       S, downloadTerrain, downloadRoughness, downloadERA5, downloadGWA,
       runAEP, exportResults, applyPreset, generateGrid, currentPC,
-      loadDemo, redrawMap, refreshSiteUI
+      loadDemo, redrawMap, refreshSiteUI, updateLegend,
+      drawElevationLayer, drawRoughnessLayer, drawSpeedLayer, drawWindPointLayer
     };
     // also bind commonly used names
     window.downloadTerrain = downloadTerrain;
