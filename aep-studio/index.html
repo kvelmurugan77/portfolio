@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Wind Farm AEP Studio</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --bg:#0b1220; --panel:#121a2b; --card:#172235; --line:#243049;
+  --text:#e8eefc; --muted:#9aabcc; --acc:#3d8bfd; --ok:#3dd68c; --warn:#f5b942; --bad:#ff6b7a;
+  --chip:#1c2940; --input:#0e1626;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#10182a,#0b1220)}
+header h1{margin:0;font-size:1.05rem;letter-spacing:.02em}
+header .sub{color:var(--muted);font-size:.78rem}
+.badge{background:#14301f;color:var(--ok);border:1px solid #1f5a3a;padding:4px 10px;border-radius:999px;font-size:.72rem}
+.layout{display:grid;grid-template-columns:380px 1fr 360px;gap:0;height:calc(100vh - 58px)}
+.col{overflow:auto;border-right:1px solid var(--line);padding:12px}
+.col:last-child{border-right:none;border-left:1px solid var(--line)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.card h2{margin:0 0 8px;font-size:.88rem}
+.card p.hint{margin:0 0 10px;color:var(--muted);font-size:.75rem;line-height:1.35}
+label{display:block;font-size:.72rem;color:var(--muted);margin:8px 0 4px}
+input,select,textarea,button{font:inherit}
+input,select,textarea{width:100%;background:var(--input);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px}
+textarea{min-height:70px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.btn{border:0;border-radius:9px;padding:9px 12px;cursor:pointer;font-weight:600;font-size:.82rem}
+.btn-primary{background:var(--acc);color:#fff}
+.btn-ok{background:#1b7a4a;color:#fff}
+.btn-ghost{background:var(--chip);color:var(--text);border:1px solid var(--line)}
+.btn-warn{background:#7a5a12;color:#ffe7a8}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.drop{border:1.5px dashed #35507a;border-radius:10px;padding:14px;text-align:center;color:var(--muted);background:#101a2c;cursor:pointer}
+.drop.drag{border-color:var(--acc);background:#13233d;color:var(--text)}
+.drop strong{color:var(--text)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 8px;font-size:.7rem;color:var(--muted)}
+.chip.on{color:var(--ok);border-color:#2a6b4a}
+#map{height:100%;min-height:420px;background:#0a101c}
+.map-wrap{position:relative;height:55%;min-height:320px}
+.logs{height:45%;overflow:auto;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.72rem;background:#0a101c;border-top:1px solid var(--line)}
+.log-i{color:#9ec5ff}.log-o{color:var(--ok)}.log-w{color:var(--warn)}.log-e{color:var(--bad)}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpi .box{background:var(--input);border:1px solid var(--line);border-radius:10px;padding:10px}
+.kpi .v{font-size:1.15rem;font-weight:700}.kpi .l{font-size:.68rem;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:.72rem}
+th,td{border-bottom:1px solid var(--line);padding:5px 4px;text-align:left}
+th{color:var(--muted);font-weight:600}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.step{font-size:.68rem;padding:4px 8px;border-radius:999px;background:var(--chip);color:var(--muted);border:1px solid var(--line)}
+.step.done{color:var(--ok);border-color:#2a6b4a}.step.run{color:#9ec5ff;border-color:#2a5a9a}
+.progress{height:8px;background:#0e1626;border-radius:99px;overflow:hidden;margin:8px 0}
+.progress>div{height:100%;width:0;background:linear-gradient(90deg,#2f6fed,#3dd68c);transition:width .25s}
+details{margin-top:8px}
+summary{cursor:pointer;color:var(--muted);font-size:.78rem}
+@media(max-width:1100px){.layout{grid-template-columns:1fr;height:auto}.col{border:0;max-height:none}.map-wrap{height:360px}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Wind Farm AEP Studio</h1>
+    <div class="sub">Boundary / layout → terrain + roughness → wind climate → AEP (ERA5 · GWA · site data)</div>
+  </div>
+  <div class="badge">Local WAsP-class workflow · not bankable without mast</div>
+</header>
+
+<div class="layout">
+  <!-- LEFT: inputs -->
+  <div class="col">
+    <div class="steps" id="steps">
+      <span class="step" data-s="site">1 Site</span>
+      <span class="step" data-s="wtg">2 WTG</span>
+      <span class="step" data-s="maps">3 Maps</span>
+      <span class="step" data-s="wind">4 Wind</span>
+      <span class="step" data-s="aep">5 AEP</span>
+    </div>
+
+    <div class="card">
+      <h2>1 · Project &amp; site area</h2>
+      <p class="hint">Upload a boundary, paste corner coordinates, or load a turbine layout. Layout points alone are enough — a hull is built automatically.</p>
+      <label>Project name</label>
+      <input id="projName" value="My Wind Farm"/>
+      <div class="row">
+        <div><label>Country / region (optional)</label><input id="region" placeholder="e.g. Karnataka, India"/></div>
+        <div><label>Default z₀ (m)</label><input id="z0" type="number" step="0.001" value="0.03"/></div>
+      </div>
+
+      <label style="margin-top:12px">Boundary file (KML / KMZ / GeoJSON / CSV lon,lat)</label>
+      <div class="drop" id="dropBoundary">Drop boundary or <strong>click to browse</strong>
+        <input type="file" id="fileBoundary" hidden accept=".kml,.kmz,.geojson,.json,.csv,.txt,.xml"/>
+      </div>
+
+      <label>Layout file (CSV lat,lon or lon,lat · KML/KMZ points · GeoJSON)</label>
+      <div class="drop" id="dropLayout">Drop turbine layout or <strong>click to browse</strong>
+        <input type="file" id="fileLayout" hidden accept=".kml,.kmz,.geojson,.json,.csv,.txt"/>
+      </div>
+
+      <details open>
+        <summary>Or define area by corners / center</summary>
+        <div class="row">
+          <div><label>SW lon (left-bottom)</label><input id="swLon" type="number" step="any" placeholder="75.72"/></div>
+          <div><label>SW lat</label><input id="swLat" type="number" step="any" placeholder="15.40"/></div>
+        </div>
+        <div class="row">
+          <div><label>NE lon (top-right)</label><input id="neLon" type="number" step="any" placeholder="75.92"/></div>
+          <div><label>NE lat</label><input id="neLat" type="number" step="any" placeholder="15.50"/></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="btnBBox">Use SW–NE box</button>
+        </div>
+        <div class="row">
+          <div><label>Center lon</label><input id="cLon" type="number" step="any" placeholder="75.82"/></div>
+          <div><label>Center lat</label><input id="cLat" type="number" step="any" placeholder="15.45"/></div>
+        </div>
+        <div class="row">
+          <div><label>Radius km</label><input id="cRad" type="number" step="0.1" value="5"/></div>
+          <div style="display:flex;align-items:end"><button class="btn btn-ghost" id="btnCenter" style="width:100%">Use center + radius</button></div>
+        </div>
+      </details>
+
+      <details>
+        <summary>Auto layout grid (if no layout file)</summary>
+        <div class="row3">
+          <div><label>Count</label><input id="nWtg" type="number" value="20" min="1" max="500"/></div>
+          <div><label>Spacing D</label><input id="spD" type="number" step="0.1" value="5"/></div>
+          <div><label>Cross D</label><input id="spC" type="number" step="0.1" value="3.5"/></div>
+        </div>
+        <div class="btn-row"><button class="btn btn-ghost" id="btnGrid">Generate grid in boundary</button></div>
+      </details>
+
+      <div class="chips" id="siteChips"></div>
+    </div>
+
+    <div class="card">
+      <h2>2 · Turbine &amp; power curve</h2>
+      <label>WTG preset</label>
+      <select id="preset">
+        <option value="en156_140">Envision EN-156/3.3MW · 140 m HH</option>
+        <option value="en156_120">Envision EN-156/3.3MW · 120 m HH</option>
+        <option value="v150">Vestas V150-5.6MW · 120 m</option>
+        <option value="v163">Vestas V163-4.5MW · 113 m</option>
+        <option value="n163">Nordex N163/6.X · 148 m</option>
+        <option value="ge158">GE 158-6.1MW · 128 m</option>
+        <option value="sg170">SG 5.X-170 · 125 m</option>
+        <option value="custom">Custom / uploaded curve</option>
+      </select>
+      <div class="row3">
+        <div><label>Hub height m</label><input id="hh" type="number" value="140"/></div>
+        <div><label>Rotor Ø m</label><input id="D" type="number" value="156"/></div>
+        <div><label>Rated kW</label><input id="rated" type="number" value="3300"/></div>
+      </div>
+      <label>Upload power curve CSV (ws_mps, power_kW [, ct])</label>
+      <div class="drop" id="dropPC">Drop power curve CSV or <strong>click</strong>
+        <input type="file" id="filePC" hidden accept=".csv,.txt"/>
+      </div>
+      <div class="row">
+        <div><label>Wake k (Bastankhah)</label><input id="wakeK" type="number" step="0.005" value="0.04"/></div>
+        <div><label>Other losses %</label><input id="loss" type="number" step="0.1" value="8"/></div>
+      </div>
+      <div class="row">
+        <div><label>Availability %</label><input id="avail" type="number" step="0.1" value="97"/></div>
+        <div><label>Electrical %</label><input id="elec" type="number" step="0.1" value="2"/></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3 · Terrain &amp; roughness</h2>
+      <p class="hint">Auto-downloads DEM (Open-Meteo / OpenTopo) and land-cover roughness (OSM). Used for orographic speed-up + IBL roughness change.</p>
+      <div class="row">
+        <div><label>Terrain radius km</label><input id="terrR" type="number" value="12"/></div>
+        <div><label>Grid size</label>
+          <select id="terrG"><option>30</option><option selected>40</option><option>50</option><option>60</option></select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="btnTerrain">Download terrain</button>
+        <button class="btn btn-ghost" id="btnRough">Download roughness</button>
+      </div>
+      <div class="chips" id="mapChips"></div>
+    </div>
+
+    <div class="card">
+      <h2>4 · Wind climate</h2>
+      <p class="hint">Pick one primary climate. Site mast CSV is best. ERA5 = long-term reanalysis. GWA = microscale atlas (.lib). NEWA/other mesoscale via CSV if you have it.</p>
+      <label>Primary source</label>
+      <select id="windSrc">
+        <option value="ERA5">ERA5 / ERA5T (Open-Meteo archive)</option>
+        <option value="GWA">Global Wind Atlas 4.0 (.lib API)</option>
+        <option value="SITE">Site wind data (upload)</option>
+        <option value="MESO">Other mesoscale CSV</option>
+      </select>
+      <div class="row">
+        <div><label>ERA5 start year</label><input id="y0" type="number" value="2019"/></div>
+        <div><label>ERA5 end year</label><input id="y1" type="number" value="2023"/></div>
+      </div>
+      <div class="row">
+        <div><label>Data height m</label><input id="dataH" type="number" value="100"/></div>
+        <div><label>Sectors</label><select id="nSec"><option>12</option><option selected>16</option></select></div>
+      </div>
+      <label>Site / mesoscale CSV (timestamp optional, ws, wd)</label>
+      <div class="drop" id="dropWind">Drop wind CSV or <strong>click</strong>
+        <input type="file" id="fileWind" hidden accept=".csv,.txt,.lib"/>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="btnERA5">Download ERA5</button>
+        <button class="btn btn-ghost" id="btnGWA">Download GWA</button>
+      </div>
+      <div class="chips" id="windChips"></div>
+    </div>
+
+    <div class="card">
+      <h2>5 · Run AEP</h2>
+      <p class="hint">One-click: fills missing maps/wind if needed, runs orographic + roughness + Bastankhah wake + losses.</p>
+      <div class="progress"><div id="pb"></div></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnRun">▶ Run full AEP</button>
+        <button class="btn btn-ok" id="btnExport" disabled>Export results</button>
+      </div>
+      <button class="btn btn-warn" id="btnDemo" style="width:100%;margin-top:8px">Load Hatalageri demo boundary</button>
+    </div>
+  </div>
+
+  <!-- CENTER: map + logs -->
+  <div>
+    <div class="map-wrap"><div id="map"></div></div>
+    <div class="logs" id="log"></div>
+  </div>
+
+  <!-- RIGHT: results -->
+  <div class="col">
+    <div class="card">
+      <h2>Results</h2>
+      <div class="kpi" id="kpis">
+        <div class="box"><div class="l">Gross AEP</div><div class="v" id="kGross">—</div></div>
+        <div class="box"><div class="l">Net AEP</div><div class="v" id="kNet">—</div></div>
+        <div class="box"><div class="l">Capacity factor</div><div class="v" id="kCF">—</div></div>
+        <div class="box"><div class="l">Wake loss</div><div class="v" id="kWake">—</div></div>
+        <div class="box"><div class="l">Mean hub WS</div><div class="v" id="kWS">—</div></div>
+        <div class="box"><div class="l">Capacity</div><div class="v" id="kCap">—</div></div>
+      </div>
+      <div class="chips" id="resChips" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <h2>Per-turbine AEP</h2>
+      <div style="max-height:360px;overflow:auto">
+        <table>
+          <thead><tr><th>#</th><th>WS</th><th>SU</th><th>Wake%</th><th>Net GWh</th><th>CF%</th></tr></thead>
+          <tbody id="tbl"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Sector climate</h2>
+      <div style="max-height:220px;overflow:auto">
+        <table>
+          <thead><tr><th>Dir</th><th>f%</th><th>A</th><th>k</th><th>WS</th></tr></thead>
+          <tbody id="sectbl"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="wasp_bz_engine_v61.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
