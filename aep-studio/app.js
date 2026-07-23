@@ -191,37 +191,234 @@
   }
 
   // ─── File parsers ────────────────────────────────────────────────────────
-  function parseCSVPoints(text) {
-    const lines = text.trim().split(/\r?\n/).filter((l) => l.trim() && !l.trim().startsWith('#'));
-    if (!lines.length) return [];
-    const sep = lines[0].includes(';') ? ';' : ',';
-    let start = 0;
-    let headers = lines[0].split(sep).map((h) => h.trim().toLowerCase().replace(/['"]/g, ''));
-    const hasHeader = headers.some((h) => /lat|lon|lng|x|y|easting|northing/.test(h));
-    if (hasHeader) start = 1; else headers = [];
-    const pts = [];
-    for (let i = start; i < lines.length; i++) {
-      const c = lines[i].split(sep).map((x) => x.trim().replace(/['"]/g, ''));
-      if (c.length < 2) continue;
-      let lat, lon;
-      if (hasHeader) {
-        const li = headers.findIndex((h) => h === 'lat' || h === 'latitude' || h === 'y');
-        const lo = headers.findIndex((h) => h === 'lon' || h === 'lng' || h === 'longitude' || h === 'x' || h === 'long');
-        if (li >= 0 && lo >= 0) { lat = +c[li]; lon = +c[lo]; }
-        else { lon = +c[0]; lat = +c[1]; }
-      } else {
-        const a = +c[0], b = +c[1];
-        // Heuristic: |val|>30 more likely lon if other is lat-like, else lon,lat if first in [-180,180] and |a|>|b| often lon first for India
-        if (Math.abs(a) <= 90 && Math.abs(b) <= 180 && Math.abs(b) > Math.abs(a)) { lat = a; lon = b; }
-        else { lon = a; lat = b; }
+  // ─── CRS: UTM ↔ WGS84 (compact, no external deps) ───────────────────────
+  function utmToLatLon(easting, northing, zone, northern = true) {
+    // WGS84
+    const a = 6378137.0, f = 1 / 298.257223563, k0 = 0.9996;
+    const e = Math.sqrt(f * (2 - f));
+    const e1sq = e * e / (1 - e * e);
+    const x = easting - 500000.0;
+    let y = northing;
+    if (!northern) y -= 10000000.0;
+    const m = y / k0;
+    const mu = m / (a * (1 - Math.pow(e, 2) / 4 - 3 * Math.pow(e, 4) / 64 - 5 * Math.pow(e, 6) / 256));
+    const e1 = (1 - Math.sqrt(1 - e * e)) / (1 + Math.sqrt(1 - e * e));
+    const j1 = 3 * e1 / 2 - 27 * Math.pow(e1, 3) / 32;
+    const j2 = 21 * Math.pow(e1, 2) / 16 - 55 * Math.pow(e1, 4) / 32;
+    const j3 = 151 * Math.pow(e1, 3) / 96;
+    const j4 = 1097 * Math.pow(e1, 4) / 512;
+    const fp = mu + j1 * Math.sin(2 * mu) + j2 * Math.sin(4 * mu) + j3 * Math.sin(6 * mu) + j4 * Math.sin(8 * mu);
+    const sinfp = Math.sin(fp), cosfp = Math.cos(fp);
+    const tanfp = Math.tan(fp);
+    const c1 = e1sq * cosfp * cosfp;
+    const t1 = tanfp * tanfp;
+    const r1 = a * (1 - e * e) / Math.pow(1 - e * e * sinfp * sinfp, 1.5);
+    const n1 = a / Math.sqrt(1 - e * e * sinfp * sinfp);
+    const d = x / (n1 * k0);
+    const q1 = n1 * tanfp / r1;
+    const q2 = d * d / 2;
+    const q3 = (5 + 3 * t1 + 10 * c1 - 4 * c1 * c1 - 9 * e1sq) * Math.pow(d, 4) / 24;
+    const q4 = (61 + 90 * t1 + 298 * c1 + 45 * t1 * t1 - 252 * e1sq - 3 * c1 * c1) * Math.pow(d, 6) / 720;
+    const lat = (fp - q1 * (q2 - q3 + q4)) * 180 / Math.PI;
+    const q5 = d;
+    const q6 = (1 + 2 * t1 + c1) * Math.pow(d, 3) / 6;
+    const q7 = (5 - 2 * c1 + 28 * t1 - 3 * c1 * c1 + 8 * e1sq + 24 * t1 * t1) * Math.pow(d, 5) / 120;
+    const lon0 = (zone - 1) * 6 - 180 + 3;
+    const lon = lon0 + (q5 - q6 + q7) / cosfp * 180 / Math.PI;
+    return { lat, lon };
+  }
+
+  function latLonToUtm(lat, lon) {
+    const zone = Math.floor((lon + 180) / 6) + 1;
+    const a = 6378137.0, f = 1 / 298.257223563, k0 = 0.9996;
+    const e2 = f * (2 - f);
+    const ep2 = e2 / (1 - e2);
+    const latr = lat * Math.PI / 180, lonr = lon * Math.PI / 180;
+    const lon0 = ((zone - 1) * 6 - 180 + 3) * Math.PI / 180;
+    const N = a / Math.sqrt(1 - e2 * Math.sin(latr) ** 2);
+    const T = Math.tan(latr) ** 2;
+    const C = ep2 * Math.cos(latr) ** 2;
+    const A = Math.cos(latr) * (lonr - lon0);
+    const M = a * ((1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256) * latr
+      - (3 * e2 / 8 + 3 * e2 ** 2 / 32 + 45 * e2 ** 3 / 1024) * Math.sin(2 * latr)
+      + (15 * e2 ** 2 / 256 + 45 * e2 ** 3 / 1024) * Math.sin(4 * latr)
+      - (35 * e2 ** 3 / 3072) * Math.sin(6 * latr));
+    const easting = k0 * N * (A + (1 - T + C) * A ** 3 / 6
+      + (5 - 18 * T + T ** 2 + 72 * C - 58 * ep2) * A ** 5 / 120) + 500000;
+    let northing = k0 * (M + N * Math.tan(latr) * (A ** 2 / 2 + (5 - T + 9 * C + 4 * C ** 2) * A ** 4 / 24
+      + (61 - 58 * T + T ** 2 + 600 * C - 330 * ep2) * A ** 6 / 720));
+    const northern = lat >= 0;
+    if (!northern) northing += 10000000;
+    return { easting, northing, zone, northern };
+  }
+
+  function detectSep(line) {
+    if (line.includes('\t')) return '\t';
+    if (line.includes(';')) return ';';
+    if (line.includes(',')) return ',';
+    return /\s+/;
+  }
+
+  function splitLine(line, sep) {
+    if (sep instanceof RegExp) return line.trim().split(sep).filter(Boolean);
+    // CSV with quotes
+    const out = []; let cur = '', q = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { q = !q; continue; }
+      if (!q && ch === sep) { out.push(cur.trim()); cur = ''; continue; }
+      cur += ch;
+    }
+    out.push(cur.trim());
+    return out;
+  }
+
+  function normalizeHeader(h) {
+    return String(h || '').trim().toLowerCase()
+      .replace(/^\uFEFF/, '')
+      .replace(/["']/g, '')
+      .replace(/\s+/g, '_')
+      .replace(/[()]/g, '');
+  }
+
+  function findCol(headers, patterns) {
+    for (let i = 0; i < headers.length; i++) {
+      const h = headers[i];
+      for (const p of patterns) {
+        if (typeof p === 'string' ? h === p : p.test(h)) return i;
       }
-      if (isFinite(lat) && isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) pts.push({ lat, lon });
+    }
+    return -1;
+  }
+
+  function looksLikeLatLon(a, b) {
+    return Math.abs(a) <= 90 && Math.abs(b) <= 180;
+  }
+  function looksLikeLonLat(a, b) {
+    return Math.abs(a) <= 180 && Math.abs(b) <= 90;
+  }
+  function looksLikeUtm(a, b) {
+    // typical UTM easting 100k–900k, northing 0–10e6
+    return a > 50000 && a < 900000 && b > 0 && b < 10000000;
+  }
+
+  function resolveUtmZone(lonHint) {
+    const zSel = $('utmZone')?.value || 'auto';
+    if (zSel !== 'auto') return +zSel;
+    if (lonHint != null && isFinite(lonHint)) return Math.floor((lonHint + 180) / 6) + 1;
+    // India default often 43/44 — use 43 if unknown
+    return 43;
+  }
+
+  function convertXY(x, y, mode) {
+    // returns {lat, lon} or null
+    const crs = $('inCrs')?.value || 'auto';
+    const order = $('colOrder')?.value || 'auto';
+    const hem = ($('utmHem')?.value || 'N') === 'N';
+
+    let a = x, b = y;
+    // apply forced order
+    if (order === 'latlon') { /* a=lat b=lon later */ }
+    if (order === 'lonlat') { /* a=lon b=lat */ }
+    if (order === 'ne') { const t = a; a = b; b = t; } // swap to E,N
+
+    const forceUtm = crs === 'utm' || order === 'en' || order === 'ne';
+    const forceLl = crs === 'wgs84' || order === 'latlon' || order === 'lonlat';
+
+    if (!forceUtm && (forceLl || looksLikeLatLon(a, b) || looksLikeLonLat(a, b))) {
+      let lat, lon;
+      if (order === 'latlon') { lat = a; lon = b; }
+      else if (order === 'lonlat') { lon = a; lat = b; }
+      else if (looksLikeLatLon(a, b) && !(looksLikeLonLat(a, b) && Math.abs(a) > 90)) {
+        // if a is clearly lat
+        if (Math.abs(a) <= 90 && (Math.abs(b) > 90 || Math.abs(b) >= Math.abs(a))) { lat = a; lon = b; }
+        else { lon = a; lat = b; }
+      } else if (looksLikeLonLat(a, b)) {
+        lon = a; lat = b;
+      } else {
+        lon = a; lat = b;
+      }
+      if (isFinite(lat) && isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) return { lat, lon, crs: 'wgs84' };
+    }
+
+    if (forceUtm || looksLikeUtm(a, b) || looksLikeUtm(b, a)) {
+      let E = a, N = b;
+      if (order === 'ne' || (!forceUtm && looksLikeUtm(b, a) && !looksLikeUtm(a, b))) { E = b; N = a; }
+      // if easting/northing swapped by magnitude (N often larger)
+      if (E > 1000000 && N < 1000000) { const t = E; E = N; N = t; }
+      const zone = resolveUtmZone(null);
+      const northern = hem;
+      try {
+        const ll = utmToLatLon(E, N, zone, northern);
+        if (isFinite(ll.lat) && isFinite(ll.lon)) {
+          return { lat: ll.lat, lon: ll.lon, crs: 'utm', zone, easting: E, northing: N };
+        }
+      } catch (e) { /* fall through */ }
+    }
+    return null;
+  }
+
+  function parseCoordinateTable(text, fileHint = '') {
+    const rawLines = text.replace(/^\uFEFF/, '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#') && !l.startsWith('//'));
+    if (!rawLines.length) return [];
+    const sep = detectSep(rawLines[0]);
+    let headers = splitLine(rawLines[0], sep).map(normalizeHeader);
+    const headerLike = headers.some((h) => /lat|lon|lng|long|east|north|utm|zone|name|turb|id|x|y|hh|hub/.test(h));
+    let start = 0;
+    if (headerLike) start = 1; else headers = [];
+
+    const iLat = findCol(headers, ['lat', 'latitude', 'y_lat', 'ylat', /^lat_/]);
+    const iLon = findCol(headers, ['lon', 'lng', 'long', 'longitude', 'x_lon', 'xlon', /^lon_/, /^long_/]);
+    const iE = findCol(headers, ['easting', 'east', 'utm_e', 'utm_x', 'x_utm', 'e', 'x']);
+    const iN = findCol(headers, ['northing', 'north', 'utm_n', 'utm_y', 'y_utm', 'n', 'y']);
+    const iZone = findCol(headers, ['zone', 'utm_zone', 'utmzone']);
+    const iName = findCol(headers, ['name', 'id', 'turbine', 'wtg', 'label', 'turb']);
+    const iHH = findCol(headers, ['hh', 'hub', 'hub_height', 'hubheight', 'h']);
+
+    const pts = [];
+    for (let i = start; i < rawLines.length; i++) {
+      const cols = splitLine(rawLines[i], sep);
+      if (cols.length < 2) continue;
+      let lat, lon, easting, northing, zone, name, hh;
+      if (headerLike && iLat >= 0 && iLon >= 0) {
+        lat = +cols[iLat]; lon = +cols[iLon];
+      } else if (headerLike && iE >= 0 && iN >= 0) {
+        easting = +cols[iE]; northing = +cols[iN];
+        zone = iZone >= 0 ? parseInt(cols[iZone], 10) : resolveUtmZone(null);
+        const hem = ($('utmHem')?.value || 'N') === 'N';
+        // if zone like 43N
+        if (iZone >= 0 && /s$/i.test(cols[iZone])) { /* south */ }
+        const ll = utmToLatLon(easting, northing, zone, !(/s/i.test(String(cols[iZone] || '')) || ($('utmHem')?.value === 'S')));
+        lat = ll.lat; lon = ll.lon;
+      } else {
+        // numeric first two (or skip leading id)
+        let c0 = 0;
+        if (cols.length >= 3 && !isFinite(+cols[0]) && isFinite(+cols[1])) c0 = 1;
+        // id,e,n pattern
+        if (cols.length >= 3 && isFinite(+cols[0]) && isFinite(+cols[1]) && isFinite(+cols[2])
+            && looksLikeUtm(+cols[1], +cols[2])) {
+          // id, easting, northing
+          const ll = convertXY(+cols[1], +cols[2], 'utm');
+          if (ll) { lat = ll.lat; lon = ll.lon; easting = ll.easting; northing = ll.northing; zone = ll.zone; name = cols[0]; }
+        } else {
+          const x = +cols[c0], y = +cols[c0 + 1];
+          if (!isFinite(x) || !isFinite(y)) continue;
+          const ll = convertXY(x, y);
+          if (!ll) continue;
+          lat = ll.lat; lon = ll.lon; easting = ll.easting; northing = ll.northing; zone = ll.zone;
+        }
+      }
+      if (iName >= 0) name = cols[iName];
+      if (iHH >= 0 && isFinite(+cols[iHH])) hh = +cols[iHH];
+      if (!isFinite(lat) || !isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) continue;
+      pts.push({ lat, lon, easting, northing, zone, name, hh });
     }
     return pts;
   }
 
   function parseKMLCoords(text) {
     const pts = [];
+    // points from Point or coordinates blocks
     const re = /<coordinates[^>]*>([\s\S]*?)<\/coordinates>/gi;
     let m;
     while ((m = re.exec(text))) {
@@ -230,6 +427,12 @@
         const p = triple.split(',').map(Number);
         if (p.length >= 2 && isFinite(p[0]) && isFinite(p[1])) pts.push({ lon: p[0], lat: p[1] });
       }
+    }
+    // also gx:coord
+    const re2 = /<gx:coord>([\s\S]*?)<\/gx:coord>/gi;
+    while ((m = re2.exec(text))) {
+      const p = m[1].trim().split(/\s+/).map(Number);
+      if (p.length >= 2) pts.push({ lon: p[0], lat: p[1] });
     }
     return pts;
   }
@@ -246,10 +449,21 @@
     const walk = (g) => {
       if (!g) return;
       if (g.type === 'FeatureCollection') g.features.forEach((f) => walk(f));
-      else if (g.type === 'Feature') walk(g.geometry);
-      else if (g.type === 'Point') pts.push({ lon: g.coordinates[0], lat: g.coordinates[1] });
+      else if (g.type === 'Feature') {
+        const nm = g.properties?.name || g.properties?.Name || g.properties?.id;
+        const hh = g.properties?.hh || g.properties?.hub_height || g.properties?.HH;
+        const before = pts.length;
+        walk(g.geometry);
+        if (nm != null || hh != null) {
+          for (let i = before; i < pts.length; i++) {
+            if (nm != null) pts[i].name = String(nm);
+            if (hh != null && isFinite(+hh)) pts[i].hh = +hh;
+          }
+        }
+      } else if (g.type === 'Point') pts.push({ lon: g.coordinates[0], lat: g.coordinates[1] });
       else if (g.type === 'MultiPoint') g.coordinates.forEach((c) => pts.push({ lon: c[0], lat: c[1] }));
       else if (g.type === 'LineString') g.coordinates.forEach((c) => pts.push({ lon: c[0], lat: c[1] }));
+      else if (g.type === 'MultiLineString') g.coordinates.forEach((line) => line.forEach((c) => pts.push({ lon: c[0], lat: c[1] })));
       else if (g.type === 'Polygon') g.coordinates[0].forEach((c) => pts.push({ lon: c[0], lat: c[1] }));
       else if (g.type === 'MultiPolygon') g.coordinates.forEach((poly) => poly[0].forEach((c) => pts.push({ lon: c[0], lat: c[1] })));
     };
@@ -257,40 +471,120 @@
     return pts;
   }
 
-  async function readPointsFile(file, mode /* boundary|layout */) {
-    const name = file.name.toLowerCase();
-    let text = '';
-    if (name.endsWith('.kmz')) text = await parseKMZ(file);
-    else text = await file.text();
-
-    let pts = [];
-    if (name.endsWith('.geojson') || name.endsWith('.json') || text.trim().startsWith('{')) {
-      pts = parseGeoJSON(JSON.parse(text));
-    } else if (name.endsWith('.kml') || name.endsWith('.kmz') || name.endsWith('.xml') || text.includes('<coordinates')) {
-      pts = parseKMLCoords(text);
+  async function parseShapefile(files) {
+    // files: FileList or File — .zip or .shp(+sidecars)
+    if (typeof shp === 'undefined') throw new Error('Shapefile library (shpjs) not loaded');
+    let geo;
+    if (files instanceof File) {
+      const n = files.name.toLowerCase();
+      if (n.endsWith('.zip')) {
+        geo = await shp(await files.arrayBuffer());
+      } else if (n.endsWith('.shp')) {
+        throw new Error('Please zip .shp+.dbf+.shx together, or upload the .zip shapefile');
+      } else {
+        throw new Error('Unsupported shapefile input');
+      }
     } else {
-      pts = parseCSVPoints(text);
+      // multiple files
+      const arr = Array.from(files);
+      const zipFile = arr.find((f) => f.name.toLowerCase().endsWith('.zip'));
+      if (zipFile) geo = await shp(await zipFile.arrayBuffer());
+      else {
+        // build a zip in memory from sidecars
+        const z = new JSZip();
+        for (const f of arr) z.file(f.name, await f.arrayBuffer());
+        const buf = await z.generateAsync({ type: 'arraybuffer' });
+        geo = await shp(buf);
+      }
     }
-    if (!pts.length) throw new Error('No coordinates found in ' + file.name);
+    // shp may return FeatureCollection or object of layers
+    if (geo.type === 'FeatureCollection') return parseGeoJSON(geo);
+    if (Array.isArray(geo)) {
+      const pts = [];
+      geo.forEach((g) => pts.push(...parseGeoJSON(g)));
+      return pts;
+    }
+    if (geo && typeof geo === 'object') {
+      const pts = [];
+      Object.values(geo).forEach((g) => { if (g) pts.push(...parseGeoJSON(g)); });
+      return pts;
+    }
+    throw new Error('Could not parse shapefile');
+  }
+
+  async function readPointsFile(fileOrList, mode /* boundary|layout */) {
+    const files = (fileOrList instanceof FileList || Array.isArray(fileOrList))
+      ? Array.from(fileOrList) : [fileOrList];
+    const file = files[0];
+    if (!file) return;
+    const name = file.name.toLowerCase();
+    let pts = [];
+
+    try {
+      if (name.endsWith('.zip') || name.endsWith('.shp') || files.some((f) => /\.shp$/i.test(f.name))) {
+        addLog('Parsing shapefile…', 'i');
+        pts = await parseShapefile(files.length > 1 ? files : file);
+      } else if (name.endsWith('.kmz')) {
+        const text = await parseKMZ(file);
+        pts = parseKMLCoords(text);
+      } else {
+        const text = await file.text();
+        if (name.endsWith('.geojson') || name.endsWith('.json') || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+          pts = parseGeoJSON(JSON.parse(text));
+        } else if (name.endsWith('.kml') || name.endsWith('.xml') || text.includes('<coordinates') || text.includes('<kml')) {
+          pts = parseKMLCoords(text);
+        } else {
+          // csv / txt / dat
+          pts = parseCoordinateTable(text, name);
+        }
+      }
+    } catch (e) {
+      throw new Error((e && e.message) || String(e));
+    }
+
+    // Deduplicate consecutive identical points
+    const cleaned = [];
+    for (const p of pts) {
+      if (!isFinite(p.lat) || !isFinite(p.lon)) continue;
+      const prev = cleaned[cleaned.length - 1];
+      if (prev && Math.abs(prev.lat - p.lat) < 1e-10 && Math.abs(prev.lon - p.lon) < 1e-10) continue;
+      cleaned.push(p);
+    }
+    pts = cleaned;
+    if (!pts.length) throw new Error('No coordinates found in ' + file.name + '. Check CRS/UTM zone settings.');
+
+    // Report CRS detection
+    const sample = pts[0];
+    const utmN = pts.filter((p) => p.easting != null).length;
+    addLog(
+      `Parsed ${pts.length} points from ${file.name}` +
+      (utmN ? ` (UTM converted, zone≈${sample.zone || $('utmZone')?.value || '?'})` : ' (lon/lat)'),
+      'o'
+    );
 
     if (mode === 'boundary') {
-      // If first==last ok; else close
-      S.boundary = pts.slice();
+      S.boundary = pts.map((p) => ({ lat: p.lat, lon: p.lon }));
       const a = S.boundary[0], b = S.boundary[S.boundary.length - 1];
       if (a.lat !== b.lat || a.lon !== b.lon) S.boundary.push({ ...a });
-      addLog(`Boundary loaded: ${S.boundary.length} vertices from ${file.name}`, 'o');
+      addLog(`Boundary loaded: ${S.boundary.length} vertices`, 'o');
     } else {
-      S.turbines = pts.map((p) => ({ lat: p.lat, lon: p.lon, hh: +$('hh').value || 140 }));
+      const defHH = +$('hh').value || 140;
+      S.turbines = pts.map((p, i) => ({
+        lat: p.lat, lon: p.lon,
+        hh: p.hh != null ? p.hh : defHH,
+        name: p.name || `T${i + 1}`,
+        easting: p.easting, northing: p.northing, zone: p.zone,
+        _customHH: p.hh != null,
+      }));
       if (S.boundary.length < 3) {
         S.boundary = convexHull(S.turbines);
-        const a = S.boundary[0];
-        S.boundary.push({ ...a });
+        S.boundary.push({ ...S.boundary[0] });
         addLog('Boundary auto-built as convex hull of layout', 'i');
       }
-      addLog(`Layout loaded: ${S.turbines.length} turbines from ${file.name}`, 'o');
+      addLog(`Layout loaded: ${S.turbines.length} turbines`, 'o');
     }
     refreshSiteUI();
-    redrawMap();
+    redrawMap({ fit: true });
   }
 
   function parsePowerCurveCSV(text) {
@@ -1617,6 +1911,37 @@
     return ws * b / a;
   }
 
+  function powerLaw(ws, z1, z2, alpha) {
+    if (z1 <= 0 || z2 <= 0) return ws;
+    return ws * Math.pow(z2 / z1, alpha);
+  }
+
+  function sectorZ0(dirDeg) {
+    const rose = S.autoRoughnessRose || S.roughnessRose;
+    const z0def = +$('z0').value || 0.03;
+    if (!rose || !rose.length) return z0def;
+    const n = rose.length;
+    const si = Math.floor((((dirDeg % 360) + 360) % 360) / (360 / n)) % n;
+    const z = rose[si]?.z0;
+    if (Array.isArray(z) && z.length) return Math.max(1e-5, +z[0] || z0def);
+    if (typeof z === 'number') return Math.max(1e-5, z);
+    return z0def;
+  }
+
+  /** Vertical extrapolation of a speed sample with method + optional direction for sector z0 */
+  function verticalExtrapolate(ws, zData, zHub, dirDeg) {
+    const method = $('vertMethod')?.value || 'log';
+    if (Math.abs(zData - zHub) < 0.5) return ws;
+    if (method === 'power') {
+      const a = +$('shearAlpha').value || 0.14;
+      return powerLaw(ws, zData, zHub, a);
+    }
+    let z0 = +$('z0').value || 0.03;
+    if (method === 'log_sector' && dirDeg != null) z0 = sectorZ0(dirDeg);
+    return logLaw(ws, zData, zHub, z0);
+  }
+
+
   // ─── Orography (WFP61 or fallback) ───────────────────────────────────────
   async function runOrography() {
     const pc = currentPC();
@@ -1742,9 +2067,11 @@
       // Extrapolate to hub
       const z0 = +$('z0').value || 0.03;
       const dataH = S.wind.height || +$('dataH').value || 100;
-      const hubSp = S.wind.speeds.map((v) => logLaw(v, dataH, pc.hh, z0));
       const hubDir = S.wind.dirs.slice();
-      addLog(`Vertical extrap ${dataH}→${pc.hh} m (log-law z0=${z0})`, 'i');
+      const vMethod = $('vertMethod')?.value || 'log';
+      const hubSp = S.wind.speeds.map((v, i) => verticalExtrapolate(v, dataH, pc.hh, hubDir[i]));
+      addLog(`Vertical extrap ${dataH}→${pc.hh} m (${vMethod}${vMethod === 'power' ? ' α=' + ($('shearAlpha')?.value || 0.14) : ', z0≈' + z0})`, 'i');
+      addLog('Horizontal: per-sector orographic SU (BZ) × roughness change, then Bastankhah wakes', 'i');
 
       // Orography
       setProgress(65);
@@ -1921,54 +2248,319 @@
   }
 
   function exportResults() {
-    const R = S.results; if (!R) return;
+    const R = S.results;
+    if (!R) { alert('Run AEP first'); return; }
     const stamp = new Date().toISOString().slice(0, 10);
     const base = (S.project || 'windfarm').replace(/\s+/g, '_');
+    exportReportMd(base, stamp);
+    exportPerTurbineCsv(base, stamp);
+    exportSectorsCsv(base, stamp);
+    exportLayoutCsv(base, stamp);
+    exportBoundaryCsv(base, stamp);
+    exportWindCsv(base, stamp);
+    exportTerrainCsv(base, stamp);
+    exportRoughnessCsv(base, stamp);
+    exportWaspTab(base, stamp);
+    exportLayoutKml(base, stamp);
+    exportSummaryJson(base, stamp);
+    addLog('Exported full package (report, AEP, wind, terrain, roughness, maps data, KML, WAsP .tab)', 'o');
+  }
 
-    // summary md
+  function exportReportMd(base, stamp) {
+    const R = S.results; if (!R) return;
+    const vMethod = $('vertMethod')?.value || 'log';
     let md = `# ${S.project} — AEP Report\n\n`;
     md += `Generated: ${new Date().toISOString()}\n\n`;
     md += `## Configuration\n`;
     md += `- WTG: ${R.pc.name} · ${R.pc.rated} kW · D=${R.pc.D} m · HH=${R.pc.hh} m\n`;
     md += `- Count: ${R.n} · Capacity: ${R.capacityMW.toFixed(2)} MW\n`;
-    md += `- Wind: ${R.windSource} · Engine: ${R.engine} · RIX: ${(+R.rix || 0).toFixed(2)}%\n`;
-    md += `- Losses: other ${R.losses.other}% · avail ${R.losses.avail}% · elec ${R.losses.elec}%\n\n`;
-    md += `## AEP\n`;
-    md += `| Metric | Value |\n|--------|-------|\n`;
-    md += `| Gross AEP | ${R.grossAEP.toFixed(3)} GWh/y |\n`;
-    md += `| Net AEP | ${R.netAEP.toFixed(3)} GWh/y |\n`;
-    md += `| Wake loss | ${R.wakeLoss.toFixed(2)} % |\n`;
-    md += `| CF | ${R.CF.toFixed(2)} % |\n`;
-    md += `| Mean hub WS | ${R.hubMean.toFixed(3)} m/s |\n\n`;
+    md += `- Wind: ${R.windSource} @ ${S.wind?.height || '?'} m → hub via **${vMethod}**\n`;
+    md += `- Horizontal: spectral BZ orography + roughness rose/IBL · Engine: ${R.engine} · RIX: ${(+R.rix || 0).toFixed(2)}%\n`;
+    md += `- Losses: other ${R.losses.other}% · avail ${R.losses.avail}% · elec ${R.losses.elec}%\n`;
+    if (S.terrain) md += `- Terrain: ${S.terrain.ny}×${S.terrain.nx}, ${S.terrain.minE.toFixed(0)}–${S.terrain.maxE.toFixed(0)} m (${S.terrain.source || ''})\n`;
+    md += `- Roughness zones: ${(S.roughnessZones || []).length}\n\n`;
+    md += `## AEP\n| Metric | Value |\n|--------|-------|\n`;
+    md += `| Gross AEP | ${R.grossAEP.toFixed(3)} GWh/y |\n| Net AEP | ${R.netAEP.toFixed(3)} GWh/y |\n`;
+    md += `| Wake loss | ${R.wakeLoss.toFixed(2)} % |\n| CF | ${R.CF.toFixed(2)} % |\n| Mean hub WS | ${R.hubMean.toFixed(3)} m/s |\n\n`;
     md += `## Disclaimer\nIndicative Wind Farm AEP Studio result. Not a substitute for met-mast + certified WAsP/OpenWind assessment.\n`;
     downloadText(`${base}_AEP_Report_${stamp}.md`, md);
+  }
 
-    let csv = 'ID,Lat,Lon,Elev_m,FreeWS_mps,SU,WakePct,Gross_GWh,Net_GWh,CF_pct\n';
-    R.perTurbine.forEach((t) => {
-      csv += [t.id, t.lat, t.lon, t.elev ?? '', t.freeWS.toFixed(3), (+t.SU).toFixed(4), t.wakePct.toFixed(2), t.grossGWh.toFixed(4), t.netGWh.toFixed(4), t.CF.toFixed(2)].join(',') + '\n';
+  function exportPerTurbineCsv(base, stamp) {
+    const R = S.results; if (!R) return;
+    let csv = 'ID,Name,Lat,Lon,Easting,Northing,UTM_Zone,Elev_m,HH_m,FreeWS_mps,SU,WakePct,Gross_GWh,Net_GWh,CF_pct\n';
+    R.perTurbine.forEach((t, i) => {
+      const turb = S.turbines[i] || {};
+      const utm = (turb.easting != null) ? { easting: turb.easting, northing: turb.northing, zone: turb.zone }
+        : latLonToUtm(t.lat, t.lon);
+      csv += [
+        t.id, turb.name || `T${t.id}`, t.lat, t.lon,
+        (utm.easting ?? '').toFixed ? utm.easting.toFixed(1) : '',
+        (utm.northing ?? '').toFixed ? utm.northing.toFixed(1) : '',
+        utm.zone ?? '',
+        t.elev ?? '', turb.hh ?? R.pc.hh,
+        t.freeWS.toFixed(3), (+t.SU).toFixed(4), t.wakePct.toFixed(2),
+        t.grossGWh.toFixed(4), t.netGWh.toFixed(4), t.CF.toFixed(2),
+      ].join(',') + '\n';
     });
     downloadText(`${base}_AEP_per_turbine_${stamp}.csv`, csv, 'text/csv');
+  }
 
+  function exportSectorsCsv(base, stamp) {
+    const R = S.results; if (!R?.sectors) return;
     let sc = 'Dir_deg,Freq,A,k,WS_mps\n';
-    R.sectors.forEach((s) => { sc += [s.dir.toFixed(1), s.freq.toFixed(5), s.A.toFixed(3), s.k.toFixed(3), s.WS.toFixed(3)].join(',') + '\n'; });
+    R.sectors.forEach((s) => {
+      sc += [s.dir.toFixed(1), s.freq.toFixed(5), s.A.toFixed(3), s.k.toFixed(3), s.WS.toFixed(3)].join(',') + '\n';
+    });
     downloadText(`${base}_sectors_${stamp}.csv`, sc, 'text/csv');
+  }
 
-    let lc = 'Name,Lat,Lon,HH_m\n';
-    S.turbines.forEach((t, i) => { lc += `T${i + 1},${t.lat},${t.lon},${t.hh || R.pc.hh}\n`; });
+  function exportLayoutCsv(base, stamp) {
+    let lc = 'Name,Lat,Lon,Easting,Northing,UTM_Zone,HH_m,Elev_m\n';
+    S.turbines.forEach((t, i) => {
+      const utm = t.easting != null ? { easting: t.easting, northing: t.northing, zone: t.zone } : latLonToUtm(t.lat, t.lon);
+      lc += [
+        t.name || `T${i + 1}`, t.lat, t.lon,
+        utm.easting.toFixed(2), utm.northing.toFixed(2), utm.zone,
+        t.hh || '', t.elev ?? '',
+      ].join(',') + '\n';
+    });
     downloadText(`${base}_layout_${stamp}.csv`, lc, 'text/csv');
+  }
 
-    if (S.boundary.length) {
-      let bc = 'lon,lat\n';
-      S.boundary.forEach((p) => { bc += `${p.lon},${p.lat}\n`; });
-      downloadText(`${base}_boundary_${stamp}.csv`, bc, 'text/csv');
+  function exportBoundaryCsv(base, stamp) {
+    if (!S.boundary.length) return;
+    let bc = 'lon,lat\n';
+    S.boundary.forEach((p) => { bc += `${p.lon},${p.lat}\n`; });
+    downloadText(`${base}_boundary_${stamp}.csv`, bc, 'text/csv');
+  }
+
+  function exportWindCsv(base, stamp) {
+    if (!S.wind?.speeds?.length) { addLog('No wind series to export', 'w'); return; }
+    const w = S.wind;
+    let csv = 'index,timestamp,ws_data_mps,wd_deg,ws_hub_mps,height_data_m,height_hub_m,source\n';
+    const hh = currentPC().hh;
+    const dataH = w.height || +$('dataH').value || 100;
+    const n = w.speeds.length;
+    // export full series (may be large)
+    for (let i = 0; i < n; i++) {
+      const hub = verticalExtrapolate(w.speeds[i], dataH, hh, w.dirs[i]);
+      const ts = (w.times && w.times[i]) || '';
+      csv += [i, ts, w.speeds[i], w.dirs[i], hub.toFixed(4), dataH, hh, w.source].join(',') + '\n';
     }
+    downloadText(`${base}_wind_series_${stamp}.csv`, csv, 'text/csv');
+    // meta
+    const meta = {
+      source: w.source, height_m: dataH, hub_height_m: hh,
+      meanWS_data: w.meanWS, meanWS_hub: mean(w.speeds.map((v, i) => verticalExtrapolate(v, dataH, hh, w.dirs[i]))),
+      n, lat: w.lat, lon: w.lon, weibullA: w.weibullA, weibullK: w.weibullK,
+      gwaMeta: S.gwaMeta || null, verticalMethod: $('vertMethod')?.value || 'log',
+    };
+    downloadText(`${base}_wind_meta_${stamp}.json`, JSON.stringify(meta, null, 2), 'application/json');
+    addLog(`Exported wind series (${n} rows) + meta`, 'o');
+  }
 
-    downloadText(`${base}_summary_${stamp}.json`, JSON.stringify({
-      project: S.project, results: { ...R, perTurbine: undefined },
-      nTurbines: R.n, windMean: S.wind?.meanWS, windSource: R.windSource,
+  function exportTerrainCsv(base, stamp) {
+    const T = S.terrain;
+    if (!T?.grid) { addLog('No terrain grid to export', 'w'); return; }
+    let csv = 'row,col,lat,lon,elev_m\n';
+    for (let i = 0; i < T.ny; i++) {
+      const lat = T.lat0 + i * (T.lat1 - T.lat0) / Math.max(1, T.ny - 1);
+      for (let j = 0; j < T.nx; j++) {
+        const lon = T.lon0 + j * (T.lon1 - T.lon0) / Math.max(1, T.nx - 1);
+        csv += `${i},${j},${lat.toFixed(6)},${lon.toFixed(6)},${T.grid[i][j]}\n`;
+      }
+    }
+    downloadText(`${base}_terrain_grid_${stamp}.csv`, csv, 'text/csv');
+    downloadText(`${base}_terrain_meta_${stamp}.json`, JSON.stringify({
+      ny: T.ny, nx: T.nx, lat0: T.lat0, lat1: T.lat1, lon0: T.lon0, lon1: T.lon1,
+      minE: T.minE, maxE: T.maxE, meanE: T.meanE, source: T.source,
     }, null, 2), 'application/json');
+    addLog('Exported terrain grid + meta', 'o');
+  }
 
-    addLog('Exported report, per-turbine CSV, sectors, layout, boundary, summary JSON', 'o');
+  function exportRoughnessCsv(base, stamp) {
+    let zc = 'lu,z0_m,n_pts,centroid_lat,centroid_lon\n';
+    (S.roughnessZones || []).forEach((z) => {
+      const la = z.pts ? mean(z.pts.map((p) => p.lat)) : '';
+      const lo = z.pts ? mean(z.pts.map((p) => p.lon)) : '';
+      zc += `${(z.lu || '').replace(/,/g, ';')},${z.z0},${z.pts ? z.pts.length : 0},${la},${lo}\n`;
+    });
+    downloadText(`${base}_roughness_zones_${stamp}.csv`, zc, 'text/csv');
+    const rose = S.autoRoughnessRose || S.roughnessRose || [];
+    let rc = 'sector,dir_deg,z0_1,z0_2,z0_3,x1_m,x2_m,x3_m\n';
+    rose.forEach((r, i) => {
+      const z0 = r.z0 || []; const x = r.x || [];
+      const dir = r.dir != null ? r.dir : (i + 0.5) * 360 / rose.length;
+      rc += `${i},${dir},${z0[0] ?? ''},${z0[1] ?? ''},${z0[2] ?? ''},${x[0] ?? ''},${x[1] ?? ''},${x[2] ?? ''}\n`;
+    });
+    downloadText(`${base}_roughness_rose_${stamp}.csv`, rc, 'text/csv');
+    addLog(`Exported roughness zones (${(S.roughnessZones || []).length}) + rose (${rose.length})`, 'o');
+  }
+
+  function exportWaspTab(base, stamp) {
+    // Simple WAsP .tab from sector Weibull (hub height)
+    const R = S.results;
+    const secs = R?.sectors || [];
+    if (!secs.length) { addLog('No sectors for .tab', 'w'); return; }
+    const hh = currentPC().hh;
+    const c = centerOf(S.turbines.length ? S.turbines : S.boundary);
+    let tab = `${S.project} - hub ${hh}m\n`;
+    tab += ` ${c.lat.toFixed(3)} ${c.lon.toFixed(3)} height ${hh}m\n`;
+    // frequencies in %
+    const freqs = secs.map((s) => (s.freq * 100));
+    tab += ` ${secs.length} ${hh.toFixed(1)}\n`;
+    tab += ' ' + freqs.map((f) => f.toFixed(3)).join(' ') + '\n';
+    tab += ' ' + secs.map((s) => s.A.toFixed(3)).join(' ') + '\n';
+    tab += ' ' + secs.map((s) => s.k.toFixed(3)).join(' ') + '\n';
+    downloadText(`${base}_hub_${stamp}.tab`, tab, 'text/plain');
+    addLog('Exported WAsP-style .tab (sector Weibull at hub)', 'o');
+  }
+
+  function exportLayoutKml(base, stamp) {
+    let kml = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${S.project}</name>\n`;
+    if (S.boundary.length >= 3) {
+      kml += `<Placemark><name>Boundary</name><Style><LineStyle><color>ffbd8f3d</color><width>2</width></LineStyle><PolyStyle><color>2200ff00</color></PolyStyle></Style><Polygon><outerBoundaryIs><LinearRing><coordinates>`;
+      S.boundary.forEach((p) => { kml += `${p.lon},${p.lat},0 `; });
+      kml += `</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>\n`;
+    }
+    S.turbines.forEach((t, i) => {
+      const ws = S.speedField && S.speedField[i] != null ? ` WS=${Number(S.speedField[i]).toFixed(2)}` : '';
+      kml += `<Placemark><name>${t.name || ('T' + (i + 1))}</name><description>HH=${t.hh || ''}${ws}</description><Point><coordinates>${t.lon},${t.lat},0</coordinates></Point></Placemark>\n`;
+    });
+    if (S.windPoint || (S.wind && S.wind.lat != null)) {
+      const wp = S.windPoint || S.wind;
+      kml += `<Placemark><name>WindData_${wp.source || ''}</name><Point><coordinates>${wp.lon},${wp.lat},0</coordinates></Point></Placemark>\n`;
+    }
+    kml += `</Document></kml>`;
+    downloadText(`${base}_layout_${stamp}.kml`, kml, 'application/vnd.google-earth.kml+xml');
+    addLog('Exported layout/boundary KML', 'o');
+  }
+
+  function exportSummaryJson(base, stamp) {
+    const R = S.results;
+    downloadText(`${base}_summary_${stamp}.json`, JSON.stringify({
+      project: S.project,
+      results: R ? { ...R, perTurbine: undefined } : null,
+      nTurbines: R?.n, wind: S.wind && {
+        source: S.wind.source, height: S.wind.height, meanWS: S.wind.meanWS,
+        lat: S.wind.lat, lon: S.wind.lon, n: S.wind.speeds?.length,
+      },
+      terrain: S.terrain && { minE: S.terrain.minE, maxE: S.terrain.maxE, meanE: S.terrain.meanE, ny: S.terrain.ny, nx: S.terrain.nx, source: S.terrain.source },
+      roughnessZones: (S.roughnessZones || []).length,
+      verticalMethod: $('vertMethod')?.value,
+      gwaMeta: S.gwaMeta || null,
+    }, null, 2), 'application/json');
+  }
+
+  async function exportMapPng() {
+    if (!S.map) { alert('Map not ready'); return; }
+    try {
+      addLog('Capturing map PNG…', 'i');
+      // Use leaflet's map pane + html2canvas-free approach: draw to canvas via dom-to-image alternative
+      // Simple approach: leaflet-image style — composite tile + overlay canvases
+      const map = S.map;
+      const size = map.getSize();
+      const canvas = document.createElement('canvas');
+      canvas.width = size.x * 2; canvas.height = size.y * 2;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(2, 2);
+      ctx.fillStyle = '#0a101c';
+      ctx.fillRect(0, 0, size.x, size.y);
+
+      // try to draw tile images
+      const tiles = map.getPane('tilePane')?.querySelectorAll('img') || [];
+      const mapBounds = map.getBounds();
+      const nw = map.latLngToContainerPoint(mapBounds.getNorthWest());
+      // Draw white background for export clarity
+      ctx.fillStyle = '#e8eef2';
+      ctx.fillRect(0, 0, size.x, size.y);
+
+      const drawImgs = [];
+      tiles.forEach((img) => {
+        if (!img.complete || !img.naturalWidth) return;
+        const style = img.parentElement?.style || img.style;
+        // leaflet positions tiles via transform on parent
+        const rect = img.getBoundingClientRect();
+        const mapRect = map.getContainer().getBoundingClientRect();
+        const x = rect.left - mapRect.left;
+        const y = rect.top - mapRect.top;
+        drawImgs.push({ img, x, y, w: rect.width, h: rect.height });
+      });
+      for (const d of drawImgs) {
+        try { ctx.drawImage(d.img, d.x, d.y, d.w, d.h); } catch (_) {}
+      }
+
+      // Draw overlays from SVG paths roughly via overlay pane is hard; instead re-render simple layers
+      // Boundary
+      if (S.boundary.length >= 2) {
+        ctx.beginPath();
+        S.boundary.forEach((p, i) => {
+          const pt = map.latLngToContainerPoint([p.lat, p.lon]);
+          if (i === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+        });
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(61,139,253,0.12)';
+        ctx.strokeStyle = '#3d8bfd';
+        ctx.lineWidth = 2;
+        ctx.fill(); ctx.stroke();
+      }
+      // Turbines + speed
+      const vals = (S.speedField || []).filter(isFinite);
+      const wmin = vals.length ? Math.min(...vals) : 0;
+      const wmax = vals.length ? Math.max(...vals) : 1;
+      S.turbines.forEach((t, i) => {
+        const pt = map.latLngToContainerPoint([t.lat, t.lon]);
+        const ws = S.speedField && S.speedField[i];
+        ctx.beginPath();
+        if (ws != null && isFinite(ws)) {
+          const r = 5 + 8 * ((ws - wmin) / Math.max(0.2, wmax - wmin));
+          ctx.fillStyle = wsColor(ws, wmin, wmax);
+          ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+        } else {
+          ctx.fillStyle = '#1b7a4a';
+          ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+      // Wind point
+      const wp = S.windPoint || (S.wind && S.wind.lat != null ? S.wind : null);
+      if (wp && wp.lat != null) {
+        const pt = map.latLngToContainerPoint([wp.lat, wp.lon]);
+        ctx.beginPath();
+        ctx.fillStyle = '#f5b942';
+        ctx.arc(pt.x, pt.y, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = '#0b1220';
+        ctx.font = '12px sans-serif';
+        ctx.fillText((wp.source || 'WIND') + (wp.meanWS != null ? ` ${Number(wp.meanWS).toFixed(2)} m/s` : ''), pt.x + 10, pt.y - 8);
+      }
+      // Title
+      ctx.fillStyle = 'rgba(11,18,32,0.85)';
+      ctx.fillRect(8, 8, 320, 40);
+      ctx.fillStyle = '#e8eefc';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText(S.project || 'Wind Farm', 16, 28);
+      ctx.font = '11px sans-serif';
+      ctx.fillStyle = '#9aabcc';
+      ctx.fillText(new Date().toISOString().slice(0, 10) + ' · AEP Studio map export', 16, 42);
+
+      canvas.toBlob((blob) => {
+        if (!blob) { addLog('Map PNG export failed', 'e'); return; }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${(S.project || 'windfarm').replace(/\s+/g, '_')}_map_${new Date().toISOString().slice(0, 10)}.png`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        addLog('Exported map PNG', 'o');
+      }, 'image/png');
+    } catch (e) {
+      addLog('Map PNG export error: ' + e.message, 'e');
+      alert('Map export failed: ' + e.message);
+    }
   }
 
   // ─── Demo ────────────────────────────────────────────────────────────────
@@ -2000,9 +2592,11 @@
     z.addEventListener('dragleave', () => z.classList.remove('drag'));
     z.addEventListener('drop', async (e) => {
       e.preventDefault(); z.classList.remove('drag');
-      const f = e.dataTransfer.files?.[0]; if (f) handler(f);
+      const fl = e.dataTransfer.files; if (fl && fl.length) handler(fl.length > 1 ? fl : fl[0]);
     });
-    inp.addEventListener('change', () => { const f = inp.files?.[0]; if (f) handler(f); });
+    inp.addEventListener('change', () => {
+      const fl = inp.files; if (fl && fl.length) handler(fl.length > 1 ? fl : fl[0]);
+    });
   }
 
   // ─── Init ────────────────────────────────────────────────────────────────
@@ -2048,6 +2642,13 @@
     $('btnRun').onclick = () => runAEP();
     $('btnExport').onclick = exportResults;
     $('btnDemo').onclick = loadDemo;
+    if ($('btnExpMap')) $('btnExpMap').onclick = () => exportMapPng();
+    if ($('btnExpTerr')) $('btnExpTerr').onclick = () => exportTerrainCsv((S.project||'wf').replace(/\s+/g,'_'), new Date().toISOString().slice(0,10));
+    if ($('btnExpRough')) $('btnExpRough').onclick = () => exportRoughnessCsv((S.project||'wf').replace(/\s+/g,'_'), new Date().toISOString().slice(0,10));
+    if ($('btnExpWind')) $('btnExpWind').onclick = () => exportWindCsv((S.project||'wf').replace(/\s+/g,'_'), new Date().toISOString().slice(0,10));
+    if ($('btnExpTab')) $('btnExpTab').onclick = () => exportWaspTab((S.project||'wf').replace(/\s+/g,'_'), new Date().toISOString().slice(0,10));
+    if ($('btnExpKml')) $('btnExpKml').onclick = () => exportLayoutKml((S.project||'wf').replace(/\s+/g,'_'), new Date().toISOString().slice(0,10));
+    if ($('btnExpLayout')) $('btnExpLayout').onclick = () => exportLayoutCsv((S.project||'wf').replace(/\s+/g,'_'), new Date().toISOString().slice(0,10));
     $('projName').addEventListener('change', () => { S.project = $('projName').value; });
 
     // Install spectral engine if present
@@ -2072,7 +2673,10 @@
       runAEP, exportResults, applyPreset, generateGrid, currentPC,
       loadDemo, redrawMap, refreshSiteUI, updateLegend,
       drawElevationLayer, drawRoughnessLayer, drawSpeedLayer, drawWindPointLayer,
-      ingestGwaLibText, showGwaHelpPanel
+      ingestGwaLibText, showGwaHelpPanel,
+      exportWindCsv, exportTerrainCsv, exportRoughnessCsv, exportMapPng,
+      exportLayoutKml, exportWaspTab, readPointsFile, utmToLatLon, latLonToUtm,
+      verticalExtrapolate
     };
     // also bind commonly used names
     window.downloadTerrain = downloadTerrain;

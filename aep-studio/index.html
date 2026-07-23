@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://unpkg.com/shpjs@0.6.5/dist/shp.min.js"></script>
 <style>
 :root{
   --bg:#0b1220; --panel:#121a2b; --card:#172235; --line:#243049;
@@ -105,15 +106,116 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
         <div><label>Default z₀ (m)</label><input id="z0" type="number" step="0.001" value="0.03"/></div>
       </div>
 
-      <label style="margin-top:12px">Boundary file (KML / KMZ / GeoJSON / CSV lon,lat)</label>
+      <label style="margin-top:12px">Boundary file</label>
+      <p class="hint">KML · KMZ · GeoJSON · CSV/TXT · Shapefile (.shp or .zip with .shp/.dbf/.shx) · lon/lat or UTM</p>
       <div class="drop" id="dropBoundary">Drop boundary or <strong>click to browse</strong>
-        <input type="file" id="fileBoundary" hidden accept=".kml,.kmz,.geojson,.json,.csv,.txt,.xml"/>
+        <input type="file" id="fileBoundary" hidden accept=".kml,.kmz,.geojson,.json,.csv,.txt,.xml,.shp,.zip,.dbf,.shx,.prj" multiple/>
       </div>
 
-      <label>Layout file (CSV lat,lon or lon,lat · KML/KMZ points · GeoJSON)</label>
-      <div class="drop" id="dropLayout">Drop turbine layout or <strong>click to browse</strong>
-        <input type="file" id="fileLayout" hidden accept=".kml,.kmz,.geojson,.json,.csv,.txt"/>
+      <label>Layout / turbine coordinates</label>
+      <p class="hint">CSV/TXT (lat,lon · lon,lat · easting,northing · X,Y) · KML/KMZ · GeoJSON · SHP/ZIP · optional Name,HH columns</p>
+      <div class="drop" id="dropLayout">Drop layout or <strong>click to browse</strong>
+        <input type="file" id="fileLayout" hidden accept=".kml,.kmz,.geojson,.json,.csv,.txt,.xml,.shp,.zip,.dbf,.shx,.prj" multiple/>
       </div>
+
+      <details open>
+        <summary>Coordinate system for CSV/TXT/SHP</summary>
+        <div class="row">
+          <div>
+            <label>Input CRS</label>
+            <select id="inCrs">
+              <option value="auto" selected>Auto-detect (lat/lon vs UTM)</option>
+              <option value="wgs84">WGS84 lon/lat (EPSG:4326)</option>
+              <option value="utm">UTM → WGS84 (set zone)</option>
+            </select>
+          </div>
+          <div>
+            <label>UTM zone</label>
+            <select id="utmZone">
+              <option value="auto">Auto from longitude</option>
+              <option value="1">1N</option>
+<option value="2">2N</option>
+<option value="3">3N</option>
+<option value="4">4N</option>
+<option value="5">5N</option>
+<option value="6">6N</option>
+<option value="7">7N</option>
+<option value="8">8N</option>
+<option value="9">9N</option>
+<option value="10">10N</option>
+<option value="11">11N</option>
+<option value="12">12N</option>
+<option value="13">13N</option>
+<option value="14">14N</option>
+<option value="15">15N</option>
+<option value="16">16N</option>
+<option value="17">17N</option>
+<option value="18">18N</option>
+<option value="19">19N</option>
+<option value="20">20N</option>
+<option value="21">21N</option>
+<option value="22">22N</option>
+<option value="23">23N</option>
+<option value="24">24N</option>
+<option value="25">25N</option>
+<option value="26">26N</option>
+<option value="27">27N</option>
+<option value="28">28N</option>
+<option value="29">29N</option>
+<option value="30">30N</option>
+<option value="31">31N</option>
+<option value="32">32N</option>
+<option value="33">33N</option>
+<option value="34">34N</option>
+<option value="35">35N</option>
+<option value="36">36N</option>
+<option value="37">37N</option>
+<option value="38">38N</option>
+<option value="39">39N</option>
+<option value="40">40N</option>
+<option value="41">41N</option>
+<option value="42">42N</option>
+<option value="43" selected>43N</option>
+<option value="44">44N</option>
+<option value="45">45N</option>
+<option value="46">46N</option>
+<option value="47">47N</option>
+<option value="48">48N</option>
+<option value="49">49N</option>
+<option value="50">50N</option>
+<option value="51">51N</option>
+<option value="52">52N</option>
+<option value="53">53N</option>
+<option value="54">54N</option>
+<option value="55">55N</option>
+<option value="56">56N</option>
+<option value="57">57N</option>
+<option value="58">58N</option>
+<option value="59">59N</option>
+<option value="60">60N</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>UTM hemisphere</label>
+            <select id="utmHem">
+              <option value="N" selected>North</option>
+              <option value="S">South</option>
+            </select>
+          </div>
+          <div>
+            <label>Column order (no header)</label>
+            <select id="colOrder">
+              <option value="auto" selected>Auto</option>
+              <option value="lonlat">lon, lat</option>
+              <option value="latlon">lat, lon</option>
+              <option value="en">easting, northing</option>
+              <option value="ne">northing, easting</option>
+            </select>
+          </div>
+        </div>
+      </details>
 
       <details open>
         <summary>Or define area by corners / center</summary>
@@ -237,8 +339,38 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
       <div class="progress"><div id="pb"></div></div>
       <div class="btn-row">
         <button class="btn btn-primary" id="btnRun">▶ Run full AEP</button>
-        <button class="btn btn-ok" id="btnExport" disabled>Export results</button>
+        <button class="btn btn-ok" id="btnExport" disabled>Export all results</button>
       </div>
+      <details style="margin-top:10px">
+        <summary>More exports</summary>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn btn-ghost" id="btnExpMap" type="button">Map PNG</button>
+          <button class="btn btn-ghost" id="btnExpTerr" type="button">Terrain CSV</button>
+          <button class="btn btn-ghost" id="btnExpRough" type="button">Roughness CSV</button>
+          <button class="btn btn-ghost" id="btnExpWind" type="button">Wind series CSV</button>
+          <button class="btn btn-ghost" id="btnExpTab" type="button">WAsP .tab</button>
+          <button class="btn btn-ghost" id="btnExpKml" type="button">Layout KML</button>
+          <button class="btn btn-ghost" id="btnExpLayout" type="button">Layout CSV</button>
+        </div>
+      </details>
+      <details style="margin-top:8px">
+        <summary>Extrapolation options</summary>
+        <div class="row">
+          <div>
+            <label>Vertical profile</label>
+            <select id="vertMethod">
+              <option value="log" selected>Log-law (z₀)</option>
+              <option value="log_sector">Log-law + sector z₀ rose</option>
+              <option value="power">Power law (α)</option>
+            </select>
+          </div>
+          <div>
+            <label>Power-law α</label>
+            <input id="shearAlpha" type="number" step="0.01" value="0.14"/>
+          </div>
+        </div>
+        <p class="hint">Horizontal: spectral BZ orography (speed-up) + roughness change (IBL) applied per sector before wakes.</p>
+      </details>
       <button class="btn btn-warn" id="btnDemo" style="width:100%;margin-top:8px">Load Hatalageri demo boundary</button>
     </div>
   </div>
