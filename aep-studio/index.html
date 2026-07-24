@@ -388,6 +388,22 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
             </tbody>
           </table>
         </div>
+        
+        <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--line);">
+          <span style="font-weight:600; font-size:0.72rem; color:var(--text); display:block; margin-bottom:4px;">⚡ MCP (Measure-Correlate-Predict)</span>
+          <p class="hint" style="margin-bottom:6px;">Correlate a short-term Site Mast (Y) with a long-term ERA5 reference (X) using Linear Regression to synthesize a multi-year high-fidelity climate.</p>
+          <div class="row">
+            <div>
+              <label>Target (Short-term)</label>
+              <select id="mcpTarget" style="font-size:10px; padding:4px;"></select>
+            </div>
+            <div>
+              <label>Reference (Long-term)</label>
+              <select id="mcpRef" style="font-size:10px; padding:4px;"></select>
+            </div>
+          </div>
+          <button class="btn btn-ghost" id="btnRunMcp" type="button" style="width:100%; margin-top:6px; background:#1b7a4a; color:#fff; font-size:10px; padding:6px;">Synthesize Long-Term Mast (MCP)</button>
+        </div>
       </details>
       <div class="row">
         <div><label>ERA5 start year (≥2000)</label><input id="y0" type="number" value="2019" min="2000" max="2026"/></div>

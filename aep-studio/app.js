@@ -1599,6 +1599,86 @@
     }
   }
 
+  function runMCP() {
+    try {
+      const targetName = $('mcpTarget')?.value;
+      const refName = $('mcpRef')?.value;
+      if (!targetName || !refName) {
+        alert('Please select both a target and reference mast.');
+        return;
+      }
+      if (targetName === refName) {
+        alert('Please select two different masts for correlation.');
+        return;
+      }
+      const targetMast = S.masts.find(m => m.name === targetName);
+      const refMast = S.masts.find(m => m.name === refName);
+      if (!targetMast || !refMast) {
+        alert('Selected masts not found.');
+        return;
+      }
+
+      // Correlate speeds
+      const len = Math.min(targetMast.speeds.length, refMast.speeds.length);
+      if (len < 50) {
+        alert('At least 50 concurrent wind speed data points are required for stable correlation.');
+        return;
+      }
+
+      // Calculate linear regression y = m * x + c
+      let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0, sumYY = 0;
+      let count = 0;
+      for (let i = 0; i < len; i++) {
+        const x = refMast.speeds[i];
+        const y = targetMast.speeds[i];
+        if (x != null && y != null && isFinite(x) && isFinite(y)) {
+          sumX += x;
+          sumY += y;
+          sumXY += x * y;
+          sumXX += x * x;
+          sumYY += y * y;
+          count++;
+        }
+      }
+
+      if (count < 50) {
+        alert('Insufficient concurrent points found.');
+        return;
+      }
+
+      const meanX = sumX / count;
+      const meanY = sumY / count;
+      const slope = (sumXY - count * meanX * meanY) / (sumXX - count * meanX * meanX);
+      const intercept = meanY - slope * meanX;
+
+      // Calculate R2 correlation coefficient
+      const num = sumXY - (sumX * sumY / count);
+      const den = Math.sqrt((sumXX - (sumX * sumX / count)) * (sumYY - (sumY * sumY / count)));
+      const r_val = den > 0 ? num / den : 0;
+      const r2 = r_val * r_val;
+
+      addLog(`MCP: Correlating ${targetName} (Y) with ${refName} (X) over ${count} hours`, 'i');
+      addLog(`MCP Regression: slope = ${slope.toFixed(4)}, intercept = ${intercept.toFixed(4)} m/s (R² = ${r2.toFixed(3)})`, 'o');
+
+      // Synthesize new long-term series based on reference mast speeds
+      const synthSpeeds = refMast.speeds.map(v => Math.max(0.1, slope * v + intercept));
+      const synthDirs = [...refMast.dirs]; // assume directions follow reference
+
+      const synthName = `MCP_${targetName}_LongTerm`;
+      setWind(synthSpeeds, synthDirs, {
+        source: synthName,
+        height: targetMast.height,
+        lat: targetMast.lat,
+        lon: targetMast.lon
+      });
+
+      addLog(`MCP Success: Synthesized mast ${synthName} added to multi-mast manager!`, 'o');
+      alert(`MCP Correlation Complete!\n\nSlope: ${slope.toFixed(3)}\nIntercept: ${intercept.toFixed(2)} m/s\nCorrelation (R²): ${r2.toFixed(3)}\n\nNew synthesized long-term mast '${synthName}' is now active!`);
+    } catch (e) {
+      alert(`MCP failed: ${e.message}`);
+    }
+  }
+
   function refreshMastsUI() {
     const el = $('mastsTableBody');
     if (!el) return;
@@ -1618,6 +1698,17 @@
         </td>
       </tr>
     `).join('');
+
+    // Populate MCP target and reference dropdowns
+    const targetSel = $('mcpTarget');
+    const refSel = $('mcpRef');
+    if (targetSel && refSel) {
+      targetSel.innerHTML = S.masts.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+      refSel.innerHTML = S.masts.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+      if (S.masts.length > 1) {
+        refSel.selectedIndex = 1; // default to second mast
+      }
+    }
   }
 
   function toggleMast(idx) {
@@ -3426,6 +3517,7 @@
       };
     }
     if ($('btnExpWrg')) $('btnExpWrg').onclick = generateWrgMap;
+    if ($('btnRunMcp')) $('btnRunMcp').onclick = runMCP;
 
     // Real-time switching of active wind source in state when dropdown selection changes
     if ($('windSrc')) {
@@ -3599,7 +3691,7 @@
       exportWindCsv, exportTerrainCsv, exportRoughnessCsv, exportMapPng,
       exportLayoutKml, exportWaspTab, readPointsFile, utmToLatLon, latLonToUtm,
       verticalExtrapolate, saveProject, openProject, generateWrgMap, deleteTurbine,
-      toggleMast, deleteMast, refreshMastsUI
+      toggleMast, deleteMast, refreshMastsUI, runMCP
     };
     // also bind commonly used names
     window.downloadTerrain = downloadTerrain;
