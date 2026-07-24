@@ -3467,6 +3467,83 @@
     }
   }
 
+  function exportWaspMap() {
+    try {
+      const T = S.terrain;
+      if (!T || !T.grid) {
+        alert('Please download terrain first (TERRAIN tab).');
+        return;
+      }
+
+      addLog('Exporting WAsP Vector .map file…', 'i');
+
+      const { grid, ny, nx, lat0, lat1, lon0, lon1, minE, maxE } = T;
+      const dLat = (lat1 - lat0) / Math.max(1, ny - 1);
+      const dLon = (lon1 - lon0) / Math.max(1, nx - 1);
+      const range = Math.max(1, maxE - minE);
+
+      let mapText = "";
+
+      // Generate elevation contour lines (marching squares segments)
+      const nLevels = 12; // 12 contour levels for high-fidelity representation
+      const levels = [];
+      for (let k = 1; k < nLevels; k++) levels.push(minE + (range * k) / nLevels);
+
+      levels.forEach((lev) => {
+        for (let i = 0; i < ny - 1; i++) {
+          for (let j = 0; j < nx - 1; j++) {
+            const v00 = grid[i][j], v10 = grid[i][j + 1], v01 = grid[i + 1][j], v11 = grid[i + 1][j + 1];
+            if (![v00, v10, v01, v11].every((v) => v != null && isFinite(v))) continue;
+            const corners = [
+              [0, 0, v00], [1, 0, v10], [1, 1, v11], [0, 1, v01],
+            ];
+            const pts = [];
+            for (let e = 0; e < 4; e++) {
+              const [x1, y1, a] = corners[e];
+              const [x2, y2, b] = corners[(e + 1) % 4];
+              if ((a < lev && b >= lev) || (a >= lev && b < lev)) {
+                const t = (lev - a) / ((b - a) || 1e-9);
+                const x = x1 + (x2 - x1) * t;
+                const y = y1 + (y2 - y1) * t;
+                pts.push({ lat: lat0 + (i + y) * dLat, lon: lon0 + (j + x) * dLon });
+              }
+            }
+            if (pts.length >= 2) {
+              const p1 = pts[0], p2 = pts[1];
+              const utm1 = latLonToUtm(p1.lat, p1.lon);
+              const utm2 = latLonToUtm(p2.lat, p2.lon);
+
+              mapText += ` 0.000 0.000 ${lev.toFixed(2)} 2\r\n`;
+              mapText += `  ${utm1.easting.toFixed(2)}  ${utm1.northing.toFixed(2)}\r\n`;
+              mapText += `  ${utm2.easting.toFixed(2)}  ${utm2.northing.toFixed(2)}\r\n`;
+            }
+          }
+        }
+      });
+
+      // Export roughness zones as WAsP roughness contours
+      const defaultZ0 = +$('z0').value || 0.03;
+      if (S.roughnessZones && S.roughnessZones.length) {
+        S.roughnessZones.forEach((z) => {
+          if (!z.pts || z.pts.length < 3) return;
+          const utmPts = z.pts.map(p => latLonToUtm(p.lat, p.lon));
+          
+          mapText += ` ${z.z0.toFixed(4)} ${defaultZ0.toFixed(4)} 0.00 ${utmPts.length}\r\n`;
+          utmPts.forEach((p) => {
+            mapText += `  ${p.easting.toFixed(2)}  ${p.northing.toFixed(2)}\r\n`;
+          });
+        });
+      }
+
+      const name = (S.project || 'site').replace(/[^a-z0-9_-]/gi, '_');
+      const filename = `${name}_wasp_vector.map`;
+      triggerTextDownload(filename, mapText);
+      addLog(`WAsP Vector .map exported successfully: ${filename}`, 'o');
+    } catch (e) {
+      alert(`Failed to export WAsP .map file: ${e.message}`);
+    }
+  }
+
   // ─── Drag/drop helpers ───────────────────────────────────────────────────
   function bindDrop(zoneId, inputId, handler) {
     const z = $(zoneId), inp = $(inputId);
@@ -3518,6 +3595,7 @@
     }
     if ($('btnExpWrg')) $('btnExpWrg').onclick = generateWrgMap;
     if ($('btnRunMcp')) $('btnRunMcp').onclick = runMCP;
+    if ($('btnExpWaspMap')) $('btnExpWaspMap').onclick = exportWaspMap;
 
     // Real-time switching of active wind source in state when dropdown selection changes
     if ($('windSrc')) {
@@ -3691,7 +3769,7 @@
       exportWindCsv, exportTerrainCsv, exportRoughnessCsv, exportMapPng,
       exportLayoutKml, exportWaspTab, readPointsFile, utmToLatLon, latLonToUtm,
       verticalExtrapolate, saveProject, openProject, generateWrgMap, deleteTurbine,
-      toggleMast, deleteMast, refreshMastsUI, runMCP
+      toggleMast, deleteMast, refreshMastsUI, runMCP, exportWaspMap
     };
     // also bind commonly used names
     window.downloadTerrain = downloadTerrain;
