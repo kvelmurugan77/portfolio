@@ -1500,8 +1500,26 @@
     ]);
     setStep('wind', 'done');
     addLog(`Wind ${w.source}: ${sp.length} samples, mean ${w.meanWS.toFixed(2)} m/s @ ${w.height} m`, 'o');
+    updateWindStatusUI();
     redrawMap({ fit: false });
     return w;
+  }
+
+  function updateWindStatusUI() {
+    const el = $('windStatus');
+    if (!el) return;
+    if (S.wind) {
+      el.style.color = 'var(--ok)';
+      el.style.background = '#14301f';
+      el.style.borderColor = '#1f5a3a';
+      el.innerHTML = `🟢 <b>Active in State:</b> ${S.wind.source} (Mean ${S.wind.meanWS.toFixed(2)} m/s @ ${S.wind.height}m)<br>` +
+                     `<span style="color:var(--muted); font-size:10px;">AEP will use this dataset unless you switch primary source and run again.</span>`;
+    } else {
+      el.style.color = 'var(--muted)';
+      el.style.background = 'var(--input)';
+      el.style.borderColor = 'var(--line)';
+      el.innerHTML = `⚪ <b>Active in State:</b> None (will download/load the selected primary source on run)`;
+    }
   }
 
   async function downloadERA5() {
@@ -2040,6 +2058,50 @@
     return a * Math.exp(-0.5 * r2 / (sig * sig));
   }
 
+  // ─── Wake: Eddy Viscosity (Ainslie-Gaussian) ──────────────────────────────
+  function ainslieDeficit(dx, dy, D, ct, TI) {
+    const xPrime = dx / D;
+    if (xPrime <= 0) return 0;
+    
+    // Ainslie model is initialized at 2.0 D downstream
+    let Dm0 = ct - 0.05 - (16 * ct - 0.5) * (TI * 100) / 1000;
+    Dm0 = Math.max(0.01, Dm0);
+    
+    const Dm_rotor = 1 - Math.sqrt(Math.max(0.01, 1 - ct));
+    
+    if (xPrime < 2.0) {
+      // Linear interpolation in the near wake (0 to 2D)
+      const t = xPrime / 2.0;
+      const Dm = Dm_rotor * (1 - t) + Dm0 * t;
+      const Bw = Math.sqrt((0.445 * ct) / Math.max(1e-4, Dm * (1 - 0.5 * Dm)));
+      const rPrime = dy / D;
+      return Dm * Math.exp(-3.56 * rPrime * rPrime / (Bw * Bw));
+    }
+    
+    // Integrate ODE from xPrime = 2.0 to the target xPrime
+    let currentX = 2.0;
+    let Dm = Dm0;
+    const step = 0.5; // step size in rotor diameters
+    
+    while (currentX < xPrime) {
+      const h = Math.min(step, xPrime - currentX);
+      const Bw = Math.sqrt((0.445 * ct) / Math.max(1e-4, Dm * (1 - 0.5 * Dm)));
+      const eps_amb = 0.16 * TI;
+      const eps_shear = 0.015 * Bw * Dm;
+      const eps = eps_amb + eps_shear;
+      
+      const dDm_dx = - (16 * eps * Dm) / Math.max(1e-4, Bw * Bw * (2 - Dm));
+      
+      Dm += dDm_dx * h;
+      Dm = Math.max(0.01, Dm);
+      currentX += h;
+    }
+    
+    const Bw = Math.sqrt((0.445 * ct) / Math.max(1e-4, Dm * (1 - 0.5 * Dm)));
+    const rPrime = dy / D;
+    return Dm * Math.exp(-3.56 * rPrime * rPrime / (Bw * Bw));
+  }
+
   // ─── AEP core ────────────────────────────────────────────────────────────
   async function runAEP() {
     try {
@@ -2058,11 +2120,21 @@
       setProgress(40);
 
       // Wind
+      const desiredSrc = $('windSrc').value;
+      if (S.windSources[desiredSrc]) {
+        S.wind = S.windSources[desiredSrc];
+        addLog(`Using cached wind source: ${desiredSrc}`, 'i');
+      } else if (desiredSrc === 'GWA' && S.windSources['GWA_FILE']) {
+        S.wind = S.windSources['GWA_FILE'];
+        addLog(`Using cached wind source: GWA_FILE`, 'i');
+      } else if (S.wind && S.wind.source !== desiredSrc && !(desiredSrc === 'GWA' && S.wind.source === 'GWA_FILE')) {
+        S.wind = null;
+      }
+
       if (!S.wind || !S.wind.speeds?.length) {
-        const src = $('windSrc').value;
-        addLog('Auto wind: ' + src, 'i');
-        if (src === 'GWA') await downloadGWA();
-        else if (src === 'SITE' || src === 'MESO') { alert('Upload site/mesoscale wind CSV first'); return; }
+        addLog('Auto wind: ' + desiredSrc, 'i');
+        if (desiredSrc === 'GWA') await downloadGWA();
+        else if (desiredSrc === 'SITE' || desiredSrc === 'MESO') { alert(`Upload ${desiredSrc === 'SITE' ? 'site mast' : 'mesoscale'} wind CSV first`); return; }
         else await downloadERA5();
       }
       if (!S.wind?.speeds?.length) { addLog('No wind data', 'e'); return; }
@@ -2106,6 +2178,8 @@
       const lat0 = centerOf(S.turbines).lat, lon0 = centerOf(S.turbines).lon;
       const xy = S.turbines.map((t) => latLonToXY(t.lat, t.lon, lat0, lon0));
       const kWake = +$('wakeK').value || 0.04;
+      const useEV = ($('wakeModel')?.value || 'ev') === 'ev';
+      const TI_val = (+$('wakeTI')?.value || 12) / 100.0;
       const lossOther = +$('loss').value || 8;
       const avail = (+$('avail').value || 97) / 100;
       const elec = 1 - (+$('elec').value || 2) / 100;
@@ -2153,7 +2227,7 @@
               const dy = (xy[j].x - xy[i].x) * vx + (xy[j].y - xy[i].y) * vy;
               if (dx < 0.5 * pc.D) continue;
               const ct = ctAt(pc, free[i]);
-              const def = bastankhahDeficit(dx, dy, pc.D, ct, kWake);
+              const def = useEV ? ainslieDeficit(dx, dy, pc.D, ct, TI_val) : bastankhahDeficit(dx, dy, pc.D, ct, kWake);
               deficits2[j] += def * def;
             }
           }
@@ -2211,6 +2285,8 @@
         rix: window.BZ.rix,
         pc: { name: pc.name, rated: pc.rated, D: pc.D, hh: pc.hh },
         losses: { other: lossOther, avail: avail * 100, elec: (1 - elec) * 100 },
+        wakeModel: useEV ? 'ev' : 'bastankhah',
+        wakeTI: TI_val * 100,
       };
 
       // UI
@@ -2615,6 +2691,8 @@
           hh: $('hh')?.value,
           D: $('D')?.value,
           rated: $('rated')?.value,
+          wakeModel: $('wakeModel')?.value,
+          wakeTI: $('wakeTI')?.value,
           wakeK: $('wakeK')?.value,
           loss: $('loss')?.value,
           avail: $('avail')?.value,
@@ -2713,6 +2791,7 @@
         refreshSiteUI();
         redrawMap({ fit: true });
         restoreResultsUI();
+        updateWindStatusUI();
 
         addLog(`Project loaded successfully: ${S.project}`, 'o');
       } catch (err) {
@@ -3017,6 +3096,29 @@
       };
     }
     if ($('btnExpWrg')) $('btnExpWrg').onclick = generateWrgMap;
+
+    // Real-time switching of active wind source in state when dropdown selection changes
+    if ($('windSrc')) {
+      $('windSrc').addEventListener('change', () => {
+        const src = $('windSrc').value;
+        if (S.windSources[src]) {
+          S.wind = S.windSources[src];
+          addLog(`Switched active wind dataset to cached ${src}`, 'i');
+        } else if (src === 'GWA' && S.windSources['GWA_FILE']) {
+          S.wind = S.windSources['GWA_FILE'];
+          addLog(`Switched active wind dataset to cached GWA_FILE`, 'i');
+        } else {
+          S.wind = null;
+          addLog(`No cached wind data for ${src}. Will download or require upload on Run AEP.`, 'w');
+        }
+        updateWindStatusUI();
+        refreshSiteUI();
+        redrawMap({ fit: false });
+      });
+    }
+
+    // Initial load of wind status UI on startup
+    updateWindStatusUI();
     if ($('btnGwaLib') && $('fileGwaLib')) {
       $('btnGwaLib').onclick = () => $('fileGwaLib').click();
       $('fileGwaLib').addEventListener('change', async () => {

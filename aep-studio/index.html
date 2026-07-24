@@ -281,7 +281,16 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
         <input type="file" id="filePC" hidden accept=".csv,.txt"/>
       </div>
       <div class="row">
+        <div><label>Wake Model</label>
+          <select id="wakeModel">
+            <option value="ev" selected>Eddy Viscosity (Ainslie-Gaussian)</option>
+            <option value="bastankhah">Bastankhah Gaussian</option>
+          </select>
+        </div>
         <div><label>Wake k (Bastankhah)</label><input id="wakeK" type="number" step="0.005" value="0.04"/></div>
+      </div>
+      <div class="row">
+        <div><label>Ambient TI % (for Eddy Viscosity)</label><input id="wakeTI" type="number" step="0.5" value="12"/></div>
         <div><label>Other losses %</label><input id="loss" type="number" step="0.1" value="8"/></div>
       </div>
       <div class="row">
@@ -316,6 +325,9 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
         <option value="SITE">Site wind data (upload)</option>
         <option value="MESO">Other mesoscale CSV</option>
       </select>
+      <div id="windStatus" style="font-size:0.75rem; padding:6px 10px; margin-top:8px; border-radius:6px; background:var(--input); border:1px solid var(--line); color:var(--muted); font-weight: 500;">
+        Active wind in state: None (will be auto-loaded on run)
+      </div>
       <div class="row">
         <div><label>ERA5 start year (≥2000)</label><input id="y0" type="number" value="2019" min="2000" max="2026"/></div>
         <div><label>ERA5 end year (≥2000)</label><input id="y1" type="number" value="2023" min="2000" max="2026"/></div>
