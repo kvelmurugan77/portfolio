@@ -8,6 +8,22 @@ Launch from the portfolio tools page or open `yaw-screening-studio.html` directl
 
 Use the tool before a limited nacelle-LiDAR campaign to identify the WTG with the strongest and most credible **SCADA yaw-related signal**. Its output is a LiDAR targeting priority list, not a yaw correction.
 
+## OEM and SCADA export compatibility
+
+YawScout is designed around a **canonical SCADA schema**, not a single OEM export. It has header-alias profiles for common Vestas, Envision, Nordex / Acciona, Siemens Gamesa, Suzlon, Goldwind, Inox Wind and GE Vernova / GE signal families, plus a generic profile for other OEMs and customer historians.
+
+Profiles only accelerate the initial mapping. Tag names, status codes, aggregation conventions, unit scaling and direction references vary by turbine generation, SCADA release, owner data lake and site configuration, so the mapping screen must always be checked against the OEM signal dictionary.
+
+### Supported export layouts
+
+- **Long / tall export:** one turbine-interval record per row, with an Asset / WTG column.
+- **One turbine per file:** upload multiple files; if the asset column is absent, YawScout can derive a WTG label from the filename or use a supplied fallback label.
+- **Wide matrix export:** one timestamp per row with signals repeated in columns such as `WTG01_Active_Power`, `WTG01_Wind_Speed`, etc. The tool expands this into canonical long records. The editable WTG-ID pattern supports non-standard site naming.
+- **Delimited files:** comma, semicolon, tab and pipe delimiters; configurable header row for exports containing metadata lines.
+- **Numeric / date variations:** decimal-comma and thousands-separated values; Excel serial date/time; ISO, day-first or month-first date formats; power in W/kW/MW; wind speed in m/s or km/h; directions in degrees or radians.
+
+Auto-detection is intended as a convenience. If the automatic profile, data layout or units are not unequivocally correct, explicitly select the OEM profile / unit and remap the columns.
+
 ## Required SCADA signals
 
 | Tool field | Typical signal names | Unit |
@@ -29,9 +45,11 @@ Recommended optional fields:
 
 1. Use at least several months of 10-minute SCADA where possible.
 2. Confirm the OEM's direction reference and status-code definitions before running the tool.
-3. Select a below-rated, normal-operation wind-speed band. The default is 5–10 m/s.
-4. Add normal/full operation status values and map a curtailment flag if they are available.
-5. Review data coverage, turbine outages, known wakes, terrain-flow effects and sensor maintenance history independently.
+3. Select the matching OEM profile (or retain generic) and verify the suggested signal mappings against the SCADA tag list.
+4. Confirm export units. Explicitly choose W/kW/MW, m/s/km/h or radians when auto-detection is uncertain.
+5. Select a below-rated, normal-operation wind-speed band. The default is 5–10 m/s.
+6. Add normal/full operation status values and map a curtailment flag if they are available.
+7. Review data coverage, turbine outages, known wakes, terrain-flow effects and sensor maintenance history independently.
 
 ## How the ranking works
 
