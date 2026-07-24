@@ -21,6 +21,11 @@ header h1{margin:0;font-size:1.05rem;letter-spacing:.02em}
 header .sub{color:var(--muted);font-size:.78rem}
 .badge{background:#14301f;color:var(--ok);border:1px solid #1f5a3a;padding:4px 10px;border-radius:999px;font-size:.72rem}
 .layout{display:grid;grid-template-columns:380px 1fr 360px;gap:0;height:calc(100vh - 58px)}
+.layout.collapse-left { grid-template-columns: 0px 1fr 360px; }
+.layout.collapse-right { grid-template-columns: 380px 1fr 0px; }
+.layout.collapse-both { grid-template-columns: 0px 1fr 0px; }
+.layout.collapse-left > .col:first-child { display: none; }
+.layout.collapse-right > .col:last-child { display: none; }
 .col{overflow:auto;border-right:1px solid var(--line);padding:12px}
 .col:last-child{border-right:none;border-left:1px solid var(--line)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
@@ -83,6 +88,8 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
     <div class="sub">Boundary / layout → terrain + roughness → wind climate → AEP (ERA5 · GWA · site data)</div>
   </div>
   <div style="display:flex; align-items:center; gap:12px;">
+    <button class="btn btn-ghost" id="btnToggleLeft" style="padding:6px 12px; font-size:0.75rem; border:1px solid var(--line);">◀ Toggle Inputs</button>
+    <button class="btn btn-ghost" id="btnToggleRight" style="padding:6px 12px; font-size:0.75rem; border:1px solid var(--line);">Toggle Results ▶</button>
     <button class="btn btn-ghost" id="btnSaveProj" style="padding:6px 12px; font-size:0.75rem; border:1px dashed var(--line);">💾 Save Project</button>
     <button class="btn btn-ghost" id="btnOpenProj" style="padding:6px 12px; font-size:0.75rem; border:1px dashed var(--line);">📂 Open Project</button>
     <input type="file" id="fileOpenProj" accept=".json" style="display:none;" />
@@ -252,7 +259,10 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
           <div><label>Spacing D</label><input id="spD" type="number" step="0.1" value="5"/></div>
           <div><label>Cross D</label><input id="spC" type="number" step="0.1" value="3.5"/></div>
         </div>
-        <div class="btn-row"><button class="btn btn-ghost" id="btnGrid">Generate grid in boundary</button></div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="btnGrid">Generate grid in boundary</button>
+          <button class="btn btn-ghost" id="btnAddWtg" style="background:#132d4a; border:1px solid #2a5a9a; color:#a3ceff;">➕ Add WTG by map click</button>
+        </div>
       </details>
 
       <div class="chips" id="siteChips"></div>
@@ -291,12 +301,42 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
       </div>
       <div class="row">
         <div><label>Ambient TI % (for Eddy Viscosity)</label><input id="wakeTI" type="number" step="0.5" value="12"/></div>
-        <div><label>Other losses %</label><input id="loss" type="number" step="0.1" value="8"/></div>
+        <div><label>Calculation Method</label>
+          <select id="calcMethod">
+            <option value="time_series" selected>Time Series (Step-by-step)</option>
+            <option value="statistical">Statistical (Weibull Sectors)</option>
+          </select>
+        </div>
       </div>
-      <div class="row">
-        <div><label>Availability %</label><input id="avail" type="number" step="0.1" value="97"/></div>
-        <div><label>Electrical %</label><input id="elec" type="number" step="0.1" value="2"/></div>
-      </div>
+
+      <details style="margin-top:10px; background:var(--input); border:1px solid var(--line); padding:8px; border-radius:8px;" open>
+        <summary style="font-weight:600; font-size:0.75rem; color:var(--text); cursor:pointer;">⚙️ IEC 61400-15-2 Losses & Markov Availability</summary>
+        
+        <label style="font-weight:600; color:var(--ok); margin-top:6px; font-size:10px; letter-spacing:0.5px;">DOWNTIME LOSSES (Apply at all loads)</label>
+        <div class="row" style="margin-top:4px;">
+          <div><label>Electrical Loss (%)</label><input id="lossElec" type="number" step="0.1" value="2.0"/></div>
+          <div><label>Curtailment/Env Loss (%)</label><input id="lossEnv" type="number" step="0.1" value="1.0"/></div>
+        </div>
+
+        <label style="font-weight:600; color:var(--ok); margin-top:8px; font-size:10px; letter-spacing:0.5px;">MARKOV TURBINE AVAILABILITY</label>
+        <div class="row">
+          <div><label>Failures / WTG / Year</label><input id="markovFail" type="number" step="0.1" value="2.0"/></div>
+          <div><label>MTTR (Response hrs)</label><input id="markovMTTR" type="number" step="1" value="24"/></div>
+        </div>
+        <div class="row">
+          <div><label>MTTD (Repair hrs)</label><input id="markovMTTD" type="number" step="1" value="12"/></div>
+          <div>
+            <label>Solved Availability</label>
+            <div id="markovSolved" style="padding:8px 10px; background:var(--card); border:1px solid var(--line); border-radius:8px; color:var(--ok); font-weight:700; font-size:0.75rem; text-align:center;">99.18%</div>
+          </div>
+        </div>
+
+        <label style="font-weight:600; color:var(--warn); margin-top:10px; font-size:10px; letter-spacing:0.5px;">NON-DOWNTIME LOSSES (Partial-load only)</label>
+        <div class="row" style="margin-top:4px;">
+          <div><label>Performance Degradation (%)</label><input id="lossDegradation" type="number" step="0.1" value="1.5"/></div>
+          <div><label>Sub-optimal Op/Yaw (%)</label><input id="lossSuboptimal" type="number" step="0.1" value="1.0"/></div>
+        </div>
+      </details>
     </div>
 
     <div class="card">

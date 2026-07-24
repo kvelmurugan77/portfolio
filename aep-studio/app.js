@@ -876,10 +876,42 @@
     S.turbines.forEach((t, i) => {
       const elevTxt = t.elev != null ? `<br>Elev: ${Number(t.elev).toFixed(0)} m` : '';
       const wsTxt = S.speedField && S.speedField[i] != null ? `<br>WS: <b>${Number(S.speedField[i]).toFixed(2)} m/s</b>` : '';
-      L.circleMarker([t.lat, t.lon], {
-        radius: 5, color: '#3dd68c', weight: 1, fillColor: '#1b7a4a', fillOpacity: 0.9,
-      }).bindTooltip(`T${i + 1}<br>${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}${elevTxt}${wsTxt}`)
-        .addTo(S.layers.turbines);
+      
+      const m = L.marker([t.lat, t.lon], {
+        draggable: true,
+        icon: L.divIcon({
+          className: 'wtg-marker',
+          html: `<div style="background:#1b7a4a; width:12px; height:12px; border-radius:50%; border:2px solid #3dd68c; transform:translate(-4px,-4px); box-shadow: 0 0 4px rgba(0,0,0,0.55); cursor: grab;" title="Drag to Move T${i+1}"></div>`,
+          iconSize: [12, 12]
+        })
+      });
+
+      m.bindTooltip(`T${i + 1}: ${t.name || `WTG ${i + 1}`}<br>${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}${elevTxt}${wsTxt}`);
+      
+      m.bindPopup(`
+        <div style="color:var(--text); font-size:11px; font-family:sans-serif; min-width: 140px; padding: 4px 0;">
+          <b style="color:var(--ok)">T${i + 1}: ${t.name || `WTG ${i + 1}`}</b><br>
+          <b>Lat:</b> ${t.lat.toFixed(5)}<br>
+          <b>Lon:</b> ${t.lon.toFixed(5)}<br>
+          <b>Elev:</b> ${(t.elev || 0).toFixed(0)} m<br>
+          <b>HH:</b> ${(t.hh || 140)} m<br>
+          <button class="btn btn-ghost" onclick="window.AEPStudio.deleteTurbine(${i})" style="padding:4px 6px; font-size:9.5px; margin-top:8px; width:100%; border-radius:6px; background:#7a2412; color:#ffebe8; border:1px solid #9e3626; cursor: pointer;">🗑️ Delete WTG</button>
+        </div>
+      `);
+
+      m.on('dragend', (e) => {
+        const newLatLng = e.target.getLatLng();
+        t.lat = newLatLng.lat;
+        t.lon = newLatLng.lng;
+        t.elev = elevAt(t.lat, t.lon) || 0;
+        const utm = latLonToUtm(t.lat, t.lon);
+        t.easting = utm.easting; t.northing = utm.northing; t.zone = utm.zone;
+        addLog(`Moved T${i + 1} to ${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}`, 'i');
+        refreshSiteUI();
+        redrawMap({ fit: false });
+      });
+
+      m.addTo(S.layers.turbines);
     });
     drawElevationLayer();
     drawRoughnessLayer();
@@ -2180,50 +2212,76 @@
       const kWake = +$('wakeK').value || 0.04;
       const useEV = ($('wakeModel')?.value || 'ev') === 'ev';
       const TI_val = (+$('wakeTI')?.value || 12) / 100.0;
-      const lossOther = +$('loss').value || 8;
-      const avail = (+$('avail').value || 97) / 100;
-      const elec = 1 - (+$('elec').value || 2) / 100;
       const rho = 1.225;
 
-      // AEP integration
+      // Resolve IEC 61400-15-2 Losses & Markov Availability
+      const lossElec = +$('lossElec').value || 0;
+      const lossEnv = +$('lossEnv').value || 0;
+      const markovFail = +$('markovFail').value || 0;
+      const markovMTTR = +$('markovMTTR').value || 0;
+      const markovMTTD = +$('markovMTTD').value || 0;
+      
+      const lambda = markovFail;
+      const mu = 8760 / Math.max(0.1, markovMTTR);
+      const gamma_val = 8760 / Math.max(0.1, markovMTTD);
+      const availRatio = 1 / (1 + lambda / mu + lambda / gamma_val);
+      
+      // Combined Downtime Loss Factor (ratio)
+      const L_downtime = (1 - lossElec / 100) * (1 - lossEnv / 100) * availRatio;
+      
+      // Non-Downtime Loss Factor (ratio)
+      const lossDegradation = +$('lossDegradation').value || 0;
+      const lossSuboptimal = +$('lossSuboptimal').value || 0;
+      const L_non_down = (1 - lossDegradation / 100) * (1 - lossSuboptimal / 100);
+
+      // Setup rating first
+      const ur = getRatedWS(pc);
+
       const per = S.turbines.map(() => ({ gross: 0, net: 0, wSum: 0, fwsSum: 0, wakeSum: 0, fwsN: 0 }));
       const hours = 8760;
 
-      for (let si = 0; si < nSec; si++) {
-        const f = sectors[si].freq;
-        if (f < 1e-6) continue;
-        const dir = sectors[si].dir; // FROM
-        const th = (dir + 180) * Math.PI / 180; // TO direction for downwind
-        const ux = Math.sin(th), uy = Math.cos(th); // downwind unit (east,north)
-        const vx = Math.sin(th + Math.PI / 2), vy = Math.cos(th + Math.PI / 2);
+      const calcMethod = $('calcMethod')?.value || 'time_series';
+      addLog(`Calculation method: ${calcMethod === 'time_series' ? 'Time Series (Step-by-step)' : 'Statistical (Weibull Bins)'}`, 'i');
+      addLog(`IEC 61400-15-2 Losses: Downtime factor=${(L_downtime * 100).toFixed(2)}% | Non-downtime partial-load factor=${(L_non_down * 100).toFixed(2)}%`, 'i');
 
-        const mastSU = (window.BZ.mastSectorSU && window.BZ.mastSectorSU[si]) || window.BZ.mastSU || 1;
-        const secSU = (window.BZ.sectorSpeedups && window.BZ.sectorSpeedups[si]) || null;
-        const rc = (window.BZ.sectorRoughRC && window.BZ.sectorRoughRC[si]) || 1;
+      if (calcMethod === 'time_series') {
+        const N = hubSp.length;
+        const scaleFactor = 8760 / N;
+        addLog(`Time Series running hour-by-hour over ${N} steps…`, 'i');
 
-        // Weibull discrete bins
-        const A = sectors[si].A, k = Math.max(sectors[si].k, 1.1);
-        for (let b = 1; b <= 30; b++) {
-          const u0 = b - 0.5; // bin center free-stream at mast/climate
-          // Weibull pdf bin probability
-          const cdf = (u) => 1 - Math.exp(-Math.pow(u / A, k));
-          const p = Math.max(0, cdf(b) - cdf(b - 1));
-          if (p < 1e-9) continue;
+        // Precompute sector-wise unit vectors
+        const uxs = [], uys = [], vxs = [], vys = [];
+        for (let s = 0; s < nSec; s++) {
+          const dir = (s + 0.5) * secW;
+          const th = (dir + 180) * Math.PI / 180;
+          uxs.push(Math.sin(th)); uys.push(Math.cos(th));
+          vxs.push(Math.sin(th + Math.PI / 2)); vys.push(Math.cos(th + Math.PI / 2));
+        }
+        
+        for (let t = 0; t < N; t++) {
+          const U = hubSp[t];
+          const Dir = hubDir[t];
+          const si = Math.floor((((Dir % 360) + 360) % 360) / secW) % nSec;
+          
+          const mastSU = (window.BZ.mastSectorSU && window.BZ.mastSectorSU[si]) || window.BZ.mastSU || 1;
+          const secSU = (window.BZ.sectorSpeedups && window.BZ.sectorSpeedups[si]) || null;
+          const rc = (window.BZ.sectorRoughRC && window.BZ.sectorRoughRC[si]) || 1;
 
-          // Free WS at each turbine after oro/roughness relative to climate
+          // Free wind speed at each turbine
           const free = S.turbines.map((_, ti) => {
             const su = secSU ? secSU[ti] : (window.BZ.speedups?.[ti] || 1);
-            // WAsP-like relative: climate already generalized-ish; apply SU_rel = su/mastSU * rc
             const rel = (su / Math.max(1e-6, mastSU)) * (isFinite(rc) ? rc : 1);
-            return Math.max(0.1, u0 * rel);
+            return Math.max(0.1, U * rel);
           });
 
           // Wake deficits (energy combination)
           const deficits2 = free.map(() => 0);
+          const ux = uxs[si], uy = uys[si], vx = vxs[si], vy = vys[si];
+          
           for (let i = 0; i < xy.length; i++) {
             for (let j = 0; j < xy.length; j++) {
               if (i === j) continue;
-              const dx = (xy[j].x - xy[i].x) * ux + (xy[j].y - xy[i].y) * uy; // downwind dist from i to j
+              const dx = (xy[j].x - xy[i].x) * ux + (xy[j].y - xy[i].y) * uy;
               const dy = (xy[j].x - xy[i].x) * vx + (xy[j].y - xy[i].y) * vy;
               if (dx < 0.5 * pc.D) continue;
               const ct = ctAt(pc, free[i]);
@@ -2234,26 +2292,97 @@
           const netU = free.map((u, ti) => u * (1 - Math.min(0.7, Math.sqrt(deficits2[ti]))));
 
           for (let ti = 0; ti < S.turbines.length; ti++) {
-            const pg = powerAt(pc, free[ti]); // density ~1.225 baseline
-            const pn = powerAt(pc, netU[ti]);
-            // density correction light: none (user can extend)
-            per[ti].gross += f * p * pg * hours / 1000; // MWh → later GWh
-            per[ti].net += f * p * pn * hours / 1000;
-            per[ti].fwsSum += f * p * free[ti];
-            per[ti].fwsN += f * p;
-            per[ti].wakeSum += f * p * (free[ti] > 0.1 ? (1 - netU[ti] / free[ti]) : 0);
-            per[ti].wSum += f * p;
+            let pg = powerAt(pc, free[ti]);
+            let pn = powerAt(pc, netU[ti]);
+
+            // Apply non-downtime partial load losses
+            if (free[ti] < ur) pg = pg * L_non_down;
+            if (netU[ti] < ur) pn = pn * L_non_down;
+
+            // Scale power output with downtime losses
+            pg = pg * L_downtime;
+            pn = pn * L_downtime;
+
+            per[ti].gross += pg * scaleFactor / 1000; // accumulate in MWh/y
+            per[ti].net += pn * scaleFactor / 1000;
+            per[ti].fwsSum += free[ti];
+            per[ti].fwsN += 1;
+            per[ti].wakeSum += (free[ti] > 0.1 ? (1 - netU[ti] / free[ti]) : 0);
+            per[ti].wSum += 1;
+          }
+        }
+      } else {
+        // Statistical Weibull sectors calculation
+        addLog(`Statistical calculation running over sectors & Weibull bins…`, 'i');
+        for (let si = 0; si < nSec; si++) {
+          const f = sectors[si].freq;
+          if (f < 1e-6) continue;
+          const dir = sectors[si].dir; // FROM
+          const th = (dir + 180) * Math.PI / 180; // TO
+          const ux = Math.sin(th), uy = Math.cos(th);
+          const vx = Math.sin(th + Math.PI / 2), vy = Math.cos(th + Math.PI / 2);
+
+          const mastSU = (window.BZ.mastSectorSU && window.BZ.mastSectorSU[si]) || window.BZ.mastSU || 1;
+          const secSU = (window.BZ.sectorSpeedups && window.BZ.sectorSpeedups[si]) || null;
+          const rc = (window.BZ.sectorRoughRC && window.BZ.sectorRoughRC[si]) || 1;
+
+          // Weibull discrete bins
+          const A = sectors[si].A, k = Math.max(sectors[si].k, 1.1);
+          for (let b = 1; b <= 30; b++) {
+            const u0 = b - 0.5; // bin center free-stream
+            const cdf = (u) => 1 - Math.exp(-Math.pow(u / A, k));
+            const p = Math.max(0, cdf(b) - cdf(b - 1));
+            if (p < 1e-9) continue;
+
+            const free = S.turbines.map((_, ti) => {
+              const su = secSU ? secSU[ti] : (window.BZ.speedups?.[ti] || 1);
+              const rel = (su / Math.max(1e-6, mastSU)) * (isFinite(rc) ? rc : 1);
+              return Math.max(0.1, u0 * rel);
+            });
+
+            // Wake deficits (energy combination)
+            const deficits2 = free.map(() => 0);
+            for (let i = 0; i < xy.length; i++) {
+              for (let j = 0; j < xy.length; j++) {
+                if (i === j) continue;
+                const dx = (xy[j].x - xy[i].x) * ux + (xy[j].y - xy[i].y) * uy;
+                const dy = (xy[j].x - xy[i].x) * vx + (xy[j].y - xy[i].y) * vy;
+                if (dx < 0.5 * pc.D) continue;
+                const ct = ctAt(pc, free[i]);
+                const def = useEV ? ainslieDeficit(dx, dy, pc.D, ct, TI_val) : bastankhahDeficit(dx, dy, pc.D, ct, kWake);
+                deficits2[j] += def * def;
+              }
+            }
+            const netU = free.map((u, ti) => u * (1 - Math.min(0.7, Math.sqrt(deficits2[ti]))));
+
+            for (let ti = 0; ti < S.turbines.length; ti++) {
+              let pg = powerAt(pc, free[ti]);
+              let pn = powerAt(pc, netU[ti]);
+
+              // Apply non-downtime partial load losses
+              if (free[ti] < ur) pg = pg * L_non_down;
+              if (netU[ti] < ur) pn = pn * L_non_down;
+
+              // Apply downtime losses
+              pg = pg * L_downtime;
+              pn = pn * L_downtime;
+
+              per[ti].gross += f * p * pg * hours / 1000; // GWh/y
+              per[ti].net += f * p * pn * hours / 1000;
+              per[ti].fwsSum += f * p * free[ti];
+              per[ti].fwsN += f * p;
+              per[ti].wakeSum += f * p * (free[ti] > 0.1 ? (1 - netU[ti] / free[ti]) : 0);
+              per[ti].wSum += f * p;
+            }
           }
         }
       }
 
-      // MWh → GWh, apply losses on net
-      const lossFac = (1 - lossOther / 100) * avail * elec;
+      // MWh → GWh
       let gross = 0, net = 0;
       const perTurbine = per.map((p, i) => {
         const g = p.gross / 1000; // GWh
-        const nWake = p.net / 1000;
-        const n = nWake * lossFac;
+        const n = p.net / 1000; // GWh
         gross += g; net += n;
         const fws = p.fwsN > 0 ? p.fwsSum / p.fwsN : 0;
         const wakePct = p.wSum > 0 ? 100 * p.wakeSum / p.wSum : 0;
@@ -2264,6 +2393,10 @@
           freeWS: fws, wakePct, grossGWh: g, netGWh: n, CF: cf, SU: su,
         };
       });
+
+      const lossOther = lossEnv;
+      const avail = availRatio;
+      const elec = 1 - lossElec / 100;
 
       const capMW = S.turbines.length * pc.rated / 1000;
       const CF = net * 1000 / (capMW * 8760) * 100;
@@ -2664,6 +2797,22 @@
     refreshSiteUI(); redrawMap();
   }
 
+  // ─── Turbine Editing ─────────────────────────────────────────────────────
+  function deleteTurbine(index) {
+    if (index < 0 || index >= S.turbines.length) return;
+    const t = S.turbines[index];
+    S.turbines.splice(index, 1);
+    // Re-index remaining turbines if they have default names
+    S.turbines.forEach((wtg, idx) => {
+      if (wtg.name.startsWith('T') && isFinite(wtg.name.slice(1))) {
+        wtg.name = `T${idx + 1}`;
+      }
+    });
+    addLog(`Deleted WTG: ${t.name || `T${index + 1}`}`, 'w');
+    refreshSiteUI();
+    redrawMap({ fit: false });
+  }
+
   // ─── Save and Open Project ───────────────────────────────────────────────
   function saveProject() {
     try {
@@ -2691,12 +2840,17 @@
           hh: $('hh')?.value,
           D: $('D')?.value,
           rated: $('rated')?.value,
+          calcMethod: $('calcMethod')?.value,
           wakeModel: $('wakeModel')?.value,
           wakeTI: $('wakeTI')?.value,
           wakeK: $('wakeK')?.value,
-          loss: $('loss')?.value,
-          avail: $('avail')?.value,
-          elec: $('elec')?.value,
+          lossElec: $('lossElec')?.value,
+          lossEnv: $('lossEnv')?.value,
+          markovFail: $('markovFail')?.value,
+          markovMTTR: $('markovMTTR')?.value,
+          markovMTTD: $('markovMTTD')?.value,
+          lossDegradation: $('lossDegradation')?.value,
+          lossSuboptimal: $('lossSuboptimal')?.value,
           terrR: $('terrR')?.value,
           terrG: $('terrG')?.value,
           windSrc: $('windSrc')?.value,
@@ -3162,6 +3316,102 @@
     addLog('Wind Farm AEP Studio ready. Load boundary/layout, choose WTG, then Run full AEP.', 'i');
     refreshSiteUI();
 
+    // Real-time Markov Turbine Availability Solver (IEC 61400-15-2)
+    function updateMarkovUI() {
+      const fail = +$('markovFail').value || 0;
+      const mttr = +$('markovMTTR').value || 0;
+      const mttd = +$('markovMTTD').value || 0;
+      const lambda = fail;
+      const mu = 8760 / Math.max(0.1, mttr);
+      const gamma_val = 8760 / Math.max(0.1, mttd);
+      const avail = 1 / (1 + lambda / mu + lambda / gamma_val);
+      $('markovSolved').textContent = (avail * 100).toFixed(2) + '%';
+    }
+
+    if ($('markovFail')) $('markovFail').oninput = updateMarkovUI;
+    if ($('markovMTTR')) $('markovMTTR').oninput = updateMarkovUI;
+    if ($('markovMTTD')) $('markovMTTD').oninput = updateMarkovUI;
+    updateMarkovUI();
+
+    // Collapsible Adjustable Side Panes
+    let leftCollapsed = false;
+    let rightCollapsed = false;
+    
+    function updatePaneClasses() {
+      const layout = document.querySelector('.layout');
+      if (!layout) return;
+      layout.classList.remove('collapse-left', 'collapse-right', 'collapse-both');
+      if (leftCollapsed && rightCollapsed) {
+        layout.classList.add('collapse-both');
+      } else if (leftCollapsed) {
+        layout.classList.add('collapse-left');
+      } else if (rightCollapsed) {
+        layout.classList.add('collapse-right');
+      }
+      if (S.map) S.map.invalidateSize();
+    }
+
+    if ($('btnToggleLeft')) {
+      $('btnToggleLeft').onclick = () => {
+        leftCollapsed = !leftCollapsed;
+        $('btnToggleLeft').textContent = leftCollapsed ? '▶ Show Inputs' : '◀ Toggle Inputs';
+        updatePaneClasses();
+      };
+    }
+    
+    if ($('btnToggleRight')) {
+      $('btnToggleRight').onclick = () => {
+        rightCollapsed = !rightCollapsed;
+        $('btnToggleRight').textContent = rightCollapsed ? 'Show Results ◀' : 'Toggle Results ▶';
+        updatePaneClasses();
+      };
+    }
+
+    // Interactive Layout Editor - Add WTG on map click
+    let addMode = false;
+    if ($('btnAddWtg')) {
+      $('btnAddWtg').onclick = () => {
+        addMode = !addMode;
+        if (addMode) {
+          $('btnAddWtg').style.background = '#14301f';
+          $('btnAddWtg').style.color = 'var(--ok)';
+          $('btnAddWtg').style.borderColor = '#1f5a3a';
+          $('btnAddWtg').textContent = '🟢 Click map to add WTGs (Stop)';
+          S.map.getContainer().style.cursor = 'crosshair';
+          addLog('Map click layout editing mode: active', 'i');
+        } else {
+          $('btnAddWtg').style.background = '';
+          $('btnAddWtg').style.color = '';
+          $('btnAddWtg').style.borderColor = '';
+          $('btnAddWtg').textContent = '➕ Add WTG by map click';
+          S.map.getContainer().style.cursor = '';
+          addLog('Map click layout editing mode: stopped', 'i');
+        }
+      };
+    }
+
+    if (S.map) {
+      S.map.on('click', (e) => {
+        if (addMode) {
+          const lat = e.latlng.lat;
+          const lon = e.latlng.lng;
+          const elev = elevAt(lat, lon) || 0;
+          const utm = latLonToUtm(lat, lon);
+          const nextId = S.turbines.length + 1;
+          S.turbines.push({
+            lat, lon, elev,
+            hh: +$('hh').value || 140,
+            name: `T${nextId}`,
+            easting: utm.easting, northing: utm.northing, zone: utm.zone,
+            _customHH: false
+          });
+          addLog(`Added T${nextId} at ${lat.toFixed(5)}, ${lon.toFixed(5)}`, 'o');
+          refreshSiteUI();
+          redrawMap({ fit: false });
+        }
+      });
+    }
+
     // Public API for automation / external scripts
     window.AEPStudio = {
       S, downloadTerrain, downloadRoughness, downloadERA5, downloadGWA,
@@ -3171,7 +3421,7 @@
       ingestGwaLibText, showGwaHelpPanel,
       exportWindCsv, exportTerrainCsv, exportRoughnessCsv, exportMapPng,
       exportLayoutKml, exportWaspTab, readPointsFile, utmToLatLon, latLonToUtm,
-      verticalExtrapolate, saveProject, openProject, generateWrgMap
+      verticalExtrapolate, saveProject, openProject, generateWrgMap, deleteTurbine
     };
     // also bind commonly used names
     window.downloadTerrain = downloadTerrain;
