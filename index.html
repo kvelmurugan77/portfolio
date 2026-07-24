@@ -981,6 +981,35 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
       </div>
     </div>
 
+    <!-- SCADA Yaw Screening / LiDAR Prioritisation Tool -->
+    <div class="pgrid rv d1" style="margin-top:3rem">
+      <div class="pcard" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2.5rem">
+        <div style="font-size:3rem;margin-bottom:1.2rem">🧭</div>
+        <h3 class="ptitle" style="margin-bottom:.6rem">YawScout — SCADA Yaw Screening</h3>
+        <p class="pdesc" style="text-align:center;max-width:44ch;margin:0 auto 1.8rem">A focused <strong style="color:var(--mint)">desktop study for nacelle-LiDAR targeting</strong>. Upload SCADA data to rank the WTG most likely to have a yaw-related issue, so the first LiDAR installation is directed to the strongest candidate rather than selected blindly.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:1.2rem;justify-content:center;margin-bottom:1.5rem">
+          <span class="ptag">Yaw Candidate Ranking</span>
+          <span class="ptag">Power vs Offset</span>
+          <span class="ptag">SCADA Data QA</span>
+          <span class="ptag">Fleet Cross-Check</span>
+          <span class="ptag">LiDAR Brief Export</span>
+          <span class="ptag">Browser-Local</span>
+        </div>
+        <a class="btn-green" href="./yaw-screening-studio.html" style="font-size:.78rem;padding:.9rem 2.5rem;text-decoration:none">Launch YawScout →</a>
+      </div>
+      <div class="pcard" style="display:flex;flex-direction:column;justify-content:center">
+        <div class="pnum">LiDAR Candidate Selection</div>
+        <ul style="list-style:none;padding:0">
+          <li style="padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.85rem;color:rgba(255,255,255,.65);font-weight:300;display:flex;gap:.6rem;align-items:flex-start"><span style="color:var(--mint);font-weight:700;flex-shrink:0">▸</span> Per-WTG circular SCADA direction-offset screening: nacelle direction minus wind direction, within a configurable below-rated wind-speed and normal-operation filter</li>
+          <li style="padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.85rem;color:rgba(255,255,255,.65);font-weight:300;display:flex;gap:.6rem;align-items:flex-start"><span style="color:var(--mint);font-weight:700;flex-shrink:0">▸</span> Independent power-vs-offset corroboration after per-turbine wind-speed-bin normalisation, with a fitted / observed peak indication and data-coverage check</li>
+          <li style="padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.85rem;color:rgba(255,255,255,.65);font-weight:300;display:flex;gap:.6rem;align-items:flex-start"><span style="color:var(--mint);font-weight:700;flex-shrink:0">▸</span> Confidence-weighted LiDAR priority score using sample volume, multi-month persistence, static-versus-power agreement, wind-speed fleet consensus and sectoral residual checks</li>
+          <li style="padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.85rem;color:rgba(255,255,255,.65);font-weight:300;display:flex;gap:.6rem;align-items:flex-start"><span style="color:var(--mint);font-weight:700;flex-shrink:0">▸</span> Status, curtailment / derate and pitch filters to focus the study on likely normal partial-load operation, with explicit warnings when channels are missing</li>
+          <li style="padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.85rem;color:rgba(255,255,255,.65);font-weight:300;display:flex;gap:.6rem;align-items:flex-start"><span style="color:var(--mint);font-weight:700;flex-shrink:0">▸</span> Selected-WTG evidence plots, priority-ranking CSV and self-contained LiDAR targeting brief export — all processed locally in the browser</li>
+          <li style="padding:.5rem 0;font-size:.85rem;color:rgba(255,255,255,.65);font-weight:300;display:flex;gap:.6rem;align-items:flex-start"><span style="color:var(--gold);font-weight:700;flex-shrink:0">▸</span> Screening only: use nacelle LiDAR to confirm actual rotor-to-inflow misalignment before applying a yaw correction or claiming an AEP gain</li>
+        </ul>
+      </div>
+    </div>
+
     <!-- WTG Procurement Management Tool -->
     <div class="pgrid rv d1" style="margin-top:3rem">
       <div class="pcard" style="text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 2.5rem">
