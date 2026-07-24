@@ -368,6 +368,27 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
       <div id="windStatus" style="font-size:0.75rem; padding:6px 10px; margin-top:8px; border-radius:6px; background:var(--input); border:1px solid var(--line); color:var(--muted); font-weight: 500;">
         Active wind in state: None (will be auto-loaded on run)
       </div>
+
+      <details style="margin-top:10px; background:var(--input); border:1px solid var(--line); padding:8px; border-radius:8px;" open>
+        <summary style="font-weight:600; font-size:0.75rem; color:var(--text); cursor:pointer;">📡 Multi-Mast Manager (Spatial IDW)</summary>
+        <p class="hint" style="margin:4px 0 8px;">Masts are added automatically when you download/upload wind datasets. If multiple are active, they are interpolated at each turbine using Inverse Distance Squared (1/d²) combined with BZ speedup ratios.</p>
+        <div style="overflow-x:auto; max-height:160px; margin-top:6px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Coords</th>
+                <th>HH</th>
+                <th>Mean</th>
+                <th style="text-align: right;">Use/Del</th>
+              </tr>
+            </thead>
+            <tbody id="mastsTableBody">
+              <tr><td colspan="5" class="muted text-center" style="font-size:10px; padding:8px 0;">No met masts loaded. Add GWA/ERA5 or upload CSV.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
       <div class="row">
         <div><label>ERA5 start year (≥2000)</label><input id="y0" type="number" value="2019" min="2000" max="2026"/></div>
         <div><label>ERA5 end year (≥2000)</label><input id="y1" type="number" value="2023" min="2000" max="2026"/></div>

@@ -12,6 +12,7 @@
     roughnessRose: null,
     wind: null,        // {speeds, dirs, times?, height, source, meanWS}
     windSources: {},
+    masts: [],
     pc: null,
     results: null,
     map: null,
@@ -1502,6 +1503,26 @@
     return { A, k };
   }
 
+  function sectorizeWindSeries(speeds, dirs, nSec) {
+    const secW = 360 / nSec;
+    const sec = Array.from({ length: nSec }, () => ({ n: 0, sum: 0, ws: [] }));
+    for (let i = 0; i < speeds.length; i++) {
+      if (speeds[i] < 0.5) continue;
+      const si = Math.floor((((dirs[i] % 360) + 360) % 360) / secW) % nSec;
+      sec[si].n++; sec[si].sum += speeds[i]; sec[si].ws.push(speeds[i]);
+    }
+    const nTot = sec.reduce((s, x) => s + x.n, 0) || 1;
+    return sec.map((s, i) => {
+      const wb = weibullFit(s.ws.length ? s.ws : [1]);
+      return {
+        dir: (i + 0.5) * secW,
+        freq: s.n / nTot,
+        A: wb.A, k: wb.k,
+        WS: s.n ? s.sum / s.n : 0,
+      };
+    });
+  }
+
   function setWind(speeds, dirs, meta) {
     const valid = speeds.map((v, i) => ({ v, d: dirs[i] })).filter((x) => x.v > 0.2 && x.v < 50);
     const sp = valid.map((x) => x.v), dr = valid.map((x) => ((x.d % 360) + 360) % 360);
@@ -1523,6 +1544,30 @@
       S.windPoint = { lat: c.lat, lon: c.lon, source: w.source, height: w.height, meanWS: w.meanWS };
       w.lat = c.lat; w.lon = c.lon;
     }
+
+    // Add or update mast in Multi-Mast list S.masts
+    if (!S.masts) S.masts = [];
+    const existingIdx = S.masts.findIndex(m => m.name === w.source);
+    const nSec = +$('nSec').value || 16;
+    const mastSectors = sectorizeWindSeries(sp, dr, nSec);
+    const newMast = {
+      name: w.source,
+      lat: w.lat,
+      lon: w.lon,
+      height: w.height,
+      meanWS: w.meanWS,
+      speeds: [...sp],
+      dirs: [...dr],
+      sectors: mastSectors,
+      active: true
+    };
+    if (existingIdx >= 0) {
+      S.masts[existingIdx] = newMast;
+    } else {
+      S.masts.push(newMast);
+    }
+    refreshMastsUI();
+
     chipBox('windChips', [
       [`${w.source}`, true],
       [`n=${sp.length.toLocaleString()}`, true],
@@ -1552,6 +1597,55 @@
       el.style.borderColor = 'var(--line)';
       el.innerHTML = `⚪ <b>Active in State:</b> None (will download/load the selected primary source on run)`;
     }
+  }
+
+  function refreshMastsUI() {
+    const el = $('mastsTableBody');
+    if (!el) return;
+    if (!S.masts || !S.masts.length) {
+      el.innerHTML = '<tr><td colspan="5" class="muted text-center" style="font-size:10px; padding:8px 0;">No met masts loaded. Add GWA/ERA5 or upload CSV.</td></tr>';
+      return;
+    }
+    el.innerHTML = S.masts.map((m, idx) => `
+      <tr style="border-bottom: 1px solid var(--line);">
+        <td><b style="color:var(--ok)">${m.name}</b></td>
+        <td>${m.lat.toFixed(4)}, ${m.lon.toFixed(4)}</td>
+        <td>${m.height} m</td>
+        <td>${m.meanWS.toFixed(2)} m/s</td>
+        <td style="text-align: right;">
+          <input type="checkbox" id="mast_active_${idx}" ${m.active ? 'checked' : ''} onchange="window.AEPStudio.toggleMast(${idx})" style="width: auto; display: inline-block; margin-right: 8px; cursor: pointer;" />
+          <button class="btn btn-ghost" onclick="window.AEPStudio.deleteMast(${idx})" style="padding: 2px 6px; font-size: 10px; background: #5a1212; color: #ffe8e8; border: 1px solid #7a2222; border-radius: 4px; cursor: pointer;">🗑️</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function toggleMast(idx) {
+    if (S.masts && S.masts[idx]) {
+      S.masts[idx].active = !S.masts[idx].active;
+      addLog(`Toggled met mast ${S.masts[idx].name}: ${S.masts[idx].active ? 'Active' : 'Disabled'}`, 'i');
+      refreshMastsUI();
+    }
+  }
+
+  function deleteMast(idx) {
+    if (S.masts && S.masts[idx]) {
+      const name = S.masts[idx].name;
+      S.masts.splice(idx, 1);
+      addLog(`Deleted met mast: ${name}`, 'w');
+      refreshMastsUI();
+    }
+  }
+
+  function getDistanceM(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 
   async function downloadERA5() {
@@ -2181,9 +2275,14 @@
       addLog(`Vertical extrap ${dataH}→${pc.hh} m (${vMethod}${vMethod === 'power' ? ' α=' + ($('shearAlpha')?.value || 0.14) : ', z0≈' + z0})`, 'i');
       addLog('Horizontal: per-sector orographic SU (BZ) × roughness change, then Bastankhah wakes', 'i');
 
-      // Orography
+      // Orography (turbines + active masts to get speedups at both!)
       setProgress(65);
+      const origTurbines = S.turbines;
+      const activeMasts = (S.masts || []).filter(m => m.active);
+      const flowPoints = S.turbines.concat(activeMasts.map(m => ({ lat: m.lat, lon: m.lon, name: m.name })));
+      S.turbines = flowPoints;
       await runOrography();
+      S.turbines = origTurbines;
       setProgress(75);
 
       // Sectorize
@@ -2244,6 +2343,19 @@
       addLog(`Calculation method: ${calcMethod === 'time_series' ? 'Time Series (Step-by-step)' : 'Statistical (Weibull Bins)'}`, 'i');
       addLog(`IEC 61400-15-2 Losses: Downtime factor=${(L_downtime * 100).toFixed(2)}% | Non-downtime partial-load factor=${(L_non_down * 100).toFixed(2)}%`, 'i');
 
+      const isMultiMast = activeMasts.length > 1;
+
+      // Precompute IDW weights for each turbine to all active masts
+      const turbineWeights = S.turbines.map((t) => {
+        if (!isMultiMast) return [];
+        const weights = activeMasts.map((m) => {
+          const dist = getDistanceM(t.lat, t.lon, m.lat, m.lon);
+          return 1 / Math.pow(Math.max(10, dist), 2);
+        });
+        const sum = weights.reduce((a,b) => a+b, 0) || 1;
+        return weights.map(w => w / sum); // normalize
+      });
+
       if (calcMethod === 'time_series') {
         const N = hubSp.length;
         const scaleFactor = 8760 / N;
@@ -2257,36 +2369,69 @@
           uxs.push(Math.sin(th)); uys.push(Math.cos(th));
           vxs.push(Math.sin(th + Math.PI / 2)); vys.push(Math.cos(th + Math.PI / 2));
         }
-        
+
         for (let t = 0; t < N; t++) {
           const U = hubSp[t];
           const Dir = hubDir[t];
           const si = Math.floor((((Dir % 360) + 360) % 360) / secW) % nSec;
-          
+
           const mastSU = (window.BZ.mastSectorSU && window.BZ.mastSectorSU[si]) || window.BZ.mastSU || 1;
-          const secSU = (window.BZ.sectorSpeedups && window.BZ.sectorSpeedups[si]) || null;
           const rc = (window.BZ.sectorRoughRC && window.BZ.sectorRoughRC[si]) || 1;
 
           // Free wind speed at each turbine
           const free = S.turbines.map((_, ti) => {
-            const su = secSU ? secSU[ti] : (window.BZ.speedups?.[ti] || 1);
-            const rel = (su / Math.max(1e-6, mastSU)) * (isFinite(rc) ? rc : 1);
-            return Math.max(0.1, U * rel);
+            if (isMultiMast) {
+              let sum_u = 0;
+              const weights = turbineWeights[ti];
+              for (let mIdx = 0; mIdx < activeMasts.length; mIdx++) {
+                const m = activeMasts[mIdx];
+                const mSU = window.BZ.sectorSpeedups[si][S.turbines.length + mIdx] || 1;
+                const tSU = window.BZ.sectorSpeedups[si][ti] || 1;
+                const rel = (tSU / Math.max(1e-6, mSU)) * rc;
+                const mSp = m.speeds[t] ?? U;
+                const mSp_extrap = verticalExtrapolate(mSp, m.height, pc.hh, Dir);
+                sum_u += weights[mIdx] * mSp_extrap * rel;
+              }
+              return Math.max(0.1, sum_u);
+            } else {
+              const tSU = window.BZ.sectorSpeedups[si][ti] || 1;
+              const rel = (tSU / Math.max(1e-6, mastSU)) * rc;
+              return Math.max(0.1, U * rel);
+            }
           });
+
+          // Sort turbines from upwind to downwind for Quarton-Ainslie Added Turbulence
+          const ux = uxs[si], uy = uys[si], vx = vxs[si], vy = vys[si];
+          const sortedIdx = Array.from({length: S.turbines.length}, (_, i) => i)
+            .sort((a,b) => xy[a].x * ux + xy[a].y * uy - (xy[b].x * ux + xy[b].y * uy));
+
+          // Quarton-Ainslie local turbulence intensity tracking
+          const TI_local = Array(S.turbines.length).fill(TI_val);
 
           // Wake deficits (energy combination)
           const deficits2 = free.map(() => 0);
-          const ux = uxs[si], uy = uys[si], vx = vxs[si], vy = vys[si];
-          
-          for (let i = 0; i < xy.length; i++) {
-            for (let j = 0; j < xy.length; j++) {
-              if (i === j) continue;
+          for (let sIdx = 0; sIdx < sortedIdx.length; sIdx++) {
+            const i = sortedIdx[sIdx];
+            for (let dIdx = sIdx + 1; dIdx < sortedIdx.length; dIdx++) {
+              const j = sortedIdx[dIdx];
               const dx = (xy[j].x - xy[i].x) * ux + (xy[j].y - xy[i].y) * uy;
               const dy = (xy[j].x - xy[i].x) * vx + (xy[j].y - xy[i].y) * vy;
               if (dx < 0.5 * pc.D) continue;
+              
               const ct = ctAt(pc, free[i]);
-              const def = useEV ? ainslieDeficit(dx, dy, pc.D, ct, TI_val) : bastankhahDeficit(dx, dy, pc.D, ct, kWake);
+              
+              // Calculate wake deficit using local waked turbulence intensity (TI_local[i])
+              const def = useEV ? ainslieDeficit(dx, dy, pc.D, ct, TI_local[i]) : bastankhahDeficit(dx, dy, pc.D, ct, kWake);
               deficits2[j] += def * def;
+
+              // Quarton-Ainslie Added Turbulence accumulation
+              if (useEV && dx >= 2.0 * pc.D && Math.abs(dy) < 1.5 * pc.D) {
+                const I_add = 5.7 * Math.pow(ct, 0.7) * Math.pow(TI_val, 0.68) * Math.pow(dx / pc.D, -0.96);
+                const rPrime = dy / pc.D;
+                const Bw = Math.sqrt((0.445 * ct) / Math.max(1e-4, def * (1 - 0.5 * def)));
+                const addedTurb2 = Math.pow(I_add * Math.exp(-3.56 * rPrime * rPrime / Math.max(0.1, Bw * Bw)), 2);
+                TI_local[j] = Math.sqrt(TI_local[j] * TI_local[j] + addedTurb2);
+              }
             }
           }
           const netU = free.map((u, ti) => u * (1 - Math.min(0.7, Math.sqrt(deficits2[ti]))));
@@ -2294,6 +2439,12 @@
           for (let ti = 0; ti < S.turbines.length; ti++) {
             let pg = powerAt(pc, free[ti]);
             let pn = powerAt(pc, netU[ti]);
+
+            // Elevation-based Air Density Correction
+            const z = S.turbines[ti].elev || 0;
+            const rho_ratio = Math.exp(-z / 8400);
+            pg = pg * rho_ratio;
+            pn = pn * rho_ratio;
 
             // Apply non-downtime partial load losses
             if (free[ti] < ur) pg = pg * L_non_down;
@@ -2312,56 +2463,78 @@
           }
         }
       } else {
-        // Statistical Weibull sectors calculation
+        // Statistical Weibull sectors calculation with Multi-Mast support
         addLog(`Statistical calculation running over sectors & Weibull bins…`, 'i');
         for (let si = 0; si < nSec; si++) {
-          const f = sectors[si].freq;
-          if (f < 1e-6) continue;
+          const f_dir = sectors[si].freq;
+          if (f_dir < 1e-6) continue;
           const dir = sectors[si].dir; // FROM
           const th = (dir + 180) * Math.PI / 180; // TO
           const ux = Math.sin(th), uy = Math.cos(th);
           const vx = Math.sin(th + Math.PI / 2), vy = Math.cos(th + Math.PI / 2);
 
           const mastSU = (window.BZ.mastSectorSU && window.BZ.mastSectorSU[si]) || window.BZ.mastSU || 1;
-          const secSU = (window.BZ.sectorSpeedups && window.BZ.sectorSpeedups[si]) || null;
           const rc = (window.BZ.sectorRoughRC && window.BZ.sectorRoughRC[si]) || 1;
 
-          // Weibull discrete bins
-          const A = sectors[si].A, k = Math.max(sectors[si].k, 1.1);
-          for (let b = 1; b <= 30; b++) {
-            const u0 = b - 0.5; // bin center free-stream
-            const cdf = (u) => 1 - Math.exp(-Math.pow(u / A, k));
-            const p = Math.max(0, cdf(b) - cdf(b - 1));
-            if (p < 1e-9) continue;
-
-            const free = S.turbines.map((_, ti) => {
-              const su = secSU ? secSU[ti] : (window.BZ.speedups?.[ti] || 1);
-              const rel = (su / Math.max(1e-6, mastSU)) * (isFinite(rc) ? rc : 1);
-              return Math.max(0.1, u0 * rel);
-            });
-
-            // Wake deficits (energy combination)
-            const deficits2 = free.map(() => 0);
-            for (let i = 0; i < xy.length; i++) {
-              for (let j = 0; j < xy.length; j++) {
-                if (i === j) continue;
-                const dx = (xy[j].x - xy[i].x) * ux + (xy[j].y - xy[i].y) * uy;
-                const dy = (xy[j].x - xy[i].x) * vx + (xy[j].y - xy[i].y) * vy;
-                if (dx < 0.5 * pc.D) continue;
-                const ct = ctAt(pc, free[i]);
-                const def = useEV ? ainslieDeficit(dx, dy, pc.D, ct, TI_val) : bastankhahDeficit(dx, dy, pc.D, ct, kWake);
-                deficits2[j] += def * def;
+          // Process Weibull bins on interpolated sector parameters for each turbine!
+          for (let ti = 0; ti < S.turbines.length; ti++) {
+            let A = sectors[si].A, k_val = Math.max(sectors[si].k, 1.1), f = f_dir;
+            
+            if (isMultiMast) {
+              let sum_A = 0, sum_k = 0, sum_f = 0;
+              const weights = turbineWeights[ti];
+              for (let mIdx = 0; mIdx < activeMasts.length; mIdx++) {
+                const m = activeMasts[mIdx];
+                const mSU = window.BZ.sectorSpeedups[si][S.turbines.length + mIdx] || 1;
+                const tSU = window.BZ.sectorSpeedups[si][ti] || 1;
+                const rel = (tSU / Math.max(1e-6, mSU)) * rc;
+                const mSector = m.sectors[si] || { A: 6, k: 2, freq: 1/nSec };
+                sum_A += weights[mIdx] * mSector.A * rel;
+                sum_k += weights[mIdx] * mSector.k;
+                sum_f += weights[mIdx] * mSector.freq;
               }
+              A = sum_A;
+              k_val = Math.max(sum_k, 1.1);
+              f = sum_f;
+            } else {
+              const tSU = window.BZ.sectorSpeedups[si][ti] || 1;
+              const rel = (tSU / Math.max(1e-6, mastSU)) * rc;
+              A = A * rel;
             }
-            const netU = free.map((u, ti) => u * (1 - Math.min(0.7, Math.sqrt(deficits2[ti]))));
 
-            for (let ti = 0; ti < S.turbines.length; ti++) {
-              let pg = powerAt(pc, free[ti]);
-              let pn = powerAt(pc, netU[ti]);
+            for (let b = 1; b <= 30; b++) {
+              const u0 = b - 0.5; // bin center free-stream
+              const cdf = (u) => 1 - Math.exp(-Math.pow(u / A, k_val));
+              const p = Math.max(0, cdf(b) - cdf(b - 1));
+              if (p < 1e-9) continue;
+
+              const u_free = u0; // local free speed for this turbine bin
+
+              // Wake deficits (energy combination for this bin)
+              let deficits2_j = 0;
+              for (let i = 0; i < xy.length; i++) {
+                if (i === ti) continue;
+                const dx = (xy[ti].x - xy[i].x) * ux + (xy[ti].y - xy[i].y) * uy;
+                const dy = (xy[ti].x - xy[i].x) * vx + (xy[ti].y - xy[i].y) * vy;
+                if (dx < 0.5 * pc.D) continue;
+                const ct = ctAt(pc, u_free);
+                const def = useEV ? ainslieDeficit(dx, dy, pc.D, ct, TI_val) : bastankhahDeficit(dx, dy, pc.D, ct, kWake);
+                deficits2_j += def * def;
+              }
+              const u_net = u_free * (1 - Math.min(0.7, Math.sqrt(deficits2_j)));
+
+              let pg = powerAt(pc, u_free);
+              let pn = powerAt(pc, u_net);
+
+              // Elevation-based Air Density Correction
+              const z = S.turbines[ti].elev || 0;
+              const rho_ratio = Math.exp(-z / 8400);
+              pg = pg * rho_ratio;
+              pn = pn * rho_ratio;
 
               // Apply non-downtime partial load losses
-              if (free[ti] < ur) pg = pg * L_non_down;
-              if (netU[ti] < ur) pn = pn * L_non_down;
+              if (u_free < ur) pg = pg * L_non_down;
+              if (u_net < ur) pn = pn * L_non_down;
 
               // Apply downtime losses
               pg = pg * L_downtime;
@@ -2369,9 +2542,9 @@
 
               per[ti].gross += f * p * pg * hours / 1000; // GWh/y
               per[ti].net += f * p * pn * hours / 1000;
-              per[ti].fwsSum += f * p * free[ti];
+              per[ti].fwsSum += f * p * u_free;
               per[ti].fwsN += f * p;
-              per[ti].wakeSum += f * p * (free[ti] > 0.1 ? (1 - netU[ti] / free[ti]) : 0);
+              per[ti].wakeSum += f * p * (u_free > 0.1 ? (1 - u_net / u_free) : 0);
               per[ti].wSum += f * p;
             }
           }
@@ -2880,7 +3053,8 @@
           gwaMeta: S.gwaMeta,
           results: S.results,
           speedField: S.speedField,
-          windPoint: S.windPoint
+          windPoint: S.windPoint,
+          masts: S.masts
         }
       };
       const name = (data.inputs.projName || 'project').replace(/[^a-z0-9_-]/gi, '_');
@@ -2930,6 +3104,7 @@
         S.roughnessZones = data.state.roughnessZones || [];
         S.roughnessRose = data.state.roughnessRose || null;
         S.wind = data.state.wind || null;
+        S.masts = data.state.masts || [];
         S.gwaMeta = data.state.gwaMeta || null;
         S.results = data.state.results || null;
         S.speedField = data.state.speedField || null;
@@ -2946,6 +3121,7 @@
         redrawMap({ fit: true });
         restoreResultsUI();
         updateWindStatusUI();
+        refreshMastsUI();
 
         addLog(`Project loaded successfully: ${S.project}`, 'o');
       } catch (err) {
@@ -3315,6 +3491,7 @@
 
     addLog('Wind Farm AEP Studio ready. Load boundary/layout, choose WTG, then Run full AEP.', 'i');
     refreshSiteUI();
+    refreshMastsUI();
 
     // Real-time Markov Turbine Availability Solver (IEC 61400-15-2)
     function updateMarkovUI() {
@@ -3421,7 +3598,8 @@
       ingestGwaLibText, showGwaHelpPanel,
       exportWindCsv, exportTerrainCsv, exportRoughnessCsv, exportMapPng,
       exportLayoutKml, exportWaspTab, readPointsFile, utmToLatLon, latLonToUtm,
-      verticalExtrapolate, saveProject, openProject, generateWrgMap, deleteTurbine
+      verticalExtrapolate, saveProject, openProject, generateWrgMap, deleteTurbine,
+      toggleMast, deleteMast, refreshMastsUI
     };
     // also bind commonly used names
     window.downloadTerrain = downloadTerrain;
