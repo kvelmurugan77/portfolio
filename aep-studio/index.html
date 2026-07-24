@@ -82,7 +82,12 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
     <h1>Wind Farm AEP Studio</h1>
     <div class="sub">Boundary / layout → terrain + roughness → wind climate → AEP (ERA5 · GWA · site data)</div>
   </div>
-  <div class="badge">Local WAsP-class workflow · not bankable without mast</div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <button class="btn btn-ghost" id="btnSaveProj" style="padding:6px 12px; font-size:0.75rem; border:1px dashed var(--line);">💾 Save Project</button>
+    <button class="btn btn-ghost" id="btnOpenProj" style="padding:6px 12px; font-size:0.75rem; border:1px dashed var(--line);">📂 Open Project</button>
+    <input type="file" id="fileOpenProj" accept=".json" style="display:none;" />
+    <div class="badge">Local WAsP-class workflow · not bankable without mast</div>
+  </div>
 </header>
 
 <div class="layout">
@@ -312,8 +317,8 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
         <option value="MESO">Other mesoscale CSV</option>
       </select>
       <div class="row">
-        <div><label>ERA5 start year</label><input id="y0" type="number" value="2019"/></div>
-        <div><label>ERA5 end year</label><input id="y1" type="number" value="2023"/></div>
+        <div><label>ERA5 start year (≥2000)</label><input id="y0" type="number" value="2019" min="2000" max="2026"/></div>
+        <div><label>ERA5 end year (≥2000)</label><input id="y1" type="number" value="2023" min="2000" max="2026"/></div>
       </div>
       <div class="row">
         <div><label>Data height m</label><input id="dataH" type="number" value="100"/></div>
@@ -351,6 +356,11 @@ summary{cursor:pointer;color:var(--muted);font-size:.78rem}
           <button class="btn btn-ghost" id="btnExpTab" type="button">WAsP .tab</button>
           <button class="btn btn-ghost" id="btnExpKml" type="button">Layout KML</button>
           <button class="btn btn-ghost" id="btnExpLayout" type="button">Layout CSV</button>
+          <button class="btn btn-ghost" id="btnExpWrg" type="button" style="background:#132d4a; border:1px solid #2a5a9a; color:#a3ceff;">Export WRG Map</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <div><label>WRG Cell size (m)</label><input id="wrgCellSize" type="number" value="200" min="50" max="2000"/></div>
+          <div><label>WRG Height (m)</label><input id="wrgHeight" type="number" value="140" placeholder="Hub height"/></div>
         </div>
       </details>
       <details style="margin-top:8px">

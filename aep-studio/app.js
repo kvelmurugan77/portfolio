@@ -1509,6 +1509,10 @@
     if (!pts.length) { alert('Set site first'); return; }
     const c = centerOf(pts);
     const y0 = +$('y0').value || 2019, y1 = +$('y1').value || 2023;
+    if (y0 < 2000 || y1 < 2000) {
+      alert('ERA5 data downloads are only allowed from year 2000 onwards.');
+      return;
+    }
     const h = +$('dataH').value || 100;
     const wsV = h >= 80 ? 'wind_speed_100m' : 'wind_speed_10m';
     const wdV = h >= 80 ? 'wind_direction_100m' : 'wind_direction_10m';
@@ -2584,6 +2588,385 @@
     refreshSiteUI(); redrawMap();
   }
 
+  // ─── Save and Open Project ───────────────────────────────────────────────
+  function saveProject() {
+    try {
+      const data = {
+        version: "1.0",
+        inputs: {
+          projName: $('projName')?.value,
+          region: $('region')?.value,
+          z0: $('z0')?.value,
+          inCrs: $('inCrs')?.value,
+          utmZone: $('utmZone')?.value,
+          utmHem: $('utmHem')?.value,
+          colOrder: $('colOrder')?.value,
+          swLon: $('swLon')?.value,
+          swLat: $('swLat')?.value,
+          neLon: $('neLon')?.value,
+          neLat: $('neLat')?.value,
+          cLon: $('cLon')?.value,
+          cLat: $('cLat')?.value,
+          cRad: $('cRad')?.value,
+          nWtg: $('nWtg')?.value,
+          spD: $('spD')?.value,
+          spC: $('spC')?.value,
+          preset: $('preset')?.value,
+          hh: $('hh')?.value,
+          D: $('D')?.value,
+          rated: $('rated')?.value,
+          wakeK: $('wakeK')?.value,
+          loss: $('loss')?.value,
+          avail: $('avail')?.value,
+          elec: $('elec')?.value,
+          terrR: $('terrR')?.value,
+          terrG: $('terrG')?.value,
+          windSrc: $('windSrc')?.value,
+          y0: $('y0')?.value,
+          y1: $('y1')?.value,
+          dataH: $('dataH')?.value,
+          nSec: $('nSec')?.value,
+          vertMethod: $('vertMethod')?.value || 'log',
+          shearAlpha: $('shearAlpha')?.value || '0.14',
+          lyrBoundary: $('lyrBoundary')?.checked,
+          lyrTurbines: $('lyrTurbines')?.checked,
+          lyrElev: $('lyrElev')?.checked,
+          lyrRough: $('lyrRough')?.checked,
+          lyrSpeed: $('lyrSpeed')?.checked,
+          lyrWindPt: $('lyrWindPt')?.checked,
+          lyrLabels: $('lyrLabels')?.checked
+        },
+        state: {
+          project: S.project,
+          boundary: S.boundary,
+          turbines: S.turbines,
+          pc: S.pc,
+          terrain: S.terrain,
+          roughnessZones: S.roughnessZones,
+          roughnessRose: S.roughnessRose,
+          wind: S.wind,
+          gwaMeta: S.gwaMeta,
+          results: S.results,
+          speedField: S.speedField,
+          windPoint: S.windPoint
+        }
+      };
+      const name = (data.inputs.projName || 'project').replace(/[^a-z0-9_-]/gi, '_');
+      const jsonText = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonText], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${name}_aep_project.json`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      addLog(`Project saved: ${name}_aep_project.json`, 'o');
+    } catch (err) {
+      alert(`Failed to save project: ${err.message}`);
+      console.error(err);
+    }
+  }
+
+  function openProject(file) {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!data || !data.inputs || !data.state) {
+          throw new Error('Invalid project file format.');
+        }
+
+        // Restore inputs
+        const inputs = data.inputs;
+        for (const [id, val] of Object.entries(inputs)) {
+          const el = document.getElementById(id);
+          if (el) {
+            if (el.type === 'checkbox') {
+              el.checked = !!val;
+            } else {
+              el.value = val;
+            }
+          }
+        }
+
+        // Restore state
+        S.project = data.state.project || 'My Wind Farm';
+        S.boundary = data.state.boundary || [];
+        S.turbines = data.state.turbines || [];
+        S.pc = data.state.pc || null;
+        S.terrain = data.state.terrain || null;
+        S.roughnessZones = data.state.roughnessZones || [];
+        S.roughnessRose = data.state.roughnessRose || null;
+        S.wind = data.state.wind || null;
+        S.gwaMeta = data.state.gwaMeta || null;
+        S.results = data.state.results || null;
+        S.speedField = data.state.speedField || null;
+        S.windPoint = data.state.windPoint || null;
+
+        // Restore step styling
+        setStep('site', S.boundary.length > 0 || S.turbines.length > 0 ? 'done' : null);
+        setStep('wtg', S.pc || currentPC() ? 'done' : null);
+        setStep('maps', S.terrain || S.roughnessRose ? 'done' : null);
+        setStep('wind', S.wind ? 'done' : null);
+        setStep('aep', S.results ? 'done' : null);
+
+        refreshSiteUI();
+        redrawMap({ fit: true });
+        restoreResultsUI();
+
+        addLog(`Project loaded successfully: ${S.project}`, 'o');
+      } catch (err) {
+        alert(`Failed to open project: ${err.message}`);
+        console.error(err);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function restoreResultsUI() {
+    const R = S.results;
+    if (!R) {
+      $('kGross').textContent = '-';
+      $('kNet').textContent = '-';
+      $('kCF').textContent = '-';
+      $('kWake').textContent = '-';
+      $('kWS').textContent = '-';
+      $('kCap').textContent = '-';
+      $('tbl').innerHTML = '<tr><td colspan="6" class="muted text-center">Run AEP to see results</td></tr>';
+      $('sectbl').innerHTML = '<tr><td colspan="5" class="muted text-center">Run AEP to see sectors</td></tr>';
+      $('btnExport').disabled = true;
+      chipBox('resChips', []);
+      return;
+    }
+    
+    $('kGross').textContent = R.grossAEP.toFixed(2) + ' GWh/y';
+    $('kNet').textContent = R.netAEP.toFixed(2) + ' GWh/y';
+    $('kCF').textContent = R.CF.toFixed(1) + ' %';
+    $('kWake').textContent = R.wakeLoss.toFixed(1) + ' %';
+    $('kWS').textContent = R.hubMean.toFixed(2) + ' m/s';
+    $('kCap').textContent = R.capacityMW.toFixed(1) + ' MW';
+    
+    chipBox('resChips', [
+      [`Wind: ${R.windSource || 'Loaded'}`, true],
+      [`Engine: ${R.engine || 'n/a'}`, true],
+      [`RIX ${(+R.rix || 0).toFixed(1)}%`, true],
+      [`${R.n || S.turbines.length} WTGs`, true],
+    ]);
+    
+    $('tbl').innerHTML = R.perTurbine.map((t) =>
+      `<tr><td>${t.id}</td><td>${t.freeWS.toFixed(2)}</td><td>${(+t.SU || 1.0).toFixed(3)}</td><td>${t.wakePct.toFixed(1)}</td><td>${t.netGWh.toFixed(2)}</td><td>${t.CF.toFixed(1)}</td></tr>`
+    ).join('');
+    
+    $('sectbl').innerHTML = R.sectors.map((s) =>
+      `<tr><td>${s.dir.toFixed(0)}°</td><td>${(100 * s.freq).toFixed(1)}</td><td>${s.A.toFixed(2)}</td><td>${s.k.toFixed(2)}</td><td>${s.WS.toFixed(2)}</td></tr>`
+    ).join('');
+    
+    $('btnExport').disabled = false;
+  }
+
+  // ─── WRG Map Generation ──────────────────────────────────────────────────
+  function solveWeibullK(E_pf) {
+    if (E_pf <= 1.0) return 10.0;
+    let low = 1.01, high = 10.0;
+    for (let iter = 0; iter < 25; iter++) {
+      const mid = (low + high) / 2;
+      const ratio = gamma(1 + 3 / mid) / Math.pow(gamma(1 + 1 / mid), 3);
+      if (ratio > E_pf) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+    return (low + high) / 2;
+  }
+
+  async function generateWrgMap() {
+    try {
+      if (!S.terrain) {
+        alert('Please download terrain first (TERRAIN tab) — elevation data is required.');
+        return;
+      }
+      if (!S.wind || !S.results || !S.results.sectors) {
+        alert('Please run AEP first to establish the site wind climate and speed-ups.');
+        return;
+      }
+
+      const cell_size = parseFloat($('wrgCellSize').value) || 200;
+      const height = parseFloat($('wrgHeight').value) || currentPC().hh || 100;
+
+      const pts = S.boundary.concat(S.turbines);
+      if (!pts.length) {
+        alert('Please define a boundary or layout first.');
+        return;
+      }
+
+      const center = centerOf(pts);
+      const centerUtm = latLonToUtm(center.lat, center.lon);
+      const zone = centerUtm.zone;
+      const northern = center.lat >= 0;
+
+      const utmPts = pts.map(p => latLonToUtm(p.lat, p.lon));
+      const eastings = utmPts.map(p => p.easting);
+      const northings = utmPts.map(p => p.northing);
+
+      let Xmin = Math.min(...eastings);
+      let Xmax = Math.max(...eastings);
+      let Ymin = Math.min(...northings);
+      let Ymax = Math.max(...northings);
+
+      Xmin -= cell_size;
+      Xmax += cell_size;
+      Ymin -= cell_size;
+      Ymax += cell_size;
+
+      Xmin = Math.floor(Xmin / cell_size) * cell_size;
+      Xmax = Math.ceil(Xmax / cell_size) * cell_size;
+      Ymin = Math.floor(Ymin / cell_size) * cell_size;
+      Ymax = Math.ceil(Ymax / cell_size) * cell_size;
+
+      const Nx = Math.round((Xmax - Xmin) / cell_size) + 1;
+      const Ny = Math.round((Ymax - Ymin) / cell_size) + 1;
+      const totalPoints = Nx * Ny;
+
+      if (totalPoints > 10000) {
+        if (!confirm(`The selected cell size of ${cell_size}m results in a grid of ${Nx}x${Ny} = ${totalPoints} points. This might take a few seconds to compute. Do you want to proceed?`)) {
+          return;
+        }
+      }
+
+      addLog(`Generating WRG map: Grid ${Nx}x${Ny} (${totalPoints} points) at resolution ${cell_size}m, height ${height}m`, 'i');
+
+      const gridPoints = [];
+      for (let iy = 0; iy < Ny; iy++) {
+        for (let ix = 0; ix < Nx; ix++) {
+          const x = Xmin + ix * cell_size;
+          const y = Ymin + iy * cell_size;
+          const latlon = utmToLatLon(x, y, zone, northern);
+          gridPoints.push({
+            ix, iy, x, y,
+            lat: latlon.lat,
+            lon: latlon.lon,
+            elev: elevAt(latlon.lat, latlon.lon) || 0
+          });
+        }
+      }
+
+      const nSec = S.results.sectors.length;
+      let sectorSpeedups = [];
+      let mastSectorSU = [];
+      let sectorRoughRC = window.BZ.sectorRoughRC || Array(nSec).fill(1);
+
+      if (S.terrain && S.terrain.grid && window.WFP61 && typeof window.WFP61.computeSpectralFlowField === 'function') {
+        try {
+          const options = {
+            hubH: height,
+            z0Site: +$('z0').value || 0.03,
+            z0Mast: +$('z0').value || 0.03,
+            nSect: nSec,
+            sectorFreq: S.results.sectors.map(s => s.freq),
+            log: () => {}
+          };
+          const mast = centerOf(S.boundary.length ? S.boundary : S.turbines);
+          const flow = window.WFP61.computeSpectralFlowField(S.terrain, gridPoints, mast, options);
+          sectorSpeedups = flow.sectorSpeedups;
+          mastSectorSU = flow.mastSectorSU;
+        } catch (e) {
+          addLog(`Spectral BZ failed for WRG grid, falling back to elevation model: ${e.message}`, 'w');
+        }
+      }
+
+      if (!sectorSpeedups.length) {
+        const mast = centerOf(S.boundary.length ? S.boundary : S.turbines);
+        const mastE = elevAt(mast.lat, mast.lon) || 0;
+        sectorSpeedups = [];
+        mastSectorSU = Array(nSec).fill(1);
+        for (let s = 0; s < nSec; s++) {
+          const row = gridPoints.map((pt) => {
+            const dE = pt.elev - mastE;
+            return clamp(1 + 0.4 * dE / Math.max(80, height), 0.75, 1.35);
+          });
+          sectorSpeedups.push(row);
+        }
+      }
+
+      let wrgText = `  ${Nx}  ${Ny}  ${Xmin.toFixed(1)}  ${Ymin.toFixed(1)}  ${cell_size.toFixed(1)}\r\n`;
+
+      const rho = 1.225;
+      const sectors = S.results.sectors;
+
+      for (let pi = 0; pi < gridPoints.length; pi++) {
+        const pt = gridPoints[pi];
+        let V_total = 0;
+        let P_total = 0;
+        const localSectors = [];
+
+        for (let s = 0; s < nSec; s++) {
+          const f = sectors[s].freq;
+          const A_mast = sectors[s].A;
+          const k_mast = sectors[s].k;
+
+          const su = (sectorSpeedups[s] && sectorSpeedups[s][pi]) || 1;
+          const mSU = mastSectorSU[s] || 1;
+          const rc = sectorRoughRC[s] || 1;
+
+          const rel = (su / Math.max(1e-6, mSU)) * rc;
+          const A_local = A_mast * rel;
+          const k_local = k_mast;
+
+          const V_sec = A_local * gamma(1 + 1 / k_local);
+          const P_sec = 0.5 * rho * Math.pow(A_local, 3) * gamma(1 + 3 / k_local);
+
+          V_total += f * V_sec;
+          P_total += f * P_sec;
+
+          localSectors.push({ freq: f, A: A_local, k: k_local });
+        }
+
+        let k_total = 2.0;
+        if (V_total > 0.1) {
+          const E_pf = P_total / (0.5 * rho * Math.pow(V_total, 3));
+          k_total = solveWeibullK(E_pf);
+        }
+        let A_total = V_total / gamma(1 + 1 / k_total);
+
+        if (!isFinite(A_total) || isNaN(A_total)) A_total = 0;
+        if (!isFinite(k_total) || isNaN(k_total)) k_total = 1.0;
+        if (!isFinite(P_total) || isNaN(P_total)) P_total = 0;
+
+        let line = "GridPoint ";
+        line += pt.x.toFixed(0).padStart(10);
+        line += pt.y.toFixed(0).padStart(10);
+        line += pt.elev.toFixed(0).padStart(8);
+        line += height.toFixed(0).padStart(5);
+        line += A_total.toFixed(1).padStart(5);
+        line += k_total.toFixed(2).padStart(6);
+        line += P_total.toFixed(0).padStart(15);
+        line += nSec.toString().padStart(3);
+
+        for (let s = 0; s < nSec; s++) {
+          const sec = localSectors[s];
+          const freq10 = Math.round(sec.freq * 1000);
+          const A10 = Math.round(sec.A * 10);
+          const k100 = Math.round(sec.k * 100);
+
+          line += freq10.toString().padStart(4);
+          line += A10.toString().padStart(4);
+          line += k100.toString().padStart(5);
+        }
+
+        wrgText += line + "\r\n";
+      }
+
+      const name = (S.project || 'site').replace(/[^a-z0-9_-]/gi, '_');
+      const filename = `${name}_res_${cell_size}m_${height}m.wrg`;
+      triggerTextDownload(filename, wrgText);
+      addLog(`WRG Map generated and exported: ${filename}`, 'o');
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to generate WRG map: ${err.message}`);
+    }
+  }
+
   // ─── Drag/drop helpers ───────────────────────────────────────────────────
   function bindDrop(zoneId, inputId, handler) {
     const z = $(zoneId), inp = $(inputId);
@@ -2624,6 +3007,16 @@
     $('btnRough').onclick = () => downloadRoughness().catch((e) => addLog(e.message, 'e'));
     $('btnERA5').onclick = () => downloadERA5().catch((e) => addLog(e.message, 'e'));
     $('btnGWA').onclick = () => downloadGWA().catch((e) => addLog(e.message, 'e'));
+    
+    if ($('btnSaveProj')) $('btnSaveProj').onclick = saveProject;
+    if ($('btnOpenProj')) $('btnOpenProj').onclick = () => $('fileOpenProj').click();
+    if ($('fileOpenProj')) {
+      $('fileOpenProj').onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) openProject(file);
+      };
+    }
+    if ($('btnExpWrg')) $('btnExpWrg').onclick = generateWrgMap;
     if ($('btnGwaLib') && $('fileGwaLib')) {
       $('btnGwaLib').onclick = () => $('fileGwaLib').click();
       $('fileGwaLib').addEventListener('change', async () => {
@@ -2676,7 +3069,7 @@
       ingestGwaLibText, showGwaHelpPanel,
       exportWindCsv, exportTerrainCsv, exportRoughnessCsv, exportMapPng,
       exportLayoutKml, exportWaspTab, readPointsFile, utmToLatLon, latLonToUtm,
-      verticalExtrapolate
+      verticalExtrapolate, saveProject, openProject, generateWrgMap
     };
     // also bind commonly used names
     window.downloadTerrain = downloadTerrain;
