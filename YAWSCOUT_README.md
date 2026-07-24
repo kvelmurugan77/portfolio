@@ -24,6 +24,26 @@ Profiles only accelerate the initial mapping. Tag names, status codes, aggregati
 
 Auto-detection is intended as a convenience. If the automatic profile, data layout or units are not unequivocally correct, explicitly select the OEM profile / unit and remap the columns.
 
+## Large SCADA / million-row processing
+
+YawScout now includes a **bounded-memory streaming engine** for large browser-only studies. By default it switches to this mode when the selected files exceed **40 MB**; it can also be forced from the import panel.
+
+### How it works
+
+1. The browser reads only a small local preview so the engineer can select the OEM profile, verify the schema, units, filters and date convention.
+2. A dedicated Web Worker reads the local file(s) in 4 MB chunks. It makes two passes: first, it creates turbine and fleet wind-speed-bin reference aggregates; second, it accumulates the yaw, power-response, directional-sector, monthly-persistence and available fleet-consensus evidence.
+3. The worker returns compact per-WTG aggregates only. It does **not** send or retain millions of raw records in the visible browser page.
+
+This makes full-farm million-row and GB-scale **desktop screening** practical without uploading SCADA data. It is deliberately an aggregate screening workflow: it cannot offer a raw-row table, raw scatter plot or a forensic re-filter without reading the local files again.
+
+### Practical operating guidance
+
+- Use a current 64-bit Chrome, Edge or Firefox browser on a workstation with adequate available RAM; close memory-intensive tabs before loading GB-scale data.
+- Keep each export in a consistent encoding and SCADA schema. For wide files, choose the OEM profile and WTG-ID extraction pattern before upload.
+- A long/tall export sorted by timestamp is best for the fleet wind-speed cross-check. One-WTG-per-file exports still run, but a fleet timestamp-consensus bias may be unavailable; the output flags this rather than silently inventing a comparison.
+- The streaming power-response baseline uses mean values within wind-speed bins, whereas small in-memory studies use medians. It is suitable for WTG prioritisation, not a replacement for an IEC power-performance analysis.
+- A browser may still be constrained by corporate endpoint policy, available browser memory or exceptionally malformed/heterogeneous files. For a failed stream, split by month/year or prepare a consistent long-format export — do not force raw GB data into in-memory mode.
+
 ## Required SCADA signals
 
 | Tool field | Typical signal names | Unit |
