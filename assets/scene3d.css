@@ -1,0 +1,90 @@
+/* ==== 3D layer (active only when body.vk3d is set by assets/scene3d.min.js) ==== */
+#scene3d{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.6s ease}
+#scene3d.ready{opacity:1}
+#scene3d canvas{display:block;width:100%!important;height:100%!important}
+
+body.vk3d #bgCanvas,body.vk3d #wtgCanvas,body.vk3d #particles,body.vk3d .hero-bg{display:none}
+body.vk3d{background:#071426}
+
+/* Hero: let the 3D turbine own the right half, keep text legible */
+body.vk3d #hero{background:linear-gradient(90deg,rgba(4,12,26,.78) 0%,rgba(4,12,26,.45) 38%,rgba(4,12,26,0) 62%),linear-gradient(0deg,rgba(4,12,26,.65) 0%,rgba(4,12,26,0) 30%)}
+body.vk3d .hero-name{text-shadow:0 2px 0 rgba(29,184,126,.18),0 4px 0 rgba(13,60,90,.35),0 18px 40px rgba(0,0,0,.55)}
+
+/* Sections become translucent panes over the scene */
+body.vk3d #about{background:linear-gradient(180deg,rgba(4,12,26,0) 0%,rgba(4,12,26,.62) 18%,rgba(4,12,26,.62) 100%)}
+body.vk3d #experience{background:rgba(4,12,26,.70)}
+body.vk3d #projects{background:linear-gradient(180deg,rgba(4,12,26,.55),rgba(4,12,26,.62))}
+body.vk3d #skills{background:rgba(4,12,26,.48)}
+body.vk3d #education{background:linear-gradient(180deg,rgba(4,12,26,.5),rgba(4,12,26,.3))}
+body.vk3d #tools{background:linear-gradient(180deg,rgba(4,12,26,.62),rgba(4,12,26,.7))}
+body.vk3d #contact{background:linear-gradient(180deg,rgba(4,12,26,.6),rgba(4,12,26,.35))}
+body.vk3d footer{background:rgba(3,9,20,.85)}
+
+/* Glass cards */
+body.vk3d .pcard,body.vk3d .sgroup,body.vk3d .acard,body.vk3d .ecard2,body.vk3d .form-panel,body.vk3d .cert-strip,body.vk3d .ecard{
+  background:rgba(9,26,50,.55);-webkit-backdrop-filter:blur(12px) saturate(1.25);backdrop-filter:blur(12px) saturate(1.25);
+  box-shadow:0 18px 50px -20px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.06)}
+body.vk3d .metric{background:rgba(9,26,50,.72)}
+body.vk3d .tli{background:linear-gradient(90deg,rgba(4,12,26,.0),rgba(4,12,26,.35))}
+
+/* Section headings get extruded depth */
+body.vk3d .stitle{text-shadow:0 1px 0 rgba(29,184,126,.25),0 2px 0 rgba(20,90,110,.3),0 3px 0 rgba(10,50,80,.35),0 14px 30px rgba(0,0,0,.5)}
+
+/* 3D reveal */
+body.vk3d .rv{transform:perspective(1100px) rotateX(16deg) translateY(46px);transform-origin:50% 100%;transition:opacity .9s ease,transform 1s cubic-bezier(.2,.75,.2,1)}
+body.vk3d .rv.in{transform:none}
+
+/* Tilt cards (works with or without WebGL) */
+.tilt3d{position:relative;transform-style:preserve-3d;will-change:transform;transition:transform .35s cubic-bezier(.2,.75,.2,1),background .35s,border-color .35s}
+.tilt3d:hover{transition:transform .08s linear,background .35s,border-color .35s}
+.tilt3d::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s;
+  background:radial-gradient(420px circle at var(--gx,50%) var(--gy,50%),rgba(135,206,235,.14),transparent 45%)}
+.tilt3d:hover::after{opacity:1}
+.sgroup.tilt3d,.acard.tilt3d,.ecard2.tilt3d,.metric.tilt3d{overflow:hidden}
+
+/* Simulated SCADA HUD */
+.vk-hud{display:none}
+body.vk3d .vk-hud{display:block;position:absolute;right:2rem;bottom:7.2rem;z-index:6;width:290px;padding:1rem 1.1rem;border-radius:12px;
+  background:rgba(5,16,34,.58);border:1px solid rgba(29,184,126,.25);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  font-family:var(--body);color:#fff;opacity:0;animation:fadeUp 1s ease 1.4s forwards;box-shadow:0 20px 50px -20px rgba(0,0,0,.7)}
+.vk-hud-h{font-size:.6rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
+.vk-live{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 10px var(--mint);animation:vkPulse 1.6s ease-in-out infinite}
+@keyframes vkPulse{50%{opacity:.35}}
+.vk-hud-g{display:grid;grid-template-columns:1fr 1fr;gap:.6rem .9rem}
+.vk-hud-g b{display:block;font-family:var(--display);font-style:italic;font-weight:400;font-size:1.5rem;color:var(--mint);line-height:1;font-variant-numeric:tabular-nums}
+.vk-hud-g i{display:block;font-style:normal;font-size:.55rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.42);margin-top:.25rem}
+.vk-hud-bar{height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin:.85rem 0 .55rem;overflow:hidden}
+.vk-hud-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--mint),var(--gold));transition:width .25s linear}
+.vk-hud-f{font-size:.56rem;letter-spacing:.08em;color:rgba(255,255,255,.35)}
+
+/* Scene dots */
+.vk-dots{position:fixed;right:1.1rem;top:50%;transform:translateY(-50%);z-index:700;display:flex;flex-direction:column;gap:.7rem}
+.vk-dots a{display:flex;align-items:center;justify-content:flex-end;gap:.6rem;text-decoration:none}
+.vk-dot{width:8px;height:8px;border-radius:50%;border:1.5px solid rgba(255,255,255,.45);transition:all .3s}
+.vk-dot-l{font-size:.58rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.75);background:rgba(5,16,34,.7);padding:.25rem .55rem;border-radius:4px;opacity:0;transform:translateX(6px);transition:all .25s;white-space:nowrap}
+.vk-dots a:hover .vk-dot-l,.vk-dots a.on .vk-dot-l{opacity:1;transform:none}
+.vk-dots a.on .vk-dot{background:var(--mint);border-color:var(--mint);box-shadow:0 0 12px var(--mint);transform:scale(1.25)}
+.vk-dots a:not(.on) .vk-dot-l{opacity:0}
+.vk-dots a:hover .vk-dot-l{opacity:1}
+
+/* 3D toggle */
+.vk-3d-toggle{position:fixed;left:1.1rem;bottom:1.1rem;z-index:900;display:inline-flex;align-items:center;gap:.5rem;font-family:var(--body);
+  font-size:.62rem;font-weight:700;letter-spacing:.16em;color:rgba(255,255,255,.75);background:rgba(5,16,34,.7);border:1px solid var(--border);
+  padding:.5rem .85rem;border-radius:20px;cursor:inherit;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:all .25s}
+.vk-3d-toggle:hover{border-color:var(--mint);color:var(--mint)}
+.vk-3d-ico{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35)}
+.vk-3d-toggle.on .vk-3d-ico{background:var(--mint);box-shadow:0 0 8px var(--mint)}
+
+@media(max-width:900px){
+  body.vk3d #hero{background:linear-gradient(180deg,rgba(4,12,26,.82) 0%,rgba(4,12,26,.55) 55%,rgba(4,12,26,.1) 100%)}
+  body.vk3d .hero-right{height:70vw;min-height:300px}
+  body.vk3d .hero-right{align-items:flex-end}
+  body.vk3d .vk-hud{left:1.4rem;right:1.4rem;bottom:1.2rem;width:auto;padding:.75rem .9rem}
+  body.vk3d .vk-hud-g{grid-template-columns:repeat(4,1fr);gap:.4rem}
+  body.vk3d .vk-hud-g b{font-size:1.15rem}
+  body.vk3d .vk-hud-g i{font-size:.48rem;letter-spacing:.08em}
+  body.vk3d .vk-hud-f{display:none}
+  .vk-dots{display:none}
+  body.vk3d .rv{transform:translateY(30px)}
+}
+@media(prefers-reduced-motion:reduce){body.vk3d .rv{transform:none}}

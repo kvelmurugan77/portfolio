@@ -6,6 +6,7 @@
 <title>Velmurugan Karuppiah — Wind Energy Expert</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/scene3d.css">
 <style>
 :root{
   --sky1:#0b1f3a; --sky2:#0e3460; --sky3:#1a5f8a;
@@ -280,6 +281,7 @@ footer{background:rgba(6,14,30,.95);color:#fff;padding:2.2rem 3rem;display:flex;
 <div class="cur-d" id="cd"></div>
 <div class="cur-r" id="cr"></div>
 <canvas id="bgCanvas"></canvas>
+<div id="scene3d" aria-hidden="true"></div>
 
 <!-- NAV -->
 <nav id="nav">
@@ -1170,6 +1172,7 @@ if('ontouchstart' in window){cd.style.display='none';cr.style.display='none';doc
   function mkP(){return{x:Math.random()*W,y:Math.random()*H*.8,vx:Math.random()*.8+.3,vy:(Math.random()-.5)*.15,life:0,maxLife:Math.random()*180+80,size:Math.random()*1.5+.5,alpha:0}}
   for(let i=0;i<60;i++){const p=mkP();p.life=Math.random()*p.maxLife;particles.push(p)}
   function draw(){
+    if(window.__VK3D) return;
     ctx.clearRect(0,0,W,H);
     stars.forEach(s=>{s.a+=s.da;if(s.a>1||s.a<.2)s.da*=-1;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(200,230,255,${s.a*.6})`;ctx.fill()});
     particles.forEach(p=>{
@@ -1523,6 +1526,7 @@ document.querySelectorAll('.rv').forEach(r=>obs.observe(r));
 
   var last2=0;
   function render(ts){
+    if(window.__VK3D) return;
     var dt=Math.min((ts-last2)/1000,0.05); last2=ts;
     angle+=dt*0.72; airPhase+=dt*0.95;
     ctx.clearRect(0,0,W,H);
@@ -1839,5 +1843,6 @@ document.querySelectorAll('.rv').forEach(r=>obs.observe(r));
 })();
 </script>
 
+<script type="module" src="assets/scene3d.min.js"></script>
 </body>
 </html>
