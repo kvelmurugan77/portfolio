@@ -434,16 +434,16 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
   const V = (base, a, s, up) => base.clone().addScaledVector(W, a).addScaledVector(P, s).add(new THREE.Vector3(0, up, 0));
   const portrait = () => camera.aspect < 0.95;
   const SCENES = [
-    { id: 'hero', label: 'Hero WTG · NML', f: (t) => portrait()
+    { id: 'hero', label: 'Welcome', f: (t) => portrait()
       ? { p: HERO.clone().add(new THREE.Vector3(-4, 7.5, 40)), t: HERO.clone().add(new THREE.Vector3(1.5, 13.5, 0)) }
       : { p: HERO.clone().add(new THREE.Vector3(-13 + Math.sin(t * 0.07) * 1.2, 8, 37)), t: HERO.clone().add(new THREE.Vector3(-10, 12.5, 0)) } },
-    { id: 'about', label: 'Wind Farm Overview', f: () => ({ p: V(HERO, -70, -60, 55), t: V(HERO, 160, 30, 0) }) },
-    { id: 'experience', label: 'Array Fly-through', f: (t) => ({ p: V(HERO, 52 + Math.sin(t * 0.05) * 6, -230, 17), t: V(HERO, 52, 60, 9) }) },
-    { id: 'projects', label: 'Nacelle LiDAR · Met Mast', f: () => ({ p: V(HERO, -78, 48, 26), t: V(HERO, -22, -6, 10) }) },
-    { id: 'skills', label: 'Layout Plan View', f: () => ({ p: V(HERO, 120, -40, 360), t: V(HERO, 190, 0, 0) }) },
-    { id: 'education', label: 'Horizon', f: () => ({ p: V(HERO, -40, 110, 5), t: V(HERO, 380, -40, 22) }) },
-    { id: 'tools', label: 'Orbit · Digital Twin', f: (t) => { const a = t * 0.08; return { p: HERO.clone().add(new THREE.Vector3(Math.cos(a) * 42, 16, Math.sin(a) * 42)), t: HERO.clone().add(new THREE.Vector3(0, 10, 0)) }; } },
-    { id: 'contact', label: 'Sunset Departure', f: () => ({ p: V(HERO, -140, 20, 70), t: V(HERO, 520, -60, 0) }) }
+    { id: 'about', label: 'About Me', f: () => ({ p: V(HERO, -70, -60, 55), t: V(HERO, 160, 30, 0) }) },
+    { id: 'experience', label: 'Career Journey', f: (t) => ({ p: V(HERO, 52 + Math.sin(t * 0.05) * 6, -230, 17), t: V(HERO, 52, 60, 9) }) },
+    { id: 'projects', label: 'Key Achievements', f: () => ({ p: V(HERO, -78, 48, 26), t: V(HERO, -22, -6, 10) }) },
+    { id: 'skills', label: 'Skills', f: () => ({ p: V(HERO, 120, -40, 360), t: V(HERO, 190, 0, 0) }) },
+    { id: 'education', label: 'Education', f: () => ({ p: V(HERO, -40, 110, 5), t: V(HERO, 380, -40, 22) }) },
+    { id: 'tools', label: 'Tools', f: (t) => { const a = t * 0.08; return { p: HERO.clone().add(new THREE.Vector3(Math.cos(a) * 42, 16, Math.sin(a) * 42)), t: HERO.clone().add(new THREE.Vector3(0, 10, 0)) }; } },
+    { id: 'contact', label: 'Contact', f: () => ({ p: V(HERO, -140, 20, 70), t: V(HERO, 520, -60, 0) }) }
   ];
   const secEls = SCENES.map((s) => document.getElementById(s.id));
   let tops = [];
@@ -570,15 +570,15 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
     const el = document.createElement('div');
     el.className = 'vk-hud';
     el.innerHTML = `
-      <div class="vk-hud-h"><span class="vk-live"></span>WTG-01 · Simulated SCADA</div>
+      <div class="vk-hud-h"><span class="vk-live"></span>Live turbine demo · simulated data</div>
       <div class="vk-hud-g">
-        <div><b data-k="ws">—</b><i>Hub wind m/s</i></div>
-        <div><b data-k="rpm">—</b><i>Rotor rpm</i></div>
-        <div><b data-k="p">—</b><i>Active power MW</i></div>
-        <div><b data-k="yaw">—</b><i>Yaw error °</i></div>
+        <div><b data-k="ws">—</b><i>Wind speed (m/s)</i></div>
+        <div><b data-k="rpm">—</b><i>Blade speed (rpm)</i></div>
+        <div><b data-k="p">—</b><i>Power output (MW)</i></div>
+        <div><b data-k="yaw">—</b><i>Off-wind angle (°)</i></div>
       </div>
       <div class="vk-hud-bar"><span data-k="bar"></span></div>
-      <div class="vk-hud-f">NML · 2 beams · 2.5D upstream · 10-min avg ↺</div>`;
+      <div class="vk-hud-f">Green beams = laser sensor reading the wind ahead</div>`;
     if (parent) parent.appendChild(el);
     const q = (k) => el.querySelector(`[data-k="${k}"]`);
     const ws = q('ws'), rpm = q('rpm'), p = q('p'), yaw = q('yaw'), bar = q('bar');
@@ -615,7 +615,7 @@ function mountToggle(on) {
   const b = document.createElement('button');
   b.className = 'vk-3d-toggle' + (on ? ' on' : '');
   b.type = 'button';
-  b.title = on ? 'Switch to the lightweight 2D site' : 'Switch on the 3D wind-farm experience';
+  b.title = on ? 'Turn off the 3D animation (faster, simpler page)' : 'Turn on the 3D wind-farm animation';
   b.innerHTML = `<span class="vk-3d-ico"></span>3D ${on ? 'ON' : 'OFF'}`;
   b.addEventListener('click', () => { try { localStorage.setItem('vk3d', on ? 'off' : 'on'); } catch (e) {} location.reload(); });
   const add = () => document.body.appendChild(b);
